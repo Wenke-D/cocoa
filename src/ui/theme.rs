@@ -13,6 +13,8 @@
 
 use egui::{Color32, CornerRadius, FontFamily, FontId, Margin, Stroke, TextStyle};
 
+use crate::model::{DisplayStatus, RunStatus};
+
 /// `0xRRGGBB` literal, so the constants below can be read against VS Code's
 /// theme JSON character for character.
 const fn rgb(hex: u32) -> Color32 {
@@ -521,5 +523,42 @@ fn visuals(p: &Palette) -> egui::Visuals {
         },
 
         ..base
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Status colours (specification §23)
+// ---------------------------------------------------------------------------
+
+pub struct StatusStyle {
+    pub color: Color32,
+    /// A hollow marker reads as "not yet real work" — pending, or unknown.
+    pub filled: bool,
+}
+
+pub fn status_style(dark_mode: bool, display: DisplayStatus) -> StatusStyle {
+    match display {
+        DisplayStatus::Unknown { .. } => StatusStyle {
+            color: palette(dark_mode).chart_yellow,
+            filled: false,
+        },
+        DisplayStatus::Known(status) => StatusStyle {
+            color: status_color(dark_mode, status),
+            filled: !matches!(status, RunStatus::Pending),
+        },
+    }
+}
+
+/// Mapped onto VS Code's `charts.*` tokens, which is also where its own test
+/// and problem indicators take their green, red, and amber from.
+pub fn status_color(dark_mode: bool, status: RunStatus) -> Color32 {
+    let p = palette(dark_mode);
+    match status {
+        RunStatus::Starting | RunStatus::Running => p.chart_blue,
+        RunStatus::Completed | RunStatus::Succeeded => p.chart_green,
+        RunStatus::Analyzing => p.chart_yellow,
+        RunStatus::Failed | RunStatus::Error => p.chart_red,
+        RunStatus::Cancelling => p.chart_yellow,
+        RunStatus::Cancelled | RunStatus::Pending => p.chart_gray,
     }
 }
