@@ -1,1 +1,35 @@
+# Rust / Cargo build output
 /target
+**/*.rs.bk
+*.pdb
+
+# Note: Cargo.lock is intentionally tracked — this crate builds a binary.
+
+# Screenshot example output (see examples/screenshot.rs)
+/out
+/screenshot.png
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS cruft
+.DS_Store
+.AppleDouble
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+.directory
