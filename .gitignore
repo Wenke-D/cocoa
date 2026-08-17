@@ -17,6 +17,10 @@
 *.pem
 *.key
 
+# Local Codex/Claude configuration switchers (kept out of the repo)
+/switch-codex.sh
+/switch-claude.sh
+
 # Editors and IDEs
 .vscode/
 .idea/
