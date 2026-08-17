@@ -9,6 +9,7 @@
 
 pub mod app;
 pub mod backend;
+pub mod coco;
 pub mod fixtures;
 pub mod model;
 pub mod navigation;
