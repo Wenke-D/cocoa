@@ -21,6 +21,14 @@
 /switch-codex.sh
 /switch-claude.sh
 
+# Bundled mock experiments: generated state stays out of the repo
+/mock/**/runs/
+/mock/**/report/
+
+# Python bytecode from the mock scripts
+__pycache__/
+*.py[cod]
+
 # Editors and IDEs
 .vscode/
 .idea/

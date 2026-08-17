@@ -1,0 +1,20 @@
+kind        = "job"
+name        = "failing-solver"
+description = "Mock solver that fails at 8 s when launched with mode=fail"
+
+[render]
+template    = "job.sbatch.tmpl"
+params      = ["nodes"]
+
+[launch]
+command     = "./launch.sh"
+params      = ["mode"]
+
+[poll]
+command     = "python3 poll.py"
+
+[report]
+command     = "python3 report.py"
+
+[cancel]
+command     = "./cancel.sh"

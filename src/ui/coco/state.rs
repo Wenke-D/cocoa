@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::time::Instant;
 
-use crate::app::TransientMessage;
+use crate::app::{SIDEBAR_DEFAULT_WIDTH, ThemePreference, TransientMessage};
 use crate::coco::PlanInstance;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -174,12 +174,12 @@ pub enum CocoCommand {
         path: PathBuf,
     },
     RefreshAll,
+    AddMockLibrary,
+    SetTheme(ThemePreference),
     CloseOverlay,
-    SwitchToPrototype,
     Notify(String),
 }
 
-#[derive(Default)]
 pub struct CocoUiState {
     pub route: CocoRoute,
     pub overlay: CocoOverlay,
@@ -189,6 +189,25 @@ pub struct CocoUiState {
     pub last_refresh: Option<Instant>,
     pub last_refresh_errors: Vec<String>,
     pub report_wrap: bool,
+    pub theme: ThemePreference,
+    pub sidebar_width: f32,
+}
+
+impl Default for CocoUiState {
+    fn default() -> Self {
+        Self {
+            route: CocoRoute::default(),
+            overlay: CocoOverlay::default(),
+            register_path: String::new(),
+            register_error: None,
+            transient: None,
+            last_refresh: None,
+            last_refresh_errors: Vec::new(),
+            report_wrap: false,
+            theme: ThemePreference::default(),
+            sidebar_width: SIDEBAR_DEFAULT_WIDTH,
+        }
+    }
 }
 
 impl CocoUiState {

@@ -1,0 +1,20 @@
+kind        = "job"
+name        = "flaky-solver"
+description = "Mock solver whose poll reports UNREACHABLE between 5-10 s, then recovers"
+
+[render]
+template    = "job.sbatch.tmpl"
+params      = ["nodes"]
+
+[launch]
+command     = "./launch.sh"
+params      = ["gpu"]
+
+[poll]
+command     = "python3 poll.py"
+
+[report]
+command     = "python3 report.py"
+
+[cancel]
+command     = "./cancel.sh"

@@ -25,14 +25,14 @@ pub fn show(
     keyboard(ui, state, commands);
     let palette = theme::of(ui);
 
-    top_strip(ui, coco, commands, palette);
+    top_strip(ui, coco, state, commands, palette);
 
     let panel = egui::Panel::left("coco_sidebar")
-        .default_size(220.0)
+        .default_size(state.sidebar_width)
         .size_range(egui::Rangef::new(180.0, 300.0))
         .frame(theme::side_bar_frame(palette))
         .show(ui, |ui| sidebar::show(ui, coco, state, commands));
-    let _ = panel;
+    state.sidebar_width = panel.response.rect.width();
 
     egui::CentralPanel::default()
         .frame(theme::editor_frame(palette))
@@ -59,6 +59,7 @@ pub fn show(
 fn top_strip(
     ui: &mut egui::Ui,
     coco: &Coco,
+    state: &mut CocoUiState,
     commands: &mut Vec<CocoCommand>,
     palette: &'static theme::Palette,
 ) {
@@ -88,11 +89,11 @@ fn top_strip(
                 );
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui
-                        .small_button("Prototype mode")
-                        .on_hover_text("Switch back to the deterministic mock UI")
+                        .small_button(state.theme.label())
+                        .on_hover_text("Cycle the color theme")
                         .clicked()
                     {
-                        commands.push(CocoCommand::SwitchToPrototype);
+                        commands.push(CocoCommand::SetTheme(state.theme.next()));
                     }
                     if ui
                         .small_button("Refresh")

@@ -1,22 +1,13 @@
 //! Presentation layer.
 //!
-//! Layout rule (specification §7.2): the window has exactly two persistent
-//! content regions — the Library sidebar on the left and one unified main
-//! content region on the right. There is never a third inspector column.
-//!
-//! Nothing here can reach the backend. Pages receive an immutable snapshot and
-//! push [`crate::app::AppCommand`]s, which the app executes after the frame.
+//! Layout rule: the window has exactly two persistent content regions — the
+//! Library sidebar on the left and one unified main content region on the
+//! right. Pages read the coco engine immutably and push
+//! [`crate::ui::coco::state::CocoCommand`]s, which the app executes after the
+//! frame.
 
-pub mod activity_bar;
 pub mod coco;
-pub mod icons;
-pub mod overlays;
-pub mod pages;
-pub mod shell;
-pub mod sidebar;
-pub mod status_bar;
 pub mod theme;
-pub mod widgets;
 
 /// Spacing scale, roughly 8-point (specification §24.2).
 pub mod space {

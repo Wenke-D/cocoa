@@ -1,0 +1,10 @@
+kind        = "bench"
+name        = "nightly-benchmark"
+description = "Mock nightly sweep: two solver-gpu instances and one flaky-solver"
+
+[plan]
+command     = "./plan.sh"
+params      = ["sweep"]
+
+[report]
+command     = "python3 report.py"

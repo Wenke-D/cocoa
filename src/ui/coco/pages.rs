@@ -53,11 +53,31 @@ fn library(ui: &mut egui::Ui, coco: &Coco, commands: &mut Vec<CocoCommand>) {
         ui.label("No folders registered yet.");
         ui.label("Register a folder containing a coco.toml manifest to begin (convention §1).");
         ui.add_space(space::NORMAL);
-        if ui.button("Register folder").clicked() {
-            commands.push(CocoCommand::OpenRegister);
-        }
+        ui.horizontal(|ui| {
+            if ui.button("Register folder").clicked() {
+                commands.push(CocoCommand::OpenRegister);
+            }
+            if ui
+                .button("Add bundled mock library")
+                .on_hover_text("Registers every folder under the repo's mock/ directory")
+                .clicked()
+            {
+                commands.push(CocoCommand::AddMockLibrary);
+            }
+        });
         return;
     }
+
+    ui.horizontal(|ui| {
+        if ui
+            .button("Add bundled mock library")
+            .on_hover_text("Registers every folder under the repo's mock/ directory")
+            .clicked()
+        {
+            commands.push(CocoCommand::AddMockLibrary);
+        }
+    });
+    ui.add_space(space::SMALL);
 
     egui::Grid::new("coco_library_table")
         .striped(true)
