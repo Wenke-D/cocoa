@@ -20,5 +20,5 @@ pub use engine::{
 };
 pub use error::CocoError;
 pub use manifest::{BenchManifest, JobManifest, Kind, Manifest};
-pub use record::{BenchRecord, LaunchFailure, RunRecord, StatusChange};
+pub use record::{BenchMember, BenchRecord, LaunchFailure, RunRecord, StatusChange};
 pub use status::Status;

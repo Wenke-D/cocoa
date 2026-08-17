@@ -8,7 +8,7 @@
 //! The transient message is the only place a failed Refresh or Cancel can report
 //! itself.
 
-use crate::app::{AppCommand, ViewCtx};
+use crate::app::{AppCommand, AppMode, ViewCtx};
 use crate::model::format_relative;
 use crate::ui::icons;
 use crate::ui::theme::{self, Palette, metrics};
@@ -68,6 +68,9 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
 
                 if let Some(message) = message {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if item(ui, palette, "mode", None, "Coco mode").clicked() {
+                            ctx.push(AppCommand::SwitchMode(AppMode::Coco));
+                        }
                         if item(ui, palette, "dismiss", None, "Dismiss").clicked() {
                             ctx.state.transient_message = None;
                         }

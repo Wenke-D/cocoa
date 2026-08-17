@@ -79,7 +79,7 @@ pub struct PollReport {
 }
 
 /// One validated plan instance, ready to dispatch (§8.1).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PlanInstance {
     pub job_path: PathBuf,
     pub job_name: String,
@@ -1049,7 +1049,7 @@ impl Coco {
         None
     }
 
-    fn bench_manifest(
+    pub fn bench_manifest(
         &self,
         path: &Path,
     ) -> Result<crate::coco::manifest::BenchManifest, CocoError> {

@@ -8,6 +8,7 @@
 //! push [`crate::app::AppCommand`]s, which the app executes after the frame.
 
 pub mod activity_bar;
+pub mod coco;
 pub mod icons;
 pub mod overlays;
 pub mod pages;

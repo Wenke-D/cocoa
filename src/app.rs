@@ -18,11 +18,22 @@ use serde::{Deserialize, Serialize};
 use crate::backend::{
     BackendSnapshot, CancelTarget, DemoEntityKind, MockBackend, PrototypeBackend,
 };
+use crate::coco::{Coco, Kind, RefreshReport, ReportMode, Status};
 use crate::model::{EntityId, ReportState, RunId, RunStatus};
 use crate::navigation::{Overlay, Route, SubmitState};
+use crate::ui::coco::state::{CocoCommand, CocoOverlay, CocoRoute, CocoUiState};
 
 /// Working title. The final product name is undecided.
 pub const APP_TITLE: &str = "Experiment Pipeline Manager";
+
+/// Which backend the app is driving: the deterministic mock prototype or the
+/// real coco engine over experiment folders.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AppMode {
+    #[default]
+    Prototype,
+    Coco,
+}
 
 /// User theme choice. Mirrors [`egui::ThemePreference`] but is owned by this
 /// crate so it can be persisted without enabling egui's `serde` feature.
@@ -144,6 +155,7 @@ pub struct TransientMessage {
 #[serde(default)]
 pub struct UiState {
     pub route: Route,
+    pub mode: AppMode,
     pub theme: ThemePreference,
     pub sidebar_width: f32,
     pub sidebar_view: SidebarView,
@@ -180,6 +192,7 @@ impl Default for UiState {
     fn default() -> Self {
         Self {
             route: Route::default(),
+            mode: AppMode::default(),
             theme: ThemePreference::default(),
             sidebar_width: SIDEBAR_DEFAULT_WIDTH,
             sidebar_view: SidebarView::default(),
@@ -258,6 +271,7 @@ pub enum AppCommand {
     Refresh,
     RetryQuery(RunId),
     OpenReportExternally(RunId),
+    SwitchMode(AppMode),
     Notify(String),
 }
 
@@ -278,6 +292,10 @@ impl ViewCtx<'_> {
 pub struct ExperimentApp {
     backend: Box<dyn PrototypeBackend>,
     pub ui: UiState,
+    /// The real engine. `None` only when the private store could not be
+    /// loaded; coco mode then shows an explanatory page.
+    coco: Option<Coco>,
+    coco_ui: CocoUiState,
     /// A submitted start, performed on the next frame.
     ///
     /// The mock is synchronous, so without this the `Starting…` state of §15.4
@@ -297,10 +315,19 @@ impl ExperimentApp {
         ui.sanitize();
         crate::ui::theme::install(&cc.egui_ctx);
         ui.theme.apply(&cc.egui_ctx);
+        let coco = match Coco::new(default_store_path()) {
+            Ok(coco) => Some(coco),
+            Err(error) => {
+                log::warn!("coco engine failed to start: {error}");
+                None
+            }
+        };
 
         Self {
             backend: Box::new(MockBackend::new(Local::now())),
             ui,
+            coco,
+            coco_ui: CocoUiState::default(),
             pending_start: None,
             pending_url: None,
         }
@@ -311,6 +338,8 @@ impl ExperimentApp {
         Self {
             backend,
             ui: UiState::default(),
+            coco: None,
+            coco_ui: CocoUiState::default(),
             pending_start: None,
             pending_url: None,
         }
@@ -468,6 +497,8 @@ impl ExperimentApp {
 
             AppCommand::OpenReportExternally(run_id) => self.open_report_externally(&run_id),
 
+            AppCommand::SwitchMode(mode) => self.ui.mode = mode,
+
             AppCommand::Notify(text) => self.ui.notify(text),
         }
     }
@@ -500,6 +531,388 @@ impl ExperimentApp {
                     *submit_state = SubmitState::Failed(error.to_string());
                 }
             }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Coco mode
+    // ------------------------------------------------------------------
+
+    fn execute_coco(&mut self, command: CocoCommand) {
+        let Some(coco) = &mut self.coco else {
+            self.coco_ui
+                .notify_error("The coco engine is not available.");
+            return;
+        };
+
+        match command {
+            CocoCommand::Navigate(route) => self.coco_ui.route = route,
+
+            CocoCommand::Back => {
+                if let Some(parent) = parent_route(&self.coco_ui.route) {
+                    self.coco_ui.route = parent;
+                }
+            }
+
+            CocoCommand::OpenRegister => {
+                self.coco_ui.overlay = CocoOverlay::RegisterFolder;
+                self.coco_ui.register_error = None;
+            }
+
+            CocoCommand::Register => {
+                let path = self.coco_ui.register_path.trim().to_owned();
+                match coco.register(std::path::Path::new(&path)) {
+                    Ok(()) => {
+                        self.coco_ui.overlay = CocoOverlay::None;
+                        self.coco_ui.register_error = None;
+                        self.coco_ui.notify(format!("Registered {path}."));
+                        if let Ok(manifest) =
+                            crate::coco::Manifest::load(std::path::Path::new(&path))
+                        {
+                            self.coco_ui.route = match manifest.kind() {
+                                Kind::Job => CocoRoute::JobOverview {
+                                    path: std::path::PathBuf::from(&path),
+                                },
+                                Kind::Bench => CocoRoute::BenchOverview {
+                                    path: std::path::PathBuf::from(&path),
+                                },
+                            };
+                        }
+                    }
+                    Err(error) => self.coco_ui.register_error = Some(error.to_string()),
+                }
+            }
+
+            CocoCommand::Unregister { path } => match coco.unregister(&path) {
+                Ok(()) => {
+                    self.coco_ui
+                        .notify(format!("Removed {} from the library.", path.display()));
+                    if self.coco_ui.route.entity_path() == Some(&path) {
+                        self.coco_ui.route = CocoRoute::Library;
+                    }
+                }
+                Err(error) => self.coco_ui.notify_error(error.to_string()),
+            },
+
+            CocoCommand::OpenStartJob { path } => {
+                let fields = coco
+                    .job_manifest(&path)
+                    .map(|manifest| {
+                        declared_params(&manifest.render_params, &manifest.launch_params)
+                    })
+                    .unwrap_or_default();
+                self.coco_ui.overlay = CocoOverlay::StartJob {
+                    path,
+                    fields,
+                    submitting: false,
+                    error: None,
+                };
+            }
+
+            CocoCommand::FillLastArgs { path } => {
+                if let CocoOverlay::StartJob { fields, .. } = &mut self.coco_ui.overlay
+                    && let Ok(manifest) = coco.job_manifest(&path)
+                    && let Some(last) = coco.last_args().get(&manifest.name)
+                {
+                    for (name, value) in last {
+                        if fields.contains_key(name) {
+                            fields.insert(name.clone(), value.clone());
+                        }
+                    }
+                }
+            }
+
+            CocoCommand::SubmitStartJob { path } => {
+                let CocoOverlay::StartJob { fields, .. } = &mut self.coco_ui.overlay else {
+                    return;
+                };
+                let fields = fields.clone();
+                let manifest = match coco.job_manifest(&path) {
+                    Ok(manifest) => manifest,
+                    Err(error) => {
+                        self.coco_ui.overlay = CocoOverlay::StartJob {
+                            path: path.clone(),
+                            fields,
+                            submitting: false,
+                            error: Some(error.to_string()),
+                        };
+                        return;
+                    }
+                };
+                let render = split_fields(&fields, &manifest.render_params);
+                let launch = split_fields(&fields, &manifest.launch_params);
+                self.coco_ui.overlay = CocoOverlay::StartJob {
+                    path: path.clone(),
+                    fields: fields.clone(),
+                    submitting: true,
+                    error: None,
+                };
+                match coco.start_job(&path, render, launch) {
+                    Ok(run_id) => {
+                        self.coco_ui.overlay = CocoOverlay::None;
+                        self.coco_ui.notify(format!("Started run #{run_id}."));
+                        self.coco_ui.route = CocoRoute::JobRunDetail { path, run_id };
+                    }
+                    Err(error) => {
+                        self.coco_ui.overlay = CocoOverlay::StartJob {
+                            path,
+                            fields,
+                            submitting: false,
+                            error: Some(error.to_string()),
+                        };
+                    }
+                }
+            }
+
+            CocoCommand::OpenStartBench { path } => {
+                let fields = coco
+                    .bench_manifest(&path)
+                    .map(|manifest| declared_params(&manifest.plan_params, &[]))
+                    .unwrap_or_default();
+                self.coco_ui.overlay = CocoOverlay::StartBench {
+                    path,
+                    fields,
+                    plan: None,
+                    submitting: false,
+                    error: None,
+                };
+            }
+
+            CocoCommand::PlanBench { path } => {
+                let CocoOverlay::StartBench { fields, .. } = &mut self.coco_ui.overlay else {
+                    return;
+                };
+                let fields = fields.clone();
+                match coco.plan_bench(&path, fields.clone()) {
+                    Ok(instances) => {
+                        self.coco_ui.overlay = CocoOverlay::StartBench {
+                            path: path.clone(),
+                            fields,
+                            plan: Some(instances),
+                            submitting: false,
+                            error: None,
+                        };
+                    }
+                    Err(error) => {
+                        self.coco_ui.overlay = CocoOverlay::StartBench {
+                            path: path.clone(),
+                            fields,
+                            plan: None,
+                            submitting: false,
+                            error: Some(error.to_string()),
+                        };
+                    }
+                }
+            }
+
+            CocoCommand::DispatchBench { path } => {
+                let CocoOverlay::StartBench { fields, .. } = &mut self.coco_ui.overlay else {
+                    return;
+                };
+                let fields = fields.clone();
+                self.coco_ui.overlay = CocoOverlay::StartBench {
+                    path: path.clone(),
+                    fields: fields.clone(),
+                    plan: None,
+                    submitting: true,
+                    error: None,
+                };
+                match coco.start_bench(&path, fields.clone()) {
+                    Ok(start) => {
+                        self.coco_ui.overlay = CocoOverlay::None;
+                        self.coco_ui.notify(format!(
+                            "Bench run #{} dispatched {} member(s), {} launch failure(s).",
+                            start.run_id,
+                            start.members.len(),
+                            start.launch_failures.len()
+                        ));
+                        self.coco_ui.route = CocoRoute::BenchRunDetail {
+                            path,
+                            run_id: start.run_id,
+                        };
+                    }
+                    Err(error) => {
+                        self.coco_ui.overlay = CocoOverlay::StartBench {
+                            path,
+                            fields,
+                            plan: None,
+                            submitting: false,
+                            error: Some(error.to_string()),
+                        };
+                    }
+                }
+            }
+
+            CocoCommand::CancelRun { path, run_id } => {
+                self.coco_ui.overlay = CocoOverlay::ConfirmCancelRun { path, run_id };
+            }
+
+            CocoCommand::ConfirmCancelRun { path, run_id } => {
+                self.coco_ui.overlay = CocoOverlay::None;
+                match coco.cancel_run(&path, run_id) {
+                    Ok(()) => self.coco_ui.notify(format!("Run #{run_id} is cancelling.")),
+                    Err(error) => self.coco_ui.notify_error(error.to_string()),
+                }
+            }
+
+            CocoCommand::CancelBench { path, run_id } => {
+                self.coco_ui.overlay = CocoOverlay::ConfirmCancelBench { path, run_id };
+            }
+
+            CocoCommand::ConfirmCancelBench { path, run_id } => {
+                self.coco_ui.overlay = CocoOverlay::None;
+                match coco.cancel_bench(&path, run_id) {
+                    Ok(results) => {
+                        let cancelled = results.iter().filter(|r| r.ok).count();
+                        let failed = results.len() - cancelled;
+                        self.coco_ui.notify(format!(
+                            "Cancelling {cancelled} member(s){}.",
+                            if failed > 0 {
+                                format!("; {failed} failed")
+                            } else {
+                                String::new()
+                            }
+                        ));
+                    }
+                    Err(error) => self.coco_ui.notify_error(error.to_string()),
+                }
+            }
+
+            CocoCommand::ReportRun { path, run_id, mode } => {
+                match coco.report_run(&path, run_id, mode) {
+                    Ok(()) => self
+                        .coco_ui
+                        .notify(format!("Report for run #{run_id} is ready.")),
+                    Err(error) => self.coco_ui.notify_error(error.to_string()),
+                }
+            }
+
+            CocoCommand::OpenReport { path, run_id } => {
+                self.coco_ui.route = CocoRoute::ReportViewer { path, run_id };
+            }
+
+            CocoCommand::OpenHtmlReport { path, run_id } => {
+                let html_path = path.join("report").join(format!("{run_id}.html"));
+                match std::fs::read_to_string(&html_path) {
+                    Ok(html) => {
+                        let out = std::env::temp_dir().join(format!("coco-report-{run_id}.html"));
+                        match std::fs::write(&out, html) {
+                            Ok(()) => {
+                                self.pending_url = Some(format!("file://{}", encode_path(&out)));
+                                self.coco_ui
+                                    .notify("Opening the HTML report in your browser…");
+                            }
+                            Err(error) => self
+                                .coco_ui
+                                .notify_error(format!("Could not write the report: {error}")),
+                        }
+                    }
+                    Err(_) => self
+                        .coco_ui
+                        .notify_error("No HTML report is available for this run."),
+                }
+            }
+
+            CocoCommand::PollEntity { path } => {
+                let kind = coco.entities().into_iter().find_map(|view| {
+                    (view.path == path)
+                        .then_some(view.manifest)
+                        .and_then(|result| result.ok().map(|manifest| manifest.kind()))
+                });
+                match kind {
+                    Some(Kind::Job) => self.poll_job_entity(&path),
+                    Some(Kind::Bench) => {
+                        let report = coco.refresh();
+                        self.apply_refresh_report(&report, true);
+                    }
+                    None => self.coco_ui.notify_error("That folder is not registered."),
+                }
+            }
+
+            CocoCommand::RefreshAll => {
+                let report = coco.refresh();
+                self.apply_refresh_report(&report, true);
+            }
+
+            CocoCommand::CloseOverlay => self.coco_ui.overlay = CocoOverlay::None,
+
+            CocoCommand::SwitchToPrototype => self.ui.mode = AppMode::Prototype,
+
+            CocoCommand::Notify(text) => self.coco_ui.notify(text),
+        }
+    }
+
+    fn poll_job_entity(&mut self, path: &std::path::Path) {
+        let Some(coco) = &mut self.coco else {
+            return;
+        };
+        let polled = match coco.poll_job(path) {
+            Ok(report) => {
+                self.coco_ui.notify(format!(
+                    "Polled: {} status change(s).",
+                    report.changed.len()
+                ));
+                Ok(())
+            }
+            Err(error) => {
+                self.coco_ui.notify_error(error.to_string());
+                Err(())
+            }
+        };
+        let Ok(runs) = coco.job_runs(path) else {
+            return;
+        };
+        let mut reported = 0;
+        for view in runs {
+            if let Ok(record) = &view.record
+                && matches!(record.status, Status::Completed | Status::Analyzing)
+            {
+                reported += 1;
+                if let Err(error) = coco.report_run(path, view.run_id, ReportMode::Auto) {
+                    self.coco_ui.notify_error(error.to_string());
+                }
+            }
+        }
+        let _ = polled;
+        if reported > 0 {
+            self.coco_ui
+                .notify(format!("{reported} report(s) generated."));
+        }
+    }
+
+    fn apply_refresh_report(&mut self, report: &RefreshReport, manual: bool) {
+        let errors: Vec<String> = report
+            .poll_errors
+            .iter()
+            .chain(&report.report_errors)
+            .map(ToString::to_string)
+            .collect();
+        let changes = report.poll_changes.len() + report.reports_run;
+        if manual {
+            if errors.is_empty() {
+                self.coco_ui.notify(format!(
+                    "Refreshed: {changes} status change(s), {} report(s).",
+                    report.reports_run
+                ));
+            } else {
+                self.coco_ui.notify_error(summarize_errors(&errors));
+            }
+        } else if !errors.is_empty() && errors != self.coco_ui.last_refresh_errors {
+            self.coco_ui.notify_error(summarize_errors(&errors));
+        }
+        self.coco_ui.last_refresh_errors = errors;
+        self.coco_ui.last_refresh = Some(std::time::Instant::now());
+    }
+
+    fn recover_coco_route(&mut self) {
+        let Some(coco) = &self.coco else {
+            return;
+        };
+        let Some(path) = self.coco_ui.route.entity_path() else {
+            return;
+        };
+        if !coco.entities().iter().any(|view| &view.path == path) {
+            self.coco_ui.route = CocoRoute::Library;
         }
     }
 
@@ -559,6 +972,15 @@ impl eframe::App for ExperimentApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        match self.ui.mode {
+            AppMode::Prototype => self.prototype_ui(ui),
+            AppMode::Coco => self.coco_frame(ui),
+        }
+    }
+}
+
+impl ExperimentApp {
+    fn prototype_ui(&mut self, ui: &mut egui::Ui) {
         let now = Local::now();
         self.poll();
         self.backend.tick(now);
@@ -588,6 +1010,51 @@ impl eframe::App for ExperimentApp {
         self.recover_route();
         self.schedule_repaint(ui.ctx());
     }
+
+    /// One frame of the real-backend mode: auto-refresh the engine, render
+    /// from immutable reads, execute the collected commands, then schedule
+    /// the next tick.
+    fn coco_frame(&mut self, ui: &mut egui::Ui) {
+        if let Some(coco) = &mut self.coco {
+            let due = self
+                .coco_ui
+                .last_refresh
+                .map(|at| at.elapsed() >= Duration::from_secs(3))
+                .unwrap_or(true);
+            if due && !coco.entities().is_empty() {
+                let report = coco.refresh();
+                self.apply_refresh_report(&report, false);
+            }
+        }
+
+        let mut commands = Vec::new();
+        {
+            let coco = self.coco.as_ref();
+            let state = &mut self.coco_ui;
+            match coco {
+                Some(coco) => crate::ui::coco::show(ui, coco, state, &mut commands),
+                None => {
+                    egui::CentralPanel::default().show(ui, |ui| {
+                        ui.label("The coco engine is not available.");
+                        ui.label(
+                            "The private store could not be loaded. Check the logs for the reason.",
+                        );
+                    });
+                }
+            }
+        }
+
+        for command in commands {
+            self.execute_coco(command);
+        }
+
+        if let Some(url) = self.pending_url.take() {
+            ui.ctx().open_url(egui::OpenUrl::new_tab(url));
+        }
+
+        self.recover_coco_route();
+        ui.ctx().request_repaint_after(Duration::from_millis(500));
+    }
 }
 
 /// Percent-encode the few characters that make a `file://` URL ambiguous.
@@ -601,4 +1068,60 @@ fn encode_path(path: &std::path::Path) -> String {
             other => other.to_string(),
         })
         .collect()
+}
+
+/// The engine's default private store location (convention §5), overridable
+/// through `COCO_STORE_PATH` for development and tests.
+fn default_store_path() -> std::path::PathBuf {
+    if let Ok(store) = std::env::var("COCO_STORE_PATH") {
+        return std::path::PathBuf::from(store);
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        return std::path::PathBuf::from(home).join(".local/share/coco/store.json");
+    }
+    std::path::PathBuf::from("coco-store.json")
+}
+
+/// An empty map with exactly the declared parameter names (§2: no defaults,
+/// no prefill — the fields start empty).
+fn declared_params(
+    first: &[String],
+    second: &[String],
+) -> std::collections::BTreeMap<String, String> {
+    first
+        .iter()
+        .chain(second)
+        .map(|name| (name.clone(), String::new()))
+        .collect()
+}
+
+/// The subset of the form's fields declared for one parameter set.
+fn split_fields(
+    fields: &std::collections::BTreeMap<String, String>,
+    declared: &[String],
+) -> std::collections::BTreeMap<String, String> {
+    declared
+        .iter()
+        .filter_map(|name| fields.get(name).map(|value| (name.clone(), value.clone())))
+        .collect()
+}
+
+fn parent_route(route: &CocoRoute) -> Option<CocoRoute> {
+    match route {
+        CocoRoute::Library => None,
+        CocoRoute::JobOverview { .. } | CocoRoute::BenchOverview { .. } => Some(CocoRoute::Library),
+        CocoRoute::JobRunDetail { path, .. } => Some(CocoRoute::JobOverview { path: path.clone() }),
+        CocoRoute::BenchRunDetail { path, .. } => {
+            Some(CocoRoute::BenchOverview { path: path.clone() })
+        }
+        CocoRoute::ReportViewer { .. } => Some(CocoRoute::Library),
+    }
+}
+
+fn summarize_errors(errors: &[String]) -> String {
+    match errors {
+        [] => "No errors.".to_owned(),
+        [only] => only.clone(),
+        _ => format!("{} (and {} more)", errors[0], errors.len() - 1),
+    }
 }
