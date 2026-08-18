@@ -6,7 +6,6 @@
 
 use crate::app::{AppCommand, ViewCtx};
 use crate::backend::CancelTarget;
-use crate::model::{EntityId, ReportState, RunId, format_duration, format_relative};
 use crate::navigation::{ReportContext, Route};
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::section::Section;
@@ -14,6 +13,7 @@ use crate::ui::widgets::{
     breadcrumbs, dispatch_table, parameter_block, progress as progress_bar, status_badge,
 };
 use crate::ui::{space, text};
+use crate::view_model::{EntityId, ReportState, RunId, format_duration, format_relative};
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, bench_id: &EntityId, run_id: &RunId) {
     breadcrumbs::show(ctx, ui);
@@ -47,7 +47,7 @@ fn header(
     ctx: &mut ViewCtx,
     ui: &mut egui::Ui,
     bench_id: &EntityId,
-    bench_run: &crate::model::BenchRun,
+    bench_run: &crate::view_model::BenchRun,
 ) {
     let name = ctx.snapshot.entity_name(bench_id).to_owned();
 
@@ -85,7 +85,7 @@ fn header(
     status_badge::pill(ui, bench_run.display_status());
 }
 
-fn progress_summary(ctx: &mut ViewCtx, ui: &mut egui::Ui, bench_run: &crate::model::BenchRun) {
+fn progress_summary(ctx: &mut ViewCtx, ui: &mut egui::Ui, bench_run: &crate::view_model::BenchRun) {
     let now = ctx.now;
     let progress = ctx.snapshot.bench_progress(bench_run);
 
@@ -129,7 +129,7 @@ fn report_section(
     ctx: &mut ViewCtx,
     ui: &mut egui::Ui,
     bench_id: &EntityId,
-    bench_run: &crate::model::BenchRun,
+    bench_run: &crate::view_model::BenchRun,
 ) {
     Section::new("BENCH REPORT").show_heading(ui);
 

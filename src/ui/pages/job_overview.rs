@@ -4,11 +4,11 @@
 //! come first. The parameter field lives in a modal, never on this page.
 
 use crate::app::{AppCommand, ViewCtx};
-use crate::model::{Entity, JobRun};
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::section::Section;
 use crate::ui::widgets::{active_run_card, empty_state, run_history_table};
 use crate::ui::{space, text};
+use crate::view_model::{Entity, JobRun};
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity: &Entity) {
     header(ctx, ui, entity);

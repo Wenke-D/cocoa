@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 
 use crate::backend::CancelTarget;
-use crate::model::EntityId;
+use crate::view_model::EntityId;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum SubmitState {

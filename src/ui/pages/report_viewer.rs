@@ -17,7 +17,6 @@
 use std::sync::Arc;
 
 use crate::app::{AppCommand, ViewCtx};
-use crate::model::{ReportFormat, ReportState, RunId};
 use crate::navigation::ReportContext;
 use crate::ui::icons;
 use crate::ui::widgets::breadcrumbs;
@@ -25,6 +24,7 @@ use crate::ui::widgets::button::Button;
 use crate::ui::widgets::icon_button;
 use crate::ui::widgets::section::Section;
 use crate::ui::{space, text};
+use crate::view_model::{ReportFormat, ReportState, RunId};
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, context: &ReportContext, run_id: &RunId) {
     breadcrumbs::show(ctx, ui);

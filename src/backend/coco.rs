@@ -15,7 +15,7 @@ use chrono::{DateTime, Local};
 use crate::backend::snapshot::{BackendSnapshot, World};
 use crate::backend::traits::{AddedFolders, BackendError, CancelTarget, ExperimentBackend};
 use crate::coco::{BenchRecord, Coco, CocoError, Manifest, RunRecord, Status};
-use crate::model::{
+use crate::view_model::{
     BenchPlan, BenchPlanStep, BenchRun, Entity, EntityId, EntityKind, JobRun, ManifestState,
     QueryHealth, ReportFormat, ReportState, RunId, RunOrigin, RunStatus,
 };

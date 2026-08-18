@@ -13,9 +13,9 @@ pub mod pending;
 pub mod report_viewer;
 
 use crate::app::ViewCtx;
-use crate::model::EntityKind;
 use crate::navigation::Route;
 use crate::ui::widgets::breadcrumbs;
+use crate::view_model::EntityKind;
 
 /// Dispatch the current route to its page.
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {

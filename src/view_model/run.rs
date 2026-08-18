@@ -11,9 +11,9 @@
 use chrono::{DateTime, Local, TimeDelta};
 use serde::{Deserialize, Serialize};
 
-use crate::model::entity::EntityId;
-use crate::model::report::ReportState;
-use crate::model::status::{QueryHealth, RunStatus};
+use crate::view_model::entity::EntityId;
+use crate::view_model::report::ReportState;
+use crate::view_model::status::{QueryHealth, RunStatus};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct RunId(pub String);

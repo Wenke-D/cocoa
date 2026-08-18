@@ -14,13 +14,13 @@ use std::sync::Arc;
 use egui::text::{LayoutJob, TextFormat, TextWrapping};
 
 use crate::app::{AppCommand, SidebarView, ViewCtx};
-use crate::model::{Entity, EntityKind, RunStatus};
 use crate::navigation::Route;
 use crate::ui::icons;
 use crate::ui::space;
 use crate::ui::text;
 use crate::ui::theme::{self, metrics};
 use crate::ui::widgets;
+use crate::view_model::{Entity, EntityKind, RunStatus};
 
 /// Left edge of a top-level row's text, matching VS Code's tree indent.
 const ROW_INDENT: f32 = 20.0;

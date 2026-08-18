@@ -18,8 +18,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::backend::{BackendSnapshot, CancelTarget, CocoBackend, ExperimentBackend};
 use crate::coco::Coco;
-use crate::model::{EntityId, ReportState, RunId, RunStatus};
 use crate::navigation::{Overlay, Route, SubmitState};
+use crate::view_model::{EntityId, ReportState, RunId, RunStatus};
 
 /// Working title. The final product name is undecided.
 pub const APP_TITLE: &str = "Experiment Pipeline Manager";
@@ -524,7 +524,7 @@ impl ExperimentApp {
             Ok(run_id) => {
                 self.ui.overlay = Overlay::None;
                 self.ui.route = match kind {
-                    Some(crate::model::EntityKind::Bench) => Route::BenchRunDetail {
+                    Some(crate::view_model::EntityKind::Bench) => Route::BenchRunDetail {
                         bench_id: entity_id,
                         run_id,
                     },

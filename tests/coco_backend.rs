@@ -11,7 +11,7 @@ use chrono::Local;
 
 use experiment_manager::backend::{CancelTarget, CocoBackend, ExperimentBackend};
 use experiment_manager::coco::Coco;
-use experiment_manager::model::{EntityKind, RunId, RunStatus};
+use experiment_manager::view_model::{EntityKind, RunId, RunStatus};
 use tempfile::TempDir;
 
 fn copy_dir(src: &Path, dst: &Path) {

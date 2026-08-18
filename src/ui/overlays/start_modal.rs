@@ -6,13 +6,13 @@
 //! is an explicit button that fills the fields and stops there.
 
 use crate::app::{AppCommand, ViewCtx};
-use crate::model::EntityId;
 use crate::navigation::{Overlay, SubmitState};
 use crate::ui::overlays::modal_frame;
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::section::Section;
 use crate::ui::widgets::{form, surface};
 use crate::ui::{icons, space, text};
+use crate::view_model::EntityId;
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity_id: &EntityId) {
     let Some(entity) = ctx.snapshot.entity(entity_id).cloned() else {

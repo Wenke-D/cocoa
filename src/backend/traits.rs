@@ -10,7 +10,7 @@ use std::path::Path;
 use chrono::{DateTime, Local};
 
 use crate::backend::snapshot::BackendSnapshot;
-use crate::model::{EntityId, ReportState, RunId};
+use crate::view_model::{EntityId, ReportState, RunId};
 
 /// What the user asked to cancel.
 ///

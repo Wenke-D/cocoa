@@ -4,11 +4,11 @@
 //! Jobs it will dispatch. It reports what the last run actually did.
 
 use crate::app::{AppCommand, ViewCtx};
-use crate::model::{BenchRun, Entity};
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::section::Section;
 use crate::ui::widgets::{active_run_card, empty_state, run_history_table};
 use crate::ui::{space, text};
+use crate::view_model::{BenchRun, Entity};
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity: &Entity) {
     header(ctx, ui, entity);

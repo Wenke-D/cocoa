@@ -13,7 +13,7 @@
 
 use egui::{Color32, CornerRadius, FontFamily, FontId, Margin, Stroke, TextStyle};
 
-use crate::model::{DisplayStatus, RunStatus};
+use crate::view_model::{DisplayStatus, RunStatus};
 
 /// `0xRRGGBB` literal, so the constants below can be read against VS Code's
 /// theme JSON character for character.

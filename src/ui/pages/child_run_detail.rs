@@ -6,11 +6,11 @@
 //! link to the Job rather than quietly moving the selection to it.
 
 use crate::app::{AppCommand, ViewCtx};
-use crate::model::{EntityId, RunId};
 use crate::navigation::ReportContext;
 use crate::ui::widgets::breadcrumbs;
 use crate::ui::widgets::run_detail::{self, Surround};
 use crate::ui::{space, text};
+use crate::view_model::{EntityId, RunId};
 
 pub fn show(
     ctx: &mut ViewCtx,

@@ -9,9 +9,9 @@
 //! itself.
 
 use crate::app::{AppCommand, ViewCtx};
-use crate::model::format_relative;
 use crate::ui::icons;
 use crate::ui::theme::{self, metrics};
+use crate::view_model::format_relative;
 
 /// Horizontal padding inside one status bar item.
 const PADDING: f32 = 6.0;

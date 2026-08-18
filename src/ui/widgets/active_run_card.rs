@@ -5,11 +5,11 @@
 
 use crate::app::{AppCommand, ViewCtx};
 use crate::backend::CancelTarget;
-use crate::model::{BenchRun, JobRun, RunOrigin, format_duration};
 use crate::navigation::Route;
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::{parameter_block, progress, status_badge, surface};
 use crate::ui::{space, text};
+use crate::view_model::{BenchRun, JobRun, RunOrigin, format_duration};
 
 /// A card for one active Job run.
 pub fn job_card(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun) {

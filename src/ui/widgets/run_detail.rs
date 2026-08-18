@@ -7,12 +7,14 @@
 
 use crate::app::{AppCommand, ViewCtx};
 use crate::backend::CancelTarget;
-use crate::model::{JobRun, QueryHealth, ReportState, RunOrigin, format_duration, format_relative};
 use crate::navigation::{ReportContext, Route};
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::section::Section;
 use crate::ui::widgets::{form, parameter_block, status_badge, surface};
 use crate::ui::{space, text, theme};
+use crate::view_model::{
+    JobRun, QueryHealth, ReportState, RunOrigin, format_duration, format_relative,
+};
 
 /// Page-specific trimmings around the shared facts.
 pub struct Surround {
@@ -180,7 +182,7 @@ fn status_section(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun) {
             });
         }
 
-        _ if run.status == crate::model::RunStatus::Failed => {
+        _ if run.status == crate::view_model::RunStatus::Failed => {
             surface::callout(ui, theme::Level::Error, |ui| {
                 ui.label(text::strong("Failed"));
                 ui.add_space(space::NORMAL);

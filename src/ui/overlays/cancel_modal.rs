@@ -5,10 +5,10 @@
 
 use crate::app::{AppCommand, ViewCtx};
 use crate::backend::CancelTarget;
-use crate::model::format_duration;
 use crate::ui::overlays::modal_frame;
 use crate::ui::widgets::button::Button;
 use crate::ui::{space, text};
+use crate::view_model::format_duration;
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, target: &CancelTarget, error: Option<&str>) {
     let now = ctx.now;

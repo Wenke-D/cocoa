@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::status::ManifestState;
+use crate::view_model::status::ManifestState;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct EntityId(pub String);

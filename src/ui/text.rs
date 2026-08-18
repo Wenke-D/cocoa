@@ -12,8 +12,8 @@
 
 use egui::RichText;
 
-use crate::model::DisplayStatus;
 use crate::ui::theme;
+use crate::view_model::DisplayStatus;
 
 /// The size VS Code gives the workbench's own chrome: panel titles, section
 /// twisties, the notes beside them. Distinct from the content type scale, and

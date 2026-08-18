@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::backend::World;
-use crate::model::{EntityId, RunId};
+use crate::view_model::{EntityId, RunId};
 
 /// Where a report was opened from, so the viewer can build a trail back.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

@@ -3,8 +3,8 @@
 //! No emoji — their rendering varies across operating systems (specification
 //! §23). The label is always present, so the badge never relies on colour alone.
 
-use crate::model::{DisplayStatus, RunStatus};
 use crate::ui::{text, theme};
+use crate::view_model::{DisplayStatus, RunStatus};
 
 const MARKER_RADIUS: f32 = 4.0;
 

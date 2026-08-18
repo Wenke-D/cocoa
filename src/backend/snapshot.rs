@@ -10,7 +10,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Local};
 use serde::Serialize;
 
-use crate::model::{
+use crate::view_model::{
     BenchProgress, BenchRun, Entity, EntityId, EntityKind, JobRun, RunId, RunStatus, progress_of,
 };
 

@@ -6,12 +6,12 @@
 use egui_extras::{Column, TableBuilder};
 
 use crate::app::{AppCommand, ViewCtx};
-use crate::model::{BenchRun, JobRun, RunOrigin, format_duration};
 use crate::navigation::{ReportContext, Route};
 use crate::ui::icons;
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::{icon_button, parameter_block, rows_are_clickable, status_badge};
 use crate::ui::{space, text};
+use crate::view_model::{BenchRun, JobRun, RunOrigin, format_duration};
 
 const ROW_HEIGHT: f32 = 24.0;
 const HEADER_HEIGHT: f32 = 22.0;

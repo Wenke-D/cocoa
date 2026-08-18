@@ -19,8 +19,8 @@
 //! field* background. On the light theme that is a pale blue bar on a white
 //! track, and the track is the same white as the page behind it.
 
-use crate::model::RunStatus;
 use crate::ui::theme;
+use crate::view_model::RunStatus;
 
 /// Thin enough to read as a rule under the counts rather than as a widget
 /// competing with them.

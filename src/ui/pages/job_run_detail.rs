@@ -3,10 +3,10 @@
 //! Reached from a Job's own history. The Library keeps the Job selected.
 
 use crate::app::ViewCtx;
-use crate::model::{EntityId, RunId};
 use crate::navigation::ReportContext;
 use crate::ui::widgets::breadcrumbs;
 use crate::ui::widgets::run_detail::{self, Surround};
+use crate::view_model::{EntityId, RunId};
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, job_id: &EntityId, run_id: &RunId) {
     breadcrumbs::show(ctx, ui);
