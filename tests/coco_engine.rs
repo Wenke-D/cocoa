@@ -361,14 +361,17 @@ fn unknown_poll_status_is_ignored_with_a_warning() {
 }
 
 #[test]
-fn broken_manifest_stays_registered_and_shown() {
+fn a_manifest_that_breaks_later_stays_registered_and_shown() {
     let dir = TempDir::new().unwrap();
-    let folder = dir.path().join("broken");
-    fs::create_dir_all(&folder).unwrap();
-    write(&folder, "coco.toml", "kind = \"pipeline\"\nname = \"x\"\n");
+    let folder = job_folder(&dir, "solver");
 
     let mut coco = engine(&dir);
     coco.register(&folder).unwrap();
+
+    // Someone edits the manifest afterwards. The entity is one the user knows
+    // and has run, so it stays listed carrying the error (specification §11.5).
+    write(&folder, "coco.toml", "kind = \"pipeline\"\nname = \"solver\"\n");
+
     let views = coco.entities();
     assert_eq!(views.len(), 1);
     assert!(views[0].manifest.is_err());
@@ -377,6 +380,22 @@ fn broken_manifest_stays_registered_and_shown() {
         .start_job(&folder, params(&[]), params(&[]))
         .unwrap_err();
     assert!(err.to_string().contains("kind"), "{err}");
+}
+
+/// The other side of that rule: a manifest already broken when the folder is
+/// picked never registers at all (specification §11.5).
+#[test]
+fn a_manifest_already_broken_is_refused_at_registration() {
+    let dir = TempDir::new().unwrap();
+    let folder = dir.path().join("broken");
+    fs::create_dir_all(&folder).unwrap();
+    write(&folder, "coco.toml", "kind = \"pipeline\"\nname = \"x\"\n");
+
+    let mut coco = engine(&dir);
+    let err = coco.register(&folder).unwrap_err();
+
+    assert!(err.to_string().contains("kind"), "{err}");
+    assert!(coco.entities().is_empty(), "a refused folder registered");
 }
 
 #[test]
