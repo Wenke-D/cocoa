@@ -45,7 +45,7 @@ fn header(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity: &Entity) {
             if let Some(reason) = &blocked {
                 response.on_hover_text(reason);
             } else if response.clicked() {
-                ctx.push(AppCommand::OpenStartModal(entity.id.clone()));
+                ctx.push(AppCommand::OpenStartPage(entity.id.clone()));
             }
         });
     });

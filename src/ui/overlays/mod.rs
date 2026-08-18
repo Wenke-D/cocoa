@@ -5,7 +5,6 @@
 
 pub mod cancel_modal;
 pub mod folder_report;
-pub mod start_modal;
 
 use crate::app::{AppCommand, ViewCtx};
 use crate::navigation::Overlay;
@@ -16,7 +15,6 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
 
     match overlay {
         Overlay::None => {}
-        Overlay::StartRun { entity_id, .. } => start_modal::show(ctx, ui, &entity_id),
         Overlay::ConfirmCancel { target, error } => {
             cancel_modal::show(ctx, ui, &target, error.as_deref())
         }

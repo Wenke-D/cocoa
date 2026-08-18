@@ -11,6 +11,7 @@ pub mod job_overview;
 pub mod job_run_detail;
 pub mod pending;
 pub mod report_viewer;
+pub mod start_run;
 
 use crate::app::ViewCtx;
 use crate::navigation::Route;
@@ -37,6 +38,8 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
                 EntityKind::Bench => bench_overview::show(ctx, ui, &entity),
             }
         }
+
+        Route::StartRun { entity_id } => start_run::show(ctx, ui, &entity_id),
 
         Route::JobRunDetail { job_id, run_id } => job_run_detail::show(ctx, ui, &job_id, &run_id),
 

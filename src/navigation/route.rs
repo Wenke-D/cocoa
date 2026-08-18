@@ -41,6 +41,16 @@ pub enum Route {
         entity_id: EntityId,
     },
 
+    /// The start form for one experiment (specification §15).
+    ///
+    /// A place, not an overlay: the form is a step under the experiment, and
+    /// the breadcrumbs already say so. Only the identity lives here — what the
+    /// user has typed is a draft in `UiState`, so a route stays something you
+    /// can be at rather than something you are part-way through.
+    StartRun {
+        entity_id: EntityId,
+    },
+
     JobRunDetail {
         job_id: EntityId,
         run_id: RunId,
@@ -89,7 +99,7 @@ impl Route {
     pub fn selected_entity(&self) -> Option<&EntityId> {
         match self {
             Self::EmptyExplorer => None,
-            Self::EntityOverview { entity_id } => Some(entity_id),
+            Self::EntityOverview { entity_id } | Self::StartRun { entity_id } => Some(entity_id),
             Self::JobRunDetail { job_id, .. } => Some(job_id),
             Self::BenchRunDetail { bench_id, .. } | Self::BenchChildRunDetail { bench_id, .. } => {
                 Some(bench_id)
@@ -165,6 +175,19 @@ impl Route {
                 label: entity_label(entity_id),
                 route: None,
             }],
+
+            Self::StartRun { entity_id } => vec![
+                Crumb {
+                    label: entity_label(entity_id),
+                    route: Some(Self::EntityOverview {
+                        entity_id: entity_id.clone(),
+                    }),
+                },
+                Crumb {
+                    label: "Start".to_owned(),
+                    route: None,
+                },
+            ],
 
             Self::JobRunDetail { job_id, run_id } => vec![
                 Crumb {
@@ -307,7 +330,7 @@ impl Route {
                 }
             }
 
-            Route::EntityOverview { entity_id } => world
+            Route::EntityOverview { entity_id } | Route::StartRun { entity_id } => world
                 .entity(entity_id)
                 .is_none()
                 .then(|| missing_entity(entity_id)),

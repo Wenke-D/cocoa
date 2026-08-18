@@ -55,6 +55,37 @@ impl ThemePreference {
     }
 }
 
+/// The Start page's working state (specification §15).
+///
+/// One draft at a time. Leaving the page discards it, which is what closing the
+/// modal used to do.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct StartDraft {
+    /// Whose form this is. A draft for another experiment is stale and is
+    /// replaced rather than shown.
+    pub entity_id: Option<EntityId>,
+    /// One value per declared parameter, by name (convention §2).
+    pub fields: BTreeMap<String, String>,
+    pub submit_state: SubmitState,
+}
+
+impl StartDraft {
+    /// The draft for `entity_id`, or a fresh one if the last draft was another
+    /// experiment's.
+    pub fn open(&mut self, entity_id: &EntityId, parameter_names: &[String]) {
+        if self.entity_id.as_ref() != Some(entity_id) {
+            *self = Self {
+                entity_id: Some(entity_id.clone()),
+                fields: parameter_names
+                    .iter()
+                    .map(|name| (name.clone(), String::new()))
+                    .collect(),
+                submit_state: SubmitState::Idle,
+            };
+        }
+    }
+}
+
 /// Which view the activity bar has open in the sidebar.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SidebarView {
@@ -151,6 +182,14 @@ pub struct UiState {
 
     #[serde(skip)]
     pub overlay: Overlay,
+    /// What the user has typed on the Start page, and how a submission went.
+    ///
+    /// Not in the route: a route is a place, and half a filled-in form is not
+    /// one. Not persisted either — the values are gone on relaunch, so
+    /// restoring the page they belonged to would only show an empty form
+    /// somebody did not ask for.
+    #[serde(skip)]
+    pub start_draft: StartDraft,
     #[serde(skip)]
     pub run_search: String,
     #[serde(skip)]
@@ -181,6 +220,7 @@ impl Default for UiState {
             jobs_section_open: true,
             status_filter: StatusFilter::default(),
             overlay: Overlay::None,
+            start_draft: StartDraft::default(),
             run_search: String::new(),
             transient_message: None,
             focus_parameter_field: false,
@@ -194,7 +234,11 @@ impl Default for UiState {
 }
 
 impl UiState {
-    fn sanitize(&mut self) {
+    /// What a restored `UiState` becomes before it is used.
+    ///
+    /// Public so a test can check it without an eframe context: what a relaunch
+    /// does with a persisted route is behaviour, not an implementation detail.
+    pub fn sanitize(&mut self) {
         if !self.sidebar_width.is_finite() {
             self.sidebar_width = SIDEBAR_DEFAULT_WIDTH;
         }
@@ -203,6 +247,14 @@ impl UiState {
             .clamp(SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH);
         if self.route.is_report() {
             self.route = Route::EmptyExplorer;
+        }
+        // A route is restored on launch and a Start draft is not, so restoring
+        // the page would open an empty form nobody asked for. Land on the
+        // experiment it belonged to (specification §15).
+        if let Route::StartRun { entity_id } = &self.route {
+            self.route = Route::EntityOverview {
+                entity_id: entity_id.clone(),
+            };
         }
     }
 
@@ -228,7 +280,7 @@ pub enum AppCommand {
     Navigate(Route),
     NavigateBack,
 
-    OpenStartModal(EntityId),
+    OpenStartPage(EntityId),
     FillLastArgs(EntityId),
     SubmitStart {
         entity_id: EntityId,
@@ -357,34 +409,26 @@ impl ExperimentApp {
                 }
             }
 
-            AppCommand::OpenStartModal(entity_id) => {
+            AppCommand::OpenStartPage(entity_id) => {
                 let snapshot = self.experiments.snapshot();
-                let fields = snapshot
+                let names = snapshot
                     .entity(&entity_id)
-                    .map(|entity| {
-                        entity
-                            .parameter_names
-                            .iter()
-                            .map(|name| (name.clone(), String::new()))
-                            .collect()
-                    })
+                    .map(|entity| entity.parameter_names.clone())
                     .unwrap_or_default();
-                self.ui.overlay = Overlay::StartRun {
-                    entity_id,
-                    fields,
-                    submit_state: SubmitState::Idle,
-                };
+                self.ui.start_draft.open(&entity_id, &names);
+                self.ui.route = Route::StartRun { entity_id };
                 self.ui.focus_parameter_field = true;
             }
 
             AppCommand::FillLastArgs(entity_id) => {
-                if let Overlay::StartRun { fields, .. } = &mut self.ui.overlay {
-                    let snapshot = self.experiments.snapshot();
-                    if let Some(entity) = snapshot.entity(&entity_id) {
-                        for (name, value) in &entity.last_used {
-                            if fields.contains_key(name) {
-                                fields.insert(name.clone(), value.clone());
-                            }
+                let snapshot = self.experiments.snapshot();
+                if let Some(entity) = snapshot.entity(&entity_id) {
+                    for (name, value) in &entity.last_used {
+                        if self.ui.start_draft.fields.contains_key(name) {
+                            self.ui
+                                .start_draft
+                                .fields
+                                .insert(name.clone(), value.clone());
                         }
                     }
                 }
@@ -394,9 +438,7 @@ impl ExperimentApp {
                 entity_id,
                 parameters,
             } => {
-                if let Overlay::StartRun { submit_state, .. } = &mut self.ui.overlay {
-                    *submit_state = SubmitState::Submitting;
-                }
+                self.ui.start_draft.submit_state = SubmitState::Submitting;
                 self.pending_start = Some((entity_id, parameters));
             }
 
@@ -536,7 +578,10 @@ impl ExperimentApp {
 
         match self.experiments.start(&entity_id, parameters) {
             Ok(run_id) => {
-                self.ui.overlay = Overlay::None;
+                // The draft did its job. Discarding it here means coming back
+                // to Start for this experiment opens the empty form §15.3 asks
+                // for, rather than the values that already ran.
+                self.ui.start_draft = StartDraft::default();
                 self.ui.route = match kind {
                     Some(crate::view_model::EntityKind::Bench) => Route::BenchRunDetail {
                         bench_id: entity_id,
@@ -549,9 +594,7 @@ impl ExperimentApp {
                 };
             }
             Err(error) => {
-                if let Overlay::StartRun { submit_state, .. } = &mut self.ui.overlay {
-                    *submit_state = SubmitState::Failed(error.explain());
-                }
+                self.ui.start_draft.submit_state = SubmitState::Failed(error.explain());
             }
         }
     }

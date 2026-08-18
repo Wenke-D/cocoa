@@ -11,12 +11,11 @@
 //!
 //! Surfaces: `job` (default) | `job-active` (the overview with a run in
 //! flight, which is what `design/workbench-*.png` document) | `run-detail` |
-//! `start-modal` | `start-modal-last` (one run already started, so the modal
-//! offers its history action) | `bench-modal` | `cancel-modal` |
+//! `start-page` | `start-page-last` (one run already started, so the page
+//! offers its history action) | `bench-start` | `cancel-modal` |
 //! `folder-report` (what an Add Folder pick refused) | `bench-plan-failed`
 //! (a Bench start refused because several of its plan's calls are invalid).
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use coco::adapter::{AddedFolders, CancelTarget};
@@ -104,7 +103,7 @@ fn arrange(app: &mut ExperimentApp, surface: &str) {
     // Surfaces that need something to have run: a modal only offers its
     // history action afterwards, and the overview only shows its active-run
     // card, side bar badge, and status bar count while one is in flight.
-    if matches!(surface, "start-modal-last" | "run-detail" | "job-active") {
+    if matches!(surface, "start-page-last" | "run-detail" | "job-active") {
         let parameters = job
             .parameter_names
             .iter()
@@ -118,16 +117,10 @@ fn arrange(app: &mut ExperimentApp, surface: &str) {
     }
 
     match surface {
-        "start-modal" | "start-modal-last" | "bench-modal" => {
-            let fields: BTreeMap<String, String> = job
-                .parameter_names
-                .iter()
-                .map(|name| (name.clone(), String::new()))
-                .collect();
-            app.ui.overlay = Overlay::StartRun {
+        "start-page" | "start-page-last" | "bench-start" => {
+            app.ui.start_draft.open(&job.id, &job.parameter_names);
+            app.ui.route = Route::StartRun {
                 entity_id: job.id.clone(),
-                fields,
-                submit_state: SubmitState::Idle,
             };
         }
         "run-detail" => {
@@ -146,26 +139,26 @@ fn arrange(app: &mut ExperimentApp, surface: &str) {
         // A Bench start turned down by plan validation, with the shape that
         // matters: several calls at fault, listed together (§15.4).
         "bench-plan-failed" => {
-            let fields: BTreeMap<String, String> = job
+            app.ui.start_draft.open(&job.id, &job.parameter_names);
+            app.ui.start_draft.fields = job
                 .parameter_names
                 .iter()
                 .map(|name| (name.clone(), "1".to_owned()))
                 .collect();
-            app.ui.overlay = Overlay::StartRun {
+            app.ui.route = Route::StartRun {
                 entity_id: job.id.clone(),
-                fields,
-                submit_state: SubmitState::Failed(
-                    coco::adapter::ExperimentError::InvalidPlan {
-                        calls: 12,
-                        problems: vec![
-                            "call 2: `solver-xl` is not a registered job".to_owned(),
-                            "call 5: job `solver-gpu` — missing `gpu`, extra `device`".to_owned(),
-                            "call 9: `solver-xl` is not a registered job".to_owned(),
-                        ],
-                    }
-                    .explain(),
-                ),
             };
+            app.ui.start_draft.submit_state = SubmitState::Failed(
+                coco::adapter::ExperimentError::InvalidPlan {
+                    calls: 12,
+                    problems: vec![
+                        "call 2: `solver-xl` is not a registered job".to_owned(),
+                        "call 5: job `solver-gpu` — missing `gpu`, extra `device`".to_owned(),
+                        "call 9: `solver-xl` is not a registered job".to_owned(),
+                    ],
+                }
+                .explain(),
+            );
         }
 
         // The mix the refusal modal exists for: one pick that registered some

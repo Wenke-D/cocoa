@@ -32,7 +32,7 @@ The prototype must allow a user to:
 
 1. Select a Job or Bench.
 2. See its current runs and complete run history.
-3. Open a Start modal.
+3. Open the Start page.
 4. Enter a free-form parameter string.
 5. Start a simulated run.
 6. Monitor its status.
@@ -110,7 +110,7 @@ A Bench run has:
 - A Bench run ID.
 - Start time.
 - Optional end time.
-- Input parameter string (the string the user typed in the Start modal).
+- Input parameter string (the string the user typed on the Start page).
 - The plan returned at start time.
 - Aggregate execution status.
 - Query-health status.
@@ -176,7 +176,7 @@ Before a Bench run begins, validate the returned plan:
 - Every referenced Job's manifest must be `Valid`.
 
 If validation fails, the Bench does not start and no run is dispatched. Report
-the failure inline in the Start modal, naming the offending call and Job. See
+the failure inline on the Start page, naming every offending call and Job. See
 §15.4 and §31.
 
 Validation is all-or-nothing. Never dispatch a partial plan.
@@ -243,7 +243,7 @@ The first implementation must include:
 - No permanent right-side inspector.
 - Job overview.
 - Bench overview.
-- Start modal.
+- Start page.
 - Cancel confirmation modal.
 - Job run-detail page.
 - Bench run-detail page.
@@ -612,6 +612,12 @@ pub enum Route {
         entity_id: EntityId,
     },
 
+    /// The start form (§15). Only the identity: what the user has typed is a
+    /// draft held outside the route.
+    StartRun {
+        entity_id: EntityId,
+    },
+
     JobRunDetail {
         job_id: EntityId,
         run_id: RunId,
@@ -642,17 +648,15 @@ Use a separate overlay enum:
 pub enum Overlay {
     None,
 
-    StartRun {
-        entity_id: EntityId,
-        parameter_draft: String,
-        submit_state: SubmitState,
-    },
-
     ConfirmCancel {
         target: CancelTarget,
     },
 
-    AddDemoFolder,
+    /// What an Add Folder pick refused (§11.5).
+    AddFolderReport {
+        picked: String,
+        outcome: AddedFolders,
+    },
 
     Settings,
 }
@@ -1233,15 +1237,26 @@ Clicking the row opens Bench Run Detail.
 
 ---
 
-## 15. Start Modal
+## 15. Start Page
 
-Starting must happen in a centered modal.
+Starting must happen on a page of its own, reached from the experiment and
+addressed as `experiment > Start` in the breadcrumbs (§9.2).
 
 Do not permanently display the parameter field on the overview page.
 
+A start is a piece of work, not a dialog: it has parameters to fill, a check to
+read, and a failure worth laying out. Earlier drafts of this specification put
+it in a centered modal on the principle that a modal is a temporary action and
+never a place (§9). The principle stands and the classification was wrong —
+this one is a place, the trail says where it sits, and the failure it can
+produce is a list rather than a sentence (§15.4).
+
+Cancel confirmation stays a modal (§16): that one really is a temporary
+question, answered and gone.
+
 ### 15.1 Contents
 
-The Start modal contains:
+The Start page contains:
 
 - The experiment's name as the title, under a small `START JOB` / `START BENCH`
   type label — the identity block an entity page uses (§13.1). The title takes
@@ -1254,10 +1269,14 @@ The Start modal contains:
   `PARAMETERS` row — the shape the sidebar's title row already uses.
 - Active-run notice when applicable, informational only and never blocking.
 - Inline validation error.
-- Cancel button.
+- Back button, returning to the experiment's overview.
 - Primary Start button.
 
-For a Bench, the modal cannot preview the plan — the plan does not exist until
+The form keeps a measure of its own rather than filling the editor's width: a
+declared parameter is a short value, and a field the width of the window invites
+a paragraph.
+
+For a Bench, the page cannot preview the plan — the plan does not exist until
 Start is pressed. Do not display a fabricated job list.
 
 Example:
@@ -1276,6 +1295,12 @@ Cancel                                            Start Job
 
 Every field opens empty, and `[history]` is the icon action that fills them from
 the last run (§15.3). Start stays disabled until each one has a value.
+
+What the user has typed is a draft held outside the route: a route is a place,
+and a half-filled form is not one. Leaving the page discards the draft, and so
+does a start that succeeds — coming back to Start opens the empty form §15.3
+asks for. A restored route on relaunch lands on the experiment's overview
+instead of a form whose values are gone.
 
 ### 15.2 Parameter Semantics
 
@@ -1365,7 +1390,8 @@ Linux: Control + Enter
 
 to submit.
 
-`Escape` closes the modal unless submission is in progress.
+`Escape` does nothing here. A page is left, not dismissed: the Back button and
+the breadcrumb above it both say where to.
 
 Do not use plain Enter when focus behavior could cause accidental launches.
 
@@ -1963,7 +1989,7 @@ Full path text must be selectable.
 Required:
 
 ```text
-Command/Control + Enter   Start from Start modal
+Command/Control + Enter   Start from the Start page
 Escape                    Close current modal
 Command/Control + F       Focus report search when in report viewer
 ```
@@ -1978,7 +2004,7 @@ F5                        Manual refresh
 
 Focus requirements:
 
-- Opening Start modal focuses the parameter field.
+- Opening the Start page focuses the parameter field.
 - Opening report search focuses the search field only when explicitly invoked.
 - Closing a modal returns focus to the action that opened it when practical.
 - Keyboard focus must not remain trapped after a modal closes.
@@ -2320,7 +2346,7 @@ Consequences:
   dispatched by one or more Benches.
 - Cancelling any run affects only that run.
 
-When an active run already exists, the Start modal may show an informational
+When an active run already exists, the Start page may show an informational
 notice. It must not block submission:
 
 ```text
@@ -2338,7 +2364,7 @@ Errors must be shown near the relevant operation.
 
 ### Start Failure
 
-- Keep Start modal open.
+- Stay on the Start page.
 - Show inline error.
 - Preserve parameter input.
 - Allow retry.
@@ -2469,7 +2495,6 @@ src/
 │   │
 │   ├── overlays/
 │   │   ├── mod.rs
-│   │   ├── start_modal.rs
 │   │   ├── cancel_modal.rs
 │   │   ├── add_demo_folder.rs
 │   │   └── settings.rs
@@ -2852,7 +2877,7 @@ Implement in this order.
 
 ### Phase 5: Modals
 
-- Start modal.
+- Start page.
 - Parameter handling.
 - Cancel confirmation.
 - Add Demo Folder.
@@ -2951,7 +2976,7 @@ The final prototype delivery must include:
 9. Linux build verification or documented limitation.
 10. Screenshots of:
     - Job overview, including a Bench-sourced history row.
-    - Start modal.
+    - Start page.
     - Job run detail.
     - Bench run detail with the dispatch table.
     - A parameter-sweep Bench run.

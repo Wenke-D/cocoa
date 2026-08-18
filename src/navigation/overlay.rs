@@ -3,10 +3,7 @@
 //! Kept out of [`crate::navigation::Route`] deliberately (specification §9): a
 //! modal is a temporary action, not a place. Overlay state is never persisted.
 
-use std::collections::BTreeMap;
-
 use crate::adapter::{AddedFolders, CancelTarget, Explained};
-use crate::view_model::EntityId;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub enum SubmitState {
@@ -26,13 +23,6 @@ pub enum SubmitState {
 pub enum Overlay {
     #[default]
     None,
-
-    StartRun {
-        entity_id: EntityId,
-        /// One field per declared parameter, by name (convention §2).
-        fields: BTreeMap<String, String>,
-        submit_state: SubmitState,
-    },
 
     ConfirmCancel {
         target: CancelTarget,
@@ -59,15 +49,9 @@ impl Overlay {
         !matches!(self, Self::None)
     }
 
-    /// Escape and backdrop clicks must not interrupt an in-flight submission
-    /// (specification §15.5).
+    /// Every overlay left is dismissible: the one that was not — a Start with a
+    /// submission in flight — is a page now, and a page is not dismissed.
     pub fn is_dismissible(&self) -> bool {
-        !matches!(
-            self,
-            Self::StartRun {
-                submit_state: SubmitState::Submitting,
-                ..
-            }
-        )
+        true
     }
 }
