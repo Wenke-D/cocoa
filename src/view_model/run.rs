@@ -34,30 +34,61 @@ impl std::fmt::Display for RunId {
     }
 }
 
-/// How a run was started.
+/// Who asked for something. A Bench has only these two answers — it is never
+/// dispatched by another Bench (specification §2.2) — so it gets its own type
+/// rather than a wider one with a variant it can never hold.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+pub enum Trigger {
+    Human,
+    Agent,
+}
+
+impl Trigger {
+    /// What a history row calls it. `you` rather than `human`: the row is being
+    /// read by the person who clicked it.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Human => "you",
+            Self::Agent => "agent",
+        }
+    }
+}
+
+/// How a Job run came to exist (specification §10.6).
 ///
-/// Origin is presentation and navigation metadata only. It never changes how a
-/// run executes, and it never excludes a run from its Job's own history
-/// (specification §10.6).
+/// Three answers, and exactly one is true of any run: a person asked, an agent
+/// asked, or a Bench dispatched it. Origin is presentation and navigation
+/// metadata only — it never changes how a run executes, and it never excludes a
+/// run from its Job's own history.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub enum RunOrigin {
-    Direct,
-    BenchStep {
-        bench_id: EntityId,
+    Human,
+    Agent,
+    Bench {
+        /// The Bench's name as it was recorded at dispatch. Known even when the
+        /// folder is not: it is what this run was dispatched under.
+        name: String,
+        /// Where that Bench is now, when it is still in the Explorer. `None`
+        /// once the folder is gone — the run keeps its history, the link does
+        /// not.
+        bench_id: Option<EntityId>,
         bench_run_id: RunId,
-        step_index: usize,
+        /// Which call of the plan, counted from 1 as the plan's own validation
+        /// errors count them (convention §8.1).
+        call: usize,
     },
 }
 
 impl RunOrigin {
+    /// Whether the run was started against its Job rather than dispatched.
     pub fn is_direct(&self) -> bool {
-        matches!(self, Self::Direct)
+        matches!(self, Self::Human | Self::Agent)
     }
 
     pub fn bench_run_id(&self) -> Option<&RunId> {
         match self {
-            Self::Direct => None,
-            Self::BenchStep { bench_run_id, .. } => Some(bench_run_id),
+            Self::Human | Self::Agent => None,
+            Self::Bench { bench_run_id, .. } => Some(bench_run_id),
         }
     }
 }
@@ -158,9 +189,11 @@ impl BenchPlan {
 pub struct BenchRun {
     pub id: RunId,
     pub bench_id: EntityId,
+    /// Who asked for this Bench (specification §10.6).
+    pub by: Trigger,
     pub started_at: DateTime<Local>,
     pub ended_at: Option<DateTime<Local>>,
-    /// The string the user typed in the Start modal. Each dispatched run has its
+    /// The string the user typed on the Start page. Each dispatched run has its
     /// own derived parameters; do not conflate the two (specification §18.4).
     pub parameters: String,
     pub plan: BenchPlan,

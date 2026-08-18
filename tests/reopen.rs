@@ -12,7 +12,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
-use coco::engine::Coco;
+use coco::engine::{Coco, Trigger};
 use tempfile::TempDir;
 
 fn script(folder: &Path, name: &str, body: &str) {
@@ -96,7 +96,7 @@ fn a_run_that_finished_while_coco_was_closed_settles_on_reopen() {
     let run_id = {
         let mut coco = Coco::new(&store).unwrap();
         coco.register(&job).unwrap();
-        coco.start_job(&job, params(&[("size", "1")]), params(&[]))
+        coco.start_job(&job, params(&[("size", "1")]), params(&[]), Trigger::Human)
             .unwrap()
     };
     // The window closes here: nothing of coco is left running.

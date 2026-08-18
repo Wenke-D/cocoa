@@ -11,7 +11,7 @@ use crate::ui::icons;
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::{icon_button, parameter_block, rows_are_clickable, status_badge};
 use crate::ui::{space, text};
-use crate::view_model::{BenchRun, JobRun, RunOrigin, format_duration};
+use crate::view_model::{BenchRun, JobRun, RunOrigin, Trigger, format_duration};
 
 const ROW_HEIGHT: f32 = 24.0;
 const HEADER_HEIGHT: f32 = 22.0;
@@ -19,7 +19,6 @@ const HEADER_HEIGHT: f32 = 22.0;
 /// A Job's complete history, including runs a Bench dispatched.
 pub fn job_history(ctx: &mut ViewCtx, ui: &mut egui::Ui, runs: &[&JobRun]) {
     let now = ctx.now;
-    let snapshot = ctx.snapshot;
 
     rows_are_clickable(ui);
 
@@ -59,25 +58,42 @@ pub fn job_history(ctx: &mut ViewCtx, ui: &mut egui::Ui, runs: &[&JobRun]) {
                 });
                 row.col(|ui| parameter_block::truncated_cell(ui, &run.parameters));
 
-                // Where this run came from (specification §13.3).
+                // Why this row exists: a person asked, an agent asked, or a
+                // Bench dispatched it (specification §10.6, §13.3). One column,
+                // because exactly one of the three is true of any run.
                 row.col(|ui| match &run.origin {
-                    RunOrigin::Direct => {
-                        ui.label(text::none());
+                    RunOrigin::Human => {
+                        ui.label(text::muted(Trigger::Human.label()));
                     }
-                    RunOrigin::BenchStep {
+                    RunOrigin::Agent => {
+                        ui.label(text::muted(Trigger::Agent.label()));
+                    }
+                    RunOrigin::Bench {
+                        name,
                         bench_id,
                         bench_run_id,
                         ..
-                    } => {
-                        let name = snapshot.entity_name(bench_id);
-                        if ui.link(name).on_hover_text("Open the Bench run").clicked() {
-                            consumed = true;
-                            ctx.push(AppCommand::Navigate(Route::BenchRunDetail {
-                                bench_id: bench_id.clone(),
-                                run_id: bench_run_id.clone(),
-                            }));
+                    } => match bench_id {
+                        Some(bench_id) => {
+                            if ui
+                                .link(name.as_str())
+                                .on_hover_text("Open the Bench run")
+                                .clicked()
+                            {
+                                consumed = true;
+                                ctx.push(AppCommand::Navigate(Route::BenchRunDetail {
+                                    bench_id: bench_id.clone(),
+                                    run_id: bench_run_id.clone(),
+                                }));
+                            }
                         }
-                    }
+                        // The Bench has left the Explorer. The run still says
+                        // what dispatched it; there is just nowhere to go.
+                        None => {
+                            ui.label(text::muted(name.as_str()))
+                                .on_hover_text("This Bench is no longer in the Explorer");
+                        }
+                    },
                 });
 
                 row.col(|ui| {

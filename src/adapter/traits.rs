@@ -10,7 +10,7 @@ use std::path::Path;
 use chrono::{DateTime, Local};
 
 use crate::view_model::world::Snapshot;
-use crate::view_model::{EntityId, ReportState, RunId};
+use crate::view_model::{EntityId, ReportState, RunId, Trigger};
 
 /// What the user asked to cancel.
 ///
@@ -150,10 +150,16 @@ pub trait Experiments {
     /// Returns the id of the created run: a Job run for a Job, a Bench run
     /// for a Bench. Bench start is atomic — either the Bench run and all of
     /// its child runs exist, or nothing was created.
+    ///
+    /// `by` is recorded on the run (specification §10.6). It is a parameter
+    /// rather than something the adapter decides, because the answer is a
+    /// property of the surface the request arrived through, and only that
+    /// surface knows it.
     fn start(
         &mut self,
         entity_id: &EntityId,
         parameters: BTreeMap<String, String>,
+        by: Trigger,
     ) -> Result<RunId, ExperimentError>;
 
     fn cancel(&mut self, target: CancelTarget) -> Result<(), ExperimentError>;

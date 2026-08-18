@@ -12,7 +12,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
-use coco::engine::{Coco, ReportMode, Status};
+use coco::engine::{Coco, ReportMode, Status, Trigger};
 use tempfile::TempDir;
 
 fn write(folder: &Path, name: &str, contents: &str) {
@@ -196,7 +196,12 @@ fn full_job_lifecycle() {
     coco.register(&job).unwrap();
 
     let run_id = coco
-        .start_job(&job, params(&[("size", "256")]), params(&[("gpu", "0")]))
+        .start_job(
+            &job,
+            params(&[("size", "256")]),
+            params(&[("gpu", "0")]),
+            Trigger::Human,
+        )
         .unwrap();
 
     let record = coco.run_record(&job, run_id).unwrap();
@@ -246,7 +251,12 @@ fn launch_failure_records_nothing_and_burns_the_id() {
     coco.register(&job).unwrap();
 
     let err = coco
-        .start_job(&job, params(&[("size", "1")]), params(&[("gpu", "0")]))
+        .start_job(
+            &job,
+            params(&[("size", "1")]),
+            params(&[("gpu", "0")]),
+            Trigger::Human,
+        )
         .unwrap_err();
     assert!(err.to_string().contains("cluster refused"), "{err}");
 
@@ -261,7 +271,12 @@ fn launch_failure_records_nothing_and_burns_the_id() {
     // The failed id is consumed: the next start gets id 1, never 0.
     write_script(&job, "launch.sh", "echo 'COCO_RETURN: ok-1'\n");
     let run_id = coco
-        .start_job(&job, params(&[("size", "1")]), params(&[("gpu", "0")]))
+        .start_job(
+            &job,
+            params(&[("size", "1")]),
+            params(&[("gpu", "0")]),
+            Trigger::Human,
+        )
         .unwrap();
     assert_eq!(run_id, 1);
 }
@@ -273,7 +288,12 @@ fn poll_failure_sets_unreachable_and_returns_loud_error() {
     let mut coco = engine(&dir);
     coco.register(&job).unwrap();
     let run_id = coco
-        .start_job(&job, params(&[("size", "1")]), params(&[("gpu", "0")]))
+        .start_job(
+            &job,
+            params(&[("size", "1")]),
+            params(&[("gpu", "0")]),
+            Trigger::Human,
+        )
         .unwrap();
 
     write_script(&job, "poll.py", "echo 'squeue broke' >&2\nexit 3\n");
@@ -319,7 +339,12 @@ fn cancel_failure_keeps_status_and_success_moves_to_cancelling() {
     let mut coco = engine(&dir);
     coco.register(&job).unwrap();
     let run_id = coco
-        .start_job(&job, params(&[("size", "1")]), params(&[("gpu", "0")]))
+        .start_job(
+            &job,
+            params(&[("size", "1")]),
+            params(&[("gpu", "0")]),
+            Trigger::Human,
+        )
         .unwrap();
     fs::write(job.join("poll-state"), "RUNNING").unwrap();
     coco.poll_job(&job).unwrap();
@@ -347,7 +372,12 @@ fn unknown_poll_status_is_ignored_with_a_warning() {
     let mut coco = engine(&dir);
     coco.register(&job).unwrap();
     let run_id = coco
-        .start_job(&job, params(&[("size", "1")]), params(&[("gpu", "0")]))
+        .start_job(
+            &job,
+            params(&[("size", "1")]),
+            params(&[("gpu", "0")]),
+            Trigger::Human,
+        )
         .unwrap();
 
     write_script(&job, "poll.py", "echo 'COCO_RETURN: sub-0 HYPERDRIVE'\n");
@@ -381,7 +411,7 @@ fn a_manifest_that_breaks_later_stays_registered_and_shown() {
     assert!(views[0].manifest.is_err());
 
     let err = coco
-        .start_job(&folder, params(&[]), params(&[]))
+        .start_job(&folder, params(&[]), params(&[]), Trigger::Human)
         .unwrap_err();
     assert!(err.to_string().contains("kind"), "{err}");
 }
@@ -443,15 +473,22 @@ fn bench_fanout_records_members_and_launch_failures() {
     coco.register(&bench).unwrap();
 
     let start = coco
-        .start_bench(&bench, params(&[("mesh", "fine")]))
+        .start_bench(&bench, params(&[("mesh", "fine")]), Trigger::Human)
         .unwrap();
     assert_eq!(start.members.len(), 1);
     assert_eq!(start.launch_failures.len(), 1);
     assert_eq!(start.launch_failures[0].job, "bad-job");
 
     let member = coco.run_record(&good, start.members[0].run_id).unwrap();
-    assert_eq!(member.bench, Some(start.run_id));
-    assert_eq!(member.bench_name.as_deref(), Some("sweep"));
+    assert_eq!(
+        member.origin,
+        coco::engine::RunOrigin::Bench {
+            run_id: start.run_id,
+            name: "sweep".to_owned(),
+            call: 1,
+        },
+        "a dispatched run records which bench run and which call dispatched it"
+    );
 
     // The bench never became what the plan asked for: ERROR, eventually.
     fs::write(good.join("poll-state"), "COMPLETED").unwrap();
@@ -472,7 +509,7 @@ fn bench_report_requires_every_member_succeeded() {
     coco.register(&good).unwrap();
     coco.register(&bench).unwrap();
     let start = coco
-        .start_bench(&bench, params(&[("mesh", "fine")]))
+        .start_bench(&bench, params(&[("mesh", "fine")]), Trigger::Human)
         .unwrap();
 
     fs::write(good.join("poll-state"), "FAILED no convergence").unwrap();
@@ -502,7 +539,7 @@ fn bench_reports_when_every_member_succeeded() {
     coco.register(&job).unwrap();
     coco.register(&bench).unwrap();
     let start = coco
-        .start_bench(&bench, params(&[("mesh", "fine")]))
+        .start_bench(&bench, params(&[("mesh", "fine")]), Trigger::Human)
         .unwrap();
 
     let status = coco.bench_status(&bench, start.run_id).unwrap();
@@ -557,7 +594,7 @@ fn every_bad_plan_call_is_reported_at_once() {
     coco.register(&bench).unwrap();
 
     let err = coco
-        .start_bench(&bench, params(&[("mesh", "fine")]))
+        .start_bench(&bench, params(&[("mesh", "fine")]), Trigger::Human)
         .unwrap_err();
     let message = err.to_string();
 
@@ -587,7 +624,7 @@ fn plan_failure_dispatches_nothing() {
     coco.register(&bench).unwrap();
 
     let err = coco
-        .start_bench(&bench, params(&[("mesh", "fine")]))
+        .start_bench(&bench, params(&[("mesh", "fine")]), Trigger::Human)
         .unwrap_err();
     assert!(err.to_string().contains("not a registered job"), "{err}");
     assert!(coco.bench_runs(&bench).unwrap().is_empty());
@@ -600,7 +637,12 @@ fn manual_report_heals_a_failed_auto_report() {
     let mut coco = engine(&dir);
     coco.register(&job).unwrap();
     let run_id = coco
-        .start_job(&job, params(&[("size", "1")]), params(&[("gpu", "0")]))
+        .start_job(
+            &job,
+            params(&[("size", "1")]),
+            params(&[("gpu", "0")]),
+            Trigger::Human,
+        )
         .unwrap();
     fs::write(job.join("poll-state"), "COMPLETED").unwrap();
     coco.poll_job(&job).unwrap();
@@ -627,10 +669,20 @@ fn corrupt_run_json_fails_only_that_run() {
     let job = job_folder(&dir, "mixed-history");
     let mut coco = engine(&dir);
     coco.register(&job).unwrap();
-    coco.start_job(&job, params(&[("size", "1")]), params(&[("gpu", "0")]))
-        .unwrap();
-    coco.start_job(&job, params(&[("size", "2")]), params(&[("gpu", "1")]))
-        .unwrap();
+    coco.start_job(
+        &job,
+        params(&[("size", "1")]),
+        params(&[("gpu", "0")]),
+        Trigger::Human,
+    )
+    .unwrap();
+    coco.start_job(
+        &job,
+        params(&[("size", "2")]),
+        params(&[("gpu", "1")]),
+        Trigger::Human,
+    )
+    .unwrap();
 
     fs::write(job.join("runs/0/run.json"), "{ not json").unwrap();
     let views = coco.job_runs(&job).unwrap();
@@ -659,13 +711,23 @@ fn blank_parameter_values_are_refused() {
 
     // Every field left empty, which is what an untouched start form sends.
     let err = coco
-        .start_job(&job, params(&[("size", "")]), params(&[("gpu", "")]))
+        .start_job(
+            &job,
+            params(&[("size", "")]),
+            params(&[("gpu", "")]),
+            Trigger::Human,
+        )
         .unwrap_err();
     assert!(err.to_string().contains("size"), "{err}");
 
     // One field filled, the other blank or whitespace.
     let err = coco
-        .start_job(&job, params(&[("size", "256")]), params(&[("gpu", "  ")]))
+        .start_job(
+            &job,
+            params(&[("size", "256")]),
+            params(&[("gpu", "  ")]),
+            Trigger::Human,
+        )
         .unwrap_err();
     assert!(err.to_string().contains("gpu"), "{err}");
 
@@ -673,6 +735,11 @@ fn blank_parameter_values_are_refused() {
     assert!(!job.join("runs").exists(), "a refused start wrote a run");
 
     // The same start with real values goes through.
-    coco.start_job(&job, params(&[("size", "256")]), params(&[("gpu", "0")]))
-        .unwrap();
+    coco.start_job(
+        &job,
+        params(&[("size", "256")]),
+        params(&[("gpu", "0")]),
+        Trigger::Human,
+    )
+    .unwrap();
 }

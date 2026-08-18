@@ -841,19 +841,49 @@ A succeeded run may temporarily have no report.
 
 ### 10.6 Run Origin
 
-Every Job run records how it was started.
+Every Job run records how it was started, and every Bench run records who asked.
 
 ```rust
 pub enum RunOrigin {
-    Direct,
+    Human,
+    Agent,
 
-    BenchStep {
-        bench_id: EntityId,
+    Bench {
+        name: String,
+        bench_id: Option<EntityId>,
         bench_run_id: RunId,
-        step_index: usize,
+        call: usize,
     },
 }
+
+/// A Bench is never dispatched by another Bench (§2.2), so it gets a type that
+/// cannot say otherwise.
+pub enum Trigger {
+    Human,
+    Agent,
+}
 ```
+
+Exactly one of the three is true of any run, so the history's Source column is
+one column with three kinds of value rather than two columns (§13.3): the Bench
+name as a link, or `you`, or `agent`.
+
+Origin is recorded at dispatch, not worked out at read time. Reconstructing it —
+finding the Bench by name and scanning its members for this run — has to invent
+an answer when the Bench folder is gone, and a run that outlives its Bench then
+shows a confident wrong call number instead of the name it was dispatched under.
+`name` and `call` are therefore recorded; `bench_id` is resolved for navigation
+only, and is `None` once the Bench has left the Explorer — the run keeps its
+history, the link simply stops being a link.
+
+`call` counts from 1, as the plan's own validation errors count (§15.4). The
+same call must not have two numbers.
+
+Who asked is a property of the surface the request arrived through, and only
+that surface knows it: the workbench records `Human`, and an interface built for
+an agent records `Agent`. It is a parameter of the start operation rather than
+something the engine decides.
+
 
 Origin is presentation and navigation metadata only. It must not change how the
 run executes, and it must not exclude the run from the owning Job's history.

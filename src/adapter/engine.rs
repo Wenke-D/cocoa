@@ -17,7 +17,7 @@ use crate::engine::{BenchRecord, Coco, EngineError, Manifest, RunRecord, Status}
 use crate::view_model::world::{Snapshot, World};
 use crate::view_model::{
     BenchPlan, BenchPlanStep, BenchRun, Entity, EntityId, EntityKind, JobRun, ManifestState,
-    QueryHealth, ReportFormat, ReportState, RunId, RunOrigin, RunStatus,
+    QueryHealth, ReportFormat, ReportState, RunId, RunOrigin, RunStatus, Trigger,
 };
 
 /// How often `tick` polls every job and advances reports, automatically.
@@ -157,29 +157,21 @@ impl EngineAdapter {
     }
 
     fn origin_of(&self, record: &RunRecord) -> RunOrigin {
-        let (Some(bench_run_id), Some(bench_name)) = (record.bench, record.bench_name.as_deref())
-        else {
-            return RunOrigin::Direct;
-        };
-        let bench_id = self
-            .find_bench_path_by_name(bench_name)
-            .map(|path| EntityId::new(path.display().to_string()))
-            .unwrap_or_else(|| EntityId::new(bench_name.to_owned()));
-        let step_index = self
-            .find_bench_path_by_name(bench_name)
-            .and_then(|path| self.coco.bench_record(&path, bench_run_id).ok())
-            .map(|bench_record| {
-                bench_record
-                    .members
-                    .iter()
-                    .position(|member| member.run_id == record.run_id)
-                    .unwrap_or(0)
-            })
-            .unwrap_or(0);
-        RunOrigin::BenchStep {
-            bench_id,
-            bench_run_id: RunId::new(bench_run_id.to_string()),
-            step_index,
+        match &record.origin {
+            crate::engine::RunOrigin::Human => RunOrigin::Human,
+            crate::engine::RunOrigin::Agent => RunOrigin::Agent,
+            crate::engine::RunOrigin::Bench { run_id, name, call } => RunOrigin::Bench {
+                name: name.clone(),
+                // Resolved for navigation only. A Bench that has left the
+                // Explorer leaves this `None` rather than a fabricated id: the
+                // run still says what dispatched it, and the link simply stops
+                // being a link.
+                bench_id: self
+                    .find_bench_path_by_name(name)
+                    .map(|path| EntityId::new(path.display().to_string())),
+                bench_run_id: RunId::new(run_id.to_string()),
+                call: *call,
+            },
         }
     }
 
@@ -212,6 +204,10 @@ impl EngineAdapter {
         };
         BenchRun {
             id: RunId::new(record.run_id.to_string()),
+            by: match record.by {
+                crate::engine::Trigger::Human => Trigger::Human,
+                crate::engine::Trigger::Agent => Trigger::Agent,
+            },
             bench_id: EntityId::new(bench_path.display().to_string()),
             started_at: record.started_at,
             ended_at: None,
@@ -286,7 +282,12 @@ impl Experiments for EngineAdapter {
         &mut self,
         entity_id: &EntityId,
         parameters: BTreeMap<String, String>,
+        by: Trigger,
     ) -> Result<RunId, ExperimentError> {
+        let by = match by {
+            Trigger::Human => crate::engine::Trigger::Human,
+            Trigger::Agent => crate::engine::Trigger::Agent,
+        };
         let path = PathBuf::from(entity_id.as_str());
         let manifest = self
             .coco
@@ -308,11 +309,11 @@ impl Experiments for EngineAdapter {
             Manifest::Job(job) => {
                 let render = split_fields(&parameters, &job.render_params);
                 let launch = split_fields(&parameters, &job.launch_params);
-                self.coco.start_job(&path, render, launch)
+                self.coco.start_job(&path, render, launch, by)
             }
             Manifest::Bench(_) => self
                 .coco
-                .start_bench(&path, parameters)
+                .start_bench(&path, parameters, by)
                 .map(|start| start.run_id),
         }
         .map_err(experiment_error)?;

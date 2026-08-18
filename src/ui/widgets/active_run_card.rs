@@ -14,22 +14,21 @@ use crate::view_model::{BenchRun, JobRun, RunOrigin, format_duration};
 /// A card for one active Job run.
 pub fn job_card(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun) {
     let now = ctx.now;
-    let snapshot = ctx.snapshot;
 
     surface::card(ui, |ui| {
         ui.horizontal(|ui| {
             status_badge::badge(ui, run.display_status());
 
             // A run a Bench dispatched says so, and links back to the Bench run.
-            if let RunOrigin::BenchStep {
-                bench_id,
+            if let RunOrigin::Bench {
+                name,
+                bench_id: Some(bench_id),
                 bench_run_id,
                 ..
             } = &run.origin
             {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let label = format!("from {}", snapshot.entity_name(bench_id));
-                    if ui.link(label).clicked() {
+                    if ui.link(format!("from {name}")).clicked() {
                         ctx.push(AppCommand::Navigate(Route::BenchRunDetail {
                             bench_id: bench_id.clone(),
                             run_id: bench_run_id.clone(),

@@ -19,7 +19,7 @@ use crate::engine::invoke::{self, Invocation, coco_return_lines};
 use crate::engine::manifest::{JobManifest, Manifest};
 use crate::engine::record::{
     BenchMember, BenchMembersFile, BenchMembersFileMember, BenchRecord, BenchReport, LaunchFailure,
-    RunRecord,
+    RunOrigin, RunRecord, Trigger,
 };
 use crate::engine::status::Status;
 use crate::engine::store::{Store, write_atomic};
@@ -155,7 +155,10 @@ impl Coco {
         Self::with_config(store_path, Config::default())
     }
 
-    pub fn with_config(store_path: impl Into<PathBuf>, config: Config) -> Result<Self, EngineError> {
+    pub fn with_config(
+        store_path: impl Into<PathBuf>,
+        config: Config,
+    ) -> Result<Self, EngineError> {
         let store_path = store_path.into();
         let store = Store::load(&store_path)?;
         Ok(Self {
@@ -321,8 +324,13 @@ impl Coco {
         path: &Path,
         render: BTreeMap<String, String>,
         launch: BTreeMap<String, String>,
+        by: Trigger,
     ) -> Result<u64, EngineError> {
-        self.start_job_inner(path, render, launch, None)
+        let origin = match by {
+            Trigger::Human => RunOrigin::Human,
+            Trigger::Agent => RunOrigin::Agent,
+        };
+        self.start_job_inner(path, render, launch, origin)
     }
 
     fn start_job_inner(
@@ -330,7 +338,7 @@ impl Coco {
         path: &Path,
         render: BTreeMap<String, String>,
         launch: BTreeMap<String, String>,
-        origin: Option<(u64, String)>,
+        origin: RunOrigin,
     ) -> Result<u64, EngineError> {
         let manifest = self.job_manifest(path)?;
         validate_params(&manifest.render_params, &render, "render")?;
@@ -741,6 +749,7 @@ impl Coco {
         &mut self,
         path: &Path,
         params: BTreeMap<String, String>,
+        by: Trigger,
     ) -> Result<BenchStart, EngineError> {
         let manifest = self.bench_manifest(path)?;
         let instances = self.plan_bench(path, params.clone())?;
@@ -748,12 +757,18 @@ impl Coco {
 
         let mut members = Vec::new();
         let mut launch_failures = Vec::new();
-        for instance in instances {
+        // `call` counts from 1, as the plan's own validation errors do
+        // (convention §8.1): the same call must not have two numbers.
+        for (index, instance) in instances.into_iter().enumerate() {
             match self.start_job_inner(
                 &instance.job_path,
                 instance.render.clone(),
                 instance.launch.clone(),
-                Some((bench_run_id, manifest.name.clone())),
+                RunOrigin::Bench {
+                    run_id: bench_run_id,
+                    name: manifest.name.clone(),
+                    call: index + 1,
+                },
             ) {
                 Ok(run_id) => members.push(BenchMember {
                     run_id,
@@ -770,6 +785,7 @@ impl Coco {
         let record = BenchRecord {
             run_id: bench_run_id,
             bench: manifest.name.clone(),
+            by,
             started_at: Local::now(),
             params: params.clone(),
             planned: members.len() + launch_failures.len(),

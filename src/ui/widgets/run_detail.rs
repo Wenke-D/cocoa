@@ -128,30 +128,37 @@ fn overview_fields(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun, surround:
 /// Where this run came from, linking back to the dispatching Bench run.
 fn source_value(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun) {
     match &run.origin {
-        RunOrigin::Direct => {
-            ui.label("Started directly");
+        RunOrigin::Human => {
+            ui.label("Started by you");
         }
-        RunOrigin::BenchStep {
+        RunOrigin::Agent => {
+            ui.label("Started by an agent");
+        }
+        RunOrigin::Bench {
+            name,
             bench_id,
             bench_run_id,
-            step_index,
+            call,
         } => {
-            let bench_name = ctx.snapshot.entity_name(bench_id).to_owned();
             let started = ctx
                 .snapshot
                 .bench_run(bench_run_id)
                 .map(|bench_run| bench_run.started_at.format("%Y-%m-%d %H:%M").to_string())
                 .unwrap_or_else(|| bench_run_id.to_string());
+            let label = format!("{name} · Run {started} · call {call}");
 
-            ui.horizontal(|ui| {
-                if ui
-                    .link(format!("{bench_name} · Run {started} · call {step_index}"))
-                    .clicked()
-                {
-                    ctx.push(AppCommand::Navigate(Route::BenchRunDetail {
-                        bench_id: bench_id.clone(),
-                        run_id: bench_run_id.clone(),
-                    }));
+            ui.horizontal(|ui| match bench_id {
+                Some(bench_id) => {
+                    if ui.link(label).clicked() {
+                        ctx.push(AppCommand::Navigate(Route::BenchRunDetail {
+                            bench_id: bench_id.clone(),
+                            run_id: bench_run_id.clone(),
+                        }));
+                    }
+                }
+                None => {
+                    ui.label(label)
+                        .on_hover_text("This Bench is no longer in the Explorer");
                 }
             });
         }

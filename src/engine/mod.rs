@@ -20,5 +20,7 @@ pub use coco::{
 };
 pub use error::EngineError;
 pub use manifest::{BenchManifest, JobManifest, Kind, Manifest};
-pub use record::{BenchMember, BenchRecord, LaunchFailure, RunRecord, StatusChange};
+pub use record::{
+    BenchMember, BenchRecord, LaunchFailure, RunOrigin, RunRecord, StatusChange, Trigger,
+};
 pub use status::Status;

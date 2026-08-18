@@ -11,7 +11,7 @@ use chrono::Local;
 
 use coco::adapter::{CancelTarget, EngineAdapter, Experiments};
 use coco::engine::Coco;
-use coco::view_model::{EntityKind, RunId, RunStatus};
+use coco::view_model::{EntityKind, RunId, RunStatus, Trigger};
 use tempfile::TempDir;
 
 fn copy_dir(src: &Path, dst: &Path) {
@@ -60,7 +60,9 @@ fn coco_backend_drives_the_workbench_model() {
     params.insert("nodes".to_owned(), "64".to_owned());
     params.insert("gpu".to_owned(), "0".to_owned());
     let entity_id = entity.id.clone();
-    let run_id = experiments.start(&entity_id, params).unwrap();
+    let run_id = experiments
+        .start(&entity_id, params, Trigger::Human)
+        .unwrap();
 
     let snapshot = experiments.snapshot();
     let run = snapshot.job_run(&run_id).unwrap();
@@ -213,4 +215,78 @@ fn an_entity_whose_manifest_breaks_later_stays_listed() {
         .find(|entity| entity.name == "solver-gpu")
         .expect("a registered entity must survive its manifest breaking");
     assert!(!entity.manifest.is_valid(), "{:?}", entity.manifest);
+}
+
+/// A run outlives the Bench that dispatched it (specification §10.6).
+///
+/// The origin used to be reconstructed at read time by finding the Bench by
+/// name and scanning its members, with `unwrap_or(0)` when that failed — so a
+/// run whose Bench had left the Explorer reported "call 0" with confidence.
+/// Recorded at dispatch, it keeps the name and the call and only loses the link.
+#[test]
+fn a_run_keeps_its_origin_when_its_bench_leaves_the_explorer() {
+    use coco::view_model::RunOrigin;
+
+    let dir = TempDir::new().unwrap();
+    let library = dir.path().join("library");
+    copy_dir(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("mock"),
+        &library,
+    );
+
+    let mut experiments = EngineAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
+    experiments.register_folder(&library).unwrap();
+
+    let bench = experiments
+        .snapshot()
+        .entities
+        .iter()
+        .find(|entity| entity.name == "nightly-benchmark")
+        .cloned()
+        .expect("the bundled bench registered");
+    let parameters = bench
+        .parameter_names
+        .iter()
+        .map(|name| (name.clone(), "1".to_owned()))
+        .collect();
+    experiments
+        .start(&bench.id, parameters, Trigger::Human)
+        .unwrap();
+
+    let dispatched = |experiments: &EngineAdapter| {
+        experiments
+            .snapshot()
+            .job_runs
+            .values()
+            .find(|run| !run.origin.is_direct())
+            .cloned()
+            .expect("the bench dispatched something")
+    };
+
+    let before = dispatched(&experiments);
+    let RunOrigin::Bench { name, call, .. } = &before.origin else {
+        panic!("expected a dispatched run, got {:?}", before.origin);
+    };
+    assert_eq!(name, "nightly-benchmark");
+    assert!(*call >= 1, "calls count from 1, got {call}");
+    let (name, call) = (name.clone(), *call);
+
+    // The Bench folder goes away; its dispatched runs stay in their Job.
+    fs::remove_dir_all(library.join("benches/nightly-benchmark")).unwrap();
+    experiments.refresh().ok();
+
+    let after = dispatched(&experiments);
+    match &after.origin {
+        RunOrigin::Bench {
+            name: still,
+            bench_id,
+            call: still_call,
+            ..
+        } => {
+            assert_eq!(still, &name, "the name it was dispatched under is recorded");
+            assert_eq!(still_call, &call, "and so is the call");
+            assert!(bench_id.is_none(), "there is nowhere left to link to");
+        }
+        other => panic!("the run forgot what dispatched it: {other:?}"),
+    }
 }

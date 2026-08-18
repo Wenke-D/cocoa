@@ -17,6 +17,7 @@ use std::path::Path;
 
 use coco::adapter::{EngineAdapter, Experiments};
 use coco::engine::Coco;
+use coco::view_model::Trigger;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -100,7 +101,9 @@ fn world_matches_the_golden_dump() {
         .into_iter()
         .map(|(name, value)| (name.to_owned(), value.to_owned()))
         .collect();
-    experiments.start(&solver, parameters).unwrap();
+    experiments
+        .start(&solver, parameters, Trigger::Human)
+        .unwrap();
 
     let canonical = fs::canonicalize(&library).unwrap();
     let dump = serde_json::to_value(&*experiments.snapshot()).unwrap();

@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use coco::engine::{Coco, Status};
+use coco::engine::{Coco, Status, Trigger};
 use tempfile::TempDir;
 
 fn mock_root() -> PathBuf {
@@ -48,7 +48,9 @@ fn bundled_mock_library_registers_and_runs() {
     render.insert("nodes".to_owned(), "64".to_owned());
     let mut launch = BTreeMap::new();
     launch.insert("gpu".to_owned(), "0".to_owned());
-    let run_id = coco.start_job(&solver, render, launch).unwrap();
+    let run_id = coco
+        .start_job(&solver, render, launch, Trigger::Human)
+        .unwrap();
     assert_eq!(
         coco.run_record(&solver, run_id).unwrap().submission_id,
         format!("slurm-{run_id}")
@@ -68,7 +70,9 @@ fn bundled_mock_library_registers_and_runs() {
     let plan = coco.plan_bench(&bench, bench_params.clone()).unwrap();
     assert_eq!(plan.len(), 3);
 
-    let start = coco.start_bench(&bench, bench_params).unwrap();
+    let start = coco
+        .start_bench(&bench, bench_params, Trigger::Human)
+        .unwrap();
     assert_eq!(start.members.len(), 3);
     assert!(
         start.launch_failures.is_empty(),

@@ -14,7 +14,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
-use coco::engine::{Coco, ReportMode};
+use coco::engine::{Coco, ReportMode, Trigger};
 use tempfile::TempDir;
 
 fn main() {
@@ -47,7 +47,9 @@ fn main() {
     launch.insert("gpu".to_owned(), "0".to_owned());
 
     println!("\n== job start ==");
-    let run_id = coco.start_job(&job, render, launch).expect("start job");
+    let run_id = coco
+        .start_job(&job, render, launch, Trigger::Human)
+        .expect("start job");
     println!(
         "  run {run_id} starting, submission {}",
         status(&coco, &job, run_id).submission_id
@@ -69,7 +71,9 @@ fn main() {
     println!("\n== bench fan-out ==");
     let mut bench_params = BTreeMap::new();
     bench_params.insert("mesh".to_owned(), "fine".to_owned());
-    let start = coco.start_bench(&bench, bench_params).expect("start bench");
+    let start = coco
+        .start_bench(&bench, bench_params, Trigger::Human)
+        .expect("start bench");
     println!(
         "  bench run {}: {} member(s), {} launch failure(s)",
         start.run_id,

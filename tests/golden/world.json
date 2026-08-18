@@ -59,7 +59,7 @@
       "id": "0",
       "job_id": "<library>/jobs/solver-gpu",
       "last_successful_query": "<time>",
-      "origin": "Direct",
+      "origin": "Human",
       "parameters": "--gpu 0 --nodes 64",
       "query_health": "Healthy",
       "report": "Missing",

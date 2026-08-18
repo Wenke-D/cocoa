@@ -21,6 +21,54 @@ pub struct StatusChange {
     pub at: DateTime<Local>,
 }
 
+/// Who asked for a run.
+///
+/// coco does not assume what an experiment is — only that there are scripts to
+/// launch — so this says nothing about the work. It says which surface the
+/// request came through, which is the one thing coco itself knows.
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum Trigger {
+    #[default]
+    Human,
+    Agent,
+}
+
+/// How a job run came to exist (convention §12).
+///
+/// Recorded at dispatch rather than worked out at read time. The alternative —
+/// finding the bench by name and scanning its members — has to invent an answer
+/// when the bench folder is gone, and a run that outlives its bench then shows a
+/// confident wrong call number instead of the name it was actually dispatched
+/// under.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "by", rename_all = "snake_case")]
+pub enum RunOrigin {
+    #[default]
+    Human,
+    Agent,
+    Bench {
+        /// The bench *run* that dispatched this one.
+        run_id: u64,
+        /// The bench's name at dispatch. Kept even when the folder is gone: it
+        /// is what the run was dispatched under.
+        name: String,
+        /// Which call of that run's plan, counted from 1 as the plan's own
+        /// validation errors count them (convention §8.1).
+        call: usize,
+    },
+}
+
+impl RunOrigin {
+    /// The bench run that dispatched this one, if a bench did.
+    pub fn bench_run_id(&self) -> Option<u64> {
+        match self {
+            Self::Bench { run_id, .. } => Some(*run_id),
+            _ => None,
+        }
+    }
+}
+
 /// `runs/<run_id>/run.json` (convention §7.1).
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RunRecord {
@@ -37,11 +85,9 @@ pub struct RunRecord {
     /// Captured output attached to an `ERROR` (convention §9, §11).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
-    /// Present only on runs a bench dispatched (§8.2).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub bench: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub bench_name: Option<String>,
+    /// How this run came to exist (§8.2).
+    #[serde(default)]
+    pub origin: RunOrigin,
 }
 
 impl RunRecord {
@@ -50,10 +96,10 @@ impl RunRecord {
         submission_id: String,
         render: BTreeMap<String, String>,
         launch: BTreeMap<String, String>,
-        origin: Option<(u64, String)>,
+        origin: RunOrigin,
         now: DateTime<Local>,
     ) -> Self {
-        let mut record = Self {
+        Self {
             run_id,
             submission_id,
             render,
@@ -65,14 +111,8 @@ impl RunRecord {
             }],
             reason: None,
             error: None,
-            bench: None,
-            bench_name: None,
-        };
-        if let Some((bench_id, bench_name)) = origin {
-            record.bench = Some(bench_id);
-            record.bench_name = Some(bench_name);
+            origin,
         }
-        record
     }
 
     pub fn started_at(&self) -> DateTime<Local> {
@@ -147,6 +187,10 @@ pub struct BenchReport {
 pub struct BenchRecord {
     pub run_id: u64,
     pub bench: String,
+    /// Who asked for this bench. Only ever a person or an agent — a bench is
+    /// never dispatched by another bench (§2.2).
+    #[serde(default)]
+    pub by: Trigger,
     pub started_at: DateTime<Local>,
     pub params: BTreeMap<String, String>,
     pub planned: usize,

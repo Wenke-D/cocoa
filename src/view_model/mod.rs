@@ -21,7 +21,7 @@ pub use entity::{Entity, EntityId, EntityKind};
 pub use report::{ReportFormat, ReportState};
 pub use run::{
     BenchPlan, BenchPlanStep, BenchProgress, BenchRun, DisplayStatus, JobRun, RunId, RunOrigin,
-    aggregate_status, format_duration, format_relative, progress_of,
+    Trigger, aggregate_status, format_duration, format_relative, progress_of,
 };
 pub use status::{ManifestState, QueryHealth, RunStatus};
 pub use world::{Snapshot, World};

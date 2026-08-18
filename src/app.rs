@@ -20,7 +20,7 @@ use crate::adapter::{AddedFolders, CancelTarget, EngineAdapter, Experiments};
 use crate::engine::Coco;
 use crate::navigation::{Overlay, Route, SubmitState};
 use crate::view_model::Snapshot;
-use crate::view_model::{EntityId, ReportState, RunId, RunStatus};
+use crate::view_model::{EntityId, ReportState, RunId, RunStatus, Trigger};
 
 /// The product name, shown in the platform window title.
 pub const APP_TITLE: &str = "coco";
@@ -576,7 +576,12 @@ impl ExperimentApp {
             .entity(&entity_id)
             .map(|entity| entity.kind);
 
-        match self.experiments.start(&entity_id, parameters) {
+        // The workbench is a person's surface. Every other one declares
+        // itself (specification §10.6).
+        match self
+            .experiments
+            .start(&entity_id, parameters, Trigger::Human)
+        {
             Ok(run_id) => {
                 // The draft did its job. Discarding it here means coming back
                 // to Start for this experiment opens the empty form §15.3 asks
