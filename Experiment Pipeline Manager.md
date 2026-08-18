@@ -59,8 +59,7 @@ A Job has:
 - A display name.
 - A folder path.
 - Manifest validity state.
-- Default parameters.
-- Last-used parameters.
+- The values its last run used, for the explicit fill action (§15.3).
 - Zero or more runs.
 - Zero or more active runs.
 - Historical reports.
@@ -101,8 +100,7 @@ A Bench has:
 - A display name.
 - A folder path.
 - Manifest validity state.
-- Default parameters.
-- Last-used parameters.
+- The values its last run used, for the explicit fill action (§15.3).
 - Zero or more Bench runs.
 
 A Bench has **no** static job list. Its calls are unknown until a run starts.
@@ -1227,18 +1225,19 @@ Start is pressed. Do not display a fabricated job list.
 Example:
 
 ```text
-Start Job
+START JOB
+solver-gpu
 
-Solver GPU
+PARAMETERS  (all required)                          [history]
 
-Parameters
-[ --mesh=256 --gpu=0                         ]
+  nodes  [ required                                        ]
+  gpu    [ required                                        ]
 
-Last used:
---mesh=128 --gpu=0
-
-Cancel                                  Start Job
+Cancel                                            Start Job
 ```
+
+Every field opens empty, and `[history]` is the icon action that fills them from
+the last run (§15.3). Start stays disabled until each one has a value.
 
 ### 15.2 Parameter Semantics
 
@@ -1263,13 +1262,20 @@ The engine refuses a blank value exactly as it refuses a missing one, so a start
 reaching it by any other route — a Bench dispatching a member, say — is refused
 the same way.
 
-### 15.3 Default Value
+### 15.3 No Prefill
 
-When the modal opens, populate the field using this priority:
+The modal opens with every field empty. It does not prefill from the last run,
+from the manifest, or from anything else — every declared parameter is supplied
+by hand, deliberately, each time (convention §2.1).
 
-1. Last-used parameters for this entity.
-2. Manifest/mock default parameters.
-3. Empty string.
+Reusing the last run's values is an explicit action, not a default: the
+`PARAMETERS` section carries a history icon that fills the fields and stops
+there (§15.1). It appears only once the experiment has been started at least
+once, and the user still sees, edits and submits the values themselves.
+
+A prefilled field is indistinguishable from one the user filled, and a start is
+a job on a cluster. Restarting *last night's* sweep because the modal
+remembered it is a mistake this application must not be able to make for you.
 
 ### 15.4 Submission
 
@@ -2351,15 +2357,16 @@ Persist:
 - Last selected entity ID.
 - Last non-report route when valid.
 - Status filter.
-- Optional last-used parameters.
 
 Do not persist:
 
-- Active mock runs.
-- Mock clock state.
+- Anything about runs. The experiment folders hold their own records, and the
+  engine's store holds the run counter and the values each experiment last used
+  (convention §5) — the UI keeps no copy of either.
 - Temporary modals.
 - Temporary error banners.
-- Developer-control state unless convenient.
+- Parameter drafts. A modal is a temporary action; a draft survives a failed
+  submission (§31) and nothing longer.
 
 If persisted state is invalid after fixtures change, fall back safely.
 
