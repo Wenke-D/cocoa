@@ -19,14 +19,11 @@ lint:
     cargo clippy --all-targets -- -D warnings
 
 # The gate before committing.
-check: lint, test
-    echo "clippy and tests are clean"
+check: fmt-check, lint, test
+    echo "formatting, clippy and tests are clean"
 
-# `cargo fmt --all` is deliberately not part of `check`: two engine files have
-# been unformatted since before the tooling was set up, so the check is red for
-# reasons unrelated to whatever you just changed. Format the file you touched.
-fmt file:
-    rustfmt --edition 2024 {{file}}
+fmt:
+    cargo fmt --all
 
 fmt-check:
     cargo fmt --all -- --check
@@ -34,7 +31,7 @@ fmt-check:
 # One surface of the running app, captured to a PNG. Surfaces are listed at the
 # top of examples/screenshot.rs.
 #
-#     via shot dark out/modal.png start-modal
+#     via shot dark out/start.png start-page
 shot theme out surface:
     cargo run --example screenshot -- {{theme}} {{out}} {{surface}}
 

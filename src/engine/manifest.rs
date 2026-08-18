@@ -168,9 +168,9 @@ impl Manifest {
         let launch = raw.launch.ok_or_else(|| {
             EngineError::manifest(manifest_path, "missing required table `[launch]`")
         })?;
-        let poll = raw
-            .poll
-            .ok_or_else(|| EngineError::manifest(manifest_path, "missing required table `[poll]`"))?;
+        let poll = raw.poll.ok_or_else(|| {
+            EngineError::manifest(manifest_path, "missing required table `[poll]`")
+        })?;
         let report = raw.report.ok_or_else(|| {
             EngineError::manifest(manifest_path, "missing required table `[report]`")
         })?;
@@ -245,9 +245,9 @@ impl Manifest {
             .map_err(|e| EngineError::manifest(manifest_path, format!("invalid manifest: {e}")))?;
 
         let name = require_name(raw.name, manifest_path)?;
-        let plan = raw
-            .plan
-            .ok_or_else(|| EngineError::manifest(manifest_path, "missing required table `[plan]`"))?;
+        let plan = raw.plan.ok_or_else(|| {
+            EngineError::manifest(manifest_path, "missing required table `[plan]`")
+        })?;
         let report = raw.report.ok_or_else(|| {
             EngineError::manifest(manifest_path, "missing required table `[report]`")
         })?;
@@ -354,7 +354,8 @@ fn require_file_in_folder(
             ),
         ));
     }
-    let folder_canon = fs::canonicalize(folder).map_err(|source| EngineError::io(folder, source))?;
+    let folder_canon =
+        fs::canonicalize(folder).map_err(|source| EngineError::io(folder, source))?;
     if !canonical.starts_with(&folder_canon) {
         return Err(EngineError::manifest(
             manifest_path,
