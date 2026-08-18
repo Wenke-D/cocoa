@@ -2991,6 +2991,79 @@ The coding agent must follow these constraints:
 
 ---
 
+## 43. Agent Interface
+
+An agent asks coco to do things. It never runs an experiment's scripts itself,
+and it never touches the store: coco is the one owner, and the owner is the
+window (§9).
+
+### 43.1 Availability
+
+The interface exists only while coco is running. That is a decision, not a
+limitation to be worked around. A run started through it belongs to the store
+the user is looking at, and appears there exactly as a click's run does.
+
+An agent therefore cannot act while coco is closed. What coco must do instead is
+catch up on the way back up: a run in flight when the window closed is polled on
+the first refresh, and if the cluster finished it, the stage that follows runs
+(§10).
+
+### 43.2 Transport
+
+A Unix domain socket at a fixed path — `$HOME/.local/share/coco/coco.sock`,
+overridable with `COCO_SOCKET_PATH` for development.
+
+A socket rather than a TCP port: there is no port to discover, publish, or
+collide over, nothing else on the machine reaches it by accident, and the
+filesystem's own permissions decide who may. Socket paths are bounded well below
+a filesystem's path limit, so a failure to bind is reported with the path in it.
+
+The wire format is HTTP/1.1, so `curl --unix-socket` is the whole client
+library. One request, one response, connection closed: no keep-alive, no chunked
+encoding. Anything outside that subset is answered `400` rather than guessed at.
+
+Failing to bind is not fatal. Another coco already owns the socket, or the
+directory is not writable; either way the workbench is still a workbench, and it
+says so in the log. A socket file with nothing listening behind it is a crash's
+leftover and is replaced. One with a live coco behind it is not: the second
+window runs without an interface rather than stealing the first's.
+
+### 43.3 Path through the application
+
+Every request is handed to the frame loop and executed where the commands from
+the screen are executed. An agent's start takes the same call a click takes —
+the same validation, the same origin stamping (§10.6), the same screen update.
+There is no second way into the engine to keep in step with the first.
+
+Reads are answered from the snapshot the frame loop publishes after each frame,
+so they never wait on one. Writes wait, because the engine has one owner and the
+socket thread is not it. A wait that outlives its welcome is answered `503`
+rather than left hanging.
+
+### 43.4 Surface
+
+```text
+GET  /world                        the world, as §26.1's dump prints it
+POST /experiments/{name}/runs      {"parameters": {…}} → 201 {"run_id": "…"}
+```
+
+Experiments are addressed by name, which is unique across the Explorer
+(convention §5): an agent should not have to know folder paths.
+
+A refusal carries the workbench's own text, unchanged — an agent reading it sees
+what a person would have been shown — under the status that says who can act:
+`404` for something that is not there, `400` for a request that was refused,
+`503` when coco did not answer.
+
+### 43.5 What is not here
+
+No approval step and no separate notification: a run records who asked (§10.6),
+and that record is where the question is answered. No authentication: the socket
+is reachable only by processes that can open the file, and coco runs on the
+user's own workstation.
+
+---
+
 ## 42. Deliverables
 
 The final prototype delivery must include:

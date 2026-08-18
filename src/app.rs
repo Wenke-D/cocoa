@@ -316,6 +316,16 @@ impl ViewCtx<'_> {
 
 pub struct ExperimentApp {
     experiments: Box<dyn Experiments>,
+    /// What the agent interface hands work through, when one is running
+    /// (specification §43). `None` when it could not bind — the workbench is
+    /// still a workbench without it.
+    #[cfg(unix)]
+    agent: Option<std::sync::Arc<crate::agent::Bridge>>,
+    /// Held for its lifetime, not its methods: dropping it unbinds the socket
+    /// and removes the file.
+    #[cfg(unix)]
+    #[allow(dead_code, reason = "kept alive so its Drop runs at exit")]
+    agent_server: Option<crate::agent::Server>,
     pub ui: UiState,
     /// A submitted start, performed on the next frame so the `Starting…` state
     /// is rendered and a slow engine can finish before the frame returns.
@@ -340,9 +350,33 @@ impl ExperimentApp {
                 .expect("fallback store must load")
         });
 
+        // The interface an agent drives coco through (specification §43).
+        // Failing to bind is not fatal: another coco already owns the socket,
+        // or the directory is not writable, and a workbench without an agent
+        // interface is still a workbench.
+        #[cfg(unix)]
+        let (agent, agent_server) = {
+            let bridge = crate::agent::Bridge::new();
+            bridge.attach(cc.egui_ctx.clone());
+            match crate::agent::Server::start(
+                crate::agent::default_socket_path(),
+                std::sync::Arc::clone(&bridge),
+            ) {
+                Ok(server) => (Some(bridge), Some(server)),
+                Err(error) => {
+                    log::warn!("agent interface unavailable: {error}");
+                    (None, None)
+                }
+            }
+        };
+
         Self {
             experiments: Box::new(EngineAdapter::new(engine)),
             ui,
+            #[cfg(unix)]
+            agent,
+            #[cfg(unix)]
+            agent_server,
             pending_start: None,
             pending_url: None,
         }
@@ -353,6 +387,10 @@ impl ExperimentApp {
         Self {
             experiments,
             ui: UiState::default(),
+            #[cfg(unix)]
+            agent: None,
+            #[cfg(unix)]
+            agent_server: None,
             pending_start: None,
             pending_url: None,
         }
@@ -634,6 +672,56 @@ impl ExperimentApp {
         }
     }
 
+    /// Runs whatever the agent interface has queued, and answers it.
+    ///
+    /// Every request goes through the same call a click goes through, so an
+    /// agent cannot reach anything a person could not, and cannot reach it by a
+    /// path with different rules.
+    #[cfg(unix)]
+    fn serve_agent(&mut self) {
+        use crate::agent::Request;
+
+        let Some(agent) = self.agent.clone() else {
+            return;
+        };
+        for pending in agent.take_pending() {
+            let answer = match pending.request {
+                Request::Start {
+                    experiment,
+                    parameters,
+                } => self.start_by_name(&experiment, parameters, Trigger::Agent),
+            };
+            // The caller may have hung up; that is their business.
+            let _ = pending.reply.send(answer);
+        }
+    }
+
+    /// Starts an experiment named rather than addressed.
+    ///
+    /// An agent knows `solver-gpu`, not the folder it lives in. Names are unique
+    /// across the Explorer (convention §5), so the lookup is total.
+    #[cfg(unix)]
+    fn start_by_name(
+        &mut self,
+        name: &str,
+        parameters: BTreeMap<String, String>,
+        by: Trigger,
+    ) -> Result<crate::agent::Reply, String> {
+        let snapshot = self.experiments.snapshot();
+        let Some(entity) = snapshot.entities.iter().find(|entity| entity.name == name) else {
+            return Err(format!("No such entity: {name}"));
+        };
+        let entity_id = entity.id.clone();
+        drop(snapshot);
+
+        match self.experiments.start(&entity_id, parameters, by) {
+            Ok(run_id) => Ok(crate::agent::Reply::Started {
+                run_id: run_id.to_string(),
+            }),
+            Err(error) => Err(error.to_string()),
+        }
+    }
+
     fn schedule_repaint(&self, ctx: &egui::Context) {
         let snapshot = self.experiments.snapshot();
         let needs_animation = snapshot.active_run_count() > 0 || self.ui.overlay.is_open();
@@ -671,11 +759,26 @@ impl eframe::App for ExperimentApp {
             self.execute(command);
         }
 
+        // Requests from the agent interface are executed here, alongside the
+        // commands the screen just produced, because they are the same kind of
+        // thing: something asked for, done once, by the one owner of the store
+        // (specification §43).
+        #[cfg(unix)]
+        self.serve_agent();
+
         if let Some(url) = self.pending_url.take() {
             ui.ctx().open_url(egui::OpenUrl::new_tab(url));
         }
 
         self.recover_route();
+
+        // Published after the frame, so a read over the socket sees what the
+        // window is showing rather than what it was showing.
+        #[cfg(unix)]
+        if let Some(agent) = &self.agent {
+            agent.publish(self.experiments.snapshot());
+        }
+
         self.schedule_repaint(ui.ctx());
     }
 }

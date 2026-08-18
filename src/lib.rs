@@ -8,6 +8,8 @@
 #![warn(clippy::all)]
 
 pub mod adapter;
+#[cfg(unix)]
+pub mod agent;
 pub mod app;
 pub mod engine;
 pub mod navigation;
