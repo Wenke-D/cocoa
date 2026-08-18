@@ -6,7 +6,7 @@
 pub mod bench_overview;
 pub mod bench_run_detail;
 pub mod child_run_detail;
-pub mod empty_library;
+pub mod empty_explorer;
 pub mod job_overview;
 pub mod job_run_detail;
 pub mod pending;
@@ -22,7 +22,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
     let route = ctx.state.route.clone();
 
     match route {
-        Route::EmptyLibrary => empty_library::show(ctx, ui),
+        Route::EmptyExplorer => empty_explorer::show(ctx, ui),
 
         Route::EntityOverview { entity_id } => {
             let Some(entity) = ctx.snapshot.entity(&entity_id).cloned() else {

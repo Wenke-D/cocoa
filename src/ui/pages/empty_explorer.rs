@@ -1,4 +1,4 @@
-//! Empty Library page (specification §12).
+//! Empty Explorer page (specification §12).
 //!
 //! This must not look like an error.
 

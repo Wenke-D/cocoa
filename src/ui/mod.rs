@@ -1,7 +1,7 @@
 //! Presentation layer.
 //!
 //! Layout rule (specification §7.2): the window has exactly two persistent
-//! content regions — the Library sidebar on the left and one unified main
+//! content regions — the Explorer sidebar on the left and one unified main
 //! content region on the right. There is never a third inspector column.
 //!
 //! Nothing here can reach the adapter. Pages receive an immutable snapshot and

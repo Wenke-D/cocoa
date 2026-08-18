@@ -1,6 +1,6 @@
 //! Job run detail (specification §17).
 //!
-//! Reached from a Job's own history. The Library keeps the Job selected.
+//! Reached from a Job's own history. The Explorer keeps the Job selected.
 
 use crate::app::ViewCtx;
 use crate::navigation::ReportContext;

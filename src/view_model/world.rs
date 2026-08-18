@@ -20,7 +20,7 @@ use super::{
 
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct World {
-    /// Library order is decided here, once, rather than re-sorted every frame.
+    /// Explorer order is decided here, once, rather than re-sorted every frame.
     pub entities: Vec<Entity>,
     pub job_runs: BTreeMap<RunId, JobRun>,
     pub bench_runs: BTreeMap<RunId, BenchRun>,

@@ -79,7 +79,7 @@ pub fn mono_muted(text: impl Into<String>) -> RichText {
     RichText::new(text).monospace().weak()
 }
 
-/// A panel or menu title: `LIBRARY`, `BENCHES`, `Color Theme`.
+/// A panel or menu title: `EXPLORER`, `BENCHES`, `Color Theme`.
 ///
 /// Louder than [`section`], which labels content inside the editor — VS Code's
 /// side bar titles carry the full foreground, while a label inside a document

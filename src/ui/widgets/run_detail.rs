@@ -2,7 +2,7 @@
 //!
 //! `JobRunDetail` and `BenchChildRunDetail` render **the same run record** and
 //! must present identical facts (specification §19). They therefore share this
-//! function; only breadcrumbs, Library selection, and the surrounding links
+//! function; only breadcrumbs, Explorer selection, and the surrounding links
 //! differ, and those live in the pages.
 
 use crate::adapter::CancelTarget;

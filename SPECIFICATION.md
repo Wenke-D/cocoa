@@ -87,7 +87,7 @@ concurrent active runs regardless of how they were started.
 **A Bench does not define, own, or contain Jobs. A Bench is not a pipeline.**
 
 A Bench is a *fan-out launcher*. When started, it returns a list of calls to Jobs
-that **already exist in the Library**, each with its own parameter string. The
+that **already exist in the Explorer**, each with its own parameter string. The
 Bench dispatches all of them at once and then waits.
 
 There is no ordering, no dependency, and no sequencing between the dispatched
@@ -122,7 +122,7 @@ A plan call has:
 
 - A stable index, used only for display order and identity. It carries no
   execution ordering.
-- The `EntityId` of an existing Job in the Library.
+- The `EntityId` of an existing Job in the Explorer.
 - The parameter string the Bench derived for that Job.
 - The `RunId` of the dispatched run.
 
@@ -164,7 +164,7 @@ Bench run detail → dispatched runs     → BenchChildJobDetail
 ```
 
 Both routes display the same underlying run. They differ only in breadcrumbs
-and in which Library row stays highlighted. See §19.
+and in which Explorer row stays highlighted. See §19.
 
 The prototype must not duplicate run records to serve both views.
 
@@ -172,7 +172,7 @@ The prototype must not duplicate run records to serve both views.
 
 Before a Bench run begins, validate the returned plan:
 
-- Every referenced `EntityId` must exist in the Library and must be a Job.
+- Every referenced `EntityId` must exist in the Explorer and must be a Job.
 - Every referenced Job's manifest must be `Valid`.
 
 If validation fails, the Bench does not start and no run is dispatched. Report
@@ -274,7 +274,7 @@ The following may be added after all P0 requirements work:
 - Sortable table headers.
 - Column-width persistence.
 - Keyboard selection inside tables.
-- Context menu for removing an item from the Library.
+- Context menu for removing an item from the Explorer.
 - Visual snapshot tests.
 - macOS application bundle.
 - Linux AppImage or package.
@@ -486,7 +486,7 @@ It is laid out as a workbench, in the order the panels claim space: activity bar
 
 ```text
 ┌────┬───────────────────┬────────────────────────────────────────────────┐
-│    │ LIBRARY         + │                                                │
+│    │ EXPLORER         + │                                                │
 │ Li │                   │                                                │
 │ Ru²│ v BENCHES         │                 Main Content                   │
 │    │   Nightly Bench 1 │                                                │
@@ -518,7 +518,7 @@ A fixed-width icon strip on the far left, spanning the full height above the sta
 
 It contains, top to bottom:
 
-1. `Library` view icon.
+1. `Explorer` view icon.
 2. `Active Runs` view icon, carrying the active-run count as a badge.
 3. `Manage` gear, pinned to the foot of the strip.
 
@@ -553,7 +553,7 @@ The sidebar is resizable within these limits, and the width the user drags to pe
 
 The sidebar hosts exactly one view at a time, chosen by the activity bar (§8.2). Each view opens with a title row carrying the view name in small uppercase text, followed by that view's actions.
 
-The `Library` view contains:
+The `Explorer` view contains:
 
 1. Title row, whose one action is a `+` icon button opening `Add Folder` (§11.5).
 2. `BENCHES` section.
@@ -606,7 +606,7 @@ A suitable starting model is:
 ```rust
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Route {
-    EmptyLibrary,
+    EmptyExplorer,
 
     EntityOverview {
         entity_id: EntityId,
@@ -691,7 +691,7 @@ Crumbs:  Solver GPU / Run 2026-08-15 10:24
 ```
 
 Both render the same run record. Navigating in one context must never silently
-move the Library selection to the other.
+move the Explorer selection to the other.
 
 ### 9.3 Breadcrumbs
 
@@ -869,7 +869,7 @@ pub struct BenchPlanStep {
 }
 ```
 
-`job_id` must resolve to a Job that exists in the Library. The plan holds a
+`job_id` must resolve to a Job that exists in the Explorer. The plan holds a
 reference, never an embedded copy of the Job definition.
 
 The same `job_id` may appear in several calls with different `parameters`.
@@ -879,13 +879,13 @@ Identity within a plan is `index`, never `job_id`.
 
 ---
 
-## 11. Library Sidebar
+## 11. Explorer Sidebar
 
 ### 11.1 Views
 
 The sidebar hosts two views, selected from the activity bar (§8.2).
 
-**Library.** The Benches and Jobs the user has added, grouped by kind (§11.2). This is the only persistent navigation surface. It carries no filter field: the Library is a short, fully visible list of folders the user added themselves. The run-history filters of §22.4 and the report search of §20.2 are unaffected.
+**Explorer.** The Benches and Jobs the user has added, grouped by kind (§11.2). This is the only persistent navigation surface. It carries no filter field: the Explorer is a short, fully visible list of folders the user added themselves. The run-history filters of §22.4 and the report search of §20.2 are unaffected.
 
 **Active Runs.** Everything started and not yet finished. Top-level runs only: a Bench run appears once, never once per dispatched child, matching the count of §21. Rows show the entity name and the run's status badge, and navigate to that run's detail page, where Cancel lives. When nothing is running, show a subtle `Nothing is running.` note rather than an error.
 
@@ -942,7 +942,7 @@ It must remain selected when viewing:
 
 ### 11.5 Add Folder
 
-`Add Folder` is a secondary action. It is reached from the `+` icon button in the Library view's title row (§8.3), and from the Empty Library page's button (§12).
+`Add Folder` is a secondary action. It is reached from the `+` icon button in the Explorer view's title row (§8.3), and from the Empty Explorer page's button (§12).
 
 Clicking it opens the operating system's own folder picker. Nothing stands between the click and the picker, and a path is never typed by hand. Cancelling the picker does nothing at all.
 
@@ -956,19 +956,19 @@ A folder registers only if its manifest is usable at the moment it is picked. An
 
 A manifest that breaks *afterwards* is the opposite case: the entity stays in the Explorer, and its page shows the validation message with Start disabled (§13.1). It is an entity the user knows and has run, and dropping it out of the list would hide both the entity and the mistake. The rule is that the Explorer never gains a row that has never worked, and never loses one that used to.
 
-A folder already in the Library is a no-op, never a duplicate.
+A folder already in the Explorer is a no-op, never a duplicate.
 
-Registering must immediately update the Library, select the first folder added, and report what was added and what was already there in the status bar.
+Registering must immediately update the Explorer, select the first folder added, and report what was added and what was already there in the status bar.
 
 Refusals are reported in a modal instead. One pick can name a whole directory of experiments, so refusals arrive as a list, each with its own reason; the status bar is a single line, which is exactly where those reasons are lost. A pick that refused nothing opens no modal.
 
-The modal names the directory that was picked, since a refused folder is one of many the pick found, and lists each refusal with its reason. When the same pick also registered something, it says so — the pick partly worked, and the Library has already changed behind the modal.
+The modal names the directory that was picked, since a refused folder is one of many the pick found, and lists each refusal with its reason. When the same pick also registered something, it says so — the pick partly worked, and the Explorer has already changed behind the modal.
 
 ```text
 ADD FOLDER
 Some folders were not added
 
-Added 2 folders. 1 already in the library.
+Added 2 folders. 1 already in the Explorer.
 
 ~/experiments
 
@@ -984,7 +984,7 @@ The modal only reports. It offers no retry and no partial undo: the pick is fini
 
 ---
 
-## 12. Empty Library Page
+## 12. Empty Explorer Page
 
 When no entities exist, show:
 
@@ -1331,7 +1331,7 @@ On submission:
    - Re-enable submission.
    - Show an inline error.
 
-For a Bench, step 3 produces the plan, validates it against the Library (§2.3.2),
+For a Bench, step 3 produces the plan, validates it against the Explorer (§2.3.2),
 and dispatches every call. Plan validation failure is a Start failure: the modal
 stays open, nothing is dispatched, and the error names the offending call.
 
@@ -1615,7 +1615,7 @@ A run dispatched by a Bench gets a complete detail page, reached from the Bench
 run's dispatch table.
 
 This page and `JobRunDetail` render **the same run record** (§2.3.1). They must
-present identical facts. The only differences are breadcrumbs, the Library
+present identical facts. The only differences are breadcrumbs, the Explorer
 selection, and the link back to the Bench run.
 
 The page must show:
@@ -1649,10 +1649,10 @@ When a plan dispatches the same Job several times, the breadcrumb leaf must
 disambiguate — by parameters, by call index, or both. `Solver GPU` alone is
 ambiguous and unacceptable.
 
-The Job named here **is** the Library's Solver GPU entry — that is the corrected
-model. But arriving through the Bench must not move the Library selection to it.
+The Job named here **is** the Explorer's Solver GPU entry — that is the corrected
+model. But arriving through the Bench must not move the Explorer selection to it.
 Offer navigation to the Job explicitly instead: clicking the Job name opens that
-Job's overview and, at that point, selects it in the Library.
+Job's overview and, at that point, selects it in the Explorer.
 
 ---
 
@@ -2014,7 +2014,7 @@ pub trait ExperimentBackend {
 Exact signatures may change, but the architectural boundary is mandatory.
 
 `start` on a Bench entity performs the whole fan-out: it produces the plan,
-validates it against the Library, dispatches every call, and returns the Bench
+validates it against the Explorer, dispatches every call, and returns the Bench
 `RunId`. Plan production lives behind this boundary — the UI never builds a plan.
 
 Because a Bench dispatch creates several Job runs at once, `start` must be atomic
@@ -2290,7 +2290,7 @@ application's control:
 8. A light, document-styled failure report.
 9. A table-heavy Bench summary.
 
-Both formats must appear in the demo Library so the viewer's two paths are both
+Both formats must appear in the demo Explorer so the viewer's two paths are both
 exercised without touching the developer controls.
 
 ---
@@ -2351,7 +2351,7 @@ Errors must be shown near the relevant operation.
 
 ### Invalid Manifest
 
-- Keep entity visible in the Library.
+- Keep entity visible in the Explorer.
 - Show specific validation reason.
 - Disable Start.
 
@@ -2359,7 +2359,7 @@ Errors must be shown near the relevant operation.
 
 If a route references a removed entity:
 
-- Return to Empty Library or the first available entity.
+- Return to Empty Explorer or the first available entity.
 - Do not panic.
 
 ### Missing Run
@@ -2451,7 +2451,7 @@ src/
 │   │
 │   ├── pages/
 │   │   ├── mod.rs
-│   │   ├── empty_library.rs
+│   │   ├── empty_explorer.rs
 │   │   ├── job_overview.rs
 │   │   ├── bench_overview.rs
 │   │   ├── job_run_detail.rs
@@ -2553,7 +2553,7 @@ Required:
 - Maintain visible keyboard focus.
 - Use selectable text for IDs, paths, parameters, and reports.
 - Use clear destructive wording for Cancel.
-- Use `Remove from Library`, never `Delete Folder`.
+- Use `Remove from Explorer`, never `Delete Folder`.
 - Do not silently discard parameter drafts.
 - Do not hide query errors.
 
@@ -2593,7 +2593,7 @@ Test:
 
 - Selecting an entity opens its overview.
 - Opening a Job run produces the correct route.
-- Opening a Bench child run preserves Bench context and Library selection.
+- Opening a Bench child run preserves Bench context and Explorer selection.
 - Opening the same run from the Job's history yields `JobRunDetail` and selects
   the Job instead — same run record, different context.
 - Opening and closing a report returns to the correct parent.
@@ -2671,7 +2671,7 @@ Run these checks on both macOS and Linux where CI is available.
 11. Open the referenced Job from the child-run page.
 12. Confirm the same run appears in that Job's ALL RUNS table with the Bench as
     its Source.
-13. Open it from there and confirm the Library selection moves to the Job.
+13. Open it from there and confirm the Explorer selection moves to the Job.
 14. Open a child report.
 
 ### Scenario E: Bench Partial Failure
@@ -2700,17 +2700,17 @@ Run these checks on both macOS and Linux where CI is available.
 2. Start it.
 3. Confirm Start fails with an inline error naming the offending call and Job.
 4. Confirm the modal stays open and preserves the typed parameters.
-5. Confirm no Bench run and no Job run were created anywhere in the Library.
+5. Confirm no Bench run and no Job run were created anywhere in the Explorer.
 
 ### Scenario F: Add Folder
 
-1. Reset to an empty Library.
+1. Reset to an empty Explorer.
 2. Click Add Folder and confirm the operating system's folder picker opens.
-3. Cancel it, and confirm the Library is unchanged.
+3. Cancel it, and confirm the Explorer is unchanged.
 4. Click Add Folder again and pick the bundled `mock/` directory.
 5. Confirm its three Jobs appear in the Jobs group and its Bench in the Benches group.
 6. Confirm the status bar reports how many folders were added.
-7. Pick the same directory again, and confirm nothing is duplicated and the status bar says they are already in the Library.
+7. Pick the same directory again, and confirm nothing is duplicated and the status bar says they are already in the Explorer.
 8. Pick a directory with no manifest anywhere below it.
 9. Confirm it appears with an error, and that Start is disabled for it.
 
@@ -2962,7 +2962,7 @@ The prototype is complete when all of the following are true:
 
 - It launches as a native macOS desktop application.
 - It builds as a native Linux desktop application.
-- The Library contains mock Jobs and Benches.
+- The Explorer contains mock Jobs and Benches.
 - Selecting an entity shows its status and history.
 - Start opens a modal rather than an inline permanent form.
 - Starting creates a simulated run.

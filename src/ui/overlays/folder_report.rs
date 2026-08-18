@@ -25,7 +25,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, picked: &str, outcome: &AddedF
         ui.label(text::eyebrow("ADD FOLDER"));
         ui.label(text::title(heading(outcome)));
 
-        // What did land, before what did not: the Library has already changed
+        // What did land, before what did not: the Explorer has already changed
         // behind this modal, and the reader should not have to infer it from
         // the absence of a name in the refusal list.
         if let Some(line) = registered(outcome) {
@@ -82,7 +82,7 @@ fn registered(outcome: &AddedFolders) -> Option<String> {
     }
     if outcome.already_registered > 0 {
         parts.push(format!(
-            "{} already in the library.",
+            "{} already in the Explorer.",
             outcome.already_registered
         ));
     }

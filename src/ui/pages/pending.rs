@@ -1,6 +1,6 @@
 //! Placeholder bodies for routes whose pages arrive in later phases.
 //!
-//! The routes themselves are real: breadcrumbs, Library selection, and recovery
+//! The routes themselves are real: breadcrumbs, Explorer selection, and recovery
 //! all work today. Only the page body is outstanding.
 
 use crate::app::ViewCtx;

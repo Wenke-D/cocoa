@@ -65,7 +65,7 @@ impl RunOrigin {
 #[derive(Clone, Debug, Serialize)]
 pub struct JobRun {
     pub id: RunId,
-    /// The Job this run belongs to. Always a real Library entity.
+    /// The Job this run belongs to. Always a real Explorer entity.
     pub job_id: EntityId,
     pub origin: RunOrigin,
     pub started_at: DateTime<Local>,
@@ -123,7 +123,7 @@ impl DisplayStatus {
 #[derive(Clone, Debug, Serialize)]
 pub struct BenchPlanStep {
     pub index: usize,
-    /// References an existing Library Job. The plan never embeds a Job.
+    /// References an existing Explorer Job. The plan never embeds a Job.
     pub job_id: EntityId,
     /// The parameters the Bench derived for this call. Distinct from the Bench's
     /// own input string.

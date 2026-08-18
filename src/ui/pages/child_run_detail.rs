@@ -2,7 +2,7 @@
 //!
 //! This page and [`super::job_run_detail`] render the same run record and share
 //! [`run_detail::show`], so they cannot drift apart. Only the context differs:
-//! the Library keeps the *Bench* selected here, and the page offers an explicit
+//! the Explorer keeps the *Bench* selected here, and the page offers an explicit
 //! link to the Job rather than quietly moving the selection to it.
 
 use crate::app::{AppCommand, ViewCtx};
@@ -31,14 +31,14 @@ pub fn show(
         .and_then(|bench_run| bench_run.plan.step_for_run(child_run_id))
         .cloned();
 
-    // The Job named here *is* the Library's entry for it — that is the whole
+    // The Job named here *is* the Explorer's entry for it — that is the whole
     // point of the corrected model. Offer navigation explicitly.
     let job_name = ctx.snapshot.entity_name(&run.job_id).to_owned();
     ui.horizontal(|ui| {
         ui.label(text::muted("Job"));
         if ui
             .link(&job_name)
-            .on_hover_text("Open this Job in the Library")
+            .on_hover_text("Open this Job in the Explorer")
             .clicked()
         {
             ctx.push(AppCommand::SelectEntity(run.job_id.clone()));

@@ -1,7 +1,7 @@
 //! Routes and breadcrumbs.
 //!
 //! One run record is reachable from two routes (specification §2.3.1). The route
-//! you arrived by — not the run's origin — decides which Library row stays
+//! you arrived by — not the run's origin — decides which Explorer row stays
 //! selected and what the breadcrumbs say (specification §9.2).
 
 use serde::{Deserialize, Serialize};
@@ -35,7 +35,7 @@ impl ReportContext {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Route {
     #[default]
-    EmptyLibrary,
+    EmptyExplorer,
 
     EntityOverview {
         entity_id: EntityId,
@@ -82,13 +82,13 @@ pub struct Recovery {
 }
 
 impl Route {
-    /// Which Library row stays highlighted.
+    /// Which Explorer row stays highlighted.
     ///
     /// Viewing a dispatched run through a Bench keeps the *Bench* selected, even
-    /// though the run belongs to a Job that is also in the Library.
+    /// though the run belongs to a Job that is also in the Explorer.
     pub fn selected_entity(&self) -> Option<&EntityId> {
         match self {
-            Self::EmptyLibrary => None,
+            Self::EmptyExplorer => None,
             Self::EntityOverview { entity_id } => Some(entity_id),
             Self::JobRunDetail { job_id, .. } => Some(job_id),
             Self::BenchRunDetail { bench_id, .. } | Self::BenchChildRunDetail { bench_id, .. } => {
@@ -159,7 +159,7 @@ impl Route {
         };
 
         match self {
-            Self::EmptyLibrary => Vec::new(),
+            Self::EmptyExplorer => Vec::new(),
 
             Self::EntityOverview { entity_id } => vec![Crumb {
                 label: entity_label(entity_id),
@@ -279,12 +279,12 @@ impl Route {
             Some(entity) => Route::EntityOverview {
                 entity_id: entity.id.clone(),
             },
-            None => Route::EmptyLibrary,
+            None => Route::EmptyExplorer,
         };
 
         let missing_entity = |id: &EntityId| Recovery {
             route: fallback(),
-            message: Some(format!("\"{id}\" is no longer in the Library.")),
+            message: Some(format!("\"{id}\" is no longer in the Explorer.")),
         };
 
         let missing_run = |entity_id: &EntityId| Recovery {
@@ -295,8 +295,8 @@ impl Route {
         };
 
         match self {
-            Route::EmptyLibrary => {
-                // Nothing to show, but the Library is no longer empty.
+            Route::EmptyExplorer => {
+                // Nothing to show, but the Explorer is no longer empty.
                 if world.entities.is_empty() {
                     None
                 } else {

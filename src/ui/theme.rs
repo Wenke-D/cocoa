@@ -31,7 +31,7 @@ const fn rgba(hex: u32, alpha: u8) -> Color32 {
 pub mod metrics {
     /// Width of the icon strip on the far left.
     pub const ACTIVITY_BAR: f32 = 48.0;
-    /// Height of the sidebar's view header, e.g. the `LIBRARY` row.
+    /// Height of the sidebar's view header, e.g. the `EXPLORER` row.
     pub const VIEW_HEADER: f32 = 35.0;
     /// Height of the bottom status bar.
     pub const STATUS_BAR: f32 = 22.0;

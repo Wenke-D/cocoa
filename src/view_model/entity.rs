@@ -1,10 +1,10 @@
-//! Library entities: Jobs and Benches.
+//! Explorer entities: Jobs and Benches.
 //!
 //! A **Job** is an independently runnable experiment.
 //!
 //! A **Bench** is a fan-out launcher. It does not define, own, or contain Jobs.
 //! When started it returns a list of calls to Jobs that already exist in the
-//! Library, and dispatches all of them at once (specification §2.2). Nothing in
+//! Explorer, and dispatches all of them at once (specification §2.2). Nothing in
 //! this type therefore describes a pipeline, an ordering, or a child list.
 
 use std::collections::BTreeMap;

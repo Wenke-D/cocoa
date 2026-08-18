@@ -561,7 +561,7 @@ fn file_name(path: &Path) -> String {
 /// The directory itself when it carries a manifest; otherwise every folder
 /// beneath it that does, so picking `mock/` adds the whole bundled library in
 /// one action. A directory with no manifest anywhere is returned unchanged, so
-/// it lands in the Library with its manifest error visible (specification §11.5)
+/// it lands in the Explorer with its manifest error visible (specification §11.5)
 /// rather than disappearing into a dialog error.
 fn experiment_folders(root: &Path) -> Vec<PathBuf> {
     fn collect(dir: &Path, out: &mut Vec<PathBuf>, depth: usize) {

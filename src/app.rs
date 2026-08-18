@@ -59,23 +59,23 @@ impl ThemePreference {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SidebarView {
     #[default]
-    Library,
+    Explorer,
     Running,
 }
 
 impl SidebarView {
-    pub const ALL: [Self; 2] = [Self::Library, Self::Running];
+    pub const ALL: [Self; 2] = [Self::Explorer, Self::Running];
 
     pub fn title(self) -> &'static str {
         match self {
-            Self::Library => "Library",
+            Self::Explorer => "Explorer",
             Self::Running => "Active Runs",
         }
     }
 
     pub fn tooltip(self) -> &'static str {
         match self {
-            Self::Library => "Library",
+            Self::Explorer => "Explorer",
             Self::Running => "Active runs",
         }
     }
@@ -202,7 +202,7 @@ impl UiState {
             .sidebar_width
             .clamp(SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH);
         if self.route.is_report() {
-            self.route = Route::EmptyLibrary;
+            self.route = Route::EmptyExplorer;
         }
     }
 
@@ -511,7 +511,7 @@ impl ExperimentApp {
         }
         if outcome.already_registered > 0 {
             parts.push(format!(
-                "{} already in the library.",
+                "{} already in the Explorer.",
                 outcome.already_registered
             ));
         }

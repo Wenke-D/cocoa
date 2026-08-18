@@ -13,7 +13,7 @@
 //! ```
 //!
 //! There is no in-window title bar (specification §8). The platform draws one
-//! carrying the application name; Add lives on the Library header's "+", the
+//! carrying the application name; Add lives on the Explorer header's "+", the
 //! theme in the activity bar's gear, and the active-run count in both the status
 //! bar and the activity bar's badge.
 //!
@@ -31,7 +31,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
     activity_bar::show(ctx, ui);
 
     if ctx.state.sidebar_open {
-        let panel = egui::Panel::left("library")
+        let panel = egui::Panel::left("explorer")
             .resizable(true)
             .default_size(ctx.state.sidebar_width)
             .size_range(egui::Rangef::new(SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH))

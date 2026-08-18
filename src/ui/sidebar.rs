@@ -1,11 +1,11 @@
 //! The sidebar (specification §11), styled as VS Code's side bar.
 //!
-//! One panel, two views, chosen by the activity bar. The Library view is the
+//! One panel, two views, chosen by the activity bar. The Explorer view is the
 //! only persistent navigation surface; the selected row is decided by the route,
 //! so viewing a Bench-dispatched run keeps the Bench highlighted even though the
 //! run belongs to a Job that is also listed here.
 //!
-//! The Library carries no filter field (specification §11.1): it is a short,
+//! The Explorer carries no filter field (specification §11.1): it is a short,
 //! fully visible list of folders the user added themselves. The run-history
 //! filters of §22.4 and the report search of §20.2 are unaffected.
 
@@ -37,7 +37,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
         .show(ui, |ui| match view {
-            SidebarView::Library => library(ctx, ui),
+            SidebarView::Explorer => explorer(ctx, ui),
             SidebarView::Running => running(ctx, ui),
         });
 }
@@ -58,7 +58,7 @@ fn title_row(ctx: &mut ViewCtx, ui: &mut egui::Ui, view: SidebarView) {
         color,
     );
 
-    if view == SidebarView::Library {
+    if view == SidebarView::Explorer {
         // The one title action, mirroring the Explorer's "New File" icon. Its
         // box is inset from the right edge by the same amount the title text is
         // from the left, so the row reads as one strip rather than an icon
@@ -85,10 +85,10 @@ fn title_row(ctx: &mut ViewCtx, ui: &mut egui::Ui, view: SidebarView) {
 }
 
 // ---------------------------------------------------------------------------
-// Library view
+// Explorer view
 // ---------------------------------------------------------------------------
 
-fn library(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
+fn explorer(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
     section(ctx, ui, "Benches", EntityKind::Bench, |state| {
         &mut state.benches_section_open
     });

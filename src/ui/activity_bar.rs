@@ -59,7 +59,7 @@ fn item(ctx: &mut ViewCtx, ui: &mut egui::Ui, view: SidebarView) {
         let box_rect = egui::Rect::from_center_size(rect.center(), egui::vec2(24.0, 24.0));
 
         match view {
-            SidebarView::Library => icons::files(
+            SidebarView::Explorer => icons::files(
                 painter,
                 box_rect,
                 color,

@@ -197,7 +197,7 @@ impl Coco {
         if self.store.contains(&canonical) {
             return Ok(());
         }
-        // A folder joins the library only if its manifest is usable now. A
+        // A folder joins the store only if its manifest is usable now. A
         // manifest that breaks afterwards keeps its entity listed, carrying the
         // error, because the user knows that entity and needs to see what went
         // wrong with it (§11.5). A folder that never worked is a different

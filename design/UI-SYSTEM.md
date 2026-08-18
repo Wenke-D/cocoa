@@ -58,7 +58,7 @@ change alone.
 |---|---|
 | `text::eyebrow` | The type label above a title: `JOB`, `START BENCH` |
 | `text::section` | A section heading inside content: `ACTIVE RUNS` |
-| `text::panel_header` | A panel or menu title: `LIBRARY`, `BENCHES` |
+| `text::panel_header` | A panel or menu title: `EXPLORER`, `BENCHES` |
 | `text::panel_header_paint` | The same, for a painter that has no `RichText` |
 | `text::caption` | Hints, notes, anything the reader may skip |
 | `text::muted` | A quiet line at body size |

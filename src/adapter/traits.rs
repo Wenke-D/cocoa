@@ -86,12 +86,12 @@ impl std::error::Error for ExperimentError {}
 ///
 /// A pick can name several experiment folders at once, so the outcome is a
 /// tally rather than a single success: the folders newly registered, the ones
-/// already in the library, and the ones refused with their reason.
+/// already in the Explorer, and the ones refused with their reason.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct AddedFolders {
     /// Folder names newly registered, in the order they were found.
     pub added: Vec<String>,
-    /// Folders that were already in the library.
+    /// Folders that were already in the Explorer.
     pub already_registered: usize,
     /// Folders that could not be registered, each with its reason.
     pub refused: Vec<String>,
@@ -127,7 +127,7 @@ pub trait Experiments {
     /// When the picked directory carries no manifest of its own, every
     /// experiment folder beneath it is registered instead, so one pick can
     /// add a whole library (the bundled `mock/` directory, say). A folder
-    /// already in the library is a no-op.
+    /// already in the Explorer is a no-op.
     fn register_folder(&mut self, path: &Path) -> Result<AddedFolders, ExperimentError>;
 
     /// Automatic housekeeping (polling, reports, bench fan-out progression).
