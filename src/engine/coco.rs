@@ -14,16 +14,16 @@ use std::time::Duration;
 
 use chrono::Local;
 
-use crate::coco::error::CocoError;
-use crate::coco::invoke::{self, Invocation, coco_return_lines};
-use crate::coco::manifest::{JobManifest, Manifest};
-use crate::coco::record::{
+use crate::engine::error::EngineError;
+use crate::engine::invoke::{self, Invocation, coco_return_lines};
+use crate::engine::manifest::{JobManifest, Manifest};
+use crate::engine::record::{
     BenchMember, BenchMembersFile, BenchMembersFileMember, BenchRecord, BenchReport, LaunchFailure,
     RunRecord,
 };
-use crate::coco::status::Status;
-use crate::coco::store::{Store, write_atomic};
-use crate::coco::template;
+use crate::engine::status::Status;
+use crate::engine::store::{Store, write_atomic};
+use crate::engine::template;
 
 /// Timeouts (convention §6). Defaults are the documented ones; tunable later.
 #[derive(Clone, Debug)]
@@ -52,7 +52,7 @@ impl Default for Config {
 #[derive(Debug)]
 pub struct EntityView {
     pub path: PathBuf,
-    pub manifest: Result<Manifest, CocoError>,
+    pub manifest: Result<Manifest, EngineError>,
 }
 
 /// One row of a job's history. A malformed `run.json` fails that run only and
@@ -60,14 +60,14 @@ pub struct EntityView {
 #[derive(Debug)]
 pub struct JobRunView {
     pub run_id: u64,
-    pub record: Result<RunRecord, CocoError>,
+    pub record: Result<RunRecord, EngineError>,
 }
 
 /// One bench run record (bench status is derived, never stored, §9.1).
 #[derive(Debug)]
 pub struct BenchRunView {
     pub run_id: u64,
-    pub record: Result<BenchRecord, CocoError>,
+    pub record: Result<BenchRecord, EngineError>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -130,9 +130,9 @@ pub struct RefreshReport {
     pub polls: usize,
     pub poll_changes: Vec<(u64, Status)>,
     pub poll_warnings: Vec<String>,
-    pub poll_errors: Vec<CocoError>,
+    pub poll_errors: Vec<EngineError>,
     pub reports_run: usize,
-    pub report_errors: Vec<CocoError>,
+    pub report_errors: Vec<EngineError>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -151,11 +151,11 @@ pub struct Coco {
 }
 
 impl Coco {
-    pub fn new(store_path: impl Into<PathBuf>) -> Result<Self, CocoError> {
+    pub fn new(store_path: impl Into<PathBuf>) -> Result<Self, EngineError> {
         Self::with_config(store_path, Config::default())
     }
 
-    pub fn with_config(store_path: impl Into<PathBuf>, config: Config) -> Result<Self, CocoError> {
+    pub fn with_config(store_path: impl Into<PathBuf>, config: Config) -> Result<Self, EngineError> {
         let store_path = store_path.into();
         let store = Store::load(&store_path)?;
         Ok(Self {
@@ -186,10 +186,10 @@ impl Coco {
     /// Registers a folder by path (§1, §5). Registering a path already in the
     /// store is a no-op; a valid manifest whose name collides with an
     /// already-registered entity is refused.
-    pub fn register(&mut self, path: &Path) -> Result<(), CocoError> {
-        let canonical = fs::canonicalize(path).map_err(|source| CocoError::io(path, source))?;
+    pub fn register(&mut self, path: &Path) -> Result<(), EngineError> {
+        let canonical = fs::canonicalize(path).map_err(|source| EngineError::io(path, source))?;
         if !canonical.is_dir() {
-            return Err(CocoError::validation(format!(
+            return Err(EngineError::validation(format!(
                 "{} is not a folder",
                 canonical.display()
             )));
@@ -200,7 +200,7 @@ impl Coco {
         if let Ok(manifest) = Manifest::load(&canonical)
             && let Some(existing) = self.find_name_collision(manifest.name())
         {
-            return Err(CocoError::NameCollision(existing));
+            return Err(EngineError::NameCollision(existing));
         }
         self.store.add(canonical);
         self.store.save(&self.store_path)
@@ -208,10 +208,10 @@ impl Coco {
 
     /// Removes a folder from the store. The folder and its records are
     /// untouched.
-    pub fn unregister(&mut self, path: &Path) -> Result<(), CocoError> {
+    pub fn unregister(&mut self, path: &Path) -> Result<(), EngineError> {
         let canonical = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
         if !self.store.remove(&canonical) {
-            return Err(CocoError::not_found(format!(
+            return Err(EngineError::not_found(format!(
                 "entity {}",
                 canonical.display()
             )));
@@ -231,10 +231,10 @@ impl Coco {
             .collect()
     }
 
-    pub fn entity(&self, path: &Path) -> Result<EntityView, CocoError> {
-        let canonical = fs::canonicalize(path).map_err(|source| CocoError::io(path, source))?;
+    pub fn entity(&self, path: &Path) -> Result<EntityView, EngineError> {
+        let canonical = fs::canonicalize(path).map_err(|source| EngineError::io(path, source))?;
         if !self.store.contains(&canonical) {
-            return Err(CocoError::not_found(format!(
+            return Err(EngineError::not_found(format!(
                 "entity {}",
                 canonical.display()
             )));
@@ -245,26 +245,26 @@ impl Coco {
         })
     }
 
-    pub fn job_manifest(&self, path: &Path) -> Result<JobManifest, CocoError> {
+    pub fn job_manifest(&self, path: &Path) -> Result<JobManifest, EngineError> {
         let view = self.entity(path)?;
         let manifest = view.manifest?;
         manifest.as_job().cloned().ok_or_else(|| {
-            CocoError::validation(format!("{} is a bench, not a job", view.path.display()))
+            EngineError::validation(format!("{} is a bench, not a job", view.path.display()))
         })
     }
 
     /// A job's history, newest first. `runs/` is readable on its own (§1);
     /// broken records appear as broken rows, not as blank history (§12).
-    pub fn job_runs(&self, path: &Path) -> Result<Vec<JobRunView>, CocoError> {
+    pub fn job_runs(&self, path: &Path) -> Result<Vec<JobRunView>, EngineError> {
         let runs_dir = path.join("runs");
         let mut runs = Vec::new();
         let entries = match fs::read_dir(&runs_dir) {
             Ok(entries) => entries,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(runs),
-            Err(source) => return Err(CocoError::io(&runs_dir, source)),
+            Err(source) => return Err(EngineError::io(&runs_dir, source)),
         };
         for entry in entries {
-            let entry = entry.map_err(|source| CocoError::io(&runs_dir, source))?;
+            let entry = entry.map_err(|source| EngineError::io(&runs_dir, source))?;
             let Some(run_id) = entry.file_name().to_string_lossy().parse::<u64>().ok() else {
                 continue;
             };
@@ -275,20 +275,20 @@ impl Coco {
         Ok(runs)
     }
 
-    pub fn run_record(&self, path: &Path, run_id: u64) -> Result<RunRecord, CocoError> {
+    pub fn run_record(&self, path: &Path, run_id: u64) -> Result<RunRecord, EngineError> {
         self.read_run_record(path, run_id)
     }
 
-    pub fn bench_runs(&self, path: &Path) -> Result<Vec<BenchRunView>, CocoError> {
+    pub fn bench_runs(&self, path: &Path) -> Result<Vec<BenchRunView>, EngineError> {
         let runs_dir = path.join("runs");
         let mut runs = Vec::new();
         let entries = match fs::read_dir(&runs_dir) {
             Ok(entries) => entries,
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(runs),
-            Err(source) => return Err(CocoError::io(&runs_dir, source)),
+            Err(source) => return Err(EngineError::io(&runs_dir, source)),
         };
         for entry in entries {
-            let entry = entry.map_err(|source| CocoError::io(&runs_dir, source))?;
+            let entry = entry.map_err(|source| EngineError::io(&runs_dir, source))?;
             let Some(run_id) = entry.file_name().to_string_lossy().parse::<u64>().ok() else {
                 continue;
             };
@@ -299,7 +299,7 @@ impl Coco {
         Ok(runs)
     }
 
-    pub fn bench_record(&self, path: &Path, run_id: u64) -> Result<BenchRecord, CocoError> {
+    pub fn bench_record(&self, path: &Path, run_id: u64) -> Result<BenchRecord, EngineError> {
         self.read_bench_record(path, run_id)
     }
 
@@ -316,7 +316,7 @@ impl Coco {
         path: &Path,
         render: BTreeMap<String, String>,
         launch: BTreeMap<String, String>,
-    ) -> Result<u64, CocoError> {
+    ) -> Result<u64, EngineError> {
         self.start_job_inner(path, render, launch, None)
     }
 
@@ -326,26 +326,26 @@ impl Coco {
         render: BTreeMap<String, String>,
         launch: BTreeMap<String, String>,
         origin: Option<(u64, String)>,
-    ) -> Result<u64, CocoError> {
+    ) -> Result<u64, EngineError> {
         let manifest = self.job_manifest(path)?;
         validate_params(&manifest.render_params, &render, "render")?;
         validate_params(&manifest.launch_params, &launch, "launch")?;
 
         let template_path = path.join(&manifest.template);
         let source = fs::read_to_string(&template_path)
-            .map_err(|source| CocoError::io(&template_path, source))?;
+            .map_err(|source| EngineError::io(&template_path, source))?;
         template::analyze(&source, &manifest.render_params)
-            .map_err(|e| CocoError::template(&template_path, e.to_string()))?;
+            .map_err(|e| EngineError::template(&template_path, e.to_string()))?;
         let rendered = template::render(&source, &render)
-            .map_err(|e| CocoError::template(&template_path, e.to_string()))?;
+            .map_err(|e| EngineError::template(&template_path, e.to_string()))?;
 
         let run_id = self.store.allocate_run_id(&self.store_path)?;
         let run_dir = path.join("runs").join(run_id.to_string());
-        fs::create_dir_all(&run_dir).map_err(|source| CocoError::io(&run_dir, source))?;
+        fs::create_dir_all(&run_dir).map_err(|source| EngineError::io(&run_dir, source))?;
 
         let artifact_name = artifact_name(&manifest.template);
         fs::write(run_dir.join(&artifact_name), rendered)
-            .map_err(|source| CocoError::io(run_dir.join(&artifact_name), source))?;
+            .map_err(|source| EngineError::io(run_dir.join(&artifact_name), source))?;
 
         let mut argv = manifest.launch.words.clone();
         argv.push("--script".to_owned());
@@ -358,7 +358,7 @@ impl Coco {
         }
 
         let invocation = invoke::run(path, &argv, self.config.launch_timeout)
-            .map_err(|source| CocoError::io(path, source))?;
+            .map_err(|source| EngineError::io(path, source))?;
         let submission_id = parse_launch_return(&invocation).map_err(|detail| {
             invocation_error(manifest.launch.display.clone(), &invocation, &detail)
         })?;
@@ -385,7 +385,7 @@ impl Coco {
     /// Polls one job's active runs through the job's own `poll` script
     /// (§7.2, §10). A non-zero exit or timeout moves the job's active runs to
     /// `UNREACHABLE` and is also returned as a loud operation error.
-    pub fn poll_job(&mut self, path: &Path) -> Result<PollReport, CocoError> {
+    pub fn poll_job(&mut self, path: &Path) -> Result<PollReport, EngineError> {
         let manifest = self.job_manifest(path)?;
         let active: Vec<(u64, RunRecord)> = self
             .job_runs(path)?
@@ -417,7 +417,7 @@ impl Coco {
         argv.push("--submissions".to_owned());
         argv.push(submissions.join(","));
         let invocation = invoke::run(path, &argv, self.config.poll_timeout)
-            .map_err(|source| CocoError::io(path, source))?;
+            .map_err(|source| EngineError::io(path, source))?;
 
         if !invocation.ok() {
             let reason = format!("poll script failed: {}", invocation.output());
@@ -429,7 +429,7 @@ impl Coco {
                     report.changed.push((run_id, Status::Unreachable));
                 }
             }
-            return Err(CocoError::Invocation {
+            return Err(EngineError::Invocation {
                 script: manifest.poll.display.clone(),
                 exit: invocation.exit,
                 timed_out: invocation.timed_out,
@@ -512,7 +512,7 @@ impl Coco {
         path: &Path,
         run_id: u64,
         mode: ReportMode,
-    ) -> Result<(), CocoError> {
+    ) -> Result<(), EngineError> {
         let manifest = self.job_manifest(path)?;
         let record = self.run_record(path, run_id)?;
 
@@ -527,7 +527,7 @@ impl Coco {
             },
         };
         if !eligible {
-            return Err(CocoError::validation(format!(
+            return Err(EngineError::validation(format!(
                 "run {run_id} ({}) cannot be reported",
                 record.status.label()
             )));
@@ -540,14 +540,14 @@ impl Coco {
         }
 
         let report_dir = path.join("report");
-        fs::create_dir_all(&report_dir).map_err(|source| CocoError::io(&report_dir, source))?;
+        fs::create_dir_all(&report_dir).map_err(|source| EngineError::io(&report_dir, source))?;
         let mut argv = manifest.report.words.clone();
         argv.push("--run".to_owned());
         argv.push(run_id.to_string());
         argv.push("--submission".to_owned());
         argv.push(record.submission_id.clone());
         let invocation = invoke::run(path, &argv, self.config.report_timeout)
-            .map_err(|source| CocoError::io(path, source))?;
+            .map_err(|source| EngineError::io(path, source))?;
 
         let report_path = report_dir.join(format!("{run_id}.txt"));
         let file_ok = report_path.is_file();
@@ -564,7 +564,7 @@ impl Coco {
             } else {
                 invocation.output()
             };
-            let error = CocoError::Invocation {
+            let error = EngineError::Invocation {
                 script: manifest.report.display.clone(),
                 exit: invocation.exit,
                 timed_out: invocation.timed_out,
@@ -582,11 +582,11 @@ impl Coco {
 
     /// Cancels one run through the job's `cancel` script (§7.4). A non-zero
     /// exit or timeout is a cancel failure: the run keeps its current status.
-    pub fn cancel_run(&mut self, path: &Path, run_id: u64) -> Result<(), CocoError> {
+    pub fn cancel_run(&mut self, path: &Path, run_id: u64) -> Result<(), EngineError> {
         let manifest = self.job_manifest(path)?;
         let mut record = self.run_record(path, run_id)?;
         if !record.status.is_cancellable() {
-            return Err(CocoError::validation(format!(
+            return Err(EngineError::validation(format!(
                 "run {run_id} ({}) cannot be cancelled",
                 record.status.label()
             )));
@@ -595,13 +595,13 @@ impl Coco {
         argv.push("--submission".to_owned());
         argv.push(record.submission_id.clone());
         let invocation = invoke::run(path, &argv, self.config.cancel_timeout)
-            .map_err(|source| CocoError::io(path, source))?;
+            .map_err(|source| EngineError::io(path, source))?;
         if invocation.ok() {
             record.apply_status(Status::Cancelling, Local::now(), None);
             self.write_run_record(path, &record)?;
             Ok(())
         } else {
-            Err(CocoError::Invocation {
+            Err(EngineError::Invocation {
                 script: manifest.cancel.display.clone(),
                 exit: invocation.exit,
                 timed_out: invocation.timed_out,
@@ -621,7 +621,7 @@ impl Coco {
         &mut self,
         path: &Path,
         params: BTreeMap<String, String>,
-    ) -> Result<Vec<PlanInstance>, CocoError> {
+    ) -> Result<Vec<PlanInstance>, EngineError> {
         let manifest = self.bench_manifest(path)?;
         validate_params(&manifest.plan_params, &params, "plan")?;
 
@@ -631,9 +631,9 @@ impl Coco {
             argv.push(value.clone());
         }
         let invocation = invoke::run(path, &argv, self.config.plan_timeout)
-            .map_err(|source| CocoError::io(path, source))?;
+            .map_err(|source| EngineError::io(path, source))?;
         if !invocation.ok() {
-            return Err(CocoError::Invocation {
+            return Err(EngineError::Invocation {
                 script: manifest.plan.display.clone(),
                 exit: invocation.exit,
                 timed_out: invocation.timed_out,
@@ -643,7 +643,7 @@ impl Coco {
 
         let lines = coco_return_lines(&invocation.stdout);
         if lines.is_empty() {
-            return Err(CocoError::validation(
+            return Err(EngineError::validation(
                 "plan produced no instances; a bench start needs at least one",
             ));
         }
@@ -652,9 +652,9 @@ impl Coco {
         for (index, line) in lines.iter().enumerate() {
             let call = index + 1;
             let planned = parse_plan_line(line)
-                .map_err(|e| CocoError::validation(format!("plan call {call}: {e}")))?;
+                .map_err(|e| EngineError::validation(format!("plan call {call}: {e}")))?;
             let (job_path, job) = self.find_job_by_name(&planned.job).ok_or_else(|| {
-                CocoError::validation(format!(
+                EngineError::validation(format!(
                     "plan call {call}: `{}` is not a registered job",
                     planned.job
                 ))
@@ -669,7 +669,7 @@ impl Coco {
             if expected != provided {
                 let missing: Vec<&str> = expected.difference(&provided).copied().collect();
                 let extra: Vec<&str> = provided.difference(&expected).copied().collect();
-                return Err(CocoError::validation(format!(
+                return Err(EngineError::validation(format!(
                     "plan call {call}: params for job `{}` must be exactly its declared sets; \
                      missing {}, extra {}",
                     planned.job,
@@ -707,7 +707,7 @@ impl Coco {
         &mut self,
         path: &Path,
         params: BTreeMap<String, String>,
-    ) -> Result<BenchStart, CocoError> {
+    ) -> Result<BenchStart, EngineError> {
         let manifest = self.bench_manifest(path)?;
         let instances = self.plan_bench(path, params.clone())?;
         let bench_run_id = self.store.allocate_run_id(&self.store_path)?;
@@ -762,7 +762,7 @@ impl Coco {
         path: &Path,
         run_id: u64,
         _mode: ReportMode,
-    ) -> Result<(), CocoError> {
+    ) -> Result<(), EngineError> {
         let manifest = self.bench_manifest(path)?;
         let mut record = self.bench_record(path, run_id)?;
 
@@ -800,7 +800,7 @@ impl Coco {
             }
         }
         if !block_reason.is_empty() {
-            return Err(CocoError::validation(format!(
+            return Err(EngineError::validation(format!(
                 "no bench report: {block_reason}"
             )));
         }
@@ -830,18 +830,18 @@ impl Coco {
                 .collect(),
         };
         let json = serde_json::to_vec_pretty(&members_file)
-            .map_err(|e| CocoError::store(run_dir.join("members.json"), e.to_string()))?;
+            .map_err(|e| EngineError::store(run_dir.join("members.json"), e.to_string()))?;
         write_atomic(&run_dir.join("members.json"), &json)?;
 
         let report_dir = path.join("report");
-        fs::create_dir_all(&report_dir).map_err(|source| CocoError::io(&report_dir, source))?;
+        fs::create_dir_all(&report_dir).map_err(|source| EngineError::io(&report_dir, source))?;
         let mut argv = manifest.report.words.clone();
         argv.push("--run".to_owned());
         argv.push(run_id.to_string());
         argv.push("--members".to_owned());
         argv.push(format!("runs/{run_id}/members.json"));
         let invocation = invoke::run(path, &argv, self.config.report_timeout)
-            .map_err(|source| CocoError::io(path, source))?;
+            .map_err(|source| EngineError::io(path, source))?;
 
         let report_path = report_dir.join(format!("{run_id}.txt"));
         let ok = invocation.ok() && report_path.is_file();
@@ -863,7 +863,7 @@ impl Coco {
         if ok {
             Ok(())
         } else {
-            Err(CocoError::Invocation {
+            Err(EngineError::Invocation {
                 script: manifest.report.display.clone(),
                 exit: invocation.exit,
                 timed_out: invocation.timed_out,
@@ -879,12 +879,12 @@ impl Coco {
         &mut self,
         path: &Path,
         run_id: u64,
-    ) -> Result<Vec<MemberCancel>, CocoError> {
+    ) -> Result<Vec<MemberCancel>, EngineError> {
         let record = self.bench_record(path, run_id)?;
         let mut results = Vec::new();
         for member in &record.members {
             let (job_path, _) = self.find_job_by_name(&member.job).ok_or_else(|| {
-                CocoError::not_found(format!("member job `{}` of bench run {run_id}", member.job))
+                EngineError::not_found(format!("member job `{}` of bench run {run_id}", member.job))
             })?;
             let Ok(member_record) = self.run_record(&job_path, member.run_id) else {
                 continue;
@@ -912,7 +912,7 @@ impl Coco {
 
     /// Derives a bench run's status from its members, launch failures, and
     /// report lifecycle (§9.1). Never stored, never cached.
-    pub fn bench_status(&self, path: &Path, run_id: u64) -> Result<BenchStatus, CocoError> {
+    pub fn bench_status(&self, path: &Path, run_id: u64) -> Result<BenchStatus, EngineError> {
         let record = self.bench_record(path, run_id)?;
         let resolved = self.resolve_members(&record);
         let missing: Vec<String> = resolved
@@ -961,7 +961,7 @@ impl Coco {
     /// succeeded (§7.5, §10).
     pub fn refresh(&mut self) -> RefreshReport {
         let mut report = RefreshReport::default();
-        let entities: Vec<(PathBuf, Result<Manifest, CocoError>)> = self
+        let entities: Vec<(PathBuf, Result<Manifest, EngineError>)> = self
             .entities()
             .into_iter()
             .map(|view| (view.path, view.manifest))
@@ -1052,57 +1052,57 @@ impl Coco {
     pub fn bench_manifest(
         &self,
         path: &Path,
-    ) -> Result<crate::coco::manifest::BenchManifest, CocoError> {
+    ) -> Result<crate::engine::manifest::BenchManifest, EngineError> {
         let view = self.entity(path)?;
         let manifest = view.manifest?;
         manifest.as_bench().cloned().ok_or_else(|| {
-            CocoError::validation(format!("{} is a job, not a bench", view.path.display()))
+            EngineError::validation(format!("{} is a job, not a bench", view.path.display()))
         })
     }
 
-    fn read_run_record(&self, path: &Path, run_id: u64) -> Result<RunRecord, CocoError> {
+    fn read_run_record(&self, path: &Path, run_id: u64) -> Result<RunRecord, EngineError> {
         let record_path = path.join("runs").join(run_id.to_string()).join("run.json");
         match fs::read_to_string(&record_path) {
             Ok(text) => serde_json::from_str(&text).map_err(|e| {
-                CocoError::store(&record_path, format!("run.json does not parse: {e}"))
+                EngineError::store(&record_path, format!("run.json does not parse: {e}"))
             }),
             Err(source) if source.kind() == std::io::ErrorKind::NotFound => Err(
-                CocoError::not_found(format!("run {run_id} in {}", path.display())),
+                EngineError::not_found(format!("run {run_id} in {}", path.display())),
             ),
-            Err(source) => Err(CocoError::io(&record_path, source)),
+            Err(source) => Err(EngineError::io(&record_path, source)),
         }
     }
 
-    fn write_run_record(&self, path: &Path, record: &RunRecord) -> Result<(), CocoError> {
+    fn write_run_record(&self, path: &Path, record: &RunRecord) -> Result<(), EngineError> {
         let record_path = path
             .join("runs")
             .join(record.run_id.to_string())
             .join("run.json");
         let json = serde_json::to_vec_pretty(record)
-            .map_err(|e| CocoError::store(&record_path, e.to_string()))?;
+            .map_err(|e| EngineError::store(&record_path, e.to_string()))?;
         write_atomic(&record_path, &json)
     }
 
-    fn read_bench_record(&self, path: &Path, run_id: u64) -> Result<BenchRecord, CocoError> {
+    fn read_bench_record(&self, path: &Path, run_id: u64) -> Result<BenchRecord, EngineError> {
         let record_path = path.join("runs").join(run_id.to_string()).join("run.json");
         match fs::read_to_string(&record_path) {
             Ok(text) => serde_json::from_str(&text).map_err(|e| {
-                CocoError::store(&record_path, format!("run.json does not parse: {e}"))
+                EngineError::store(&record_path, format!("run.json does not parse: {e}"))
             }),
             Err(source) if source.kind() == std::io::ErrorKind::NotFound => Err(
-                CocoError::not_found(format!("bench run {run_id} in {}", path.display())),
+                EngineError::not_found(format!("bench run {run_id} in {}", path.display())),
             ),
-            Err(source) => Err(CocoError::io(&record_path, source)),
+            Err(source) => Err(EngineError::io(&record_path, source)),
         }
     }
 
-    fn write_bench_record(&self, path: &Path, record: &BenchRecord) -> Result<(), CocoError> {
+    fn write_bench_record(&self, path: &Path, record: &BenchRecord) -> Result<(), EngineError> {
         let record_path = path
             .join("runs")
             .join(record.run_id.to_string())
             .join("run.json");
         let json = serde_json::to_vec_pretty(record)
-            .map_err(|e| CocoError::store(&record_path, e.to_string()))?;
+            .map_err(|e| EngineError::store(&record_path, e.to_string()))?;
         write_atomic(&record_path, &json)
     }
 
@@ -1211,7 +1211,7 @@ fn validate_params(
     declared: &[String],
     provided: &BTreeMap<String, String>,
     set: &str,
-) -> Result<(), CocoError> {
+) -> Result<(), EngineError> {
     let declared_set: BTreeSet<&str> = declared.iter().map(String::as_str).collect();
     let provided_set: BTreeSet<&str> = provided.keys().map(String::as_str).collect();
     let missing: Vec<&str> = declared_set.difference(&provided_set).copied().collect();
@@ -1232,7 +1232,7 @@ fn validate_params(
     if missing.is_empty() && extra.is_empty() && blank.is_empty() {
         Ok(())
     } else {
-        Err(CocoError::validation(format!(
+        Err(EngineError::validation(format!(
             "{set} parameters must match the manifest exactly and each one needs a value; \
              missing {}, extra {}, empty {}",
             describe_names(&missing),
@@ -1297,13 +1297,13 @@ fn parse_plan_line(line: &str) -> Result<PlanLine, String> {
     })
 }
 
-fn invocation_error(script: String, invocation: &Invocation, detail: &str) -> CocoError {
+fn invocation_error(script: String, invocation: &Invocation, detail: &str) -> EngineError {
     let output = if detail.is_empty() {
         invocation.output()
     } else {
         format!("{detail}\n{}", invocation.output())
     };
-    CocoError::Invocation {
+    EngineError::Invocation {
         script,
         exit: invocation.exit,
         timed_out: invocation.timed_out,

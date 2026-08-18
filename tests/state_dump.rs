@@ -15,8 +15,8 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-use experiment_manager::adapter::{CocoAdapter, Experiments};
-use experiment_manager::coco::Coco;
+use coco::adapter::{EngineAdapter, Experiments};
+use coco::engine::Coco;
 use serde_json::Value;
 use tempfile::TempDir;
 
@@ -83,7 +83,7 @@ fn world_matches_the_golden_dump() {
         &library,
     );
 
-    let mut experiments = CocoAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
+    let mut experiments = EngineAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
     experiments.register_folder(&library).unwrap();
 
     // One started run, so the golden file pins the history indexes too — the

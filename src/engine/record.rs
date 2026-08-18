@@ -12,7 +12,7 @@ use std::path::PathBuf;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
-use crate::coco::status::Status;
+use crate::engine::status::Status;
 
 /// One status change in a run's history.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]

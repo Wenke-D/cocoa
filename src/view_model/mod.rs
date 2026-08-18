@@ -1,6 +1,6 @@
 //! What the workbench shows.
 //!
-//! Not the domain — that is [`crate::coco`], which owns manifests, run records
+//! Not the domain — that is [`crate::engine`], which owns manifests, run records
 //! and the store, and which never refers to anything here. These types are the
 //! shape the UI renders: a status the user reads ([`status::RunStatus`]) rather
 //! than the one a scheduler reported, a folder path already written the way it

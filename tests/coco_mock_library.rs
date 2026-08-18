@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use experiment_manager::coco::{Coco, Status};
+use coco::engine::{Coco, Status};
 use tempfile::TempDir;
 
 fn mock_root() -> PathBuf {

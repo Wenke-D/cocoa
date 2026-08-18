@@ -16,9 +16,9 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use experiment_manager::adapter::CancelTarget;
-use experiment_manager::app::{AppCommand, ExperimentApp, ThemePreference};
-use experiment_manager::navigation::{Overlay, Route, SubmitState};
+use coco::adapter::CancelTarget;
+use coco::app::{AppCommand, ExperimentApp, ThemePreference};
+use coco::navigation::{Overlay, Route, SubmitState};
 
 /// Frames to render before capturing, so fonts and panel sizes have settled.
 const WARMUP_FRAMES: u32 = 8;
@@ -109,7 +109,7 @@ fn arrange(app: &mut ExperimentApp, surface: &str) {
             entity_id: job.id.clone(),
             parameters,
         });
-        app.poll();
+        app.apply_pending();
     }
 
     match surface {
@@ -178,7 +178,7 @@ fn main() -> eframe::Result {
     };
 
     eframe::run_native(
-        "experiment_manager_screenshot",
+        "coco_screenshot",
         native_options,
         Box::new(move |cc| {
             let mut app = ExperimentApp::new(cc);

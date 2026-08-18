@@ -11,9 +11,9 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::coco::error::CocoError;
-use crate::coco::template;
-use crate::coco::words::split_command;
+use crate::engine::error::EngineError;
+use crate::engine::template;
+use crate::engine::words::split_command;
 
 /// What an entity is. A **job** is independently launchable; a **bench** is a
 /// fan-out launcher over already-registered jobs (convention §2, §3).
@@ -128,15 +128,15 @@ impl Manifest {
     /// The template is read and checked here, too: both directions of the
     /// exact-match rule are verified when the manifest loads, so a mismatch is
     /// visible before anyone tries to start anything.
-    pub fn load(folder: &Path) -> Result<Self, CocoError> {
+    pub fn load(folder: &Path) -> Result<Self, EngineError> {
         let manifest_path = folder.join("coco.toml");
         if !manifest_path.is_file() {
-            return Err(CocoError::manifest(folder, "no coco.toml in this folder"));
+            return Err(EngineError::manifest(folder, "no coco.toml in this folder"));
         }
         let text = fs::read_to_string(&manifest_path)
-            .map_err(|source| CocoError::io(&manifest_path, source))?;
+            .map_err(|source| EngineError::io(&manifest_path, source))?;
         let value: toml::Value = toml::from_str(&text).map_err(|e| {
-            CocoError::manifest(&manifest_path, format!("coco.toml does not parse: {e}"))
+            EngineError::manifest(&manifest_path, format!("coco.toml does not parse: {e}"))
         })?;
 
         let kind = value
@@ -146,36 +146,36 @@ impl Manifest {
         match kind {
             "job" => Self::load_job(folder, &manifest_path, &text),
             "bench" => Self::load_bench(folder, &manifest_path, &text),
-            "" => Err(CocoError::manifest(
+            "" => Err(EngineError::manifest(
                 &manifest_path,
                 "missing required key `kind`",
             )),
-            other => Err(CocoError::manifest(
+            other => Err(EngineError::manifest(
                 &manifest_path,
                 format!("`kind` must be `job` or `bench`, found `{other}`"),
             )),
         }
     }
 
-    fn load_job(folder: &Path, manifest_path: &Path, text: &str) -> Result<Self, CocoError> {
+    fn load_job(folder: &Path, manifest_path: &Path, text: &str) -> Result<Self, EngineError> {
         let raw: RawJob = toml::from_str(text)
-            .map_err(|e| CocoError::manifest(manifest_path, format!("invalid manifest: {e}")))?;
+            .map_err(|e| EngineError::manifest(manifest_path, format!("invalid manifest: {e}")))?;
 
         let name = require_name(raw.name, manifest_path)?;
         let render = raw.render.ok_or_else(|| {
-            CocoError::manifest(manifest_path, "missing required table `[render]`")
+            EngineError::manifest(manifest_path, "missing required table `[render]`")
         })?;
         let launch = raw.launch.ok_or_else(|| {
-            CocoError::manifest(manifest_path, "missing required table `[launch]`")
+            EngineError::manifest(manifest_path, "missing required table `[launch]`")
         })?;
         let poll = raw
             .poll
-            .ok_or_else(|| CocoError::manifest(manifest_path, "missing required table `[poll]`"))?;
+            .ok_or_else(|| EngineError::manifest(manifest_path, "missing required table `[poll]`"))?;
         let report = raw.report.ok_or_else(|| {
-            CocoError::manifest(manifest_path, "missing required table `[report]`")
+            EngineError::manifest(manifest_path, "missing required table `[report]`")
         })?;
         let cancel = raw.cancel.ok_or_else(|| {
-            CocoError::manifest(manifest_path, "missing required table `[cancel]`")
+            EngineError::manifest(manifest_path, "missing required table `[cancel]`")
         })?;
 
         let template_name = require_string(render.template, manifest_path, "[render].template")?;
@@ -187,7 +187,7 @@ impl Manifest {
             .filter(|name| launch_params.contains(name))
             .collect();
         if !overlap.is_empty() {
-            return Err(CocoError::manifest(
+            return Err(EngineError::manifest(
                 manifest_path,
                 format!(
                     "parameter `{}` appears in both `[render].params` and `[launch].params`",
@@ -199,9 +199,9 @@ impl Manifest {
         let template_rel = PathBuf::from(&template_name);
         let template_abs = require_file_in_folder(folder, manifest_path, &template_rel)?;
         let source = fs::read_to_string(&template_abs)
-            .map_err(|source| CocoError::io(&template_abs, source))?;
+            .map_err(|source| EngineError::io(&template_abs, source))?;
         template::analyze(&source, &render_params).map_err(|e| {
-            CocoError::manifest(
+            EngineError::manifest(
                 &template_abs,
                 format!("template does not match `[render].params`: {e}"),
             )
@@ -217,39 +217,39 @@ impl Manifest {
                 manifest_path,
                 "[launch].command",
             )?)
-            .map_err(|e| CocoError::manifest(manifest_path, format!("[launch].command {e}")))?,
+            .map_err(|e| EngineError::manifest(manifest_path, format!("[launch].command {e}")))?,
             launch_params,
             poll: Command::parse(require_string(
                 poll.command,
                 manifest_path,
                 "[poll].command",
             )?)
-            .map_err(|e| CocoError::manifest(manifest_path, format!("[poll].command {e}")))?,
+            .map_err(|e| EngineError::manifest(manifest_path, format!("[poll].command {e}")))?,
             report: Command::parse(require_string(
                 report.command,
                 manifest_path,
                 "[report].command",
             )?)
-            .map_err(|e| CocoError::manifest(manifest_path, format!("[report].command {e}")))?,
+            .map_err(|e| EngineError::manifest(manifest_path, format!("[report].command {e}")))?,
             cancel: Command::parse(require_string(
                 cancel.command,
                 manifest_path,
                 "[cancel].command",
             )?)
-            .map_err(|e| CocoError::manifest(manifest_path, format!("[cancel].command {e}")))?,
+            .map_err(|e| EngineError::manifest(manifest_path, format!("[cancel].command {e}")))?,
         }))
     }
 
-    fn load_bench(_folder: &Path, manifest_path: &Path, text: &str) -> Result<Self, CocoError> {
+    fn load_bench(_folder: &Path, manifest_path: &Path, text: &str) -> Result<Self, EngineError> {
         let raw: RawBench = toml::from_str(text)
-            .map_err(|e| CocoError::manifest(manifest_path, format!("invalid manifest: {e}")))?;
+            .map_err(|e| EngineError::manifest(manifest_path, format!("invalid manifest: {e}")))?;
 
         let name = require_name(raw.name, manifest_path)?;
         let plan = raw
             .plan
-            .ok_or_else(|| CocoError::manifest(manifest_path, "missing required table `[plan]`"))?;
+            .ok_or_else(|| EngineError::manifest(manifest_path, "missing required table `[plan]`"))?;
         let report = raw.report.ok_or_else(|| {
-            CocoError::manifest(manifest_path, "missing required table `[report]`")
+            EngineError::manifest(manifest_path, "missing required table `[report]`")
         })?;
 
         let plan_params = require_params(plan.params, manifest_path, "[plan].params")?;
@@ -262,33 +262,33 @@ impl Manifest {
                 manifest_path,
                 "[plan].command",
             )?)
-            .map_err(|e| CocoError::manifest(manifest_path, format!("[plan].command {e}")))?,
+            .map_err(|e| EngineError::manifest(manifest_path, format!("[plan].command {e}")))?,
             plan_params,
             report: Command::parse(require_string(
                 report.command,
                 manifest_path,
                 "[report].command",
             )?)
-            .map_err(|e| CocoError::manifest(manifest_path, format!("[report].command {e}")))?,
+            .map_err(|e| EngineError::manifest(manifest_path, format!("[report].command {e}")))?,
         }))
     }
 }
 
-fn require_name(name: Option<String>, path: &Path) -> Result<String, CocoError> {
+fn require_name(name: Option<String>, path: &Path) -> Result<String, EngineError> {
     match name {
         Some(name) if !name.is_empty() => Ok(name),
-        Some(_) => Err(CocoError::manifest(
+        Some(_) => Err(EngineError::manifest(
             path,
             "`name` must be a non-empty string",
         )),
-        None => Err(CocoError::manifest(path, "missing required key `name`")),
+        None => Err(EngineError::manifest(path, "missing required key `name`")),
     }
 }
 
-fn require_string(value: Option<String>, path: &Path, key: &str) -> Result<String, CocoError> {
+fn require_string(value: Option<String>, path: &Path, key: &str) -> Result<String, EngineError> {
     match value {
         Some(value) => Ok(value),
-        None => Err(CocoError::manifest(
+        None => Err(EngineError::manifest(
             path,
             format!("missing required key `{key}`"),
         )),
@@ -299,11 +299,11 @@ fn require_params(
     value: Option<Vec<String>>,
     path: &Path,
     key: &str,
-) -> Result<Vec<String>, CocoError> {
+) -> Result<Vec<String>, EngineError> {
     let params = match value {
         Some(params) => params,
         None => {
-            return Err(CocoError::manifest(
+            return Err(EngineError::manifest(
                 path,
                 format!("missing required key `{key}`"),
             ));
@@ -312,13 +312,13 @@ fn require_params(
     let mut seen = BTreeSet::new();
     for name in &params {
         if name.is_empty() {
-            return Err(CocoError::manifest(
+            return Err(EngineError::manifest(
                 path,
                 format!("`{key}` contains an empty parameter name"),
             ));
         }
         if !seen.insert(name.clone()) {
-            return Err(CocoError::manifest(
+            return Err(EngineError::manifest(
                 path,
                 format!("`{key}` declares duplicate parameter `{name}`"),
             ));
@@ -331,12 +331,12 @@ fn require_file_in_folder(
     folder: &Path,
     manifest_path: &Path,
     rel: &Path,
-) -> Result<PathBuf, CocoError> {
+) -> Result<PathBuf, EngineError> {
     let joined = folder.join(rel);
     let canonical = match fs::canonicalize(&joined) {
         Ok(canonical) => canonical,
         Err(_) => {
-            return Err(CocoError::manifest(
+            return Err(EngineError::manifest(
                 manifest_path,
                 format!(
                     "`[render].template` `{}` is not a file in the folder",
@@ -346,7 +346,7 @@ fn require_file_in_folder(
         }
     };
     if !canonical.is_file() {
-        return Err(CocoError::manifest(
+        return Err(EngineError::manifest(
             manifest_path,
             format!(
                 "`[render].template` `{}` is not a file in the folder",
@@ -354,9 +354,9 @@ fn require_file_in_folder(
             ),
         ));
     }
-    let folder_canon = fs::canonicalize(folder).map_err(|source| CocoError::io(folder, source))?;
+    let folder_canon = fs::canonicalize(folder).map_err(|source| EngineError::io(folder, source))?;
     if !canonical.starts_with(&folder_canon) {
-        return Err(CocoError::manifest(
+        return Err(EngineError::manifest(
             manifest_path,
             format!(
                 "`[render].template` `{}` must be inside the folder",

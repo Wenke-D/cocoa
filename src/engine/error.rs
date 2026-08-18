@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 /// Every failure the engine can produce.
 #[derive(Debug)]
-pub enum CocoError {
+pub enum EngineError {
     /// Filesystem operation failed.
     Io {
         path: PathBuf,
@@ -38,7 +38,7 @@ pub enum CocoError {
     NameCollision(String),
 }
 
-impl CocoError {
+impl EngineError {
     pub(crate) fn io(path: impl Into<PathBuf>, source: std::io::Error) -> Self {
         Self::Io {
             path: path.into(),
@@ -76,7 +76,7 @@ impl CocoError {
     }
 }
 
-impl fmt::Display for CocoError {
+impl fmt::Display for EngineError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Io { path, source } => {
@@ -123,7 +123,7 @@ impl fmt::Display for CocoError {
     }
 }
 
-impl std::error::Error for CocoError {
+impl std::error::Error for EngineError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::Io { source, .. } => Some(source),
@@ -132,7 +132,7 @@ impl std::error::Error for CocoError {
     }
 }
 
-impl From<std::io::Error> for CocoError {
+impl From<std::io::Error> for EngineError {
     fn from(source: std::io::Error) -> Self {
         Self::Io {
             path: PathBuf::new(),

@@ -1,10 +1,10 @@
 //! The seam between the workbench and the engine, and its one implementation.
 //!
 //! ```text
-//! UI → Experiments trait → CocoAdapter → coco engine → experiment folder
+//! UI → Experiments trait → EngineAdapter → coco engine → experiment folder
 //! ```
 //!
-//! This is an adapter, not a domain layer — the domain is [`crate::coco`], and
+//! This is an adapter, not a domain layer — the domain is [`crate::engine`], and
 //! nothing here decides what an experiment *is*. What it does:
 //!
 //! - owns the engine instance, and is the only thing that may call it;
@@ -15,8 +15,8 @@
 //!
 //! It draws nothing. `egui` does not appear anywhere behind this seam.
 
-pub mod coco;
+pub mod engine;
 pub mod traits;
 
-pub use coco::CocoAdapter;
+pub use engine::EngineAdapter;
 pub use traits::{AddedFolders, CancelTarget, ExperimentError, Experiments};

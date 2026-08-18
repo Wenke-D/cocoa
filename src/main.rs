@@ -2,7 +2,7 @@
 // Hide the console window on Windows in release builds. Harmless elsewhere.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use experiment_manager::{APP_TITLE, ExperimentApp};
+use coco::{APP_TITLE, ExperimentApp};
 
 fn main() -> eframe::Result {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
@@ -25,7 +25,7 @@ fn main() -> eframe::Result {
     };
 
     eframe::run_native(
-        "experiment_manager",
+        "coco",
         native_options,
         Box::new(|cc| Ok(Box::new(ExperimentApp::new(cc)))),
     )
@@ -33,10 +33,10 @@ fn main() -> eframe::Result {
 
 /// Prints the world as JSON, on the same store the app itself would open.
 fn dump_state() {
-    use experiment_manager::adapter::{CocoAdapter, Experiments};
-    use experiment_manager::coco::Coco;
+    use coco::adapter::{EngineAdapter, Experiments};
+    use coco::engine::Coco;
 
-    let store = experiment_manager::app::default_store_path();
+    let store = coco::app::default_store_path();
     let engine = match Coco::new(store.clone()) {
         Ok(engine) => engine,
         Err(error) => {
@@ -45,7 +45,7 @@ fn dump_state() {
         }
     };
 
-    let experiments = CocoAdapter::new(engine);
+    let experiments = EngineAdapter::new(engine);
     let snapshot = experiments.snapshot();
     match serde_json::to_string_pretty(&*snapshot) {
         Ok(json) => println!("{json}"),

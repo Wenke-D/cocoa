@@ -12,7 +12,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
-use experiment_manager::coco::{Coco, ReportMode, Status};
+use coco::engine::{Coco, ReportMode, Status};
 use tempfile::TempDir;
 
 fn write(folder: &Path, name: &str, contents: &str) {

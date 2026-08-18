@@ -1,7 +1,7 @@
 //! coco — an experiment pipeline manager that drives real experiment folders
 //! through the folder's own scripts (see `design/CONVENTION.md`).
 //!
-//! [`crate::coco`] is the engine and the domain; [`crate::view_model`] is what
+//! [`crate::engine`] is the engine and the domain; [`crate::view_model`] is what
 //! the workbench shows; [`crate::adapter`] maps one onto the other, and
 //! [`crate::ui`] draws it.
 
@@ -9,7 +9,7 @@
 
 pub mod adapter;
 pub mod app;
-pub mod coco;
+pub mod engine;
 pub mod navigation;
 pub mod ui;
 pub mod view_model;

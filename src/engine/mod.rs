@@ -4,7 +4,7 @@
 //! own scripts, and maintains that folder's records. Everything coco knows
 //! about what an experiment is doing on a cluster, a script told it.
 
-pub mod engine;
+pub mod coco;
 pub mod error;
 pub mod invoke;
 pub mod manifest;
@@ -14,11 +14,11 @@ pub mod store;
 pub mod template;
 pub mod words;
 
-pub use engine::{
+pub use coco::{
     BenchStart, BenchStatus, Coco, Config, EntityView, JobRunView, MemberCancel, PlanInstance,
     PollReport, RefreshReport, ReportMode,
 };
-pub use error::CocoError;
+pub use error::EngineError;
 pub use manifest::{BenchManifest, JobManifest, Kind, Manifest};
 pub use record::{BenchMember, BenchRecord, LaunchFailure, RunRecord, StatusChange};
 pub use status::Status;

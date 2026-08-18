@@ -1,5 +1,5 @@
 //! Exercises the adapter the workbench renders from
-//! (`Experiments` → `CocoAdapter` → coco engine).
+//! (`Experiments` → `EngineAdapter` → coco engine).
 
 #![cfg(unix)]
 
@@ -9,9 +9,9 @@ use std::path::Path;
 
 use chrono::Local;
 
-use experiment_manager::adapter::{CancelTarget, CocoAdapter, Experiments};
-use experiment_manager::coco::Coco;
-use experiment_manager::view_model::{EntityKind, RunId, RunStatus};
+use coco::adapter::{CancelTarget, EngineAdapter, Experiments};
+use coco::engine::Coco;
+use coco::view_model::{EntityKind, RunId, RunStatus};
 use tempfile::TempDir;
 
 fn copy_dir(src: &Path, dst: &Path) {
@@ -43,7 +43,7 @@ fn coco_backend_drives_the_workbench_model() {
         }
     }
 
-    let mut experiments = CocoAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
+    let mut experiments = EngineAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
     experiments.register_folder(&solver).unwrap();
 
     let snapshot = experiments.snapshot();
@@ -114,7 +114,7 @@ fn picking_a_parent_directory_registers_the_folders_beneath_it() {
         &library,
     );
 
-    let mut experiments = CocoAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
+    let mut experiments = EngineAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
     let outcome = experiments.register_folder(&library).unwrap();
 
     assert_eq!(outcome.added.len(), 4, "{outcome:?}");
@@ -152,7 +152,7 @@ fn picking_a_directory_without_a_manifest_registers_it_as_invalid() {
     let empty = dir.path().join("not-an-experiment");
     fs::create_dir_all(empty.join("notes")).unwrap();
 
-    let mut experiments = CocoAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
+    let mut experiments = EngineAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
     let outcome = experiments.register_folder(&empty).unwrap();
 
     assert_eq!(outcome.added, ["not-an-experiment"], "{outcome:?}");

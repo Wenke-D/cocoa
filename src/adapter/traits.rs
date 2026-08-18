@@ -1,8 +1,8 @@
 //! The seam.
 //!
 //! Everything the UI can do to domain state passes through this trait. The
-//! single implementation is [`crate::adapter::coco::CocoAdapter`], which
-//! drives the [`crate::coco`] engine over real experiment folders.
+//! single implementation is [`crate::adapter::engine::EngineAdapter`], which
+//! drives the [`crate::engine`] engine over real experiment folders.
 
 use std::collections::BTreeMap;
 use std::path::Path;

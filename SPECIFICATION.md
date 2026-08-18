@@ -1,4 +1,4 @@
-# Experiment Pipeline Manager  
+# coco  
 ## Interactive Rust/egui Prototype Specification
 
 **Document status:** Implementation-ready prototype specification  
@@ -6,12 +6,12 @@
 **Mandatory prototype platforms:** macOS and Linux desktop  
 **UI framework:** Rust, eframe, egui, egui_extras  
 **Backend for this phase:** Deterministic MockBackend only  
-**Working crate name:** `experiment_manager`  
-**Working application title:** `Experiment Pipeline Manager`
+**Crate name:** `coco`  
+**Application title:** `coco`
 
-> **Naming note.** Both names above are placeholders. "Pipeline" is a misnomer under
-> the corrected Bench model in §2.2 — a Bench fans out, it does not sequence. The
-> final name is undecided and must not influence the architecture.
+> **Naming note.** The system is named **coco**. The earlier working title
+> "Experiment Pipeline Manager" is retired: "Pipeline" was a misnomer under the
+> Bench model in §2.2 — a Bench fans out, it does not sequence.
 
 ---
 
@@ -327,7 +327,7 @@ Use the following baseline:
 
 ```toml
 [package]
-name = "experiment_manager"
+name = "coco"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.95"

@@ -1,4 +1,4 @@
-//! The one adapter: drives the [`crate::coco`] engine and presents its data
+//! The one adapter: drives the [`crate::engine`] engine and presents its data
 //! through the snapshot model the UI renders from.
 //!
 //! The world is rebuilt lazily: every mutating operation marks it dirty, and
@@ -13,7 +13,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Local};
 
 use crate::adapter::traits::{AddedFolders, CancelTarget, ExperimentError, Experiments};
-use crate::coco::{BenchRecord, Coco, CocoError, Manifest, RunRecord, Status};
+use crate::engine::{BenchRecord, Coco, EngineError, Manifest, RunRecord, Status};
 use crate::view_model::world::{Snapshot, World};
 use crate::view_model::{
     BenchPlan, BenchPlanStep, BenchRun, Entity, EntityId, EntityKind, JobRun, ManifestState,
@@ -27,14 +27,14 @@ const AUTO_REFRESH_INTERVAL: chrono::TimeDelta = chrono::TimeDelta::seconds(3);
 /// directory.
 const SCAN_DEPTH: usize = 3;
 
-pub struct CocoAdapter {
+pub struct EngineAdapter {
     coco: Coco,
     world: RefCell<Option<Arc<World>>>,
     dirty: Cell<bool>,
     last_refresh: Option<DateTime<Local>>,
 }
 
-impl CocoAdapter {
+impl EngineAdapter {
     pub fn new(coco: Coco) -> Self {
         Self {
             coco,
@@ -270,7 +270,7 @@ impl CocoAdapter {
     }
 }
 
-impl Experiments for CocoAdapter {
+impl Experiments for EngineAdapter {
     fn snapshot(&self) -> Snapshot {
         if self.dirty.get() || self.world.borrow().is_none() {
             let world = self.build_world(Local::now());
@@ -396,7 +396,7 @@ impl Experiments for CocoAdapter {
             }
             match self.coco.register(&folder) {
                 Ok(()) => outcome.added.push(file_name(&folder)),
-                Err(CocoError::AlreadyRegistered(_)) => outcome.already_registered += 1,
+                Err(EngineError::AlreadyRegistered(_)) => outcome.already_registered += 1,
                 Err(error) if single => return Err(experiment_error(error)),
                 Err(error) => outcome.refused.push(format!(
                     "{}: {}",
@@ -510,7 +510,7 @@ fn parse_run_id(id: &RunId) -> Result<u64, ExperimentError> {
         .map_err(|_| ExperimentError::UnknownRun(id.clone()))
 }
 
-fn experiment_error(error: CocoError) -> ExperimentError {
+fn experiment_error(error: EngineError) -> ExperimentError {
     ExperimentError::Operation(error.to_string())
 }
 

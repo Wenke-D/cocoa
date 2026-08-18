@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::coco::error::CocoError;
+use crate::engine::error::EngineError;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Store {
@@ -28,23 +28,23 @@ pub struct Store {
 }
 
 impl Store {
-    pub fn load(path: &Path) -> Result<Self, CocoError> {
+    pub fn load(path: &Path) -> Result<Self, EngineError> {
         match fs::read(path) {
             Ok(bytes) => serde_json::from_slice(&bytes)
-                .map_err(|e| CocoError::store(path, format!("store.json does not parse: {e}"))),
+                .map_err(|e| EngineError::store(path, format!("store.json does not parse: {e}"))),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Self::default()),
-            Err(source) => Err(CocoError::io(path, source)),
+            Err(source) => Err(EngineError::io(path, source)),
         }
     }
 
-    pub fn save(&self, path: &Path) -> Result<(), CocoError> {
+    pub fn save(&self, path: &Path) -> Result<(), EngineError> {
         let json = serde_json::to_vec_pretty(self)
-            .map_err(|e| CocoError::store(path, format!("store.json does not serialize: {e}")))?;
+            .map_err(|e| EngineError::store(path, format!("store.json does not serialize: {e}")))?;
         write_atomic(path, &json)
     }
 
     /// Allocates the next run id and persists immediately (§5).
-    pub fn allocate_run_id(&mut self, path: &Path) -> Result<u64, CocoError> {
+    pub fn allocate_run_id(&mut self, path: &Path) -> Result<u64, EngineError> {
         let id = self.next_run_id;
         self.next_run_id += 1;
         self.save(path)?;
@@ -69,20 +69,20 @@ impl Store {
 }
 
 /// Writes a file atomically: temp file, then rename (convention §12).
-pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), CocoError> {
+pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), EngineError> {
     let parent = path.parent().unwrap_or_else(|| Path::new("."));
-    fs::create_dir_all(parent).map_err(|source| CocoError::io(parent, source))?;
+    fs::create_dir_all(parent).map_err(|source| EngineError::io(parent, source))?;
     let file_name = path
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_else(|| "out".to_owned());
     let tmp = parent.join(format!(".{file_name}.tmp.{}", std::process::id()));
 
-    fs::write(&tmp, bytes).map_err(|source| CocoError::io(&tmp, source))?;
-    let file = fs::File::open(&tmp).map_err(|source| CocoError::io(&tmp, source))?;
+    fs::write(&tmp, bytes).map_err(|source| EngineError::io(&tmp, source))?;
+    let file = fs::File::open(&tmp).map_err(|source| EngineError::io(&tmp, source))?;
     file.sync_all()
-        .map_err(|source| CocoError::io(&tmp, source))?;
-    fs::rename(&tmp, path).map_err(|source| CocoError::io(path, source))?;
+        .map_err(|source| EngineError::io(&tmp, source))?;
+    fs::rename(&tmp, path).map_err(|source| EngineError::io(path, source))?;
     Ok(())
 }
 

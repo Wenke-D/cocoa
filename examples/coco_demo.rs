@@ -14,7 +14,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
-use experiment_manager::coco::{Coco, ReportMode};
+use coco::engine::{Coco, ReportMode};
 use tempfile::TempDir;
 
 fn main() {
@@ -128,7 +128,7 @@ fn poll_and_print(coco: &mut Coco, job: &Path, run_id: u64) {
     }
 }
 
-fn status(coco: &Coco, job: &Path, run_id: u64) -> experiment_manager::coco::RunRecord {
+fn status(coco: &Coco, job: &Path, run_id: u64) -> coco::engine::RunRecord {
     coco.run_record(job, run_id).expect("record")
 }
 

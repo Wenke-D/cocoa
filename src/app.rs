@@ -16,14 +16,14 @@ use std::time::Duration;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
-use crate::adapter::{CancelTarget, CocoAdapter, Experiments};
-use crate::coco::Coco;
+use crate::adapter::{CancelTarget, EngineAdapter, Experiments};
+use crate::engine::Coco;
 use crate::navigation::{Overlay, Route, SubmitState};
 use crate::view_model::Snapshot;
 use crate::view_model::{EntityId, ReportState, RunId, RunStatus};
 
-/// Working title. The final product name is undecided.
-pub const APP_TITLE: &str = "Experiment Pipeline Manager";
+/// The product name, shown in the platform window title.
+pub const APP_TITLE: &str = "coco";
 
 /// User theme choice. Mirrors [`egui::ThemePreference`] but is owned by this
 /// crate so it can be persisted without enabling egui's `serde` feature.
@@ -289,7 +289,7 @@ impl ExperimentApp {
         });
 
         Self {
-            experiments: Box::new(CocoAdapter::new(engine)),
+            experiments: Box::new(EngineAdapter::new(engine)),
             ui,
             pending_start: None,
             pending_url: None,
@@ -306,7 +306,8 @@ impl ExperimentApp {
         }
     }
 
-    pub fn poll(&mut self) {
+    /// Runs the one action the previous frame deferred, if there is one.
+    pub fn apply_pending(&mut self) {
         if let Some((entity_id, parameters)) = self.pending_start.take() {
             self.perform_start(entity_id, parameters);
         }
@@ -589,7 +590,7 @@ impl eframe::App for ExperimentApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let now = Local::now();
-        self.poll();
+        self.apply_pending();
         self.experiments.tick(now);
         self.recover_route();
 
