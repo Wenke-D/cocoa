@@ -370,7 +370,11 @@ fn a_manifest_that_breaks_later_stays_registered_and_shown() {
 
     // Someone edits the manifest afterwards. The entity is one the user knows
     // and has run, so it stays listed carrying the error (specification §11.5).
-    write(&folder, "coco.toml", "kind = \"pipeline\"\nname = \"solver\"\n");
+    write(
+        &folder,
+        "coco.toml",
+        "kind = \"pipeline\"\nname = \"solver\"\n",
+    );
 
     let views = coco.entities();
     assert_eq!(views.len(), 1);
@@ -528,6 +532,46 @@ fn bench_reports_when_every_member_succeeded() {
             .join(format!("{}.txt", start.run_id))
             .is_file()
     );
+}
+
+/// A plan is generated, so its mistakes arrive in batches. Every call is
+/// checked and every bad one is named, rather than the user fixing one, starting
+/// again, and meeting the next (convention §8.1).
+#[test]
+fn every_bad_plan_call_is_reported_at_once() {
+    let dir = TempDir::new().unwrap();
+    let good = job_folder(&dir, "good-job");
+    let bench = bench_folder(&dir, "sweep", &["good-job"], "");
+    write_script(
+        &bench,
+        "plan.sh",
+        concat!(
+            "echo 'COCO_RETURN: {\"job\": \"ghost\", \"params\": {}}'\n",
+            "echo 'COCO_RETURN: {\"job\": \"good-job\", \"params\": {\"size\": \"1\", \"gpu\": \"0\"}}'\n",
+            "echo 'COCO_RETURN: {\"job\": \"phantom\", \"params\": {}}'\n",
+            "echo 'COCO_RETURN: {\"job\": \"good-job\", \"params\": {\"size\": \"1\"}}'\n",
+        ),
+    );
+    let mut coco = engine(&dir);
+    coco.register(&good).unwrap();
+    coco.register(&bench).unwrap();
+
+    let err = coco
+        .start_bench(&bench, params(&[("mesh", "fine")]))
+        .unwrap_err();
+    let message = err.to_string();
+
+    // Three of the four calls are bad, and all three are named — including the
+    // last, which an abort-on-first check would never have reached.
+    assert!(message.contains("3 of 4"), "{message}");
+    assert!(message.contains("call 1"), "{message}");
+    assert!(message.contains("call 3"), "{message}");
+    assert!(message.contains("call 4"), "{message}");
+    assert!(
+        !message.contains("call 2"),
+        "the good call was named: {message}"
+    );
+    assert!(coco.bench_runs(&bench).unwrap().is_empty());
 }
 
 #[test]

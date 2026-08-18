@@ -40,12 +40,13 @@ pub enum ExperimentError {
         reason: String,
     },
     ParametersRequired,
-    /// A Bench plan referenced a Job that cannot be dispatched. Nothing was
-    /// started.
+    /// A Bench plan named calls that cannot be dispatched. Every call the plan
+    /// produced was checked, so this carries all of them. Nothing was started.
     InvalidPlan {
-        call_index: usize,
-        job: String,
-        reason: String,
+        /// How many calls the plan produced.
+        calls: usize,
+        /// One line per bad call, each naming the call number.
+        problems: Vec<String>,
     },
     NotCancellable {
         reason: String,
@@ -65,14 +66,17 @@ impl std::fmt::Display for ExperimentError {
             Self::ParametersRequired => {
                 write!(f, "This experiment requires a parameter string.")
             }
-            Self::InvalidPlan {
-                call_index,
-                job,
-                reason,
-            } => write!(
+            Self::InvalidPlan { calls, problems } => write!(
                 f,
-                "Cannot start this Bench.\n\nCall {call_index} references the Job \
-                 \"{job}\", which cannot be dispatched: {reason}\n\nNo runs were dispatched."
+                "Cannot start this Bench. {} of its {calls} {} cannot be dispatched:\n\n{}\
+                 \n\nNo runs were dispatched.",
+                problems.len(),
+                if *calls == 1 { "call" } else { "calls" },
+                problems
+                    .iter()
+                    .map(|problem| format!("  {problem}"))
+                    .collect::<Vec<_>>()
+                    .join("\n")
             ),
             Self::NotCancellable { reason } => write!(f, "Cannot cancel: {reason}"),
             Self::Operation(message) => f.write_str(message),

@@ -511,7 +511,14 @@ fn parse_run_id(id: &RunId) -> Result<u64, ExperimentError> {
 }
 
 fn experiment_error(error: EngineError) -> ExperimentError {
-    ExperimentError::Operation(error.to_string())
+    match error {
+        // The one engine failure the workbench words itself: a plan's bad calls
+        // are a list the Start modal lays out, not a sentence (§15.4).
+        EngineError::InvalidPlan { calls, problems } => {
+            ExperimentError::InvalidPlan { calls, problems }
+        }
+        other => ExperimentError::Operation(other.to_string()),
+    }
 }
 
 /// The folder path as the workbench writes it (specification §24.4).

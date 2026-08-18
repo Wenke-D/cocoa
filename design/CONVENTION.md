@@ -426,9 +426,12 @@ together: no extras, none missing. Every value must be a **string**; coco
 rejects numbers, booleans, nulls and nested structures rather than coercing
 them.
 
-Every instance is validated **before anything is submitted**. A plan naming an
-unregistered job, or supplying the wrong parameter set, fails the whole start
-with nothing dispatched. A referenced job whose manifest is not valid at start
+Every instance is validated **before anything is submitted**, and every instance
+is validated — checking stops at no first failure. A plan naming an unregistered
+job, or supplying the wrong parameter set, fails the whole start with nothing
+dispatched, and the failure names every call at fault. A plan is generated, so
+its mistakes come in batches; reporting them one start at a time would make the
+author rediscover the same mistake once per call. A referenced job whose manifest is not valid at start
 (§4) fails the start the same way, naming the job. A plan producing no
 instances, or exiting non-zero or timing out, is equally a start failure: no
 run id is allocated and nothing is dispatched.

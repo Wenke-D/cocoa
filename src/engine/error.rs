@@ -36,6 +36,18 @@ pub enum EngineError {
     /// Registration was refused because a valid manifest's platform-wide
     /// unique name collides with an already-registered entity (§5).
     NameCollision(String),
+    /// A bench plan named calls that cannot be dispatched (§8.1).
+    ///
+    /// Carries every bad call rather than the first, because a plan is
+    /// generated: its mistakes come in batches, and fixing them one start at a
+    /// time is the same discovery repeated. Nothing was dispatched.
+    InvalidPlan {
+        /// How many calls the plan produced, so the reader can tell one typo
+        /// from a plan that is wrong throughout.
+        calls: usize,
+        /// One line per bad call, each already naming the call number.
+        problems: Vec<String>,
+    },
 }
 
 impl EngineError {
@@ -115,6 +127,19 @@ impl fmt::Display for EngineError {
             Self::NotFound(message) => write!(f, "not found: {message}"),
             Self::AlreadyRegistered(path) => {
                 write!(f, "already registered: {}", path.display())
+            }
+            Self::InvalidPlan { calls, problems } => {
+                write!(
+                    f,
+                    "{} of {calls} plan {} cannot be dispatched:\n\n{}",
+                    problems.len(),
+                    if *calls == 1 { "call" } else { "calls" },
+                    problems
+                        .iter()
+                        .map(|problem| format!("  {problem}"))
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                )
             }
             Self::NameCollision(name) => {
                 write!(f, "an entity named `{name}` is already registered")

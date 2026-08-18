@@ -653,17 +653,28 @@ impl Coco {
             ));
         }
 
+        // Every call is checked, not just up to the first bad one. A plan is
+        // generated code — one wrong parameter name is usually the same wrong
+        // parameter name in twenty calls, and reporting them one start at a
+        // time makes the user rediscover that twenty times (convention §8.1).
         let mut instances = Vec::new();
+        let mut problems = Vec::new();
         for (index, line) in lines.iter().enumerate() {
             let call = index + 1;
-            let planned = parse_plan_line(line)
-                .map_err(|e| EngineError::validation(format!("plan call {call}: {e}")))?;
-            let (job_path, job) = self.find_job_by_name(&planned.job).ok_or_else(|| {
-                EngineError::validation(format!(
-                    "plan call {call}: `{}` is not a registered job",
+            let planned = match parse_plan_line(line) {
+                Ok(planned) => planned,
+                Err(e) => {
+                    problems.push(format!("call {call}: {e}"));
+                    continue;
+                }
+            };
+            let Some((job_path, job)) = self.find_job_by_name(&planned.job) else {
+                problems.push(format!(
+                    "call {call}: `{}` is not a registered job",
                     planned.job
-                ))
-            })?;
+                ));
+                continue;
+            };
             let expected: BTreeSet<&str> = job
                 .render_params
                 .iter()
@@ -674,13 +685,24 @@ impl Coco {
             if expected != provided {
                 let missing: Vec<&str> = expected.difference(&provided).copied().collect();
                 let extra: Vec<&str> = provided.difference(&expected).copied().collect();
-                return Err(EngineError::validation(format!(
-                    "plan call {call}: params for job `{}` must be exactly its declared sets; \
-                     missing {}, extra {}",
+                // Short on purpose. Each problem is one line in a list the
+                // reader scans, and the rule it breaks — params must be
+                // exactly the job's declared sets — is the same on every line,
+                // so repeating it per call only pushes the specifics off the
+                // end. What differs between calls is the names.
+                let mut wrong = Vec::new();
+                if !missing.is_empty() {
+                    wrong.push(format!("missing {}", describe_names(&missing)));
+                }
+                if !extra.is_empty() {
+                    wrong.push(format!("extra {}", describe_names(&extra)));
+                }
+                problems.push(format!(
+                    "call {call}: job `{}` — {}",
                     planned.job,
-                    describe_names(&missing),
-                    describe_names(&extra)
-                )));
+                    wrong.join(", ")
+                ));
+                continue;
             }
             let render = planned
                 .params
@@ -699,6 +721,13 @@ impl Coco {
                 job_name: job.name.clone(),
                 render,
                 launch,
+            });
+        }
+
+        if !problems.is_empty() {
+            return Err(EngineError::InvalidPlan {
+                calls: lines.len(),
+                problems,
             });
         }
         Ok(instances)
