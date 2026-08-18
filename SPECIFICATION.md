@@ -950,7 +950,11 @@ What the chosen directory registers:
 
 - It carries a `coco.toml` manifest: the directory itself.
 - It does not, but folders beneath it do (searched three levels down, skipping hidden directories and generated `runs/` and `report/` state): every such folder. One pick therefore adds a whole directory of experiments — the bundled `mock/` library, say.
-- No manifest anywhere below it: the directory itself, which then appears in the Library with its manifest error visible.
+- No manifest anywhere below it: nothing. The pick is refused and says so.
+
+A folder registers only if its manifest is usable at the moment it is picked. An unusable one is refused with the reason — a missing table, a name already taken, a folder that cannot be read.
+
+A manifest that breaks *afterwards* is the opposite case: the entity stays in the Explorer, and its page shows the validation message with Start disabled (§13.1). It is an entity the user knows and has run, and dropping it out of the list would hide both the entity and the mistake. The rule is that the Explorer never gains a row that has never worked, and never loses one that used to.
 
 A folder already in the Library is a no-op, never a duplicate.
 
@@ -971,12 +975,10 @@ Added 2 folders. 1 already in the library.
 NOT ADDED
 
   solver-copy: an entity named `solver-gpu` is already registered
-  archive: cannot read coco.toml: permission denied
+  old-sweep: coco.toml: missing required table `[launch]`
 
                                                        Close
 ```
-
-A folder whose manifest is unreadable is *not* refused: it joins the Library carrying its manifest error, as above. Refusals are the folders that could not be registered at all — a name already taken, a folder that cannot be read.
 
 The modal only reports. It offers no retry and no partial undo: the pick is finished, and what it registered stays registered.
 

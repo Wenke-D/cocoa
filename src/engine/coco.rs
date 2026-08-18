@@ -197,9 +197,14 @@ impl Coco {
         if self.store.contains(&canonical) {
             return Ok(());
         }
-        if let Ok(manifest) = Manifest::load(&canonical)
-            && let Some(existing) = self.find_name_collision(manifest.name())
-        {
+        // A folder joins the library only if its manifest is usable now. A
+        // manifest that breaks afterwards keeps its entity listed, carrying the
+        // error, because the user knows that entity and needs to see what went
+        // wrong with it (§11.5). A folder that never worked is a different
+        // thing: nothing knows it yet, and registering it anyway turns a
+        // mis-picked directory into a permanent broken row.
+        let manifest = Manifest::load(&canonical)?;
+        if let Some(existing) = self.find_name_collision(manifest.name()) {
             return Err(EngineError::NameCollision(existing));
         }
         self.store.add(canonical);

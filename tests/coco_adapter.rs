@@ -144,23 +144,73 @@ fn picking_a_parent_directory_registers_the_folders_beneath_it() {
     assert!(outcome.refused.is_empty(), "{outcome:?}");
 }
 
-/// A picked directory with no manifest anywhere below it still joins the
-/// Library, showing its manifest error (specification §11.5).
+/// A picked directory with no manifest anywhere below it is refused, and
+/// nothing joins the Explorer (specification §11.5).
+///
+/// Registering it would turn one mis-picked directory into a permanent broken
+/// row that the user never chose to have.
 #[test]
-fn picking_a_directory_without_a_manifest_registers_it_as_invalid() {
+fn picking_a_directory_without_a_manifest_is_refused() {
     let dir = TempDir::new().unwrap();
     let empty = dir.path().join("not-an-experiment");
     fs::create_dir_all(empty.join("notes")).unwrap();
 
     let mut experiments = EngineAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
-    let outcome = experiments.register_folder(&empty).unwrap();
+    let error = experiments.register_folder(&empty).unwrap_err();
 
-    assert_eq!(outcome.added, ["not-an-experiment"], "{outcome:?}");
+    assert!(
+        error.to_string().contains("coco.toml"),
+        "the refusal must say what was missing: {error}"
+    );
+    assert!(
+        experiments.snapshot().entities.is_empty(),
+        "a refused folder joined the Explorer anyway"
+    );
+}
+
+/// The other half of that rule: a folder that registered while its manifest was
+/// good stays listed once the manifest breaks, carrying the error
+/// (specification §11.5).
+///
+/// The user knows this entity and has run it. Dropping it out of the Explorer
+/// the moment someone mistypes its manifest would hide both the entity and the
+/// mistake.
+#[test]
+fn an_entity_whose_manifest_breaks_later_stays_listed() {
+    let dir = TempDir::new().unwrap();
+    let library = dir.path().join("library");
+    copy_dir(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("mock"),
+        &library,
+    );
+
+    let mut experiments = EngineAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
+    experiments.register_folder(&library).unwrap();
+    assert!(
+        experiments
+            .snapshot()
+            .entities
+            .iter()
+            .any(|entity| entity.name == "solver-gpu" && entity.manifest.is_valid()),
+        "the fixture did not register cleanly"
+    );
+
+    fs::write(
+        library.join("jobs/solver-gpu/coco.toml"),
+        "kind = \"job\"\nname = \"solver-gpu\"\n",
+    )
+    .unwrap();
+
+    // The adapter serves a cached world; a manifest edited behind its back
+    // surfaces on the next refresh, which is what the workbench's own Refresh
+    // and its polling both do.
+    experiments.refresh().unwrap();
+
     let snapshot = experiments.snapshot();
     let entity = snapshot
         .entities
         .iter()
-        .find(|entity| entity.name == "not-an-experiment")
-        .expect("an unusable folder stays visible");
+        .find(|entity| entity.name == "solver-gpu")
+        .expect("a registered entity must survive its manifest breaking");
     assert!(!entity.manifest.is_valid(), "{:?}", entity.manifest);
 }
