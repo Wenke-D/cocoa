@@ -18,5 +18,5 @@
 pub mod engine;
 pub mod traits;
 
-pub use engine::EngineAdapter;
+pub use engine::{EngineAdapter, display_path};
 pub use traits::{AddedFolders, CancelTarget, ExperimentError, Experiments};

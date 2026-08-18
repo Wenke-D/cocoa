@@ -944,7 +944,7 @@ It must remain selected when viewing:
 
 `Add Folder` is a secondary action. It is reached from the `+` icon button in the Library view's title row (§8.3), and from the Empty Library page's button (§12).
 
-Clicking it opens the operating system's own folder picker. The application shows no modal of its own, and a path is never typed by hand. Cancelling the picker does nothing at all.
+Clicking it opens the operating system's own folder picker. Nothing stands between the click and the picker, and a path is never typed by hand. Cancelling the picker does nothing at all.
 
 What the chosen directory registers:
 
@@ -954,7 +954,31 @@ What the chosen directory registers:
 
 A folder already in the Library is a no-op, never a duplicate.
 
-Registering must immediately update the Library, select the first folder added, and report the outcome in the status bar: what was added, what was already there, and what was refused with its reason.
+Registering must immediately update the Library, select the first folder added, and report what was added and what was already there in the status bar.
+
+Refusals are reported in a modal instead. One pick can name a whole directory of experiments, so refusals arrive as a list, each with its own reason; the status bar is a single line, which is exactly where those reasons are lost. A pick that refused nothing opens no modal.
+
+The modal names the directory that was picked, since a refused folder is one of many the pick found, and lists each refusal with its reason. When the same pick also registered something, it says so — the pick partly worked, and the Library has already changed behind the modal.
+
+```text
+ADD FOLDER
+Some folders were not added
+
+Added 2 folders. 1 already in the library.
+
+~/experiments
+
+NOT ADDED
+
+  solver-copy: an entity named `solver-gpu` is already registered
+  archive: cannot read coco.toml: permission denied
+
+                                                       Close
+```
+
+A folder whose manifest is unreadable is *not* refused: it joins the Library carrying its manifest error, as above. Refusals are the folders that could not be registered at all — a name already taken, a folder that cannot be read.
+
+The modal only reports. It offers no retry and no partial undo: the pick is finished, and what it registered stays registered.
 
 ---
 

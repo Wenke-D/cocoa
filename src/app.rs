@@ -16,7 +16,7 @@ use std::time::Duration;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
-use crate::adapter::{CancelTarget, EngineAdapter, Experiments};
+use crate::adapter::{AddedFolders, CancelTarget, EngineAdapter, Experiments};
 use crate::engine::Coco;
 use crate::navigation::{Overlay, Route, SubmitState};
 use crate::view_model::Snapshot;
@@ -466,10 +466,21 @@ impl ExperimentApp {
             .map(|entity| entity.id.clone())
             .collect();
 
+        let picked = crate::adapter::display_path(path);
+
         let outcome = match self.experiments.register_folder(path) {
             Ok(outcome) => outcome,
+            // A pick that named exactly one folder reports that folder's
+            // refusal as the call's error rather than in the tally. Same event
+            // for the user, so it gets the same modal.
             Err(error) => {
-                self.ui.notify_error(error.to_string());
+                self.ui.overlay = Overlay::AddFolderReport {
+                    picked,
+                    outcome: AddedFolders {
+                        refused: vec![error.to_string()],
+                        ..AddedFolders::default()
+                    },
+                };
                 return;
             }
         };
@@ -488,6 +499,10 @@ impl ExperimentApp {
             };
         }
 
+        // What was registered goes to the status bar, which is where the trace
+        // of a successful pick belongs. Refusals do not: each carries its own
+        // reason, and one line cannot hold a list of them (specification
+        // §11.5).
         let mut parts = Vec::new();
         match outcome.added.len() {
             0 => {}
@@ -500,18 +515,15 @@ impl ExperimentApp {
                 outcome.already_registered
             ));
         }
-        parts.extend(outcome.refused.iter().cloned());
 
-        let failed = outcome.added.is_empty() && !outcome.refused.is_empty();
-        let message = if parts.is_empty() {
-            "Nothing to add.".to_owned()
-        } else {
-            parts.join(" ")
-        };
-        if failed {
-            self.ui.notify_error(message);
-        } else {
-            self.ui.notify(message);
+        if !parts.is_empty() {
+            self.ui.notify(parts.join(" "));
+        } else if outcome.refused.is_empty() {
+            self.ui.notify("Nothing to add.");
+        }
+
+        if !outcome.refused.is_empty() {
+            self.ui.overlay = Overlay::AddFolderReport { picked, outcome };
         }
     }
 

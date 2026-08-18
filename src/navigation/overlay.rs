@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::adapter::CancelTarget;
+use crate::adapter::{AddedFolders, CancelTarget};
 use crate::view_model::EntityId;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -34,6 +34,17 @@ pub enum Overlay {
         target: CancelTarget,
         /// Set when a cancellation attempt failed.
         error: Option<String>,
+    },
+
+    /// What an Add Folder pick refused, and what it managed to register
+    /// alongside (specification §11.5). Opened only when something was
+    /// refused: a pick that fully worked reports in the status bar.
+    AddFolderReport {
+        /// The directory the user picked, as the workbench writes it (§24.4).
+        /// A refused folder is one of many a pick can find, so the modal says
+        /// where it was looking.
+        picked: String,
+        outcome: AddedFolders,
     },
 
     Settings,

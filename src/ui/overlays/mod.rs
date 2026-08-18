@@ -1,9 +1,10 @@
-//! Modal overlays (specification §15, §16).
+//! Modal overlays (specification §11.5, §15, §16).
 //!
 //! A modal is a temporary action, never a place: overlay state lives outside the
 //! route and is never persisted.
 
 pub mod cancel_modal;
+pub mod folder_report;
 pub mod start_modal;
 
 use crate::app::{AppCommand, ViewCtx};
@@ -18,6 +19,9 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
         Overlay::StartRun { entity_id, .. } => start_modal::show(ctx, ui, &entity_id),
         Overlay::ConfirmCancel { target, error } => {
             cancel_modal::show(ctx, ui, &target, error.as_deref())
+        }
+        Overlay::AddFolderReport { picked, outcome } => {
+            folder_report::show(ctx, ui, &picked, &outcome)
         }
         Overlay::Settings => {}
     }

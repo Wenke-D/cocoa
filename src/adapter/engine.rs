@@ -521,7 +521,7 @@ fn experiment_error(error: EngineError) -> ExperimentError {
 /// all — it is shown as it is. Most experiment folders on a compute site live
 /// outside home, so this shortens what it can and never rewrites what it
 /// cannot.
-fn display_path(path: &Path) -> String {
+pub fn display_path(path: &Path) -> String {
     fold_home(path, home_dir().as_deref())
 }
 

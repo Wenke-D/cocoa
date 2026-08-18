@@ -12,12 +12,13 @@
 //! Surfaces: `job` (default) | `job-active` (the overview with a run in
 //! flight, which is what `design/workbench-*.png` document) | `run-detail` |
 //! `start-modal` | `start-modal-last` (one run already started, so the modal
-//! offers its history action) | `bench-modal` | `cancel-modal`.
+//! offers its history action) | `bench-modal` | `cancel-modal` |
+//! `folder-report` (what an Add Folder pick refused).
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use coco::adapter::CancelTarget;
+use coco::adapter::{AddedFolders, CancelTarget};
 use coco::app::{AppCommand, ExperimentApp, ThemePreference};
 use coco::navigation::{Overlay, Route, SubmitState};
 
@@ -141,6 +142,23 @@ fn arrange(app: &mut ExperimentApp, surface: &str) {
                 run_id,
             };
         }
+        // The mix the refusal modal exists for: one pick that registered some
+        // folders, found one already there, and turned two down.
+        "folder-report" => {
+            app.ui.overlay = Overlay::AddFolderReport {
+                picked: "~/experiments".to_owned(),
+                outcome: AddedFolders {
+                    added: vec!["solver-cpu".to_owned(), "sweep-a".to_owned()],
+                    already_registered: 1,
+                    refused: vec![
+                        "solver-copy: an entity named `solver-gpu` is already registered"
+                            .to_owned(),
+                        "archive: cannot read coco.toml: permission denied".to_owned(),
+                    ],
+                },
+            };
+        }
+
         // Starting navigates to the new run's own page (§15.4). This surface
         // wants the overview it was started from, with the run in flight.
         "job-active" => {
