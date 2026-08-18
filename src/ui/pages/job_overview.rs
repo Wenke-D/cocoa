@@ -24,7 +24,7 @@ fn header(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity: &Entity) {
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
             ui.label(text::eyebrow(entity.kind.label()));
-            ui.heading(&entity.name);
+            ui.label(text::title(&entity.name));
             ui.add(egui::Label::new(text::mono_muted(&entity.path)).selectable(true));
         });
 

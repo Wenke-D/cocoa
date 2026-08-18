@@ -10,7 +10,7 @@ use crate::ui::{space, text};
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, title: &str, phase: &str) {
     breadcrumbs::show(ctx, ui);
 
-    ui.heading(title);
+    ui.label(text::title(title));
     ui.add_space(space::NORMAL);
     ui.label(text::muted(format!("This page is built in {phase}.")));
 }

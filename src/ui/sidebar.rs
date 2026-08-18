@@ -152,7 +152,7 @@ fn section_header(ui: &mut egui::Ui, heading: &str, open: bool) -> egui::Respons
         icons::chevron_right(painter, twisty, theme::ink(ui, theme::Ink::Normal));
     }
 
-    let (font, color) = text::panel_header_paint(ui);
+    let (font, color) = text::section_header_paint(ui);
     painter.text(
         egui::pos2(rect.left() + ROW_INDENT, rect.center().y),
         egui::Align2::LEFT_CENTER,

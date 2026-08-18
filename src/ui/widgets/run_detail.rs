@@ -49,7 +49,7 @@ fn header(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun, surround: &Surroun
 
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
-            ui.heading(&name);
+            ui.label(text::title(&name));
             ui.label(text::muted(format!(
                 "Run {}",
                 run.started_at.format("%Y-%m-%d %H:%M:%S")

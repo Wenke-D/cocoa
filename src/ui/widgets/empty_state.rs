@@ -14,7 +14,7 @@ pub fn page(ui: &mut egui::Ui, heading: &str, body: &str, action: Option<&str>) 
 
     ui.vertical_centered(|ui| {
         ui.add_space(space::PAGE * 3.0);
-        ui.heading(heading);
+        ui.label(crate::ui::text::title(heading));
         ui.add_space(space::NORMAL);
         ui.label(crate::ui::text::muted(body));
 

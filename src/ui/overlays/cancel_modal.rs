@@ -20,7 +20,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, target: &CancelTarget, error: 
     };
 
     modal_frame(ctx, ui, "confirm_cancel", |ctx, ui| {
-        ui.heading(&copy.title);
+        ui.label(text::title(&copy.title));
         ui.add_space(space::SECTION);
 
         ui.label(text::strong(&copy.subject));

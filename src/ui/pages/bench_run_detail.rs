@@ -53,7 +53,7 @@ fn header(
 
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
-            ui.heading(&name);
+            ui.label(text::title(&name));
             ui.label(text::muted(format!(
                 "Run {}",
                 bench_run.started_at.format("%Y-%m-%d %H:%M:%S")

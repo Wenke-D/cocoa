@@ -11,6 +11,8 @@
 //! 2. Both themes must stay legible, so each status has a light and a dark
 //!    variant rather than one value that washes out in one of them.
 
+use std::sync::LazyLock;
+
 use egui::{Color32, CornerRadius, FontFamily, FontId, Margin, Stroke, TextStyle};
 
 use crate::view_model::{DisplayStatus, RunStatus};
@@ -245,7 +247,7 @@ pub fn install(ctx: &egui::Context) {
     ctx.set_style_of(egui::Theme::Dark, style(&DARK));
 }
 
-/// Inter, embedded in the binary.
+/// Inter, embedded in the binary, in the three cuts the workbench sets type in.
 ///
 /// No typeface ships on every desktop, so reading the platform's own UI face
 /// would mean a different-looking application on each one — and a fallback to
@@ -254,22 +256,76 @@ pub fn install(ctx: &egui::Context) {
 /// close to the system UI faces VS Code asks for (SF Pro, Segoe UI), and it is
 /// SIL OFL 1.1 licensed. `assets/fonts/Inter-LICENSE.txt` travels with it.
 ///
+/// Three files rather than one because egui has no synthetic bold: `strong`
+/// shifts a run's colour and leaves its weight alone, so weight as a level of
+/// hierarchy (§24.1) has to be a real cut. Static cuts rather than Inter's
+/// variable file because each one is drawn for its weight, and because what the
+/// screenshot example captures then does not depend on how a variation axis is
+/// interpolated.
+///
 /// Latin coverage is all this application needs. Anything outside it — emoji,
 /// stray symbols — still falls through to the fonts egui bundles.
 const INTER: &[u8] = include_bytes!("../../assets/fonts/Inter-Regular.ttf");
+const INTER_MEDIUM: &[u8] = include_bytes!("../../assets/fonts/Inter-Medium.ttf");
+const INTER_SEMI_BOLD: &[u8] = include_bytes!("../../assets/fonts/Inter-SemiBold.ttf");
+
+/// What each cut is registered as. The heavier two become families of their own
+/// — egui reaches a weight only by name — which is why nothing below is a
+/// `FontFamily::Proportional` with a weight hung off it.
+const REGULAR: &str = "Inter";
+const MEDIUM: &str = "Inter Medium";
+const SEMI_BOLD: &str = "Inter SemiBold";
+
+/// The middle cut: uppercase labels and column headers, which need presence at
+/// 11px without turning into headings.
+pub fn medium() -> FontFamily {
+    static FAMILY: LazyLock<FontFamily> = LazyLock::new(|| FontFamily::Name(MEDIUM.into()));
+    FAMILY.clone()
+}
+
+/// The heaviest cut: whatever a reader should land on first — a page title, a
+/// section heading, the one line in a block that carries its identity.
+pub fn semi_bold() -> FontFamily {
+    static FAMILY: LazyLock<FontFamily> = LazyLock::new(|| FontFamily::Name(SEMI_BOLD.into()));
+    FAMILY.clone()
+}
 
 fn fonts() -> egui::FontDefinitions {
     let mut definitions = egui::FontDefinitions::default();
 
-    definitions.font_data.insert(
-        "Inter".to_owned(),
-        std::sync::Arc::new(egui::FontData::from_static(INTER)),
-    );
+    // egui's own proportional chain, kept before Inter is put in front of it, so
+    // that the heavier families can fall back exactly the way the regular one
+    // does instead of ending at Inter's last Latin glyph.
+    let fallback = definitions
+        .families
+        .get(&FontFamily::Proportional)
+        .cloned()
+        .unwrap_or_default();
+
+    for (name, bytes) in [
+        (REGULAR, INTER),
+        (MEDIUM, INTER_MEDIUM),
+        (SEMI_BOLD, INTER_SEMI_BOLD),
+    ] {
+        definitions.font_data.insert(
+            name.to_owned(),
+            std::sync::Arc::new(egui::FontData::from_static(bytes)),
+        );
+    }
+
     definitions
         .families
-        .entry(egui::FontFamily::Proportional)
+        .entry(FontFamily::Proportional)
         .or_default()
-        .insert(0, "Inter".to_owned());
+        .insert(0, REGULAR.to_owned());
+
+    for name in [MEDIUM, SEMI_BOLD] {
+        let mut family = vec![name.to_owned()];
+        family.extend(fallback.iter().cloned());
+        definitions
+            .families
+            .insert(FontFamily::Name(name.into()), family);
+    }
 
     // Monospace stays on egui's bundled Hack, which is already a code face.
     definitions
@@ -531,10 +587,10 @@ fn style(p: &Palette) -> egui::Style {
             TextStyle::Monospace,
             FontId::new(12.0, FontFamily::Monospace),
         ),
-        (
-            TextStyle::Heading,
-            FontId::new(20.0, FontFamily::Proportional),
-        ),
+        // The page title is the one place the workbench sets type large, so it
+        // carries the weight too — at 20px the regular cut reads as body text
+        // that happened to be enlarged.
+        (TextStyle::Heading, FontId::new(20.0, semi_bold())),
     ]
     .into();
 

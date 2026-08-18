@@ -45,7 +45,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, context: &ReportContext, run_i
         }
 
         ReportState::ReadError { message } => {
-            ui.heading("Report");
+            ui.label(text::title("Report"));
             ui.add_space(space::SECTION);
             notice(ui, ui.visuals().error_fg_color, |ui| {
                 ui.label(text::strong("Unable to read report."));
@@ -55,7 +55,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, context: &ReportContext, run_i
         }
 
         other => {
-            ui.heading("Report");
+            ui.label(text::title("Report"));
             ui.add_space(space::SECTION);
             ui.label(text::muted(other.summary()));
         }
@@ -99,7 +99,7 @@ fn header(
 
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
-            ui.heading(title);
+            ui.label(text::title(title));
             let subtitle = match when {
                 Some(at) => format!(
                     "{} · Run {} · {}",

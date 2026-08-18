@@ -58,7 +58,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity_id: &EntityId) {
         // The title stays in the ordinary heading colour — in this theme the
         // accent means "interactive", and a blue title reads as a link.
         ui.label(text::eyebrow(entity.kind.start_action().to_uppercase()));
-        ui.heading(&entity.name);
+        ui.label(text::title(&entity.name));
 
         if entity.is_bench() {
             surface::notice(ui, "The runs to dispatch are determined at start.");
