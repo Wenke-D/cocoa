@@ -7,8 +7,8 @@ use crate::app::{AppCommand, ViewCtx};
 use crate::backend::CancelTarget;
 use crate::model::format_duration;
 use crate::ui::overlays::modal_frame;
-use crate::ui::space;
 use crate::ui::widgets::button::Button;
+use crate::ui::{space, text};
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, target: &CancelTarget, error: Option<&str>) {
     let now = ctx.now;
@@ -23,7 +23,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, target: &CancelTarget, error: 
         ui.heading(&copy.title);
         ui.add_space(space::SECTION);
 
-        ui.label(egui::RichText::new(&copy.subject).strong());
+        ui.label(text::strong(&copy.subject));
         ui.add_space(space::SMALL);
         for line in &copy.lines {
             ui.label(line);
@@ -31,7 +31,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, target: &CancelTarget, error: 
 
         if let Some(error) = error {
             ui.add_space(space::SECTION);
-            ui.label(egui::RichText::new(error).color(ui.visuals().error_fg_color));
+            ui.label(text::error(ui, error));
         }
 
         ui.add_space(space::SECTION);

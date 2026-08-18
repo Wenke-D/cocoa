@@ -45,90 +45,96 @@ pub mod metrics {
     pub const BREADCRUMB: f32 = 22.0;
     /// Padding around the editor's own content.
     pub const EDITOR_PADDING: f32 = 20.0;
+    /// Padding between a modal's border and its contents.
+    pub const MODAL_PADDING: i8 = 20;
+    /// Widest a modal's content may get before it wraps (specification §15.1).
+    pub const MODAL_WIDTH: f32 = 460.0;
 }
 
 /// Every workbench colour token this application uses.
-pub struct Palette {
-    pub dark: bool,
+struct Palette {
+    dark: bool,
 
     // --- surfaces -----------------------------------------------------------
     /// `editor.background`
-    pub editor_bg: Color32,
+    editor_bg: Color32,
     /// `sideBar.background`
-    pub side_bar_bg: Color32,
+    side_bar_bg: Color32,
     /// `activityBar.background`
-    pub activity_bar_bg: Color32,
+    activity_bar_bg: Color32,
     /// `statusBar.background`
-    pub status_bar_bg: Color32,
+    status_bar_bg: Color32,
     /// `editorWidget.background` — menus, popups, modals.
-    pub widget_bg: Color32,
+    widget_bg: Color32,
 
     // --- borders ------------------------------------------------------------
     /// `sideBar.border`, `titleBar.border`, `statusBar.border`
-    pub border: Color32,
+    border: Color32,
     /// `menu.border`, `input.border`, `dropdown.border`
-    pub control_border: Color32,
+    control_border: Color32,
 
     // --- text ---------------------------------------------------------------
     /// `foreground`
-    pub foreground: Color32,
+    foreground: Color32,
     /// `editor.foreground` — headings and emphasised text.
-    pub strong_foreground: Color32,
+    strong_foreground: Color32,
     /// `descriptionForeground` — secondary and dimmed text.
-    pub description: Color32,
+    description: Color32,
     /// `activityBar.inactiveForeground`
-    pub icon_inactive: Color32,
+    icon_inactive: Color32,
     /// `activityBar.foreground`
-    pub icon_active: Color32,
+    icon_active: Color32,
 
     // --- accents ------------------------------------------------------------
     /// `button.background`, `activityBar.activeBorder`, `focusBorder`
-    pub accent: Color32,
+    accent: Color32,
     /// `button.foreground`
-    pub on_accent: Color32,
+    on_accent: Color32,
     /// `textLink.foreground`
-    pub link: Color32,
+    link: Color32,
 
     // --- controls -----------------------------------------------------------
     /// `input.background`
-    pub input_bg: Color32,
+    input_bg: Color32,
     /// `button.secondaryBackground`
-    pub secondary_bg: Color32,
+    secondary_bg: Color32,
     /// `button.secondaryHoverBackground`
-    pub secondary_hover_bg: Color32,
+    secondary_hover_bg: Color32,
+    /// `toolbar.activeBackground` — an icon action while it is held down.
+    toolbar_active: Color32,
 
     // --- lists --------------------------------------------------------------
     /// `list.hoverBackground`
-    pub row_hover: Color32,
+    row_hover: Color32,
     /// `list.activeSelectionBackground`
-    pub row_selected: Color32,
+    row_selected: Color32,
     /// `list.activeSelectionForeground`
-    pub row_selected_fg: Color32,
+    row_selected_fg: Color32,
 
     // --- feedback -----------------------------------------------------------
     /// `editorError.foreground`
-    pub error: Color32,
+    error: Color32,
     /// `editorWarning.foreground`
-    pub warning: Color32,
+    warning: Color32,
 
     // --- charts, used for run status ---------------------------------------
-    pub chart_blue: Color32,
-    pub chart_green: Color32,
-    pub chart_red: Color32,
-    pub chart_yellow: Color32,
-    pub chart_gray: Color32,
+    chart_blue: Color32,
+    chart_green: Color32,
+    chart_red: Color32,
+    chart_yellow: Color32,
+    chart_gray: Color32,
 
     // --- editor -------------------------------------------------------------
     /// `editor.selectionBackground`
-    pub selection_bg: Color32,
+    selection_bg: Color32,
     /// `editor.findMatchHighlightBackground`
-    pub find_match_bg: Color32,
+    find_match_bg: Color32,
     /// `textCodeBlock.background`
-    pub code_bg: Color32,
+    code_bg: Color32,
 }
 
 /// VS Code **Light Modern** — the current out-of-the-box light theme.
-pub const LIGHT: Palette = Palette {
+const LIGHT: Palette = Palette {
     dark: false,
 
     editor_bg: rgb(0xFFFFFF),
@@ -153,6 +159,7 @@ pub const LIGHT: Palette = Palette {
     input_bg: rgb(0xFFFFFF),
     secondary_bg: rgb(0xE5E5E5),
     secondary_hover_bg: rgb(0xCCCCCC),
+    toolbar_active: rgba(0xA6A6A6, 0x80),
 
     row_hover: rgb(0xF2F2F2),
     row_selected: rgb(0xE8E8E8),
@@ -173,7 +180,7 @@ pub const LIGHT: Palette = Palette {
 };
 
 /// VS Code **Dark Modern**, so the Dark setting stays part of the same family.
-pub const DARK: Palette = Palette {
+const DARK: Palette = Palette {
     dark: true,
 
     editor_bg: rgb(0x1F1F1F),
@@ -198,6 +205,7 @@ pub const DARK: Palette = Palette {
     input_bg: rgb(0x313131),
     secondary_bg: rgb(0x313131),
     secondary_hover_bg: rgb(0x3C3C3C),
+    toolbar_active: rgba(0x636667, 0x80),
 
     row_hover: rgb(0x2A2D2E),
     row_selected: rgb(0x04395E),
@@ -217,12 +225,12 @@ pub const DARK: Palette = Palette {
     code_bg: rgba(0xFFFFFF, 0x0F),
 };
 
-pub fn palette(dark_mode: bool) -> &'static Palette {
+fn palette(dark_mode: bool) -> &'static Palette {
     if dark_mode { &DARK } else { &LIGHT }
 }
 
 /// The palette matching whatever theme this `Ui` is currently drawing in.
-pub fn of(ui: &egui::Ui) -> &'static Palette {
+fn of(ui: &egui::Ui) -> &'static Palette {
     palette(ui.visuals().dark_mode)
 }
 
@@ -277,35 +285,222 @@ const WINDOW_CORNER_INSET: i8 = 12;
 /// The workbench text size. Control geometry is measured against it.
 const UI_FONT_SIZE: f32 = 13.0;
 
+// ---------------------------------------------------------------------------
+// Semantic colour
+// ---------------------------------------------------------------------------
+
+// Every colour this application draws is reached through the functions below,
+// never by naming a token.
+//
+// The palette is a closed set — a workbench does not need arbitrary colour, and
+// the failure mode is not inventing a new shade but *borrowing* an existing one
+// for a purpose it was not chosen for. A list's hover wash on a toolbar button,
+// a chart's amber on a warning: both look plausible, and both break the moment
+// the theme moves. So `Palette`'s fields are private and a caller states the
+// purpose instead of the colour. A purpose that does not exist yet is added
+// here, deliberately, rather than approximated at the call site.
+
+/// A region's own ground.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Surface {
+    ActivityBar,
+    SideBar,
+    Editor,
+    StatusBar,
+    /// Menus, popups, modals — anything floating above the workbench.
+    Widget,
+}
+
+/// Text and glyphs drawn on a surface.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Ink {
+    Normal,
+    /// A title, or a value that outranks what surrounds it.
+    Strong,
+    /// Supporting text that must not compete with the content.
+    Muted,
+    /// Drawn on top of [`accent`].
+    OnAccent,
+}
+
+/// An icon's two weights. The workbench dims an icon only when it is inactive,
+/// never to signal that it is unavailable — a disabled action states itself.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum IconState {
+    Rest,
+    Active,
+}
+
+/// A list row's background under the pointer and the route.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RowState {
+    Rest,
+    Hover,
+    Selected,
+}
+
+/// A control's background as the pointer works on it. Shared by the secondary
+/// button and the toolbar icon buttons, so the two cannot drift apart.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ControlState {
+    Rest,
+    Hover,
+    /// Held down.
+    Active,
+}
+
+/// How loudly the application is speaking about something.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Level {
+    /// Worth knowing, changes nothing.
+    Info,
+    /// Worth noticing, and not a failure — a lost query is the case this exists
+    /// for (specification §10.3).
+    Warning,
+    Error,
+}
+
+/// Washes behind text in the report viewer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Highlight {
+    Selection,
+    FindMatch,
+}
+
+pub fn surface(ui: &egui::Ui, surface: Surface) -> Color32 {
+    let p = of(ui);
+    match surface {
+        Surface::ActivityBar => p.activity_bar_bg,
+        Surface::SideBar => p.side_bar_bg,
+        Surface::Editor => p.editor_bg,
+        Surface::StatusBar => p.status_bar_bg,
+        Surface::Widget => p.widget_bg,
+    }
+}
+
+pub fn ink(ui: &egui::Ui, ink: Ink) -> Color32 {
+    let p = of(ui);
+    match ink {
+        Ink::Normal => p.foreground,
+        Ink::Strong => p.strong_foreground,
+        Ink::Muted => p.description,
+        Ink::OnAccent => p.on_accent,
+    }
+}
+
+pub fn icon(ui: &egui::Ui, state: IconState) -> Color32 {
+    let p = of(ui);
+    match state {
+        IconState::Rest => p.icon_inactive,
+        IconState::Active => p.icon_active,
+    }
+}
+
+/// A row's background, or `None` when the row draws no ground of its own.
+pub fn row(ui: &egui::Ui, state: RowState) -> Option<Color32> {
+    let p = of(ui);
+    match state {
+        RowState::Rest => None,
+        RowState::Hover => Some(p.row_hover),
+        RowState::Selected => Some(p.row_selected),
+    }
+}
+
+/// The text colour a row carries at that state.
+pub fn row_ink(ui: &egui::Ui, state: RowState) -> Color32 {
+    let p = of(ui);
+    match state {
+        RowState::Selected => p.row_selected_fg,
+        _ => p.foreground,
+    }
+}
+
+pub fn control(ui: &egui::Ui, state: ControlState) -> Color32 {
+    let p = of(ui);
+    match state {
+        ControlState::Rest => p.secondary_bg,
+        ControlState::Hover => p.secondary_hover_bg,
+        ControlState::Active => p.toolbar_active,
+    }
+}
+
+pub fn feedback(ui: &egui::Ui, level: Level) -> Color32 {
+    let p = of(ui);
+    match level {
+        Level::Info => p.description,
+        Level::Warning => p.warning,
+        Level::Error => p.error,
+    }
+}
+
+pub fn highlight(ui: &egui::Ui, highlight: Highlight) -> Color32 {
+    let p = of(ui);
+    match highlight {
+        Highlight::Selection => p.selection_bg,
+        Highlight::FindMatch => p.find_match_bg,
+    }
+}
+
+/// The one colour that means "interactive": primary actions, links, the active
+/// edge of the activity bar, the run-count badge.
+pub fn accent(ui: &egui::Ui) -> Color32 {
+    of(ui).accent
+}
+
+/// A translucent wash of the foreground, for the status bar's own hover — the
+/// only place VS Code tints by opacity rather than by token.
+pub fn status_bar_hover(ui: &egui::Ui) -> Color32 {
+    of(ui).foreground.gamma_multiply(0.12)
+}
+
 /// A 1px hairline, the only border weight VS Code's workbench uses.
-pub fn hairline(p: &Palette) -> Stroke {
+pub fn hairline(ui: &egui::Ui) -> Stroke {
+    let p = of(ui);
     Stroke::new(1.0, p.border)
 }
 
-pub fn activity_bar_frame(p: &Palette) -> egui::Frame {
+pub fn activity_bar_frame(ui: &egui::Ui) -> egui::Frame {
+    let p = of(ui);
     egui::Frame::new().fill(p.activity_bar_bg)
 }
 
-pub fn side_bar_frame(p: &Palette) -> egui::Frame {
+pub fn side_bar_frame(ui: &egui::Ui) -> egui::Frame {
+    let p = of(ui);
     egui::Frame::new().fill(p.side_bar_bg)
 }
 
-pub fn status_bar_frame(p: &Palette) -> egui::Frame {
+pub fn status_bar_frame(ui: &egui::Ui) -> egui::Frame {
+    let p = of(ui);
     egui::Frame::new()
         .fill(p.status_bar_bg)
         .inner_margin(Margin::symmetric(WINDOW_CORNER_INSET, 0))
 }
 
-pub fn editor_frame(p: &Palette) -> egui::Frame {
-    egui::Frame::new().fill(p.editor_bg)
+/// Dialog chrome.
+///
+/// A modal is a window, not a menu: egui's default modal frame is
+/// [`egui::Frame::popup`], whose inner margin is `spacing.menu_margin` — edge
+/// to edge horizontally, because a menu's rows are full-bleed. A dialog's
+/// contents must stand off its border instead, so this states the margin
+/// rather than inheriting one meant for something else.
+pub fn modal_frame(ui: &egui::Ui) -> egui::Frame {
+    let p = of(ui);
+    egui::Frame::new()
+        .inner_margin(Margin::same(metrics::MODAL_PADDING))
+        .corner_radius(CornerRadius::same(5))
+        .fill(p.widget_bg)
+        .stroke(Stroke::new(1.0, p.control_border))
+        .shadow(egui::epaint::Shadow {
+            offset: [0, 4],
+            blur: 12,
+            spread: 0,
+            color: rgba(0x000000, if p.dark { 0x66 } else { 0x24 }),
+        })
 }
 
-/// The uppercase, letter-spaced label VS Code uses for section headers.
-pub fn section_header_text(p: &Palette, text: &str) -> egui::RichText {
-    egui::RichText::new(text.to_uppercase())
-        .size(11.0)
-        .strong()
-        .color(p.strong_foreground)
+pub fn editor_frame(ui: &egui::Ui) -> egui::Frame {
+    let p = of(ui);
+    egui::Frame::new().fill(p.editor_bg)
 }
 
 // ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 //! End-to-end check of the bundled `mock/` library: registering the folders
 //! and driving the engine through the mock scripts (launch, poll, bench plan,
-//! fan-out). No cluster needed, exactly like the UI's "Add bundled mock
-//! library" action.
+//! fan-out). No cluster needed — the same folders the user adds by picking
+//! `mock/` in the Add Folder picker.
 
 #![cfg(unix)]
 

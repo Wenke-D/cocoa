@@ -4,7 +4,7 @@
 //! §23). The label is always present, so the badge never relies on colour alone.
 
 use crate::model::{DisplayStatus, RunStatus};
-use crate::ui::theme;
+use crate::ui::{text, theme};
 
 const MARKER_RADIUS: f32 = 4.0;
 
@@ -13,8 +13,7 @@ pub fn badge(ui: &mut egui::Ui, display: DisplayStatus) -> egui::Response {
     ui.horizontal(|ui| {
         marker(ui, display);
         ui.add_space(2.0);
-        let style = theme::status_style(ui.visuals().dark_mode, display);
-        ui.label(egui::RichText::new(display.label()).color(style.color));
+        ui.label(text::status(ui, display));
     })
     .response
 }
@@ -42,8 +41,7 @@ pub fn marker(ui: &mut egui::Ui, display: DisplayStatus) -> egui::Response {
 
 /// Status text without a marker, for places that already have one.
 pub fn colored_label(ui: &mut egui::Ui, display: DisplayStatus) {
-    let style = theme::status_style(ui.visuals().dark_mode, display);
-    ui.label(egui::RichText::new(display.label()).color(style.color));
+    ui.label(text::status(ui, display));
 }
 
 /// A compact pill for page headers (specification §17.1).
@@ -58,11 +56,7 @@ pub fn pill(ui: &mut egui::Ui, display: DisplayStatus) {
             ui.horizontal(|ui| {
                 marker(ui, display);
                 ui.add_space(2.0);
-                ui.label(
-                    egui::RichText::new(display.label())
-                        .color(style.color)
-                        .strong(),
-                );
+                ui.label(text::status_strong(ui, display));
             });
         });
 }

@@ -8,13 +8,15 @@
 
 use std::sync::Arc;
 
+use serde::{Serialize, Serializer};
+
 /// How a report should be presented.
 ///
 /// The application does not control report styling — each experiment writes
 /// whatever it writes, and two reports may look nothing alike. Plain text is
 /// rendered in-app; HTML is handed to the system browser, which is the only
 /// thing that can render it faithfully.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 pub enum ReportFormat {
     #[default]
     PlainText,
@@ -37,7 +39,7 @@ impl ReportFormat {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub enum ReportState {
     /// No report exists and none is expected yet.
     #[default]
@@ -46,6 +48,9 @@ pub enum ReportState {
     Generating,
     Available {
         format: ReportFormat,
+        /// Dumped as a byte count, never as the body: a state dump describes
+        /// the shape of the world, and a report can be megabytes of it.
+        #[serde(rename = "text_bytes", serialize_with = "byte_count")]
         text: Arc<str>,
     },
     /// The run declared a report, but it is not there.
@@ -53,6 +58,10 @@ pub enum ReportState {
     ReadError {
         message: String,
     },
+}
+
+fn byte_count<S: Serializer>(text: &Arc<str>, serializer: S) -> Result<S::Ok, S::Error> {
+    serializer.serialize_u64(text.len() as u64)
 }
 
 impl ReportState {

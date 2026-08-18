@@ -9,8 +9,10 @@ use crate::app::{AppCommand, ViewCtx};
 use crate::model::EntityId;
 use crate::navigation::{Overlay, SubmitState};
 use crate::ui::overlays::modal_frame;
-use crate::ui::space;
 use crate::ui::widgets::button::Button;
+use crate::ui::widgets::section::Section;
+use crate::ui::widgets::{form, surface};
+use crate::ui::{icons, space, text};
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity_id: &EntityId) {
     let Some(entity) = ctx.snapshot.entity(entity_id).cloned() else {
@@ -37,6 +39,9 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity_id: &EntityId) {
     let can_submit = !submitting;
     let mut submit = false;
     let mut fill_last = false;
+    // Declared parameters still empty. Filled while the fields are drawn, so
+    // the button reflects what the user has typed this very frame.
+    let mut empty_fields: Vec<String> = Vec::new();
 
     let submit_shortcut = egui::KeyboardShortcut::new(egui::Modifiers::COMMAND, egui::Key::Enter);
     if can_submit
@@ -48,76 +53,93 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity_id: &EntityId) {
     }
 
     modal_frame(ctx, ui, "start_run", |ctx, ui| {
-        ui.heading(entity.kind.start_action());
-        ui.add_space(space::NORMAL);
-        ui.label(egui::RichText::new(&entity.name).strong());
+        // The same identity block an entity page uses (specification §13.1):
+        // the action as a small type label, the experiment itself as the title.
+        // The title stays in the ordinary heading colour — in this theme the
+        // accent means "interactive", and a blue title reads as a link.
+        ui.label(text::eyebrow(entity.kind.start_action().to_uppercase()));
+        ui.heading(&entity.name);
 
         if entity.is_bench() {
-            ui.label(
-                egui::RichText::new("The runs to dispatch are determined at start.")
-                    .weak()
-                    .small(),
-            );
+            surface::notice(ui, "The runs to dispatch are determined at start.");
         }
 
         ui.add_space(space::SECTION);
-        ui.label("Parameters");
-        ui.add_space(space::SMALL);
 
-        if entity.parameter_names.is_empty() {
-            ui.label(
-                egui::RichText::new("This experiment declares no parameters.")
-                    .weak()
-                    .small(),
-            );
-        } else {
-            for name in &entity.parameter_names {
-                let value = fields.entry(name.clone()).or_default();
-                ui.horizontal(|ui| {
-                    ui.label(
-                        egui::RichText::new(name.as_str())
-                            .monospace()
-                            .weak()
-                            .small(),
-                    );
-                    ui.add_enabled(
-                        !submitting,
-                        egui::TextEdit::singleline(value)
-                            .hint_text("required")
-                            .font(egui::TextStyle::Monospace)
-                            .desired_width(f32::INFINITY),
-                    );
+        let parameters = Section::new("PARAMETERS")
+            .note(if entity.parameter_names.is_empty() {
+                "(none declared)"
+            } else {
+                "(all required)"
+            })
+            .rule(false)
+            .enabled(!submitting)
+            .action_if(
+                !entity.last_used.is_empty(),
+                "Fill from last run",
+                icons::history,
+            )
+            .show(ui, |ui| {
+                if entity.parameter_names.is_empty() {
+                    ui.label(text::caption("This experiment declares no parameters."));
+                    return Vec::new();
+                }
+
+                // A form, so every field starts at the same x however long the
+                // longest parameter name is.
+                form::fields(ui, "start_parameters", |form| {
+                    for name in &entity.parameter_names {
+                        let value = fields.entry(name.clone()).or_default();
+                        form.row(name.as_str(), |ui| {
+                            ui.add_enabled(
+                                !submitting,
+                                egui::TextEdit::singleline(value)
+                                    .hint_text("required")
+                                    .font(egui::TextStyle::Monospace)
+                                    .desired_width(f32::INFINITY),
+                            );
+                        });
+                    }
                 });
-            }
-            ui.add_space(space::SMALL);
-        }
 
-        if !entity.last_used.is_empty() {
-            ui.add_space(space::SMALL);
-            if Button::secondary("Fill from last run")
-                .enabled(!submitting)
-                .show(ui)
-                .clicked()
-            {
-                fill_last = true;
-            }
-        }
+                // Every declared parameter is required (convention §2.1).
+                // Catching it here means the user is never told after the fact
+                // that a start they already pressed was rejected.
+                entity
+                    .parameter_names
+                    .iter()
+                    .filter(|name| {
+                        fields
+                            .get(*name)
+                            .is_none_or(|value| value.trim().is_empty())
+                    })
+                    .cloned()
+                    .collect()
+            });
+
+        empty_fields = parameters.inner;
+        fill_last |= parameters.action_clicked;
 
         if active > 0 {
             ui.add_space(space::SMALL);
-            ui.label(
-                egui::RichText::new(format!(
-                    "{active} run(s) of this experiment are already active. \
+            surface::notice(
+                ui,
+                if active == 1 {
+                    "1 run of this experiment is already active. \
                      Starting will create another independent run."
-                ))
-                .weak()
-                .small(),
+                        .to_owned()
+                } else {
+                    format!(
+                        "{active} runs of this experiment are already active. \
+                         Starting will create another independent run."
+                    )
+                },
             );
         }
 
         if let SubmitState::Failed(message) = &submit_state {
             ui.add_space(space::SECTION);
-            ui.label(egui::RichText::new(message).color(ui.visuals().error_fg_color));
+            ui.label(text::error(ui, message));
         }
 
         ui.add_space(space::SECTION);
@@ -136,15 +158,18 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity_id: &EntityId) {
                 } else {
                     entity.kind.start_action()
                 };
-                let response = Button::primary(label).enabled(can_submit).show(ui);
+                let ready = can_submit && empty_fields.is_empty();
+                let response = Button::primary(label).enabled(ready).show(ui);
                 if response.clicked() {
                     submit = true;
                 }
-                if can_submit {
+                if ready {
                     response.on_hover_text(format!(
                         "{} to start",
                         ui.ctx().format_shortcut(&submit_shortcut)
                     ));
+                } else if !empty_fields.is_empty() {
+                    response.on_hover_text(format!("Fill in {} to start", empty_fields.join(", ")));
                 }
             });
         });
@@ -158,7 +183,8 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity_id: &EntityId) {
     if fill_last {
         ctx.push(AppCommand::FillLastArgs(entity.id.clone()));
     }
-    if submit {
+    // Gates the keyboard shortcut too: it fires before the fields are drawn.
+    if submit && empty_fields.is_empty() {
         ctx.push(AppCommand::SubmitStart {
             entity_id: entity.id.clone(),
             parameters: fields,

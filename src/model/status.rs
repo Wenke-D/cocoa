@@ -10,8 +10,10 @@
 //! were able to find out. Losing query contact must never overwrite the last
 //! known execution status.
 
+use serde::Serialize;
+
 /// What a run is doing.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
 pub enum RunStatus {
     Starting,
     Pending,
@@ -65,7 +67,7 @@ impl RunStatus {
 }
 
 /// Whether the application can currently see a run's status.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub enum QueryHealth {
     #[default]
     Healthy,
@@ -82,7 +84,7 @@ impl QueryHealth {
 }
 
 /// Validity of an entity's manifest. Invalid or missing disables Start.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub enum ManifestState {
     Valid,
     Invalid { message: String },

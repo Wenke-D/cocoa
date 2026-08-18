@@ -20,7 +20,7 @@ pub fn block(ui: &mut egui::Ui, parameters: &str) {
         .corner_radius(3)
         .show(ui, |ui| {
             ui.add(
-                egui::Label::new(egui::RichText::new(text).monospace())
+                egui::Label::new(crate::ui::text::mono(text))
                     .selectable(true)
                     .wrap(),
             );
@@ -29,7 +29,7 @@ pub fn block(ui: &mut egui::Ui, parameters: &str) {
 
 /// A one-line monospace value, selectable, for IDs and paths.
 pub fn inline(ui: &mut egui::Ui, text: &str) {
-    ui.add(egui::Label::new(egui::RichText::new(text).monospace()).selectable(true));
+    ui.add(egui::Label::new(crate::ui::text::mono(text)).selectable(true));
 }
 
 /// Truncated for a table cell, with the full value on hover
@@ -37,7 +37,7 @@ pub fn inline(ui: &mut egui::Ui, text: &str) {
 pub fn truncated_cell(ui: &mut egui::Ui, text: &str) {
     let display = if text.trim().is_empty() { "—" } else { text };
     ui.add(
-        egui::Label::new(egui::RichText::new(display).monospace())
+        egui::Label::new(crate::ui::text::mono(display))
             .truncate()
             .selectable(false),
     )

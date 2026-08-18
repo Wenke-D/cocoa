@@ -12,9 +12,10 @@ UNREACHABLE recovery, and bench fan-out.
 cargo run
 ```
 
-In the Library page, click **Add bundled mock library** (or register each
-folder under `mock/` by path). The scripts simulate a scheduler with timers,
-so statuses advance on their own while the app polls every few seconds.
+In the Library page, click the **+** button and pick this `mock/` directory in
+the folder picker that opens: every experiment folder beneath it is registered
+at once. The scripts simulate a scheduler with timers, so statuses advance on
+their own while the app polls every few seconds.
 
 ## What each folder demonstrates
 

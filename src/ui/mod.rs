@@ -14,6 +14,7 @@ pub mod pages;
 pub mod shell;
 pub mod sidebar;
 pub mod status_bar;
+pub mod text;
 pub mod theme;
 pub mod widgets;
 

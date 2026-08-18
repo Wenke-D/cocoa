@@ -82,6 +82,21 @@ impl std::fmt::Display for BackendError {
 
 impl std::error::Error for BackendError {}
 
+/// What one Add Folder action did.
+///
+/// A pick can name several experiment folders at once, so the outcome is a
+/// tally rather than a single success: the folders newly registered, the ones
+/// already in the library, and the ones refused with their reason.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct AddedFolders {
+    /// Folder names newly registered, in the order they were found.
+    pub added: Vec<String>,
+    /// Folders that were already in the library.
+    pub already_registered: usize,
+    /// Folders that could not be registered, each with its reason.
+    pub refused: Vec<String>,
+}
+
 pub trait ExperimentBackend {
     /// An immutable view for rendering. Cheap to call every frame.
     fn snapshot(&self) -> BackendSnapshot;
@@ -107,11 +122,13 @@ pub trait ExperimentBackend {
     /// is a state, not a failure; a missing run is the error case.
     fn report(&self, run_id: &RunId) -> Result<ReportState, BackendError>;
 
-    /// Registers a folder by path; a no-op when already registered.
-    fn register_folder(&mut self, path: &Path) -> Result<(), BackendError>;
-
-    /// Registers every experiment folder bundled under `mock/`.
-    fn register_bundled_mock(&mut self) -> Result<usize, BackendError>;
+    /// Registers the folder the user picked (specification §11.5).
+    ///
+    /// When the picked directory carries no manifest of its own, every
+    /// experiment folder beneath it is registered instead, so one pick can
+    /// add a whole library (the bundled `mock/` directory, say). A folder
+    /// already in the library is a no-op.
+    fn register_folder(&mut self, path: &Path) -> Result<AddedFolders, BackendError>;
 
     /// Automatic housekeeping (polling, reports, bench fan-out progression).
     fn tick(&mut self, now: DateTime<Local>);

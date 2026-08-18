@@ -166,11 +166,6 @@ pub struct UiState {
     pub report_show_source: bool,
     #[serde(skip)]
     pub focus_report_search: bool,
-
-    #[serde(skip)]
-    pub register_path: String,
-    #[serde(skip)]
-    pub register_error: Option<String>,
 }
 
 impl Default for UiState {
@@ -193,8 +188,6 @@ impl Default for UiState {
             report_match_index: 0,
             report_show_source: false,
             focus_report_search: false,
-            register_path: String::new(),
-            register_error: None,
         }
     }
 }
@@ -245,11 +238,9 @@ pub enum AppCommand {
     ConfirmCancel(CancelTarget),
 
     CloseOverlay,
-    OpenAddFolder,
-    RegisterFolder {
-        path: String,
-    },
-    RegisterMockLibrary,
+    /// Opens the operating system's folder picker and registers what comes
+    /// back (specification §11.5).
+    AddFolder,
     Refresh,
     RetryQuery(RunId),
     OpenReportExternally(RunId),
@@ -429,41 +420,11 @@ impl ExperimentApp {
 
             AppCommand::CloseOverlay => self.ui.overlay = Overlay::None,
 
-            AppCommand::OpenAddFolder => {
-                self.ui.overlay = Overlay::AddFolder;
-                self.ui.register_error = None;
-            }
-
-            AppCommand::RegisterFolder { path } => {
-                match self.backend.register_folder(std::path::Path::new(&path)) {
-                    Ok(()) => {
-                        self.ui.overlay = Overlay::None;
-                        self.ui.register_error = None;
-                        self.ui.notify(format!("Registered {path}."));
-                        if let Some(entity) = self.backend.snapshot().entities.last() {
-                            let id = entity.id.clone();
-                            self.ui.route = Route::EntityOverview { entity_id: id };
-                        }
-                    }
-                    Err(error) => self.ui.register_error = Some(error.to_string()),
+            AppCommand::AddFolder => {
+                if let Some(path) = pick_folder() {
+                    self.add_folder(&path);
                 }
             }
-
-            AppCommand::RegisterMockLibrary => match self.backend.register_bundled_mock() {
-                Ok(added) => {
-                    self.ui.overlay = Overlay::None;
-                    self.ui
-                        .notify(format!("Added {added} bundled mock folder(s)."));
-                    if let Some(entity) = self.backend.snapshot().entities.first() {
-                        self.ui.route = Route::EntityOverview {
-                            entity_id: entity.id.clone(),
-                        };
-                    } else {
-                        self.ui.route = Route::EmptyLibrary;
-                    }
-                }
-                Err(error) => self.ui.register_error = Some(error.to_string()),
-            },
 
             AppCommand::RetryQuery(run_id) => {
                 let _ = self.backend.refresh();
@@ -487,6 +448,68 @@ impl ExperimentApp {
             AppCommand::OpenReportExternally(run_id) => self.open_report_externally(&run_id),
 
             AppCommand::Notify(text) => self.ui.notify(text),
+        }
+    }
+
+    /// Registers a folder the user chose and reports what happened.
+    ///
+    /// Separate from the picker so the whole outcome — messages, navigation —
+    /// is exercisable without a dialog.
+    pub fn add_folder(&mut self, path: &std::path::Path) {
+        let before: Vec<EntityId> = self
+            .backend
+            .snapshot()
+            .entities
+            .iter()
+            .map(|entity| entity.id.clone())
+            .collect();
+
+        let outcome = match self.backend.register_folder(path) {
+            Ok(outcome) => outcome,
+            Err(error) => {
+                self.ui.notify_error(error.to_string());
+                return;
+            }
+        };
+
+        // Land on the first folder this action added, so the user sees the
+        // result of the pick rather than wherever they already were.
+        if let Some(entity) = self
+            .backend
+            .snapshot()
+            .entities
+            .iter()
+            .find(|entity| !before.contains(&entity.id))
+        {
+            self.ui.route = Route::EntityOverview {
+                entity_id: entity.id.clone(),
+            };
+        }
+
+        let mut parts = Vec::new();
+        match outcome.added.len() {
+            0 => {}
+            1 => parts.push(format!("Added {}.", outcome.added[0])),
+            count => parts.push(format!("Added {count} folders.")),
+        }
+        if outcome.already_registered > 0 {
+            parts.push(format!(
+                "{} already in the library.",
+                outcome.already_registered
+            ));
+        }
+        parts.extend(outcome.refused.iter().cloned());
+
+        let failed = outcome.added.is_empty() && !outcome.refused.is_empty();
+        let message = if parts.is_empty() {
+            "Nothing to add.".to_owned()
+        } else {
+            parts.join(" ")
+        };
+        if failed {
+            self.ui.notify_error(message);
+        } else {
+            self.ui.notify(message);
         }
     }
 
@@ -595,6 +618,18 @@ impl eframe::App for ExperimentApp {
     }
 }
 
+/// The operating system's own folder picker (specification §11.5).
+///
+/// Blocking and native: the user browses with the file manager they already
+/// know, so no path is ever typed by hand. `None` means they cancelled.
+fn pick_folder() -> Option<std::path::PathBuf> {
+    let mut dialog = rfd::FileDialog::new().set_title("Add Experiment Folder");
+    if let Ok(cwd) = std::env::current_dir() {
+        dialog = dialog.set_directory(cwd);
+    }
+    dialog.pick_folder()
+}
+
 /// Percent-encode the few characters that make a `file://` URL ambiguous.
 fn encode_path(path: &std::path::Path) -> String {
     path.to_string_lossy()
@@ -610,7 +645,7 @@ fn encode_path(path: &std::path::Path) -> String {
 
 /// The engine's default private store location (convention §5), overridable
 /// through `COCO_STORE_PATH` for development and tests.
-fn default_store_path() -> std::path::PathBuf {
+pub fn default_store_path() -> std::path::PathBuf {
     if let Ok(store) = std::env::var("COCO_STORE_PATH") {
         return std::path::PathBuf::from(store);
     }

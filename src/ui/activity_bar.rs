@@ -7,15 +7,14 @@
 
 use crate::app::{SidebarView, ThemePreference, ViewCtx};
 use crate::ui::icons;
+use crate::ui::text;
 use crate::ui::theme::{self, metrics};
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
-    let palette = theme::of(ui);
-
     egui::Panel::left("activity_bar")
         .exact_size(metrics::ACTIVITY_BAR)
         .resizable(false)
-        .frame(theme::activity_bar_frame(palette))
+        .frame(theme::activity_bar_frame(ui))
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing = egui::Vec2::ZERO;
 
@@ -33,7 +32,6 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
 }
 
 fn item(ctx: &mut ViewCtx, ui: &mut egui::Ui, view: SidebarView) {
-    let palette = theme::of(ui);
     let selected = ctx.state.sidebar_open && ctx.state.sidebar_view == view;
 
     let (rect, response) = ui.allocate_exact_size(
@@ -50,18 +48,23 @@ fn item(ctx: &mut ViewCtx, ui: &mut egui::Ui, view: SidebarView) {
                 rect.left_top(),
                 egui::pos2(rect.left() + 2.0, rect.bottom()),
             );
-            painter.rect_filled(edge, 0, palette.accent);
+            painter.rect_filled(edge, 0, theme::accent(ui));
         }
 
         let color = if selected || response.hovered() {
-            palette.icon_active
+            theme::icon(ui, theme::IconState::Active)
         } else {
-            palette.icon_inactive
+            theme::icon(ui, theme::IconState::Rest)
         };
         let box_rect = egui::Rect::from_center_size(rect.center(), egui::vec2(24.0, 24.0));
 
         match view {
-            SidebarView::Library => icons::files(painter, box_rect, color, palette.activity_bar_bg),
+            SidebarView::Library => icons::files(
+                painter,
+                box_rect,
+                color,
+                theme::surface(ui, theme::Surface::ActivityBar),
+            ),
             SidebarView::Running => icons::play(painter, box_rect, color),
         }
 
@@ -89,12 +92,10 @@ fn badge(ui: &egui::Ui, icon_rect: egui::Rect, count: usize) {
     if count == 0 {
         return;
     }
-
-    let palette = theme::of(ui);
     let painter = ui.painter();
     let center = icon_rect.right_bottom() + egui::vec2(-1.0, -1.0);
 
-    painter.circle_filled(center, 8.0, palette.accent);
+    painter.circle_filled(center, 8.0, theme::accent(ui));
     painter.text(
         center,
         egui::Align2::CENTER_CENTER,
@@ -105,14 +106,12 @@ fn badge(ui: &egui::Ui, icon_rect: egui::Rect, count: usize) {
             count.to_string()
         },
         egui::FontId::proportional(if count > 99 { 8.0 } else { 10.0 }),
-        palette.on_accent,
+        theme::ink(ui, theme::Ink::OnAccent),
     );
 }
 
 /// The manage gear. Theme choice only (specification §8.2, §24.3).
 fn settings(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
-    let palette = theme::of(ui);
-
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), metrics::ACTIVITY_BAR),
         egui::Sense::click(),
@@ -120,9 +119,9 @@ fn settings(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
 
     if ui.is_rect_visible(rect) {
         let color = if response.hovered() {
-            palette.icon_active
+            theme::icon(ui, theme::IconState::Active)
         } else {
-            palette.icon_inactive
+            theme::icon(ui, theme::IconState::Rest)
         };
         icons::gear(
             ui.painter(),
@@ -139,7 +138,7 @@ fn settings(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
         .align(egui::RectAlign::RIGHT_END)
         .show(|ui| {
             ui.set_min_width(160.0);
-            ui.label(theme::section_header_text(theme::of(ui), "Color Theme"));
+            ui.label(text::panel_header(ui, "Color Theme"));
 
             let current = ctx.state.theme;
             for choice in ThemePreference::ALL {

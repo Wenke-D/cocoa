@@ -69,15 +69,27 @@ impl<'a> Button<'a> {
     }
 
     pub fn show(self, ui: &mut egui::Ui) -> egui::Response {
-        let palette = theme::of(ui);
-
         let mut button = match self.kind {
             // The border matches the fill, so a primary button occupies exactly
             // the same box as a secondary one.
             Kind::Primary => {
-                egui::Button::new(egui::RichText::new(self.label).color(palette.on_accent))
-                    .fill(palette.accent)
-                    .stroke(egui::Stroke::new(1.0, palette.accent))
+                // A primary button states its own fill, which would otherwise
+                // override the dimming egui gives a disabled widget and leave
+                // an unavailable action looking exactly like an available one.
+                let (fill, label) = if self.enabled {
+                    (theme::accent(ui), theme::ink(ui, theme::Ink::OnAccent))
+                } else {
+                    // A washed-out accent with a washed-out label on top is
+                    // unreadable in the light theme, so the disabled state drops
+                    // the accent entirely and reads as a muted control instead.
+                    (
+                        theme::control(ui, theme::ControlState::Rest),
+                        theme::ink(ui, theme::Ink::Normal).gamma_multiply(0.5),
+                    )
+                };
+                egui::Button::new(egui::RichText::new(self.label).color(label))
+                    .fill(fill)
+                    .stroke(egui::Stroke::new(1.0, fill))
             }
             Kind::Secondary => egui::Button::new(self.label),
         };

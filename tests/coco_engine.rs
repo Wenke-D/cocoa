@@ -582,3 +582,34 @@ fn corrupt_run_json_fails_only_that_run() {
     );
     assert!(views.iter().find(|v| v.run_id == 1).unwrap().record.is_ok());
 }
+
+/// Every declared parameter must be supplied by hand (convention §2.1). The
+/// start form sends one entry per declared name whether or not the user typed
+/// in it, so a present-but-blank value must be refused exactly like a missing
+/// one — otherwise a job launches with no arguments at all.
+#[test]
+fn blank_parameter_values_are_refused() {
+    let dir = TempDir::new().unwrap();
+    let job = job_folder(&dir, "solver-gpu");
+    let mut coco = engine(&dir);
+    coco.register(&job).unwrap();
+
+    // Every field left empty, which is what an untouched start form sends.
+    let err = coco
+        .start_job(&job, params(&[("size", "")]), params(&[("gpu", "")]))
+        .unwrap_err();
+    assert!(err.to_string().contains("size"), "{err}");
+
+    // One field filled, the other blank or whitespace.
+    let err = coco
+        .start_job(&job, params(&[("size", "256")]), params(&[("gpu", "  ")]))
+        .unwrap_err();
+    assert!(err.to_string().contains("gpu"), "{err}");
+
+    // Nothing was launched, and no run id was burned on a refused start.
+    assert!(!job.join("runs").exists(), "a refused start wrote a run");
+
+    // The same start with real values goes through.
+    coco.start_job(&job, params(&[("size", "256")]), params(&[("gpu", "0")]))
+        .unwrap();
+}

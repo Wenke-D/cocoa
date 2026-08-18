@@ -20,11 +20,11 @@ use crate::app::{AppCommand, ViewCtx};
 use crate::model::{ReportFormat, ReportState, RunId};
 use crate::navigation::ReportContext;
 use crate::ui::icons;
-use crate::ui::space;
 use crate::ui::widgets::breadcrumbs;
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::icon_button;
-use crate::ui::widgets::run_detail::section;
+use crate::ui::widgets::section::Section;
+use crate::ui::{space, text};
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, context: &ReportContext, run_id: &RunId) {
     breadcrumbs::show(ctx, ui);
@@ -48,7 +48,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, context: &ReportContext, run_i
             ui.heading("Report");
             ui.add_space(space::SECTION);
             notice(ui, ui.visuals().error_fg_color, |ui| {
-                ui.label(egui::RichText::new("Unable to read report.").strong());
+                ui.label(text::strong("Unable to read report."));
                 ui.add_space(space::NORMAL);
                 ui.label(message);
             });
@@ -57,7 +57,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, context: &ReportContext, run_i
         other => {
             ui.heading("Report");
             ui.add_space(space::SECTION);
-            ui.label(egui::RichText::new(other.summary()).weak());
+            ui.label(text::muted(other.summary()));
         }
     }
 }
@@ -109,7 +109,7 @@ fn header(
                 ),
                 None => format!("{} · {run_id}", format.label()),
             };
-            ui.label(egui::RichText::new(subtitle).weak().small());
+            ui.label(text::caption(subtitle));
         });
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
@@ -240,12 +240,14 @@ fn line_row(
     is_current: bool,
     wrap: egui::TextWrapMode,
 ) -> egui::Response {
-    let palette = crate::ui::theme::of(ui);
-    let highlight = if is_current {
-        palette.selection_bg
-    } else {
-        palette.find_match_bg
-    };
+    let highlight = crate::ui::theme::highlight(
+        ui,
+        if is_current {
+            crate::ui::theme::Highlight::Selection
+        } else {
+            crate::ui::theme::Highlight::FindMatch
+        },
+    );
 
     let monospace =
         egui::FontId::monospace(ui.style().text_styles[&egui::TextStyle::Monospace].size);
@@ -322,7 +324,7 @@ fn search_controls(
         ui.add_space(space::NORMAL);
 
         if matches.is_empty() {
-            ui.label(egui::RichText::new("No matches").weak());
+            ui.label(text::muted("No matches"));
             return;
         }
 
@@ -342,10 +344,11 @@ fn search_controls(
             *scroll_to = Some(ctx.state.report_match_index);
         }
 
-        ui.label(
-            egui::RichText::new(format!("{} of {} matching lines", index + 1, matches.len()))
-                .weak(),
-        );
+        ui.label(text::muted(format!(
+            "{} of {} matching lines",
+            index + 1,
+            matches.len()
+        )));
     });
 }
 
@@ -353,7 +356,7 @@ fn search_controls(
 
 fn html_body(ctx: &mut ViewCtx, ui: &mut egui::Ui, run_id: &RunId, text: &Arc<str>) {
     notice(ui, ui.visuals().hyperlink_color, |ui| {
-        ui.label(egui::RichText::new("This report is HTML.").strong());
+        ui.label(text::strong("This report is HTML."));
         ui.add_space(space::NORMAL);
         ui.label(
             "Reports bring their own styling, and this application does not control it. \
@@ -377,7 +380,7 @@ fn html_body(ctx: &mut ViewCtx, ui: &mut egui::Ui, run_id: &RunId, text: &Arc<st
 
     if show_source {
         ui.add_space(space::NORMAL);
-        section(ui, "SOURCE");
+        Section::new("SOURCE").show_heading(ui);
         text_body(ctx, ui, text);
     }
 }

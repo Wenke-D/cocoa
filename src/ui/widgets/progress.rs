@@ -33,7 +33,6 @@ const MIN_SEGMENT: f32 = 6.0;
 
 /// `statuses` is the outcome of every dispatched call, in plan order.
 pub fn bar(ui: &mut egui::Ui, statuses: &[RunStatus]) {
-    let palette = theme::of(ui);
     let (rect, _) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), HEIGHT),
         egui::Sense::hover(),
@@ -47,7 +46,7 @@ pub fn bar(ui: &mut egui::Ui, statuses: &[RunStatus]) {
 
     // A plan with no calls still shows its empty track rather than nothing.
     if statuses.is_empty() {
-        painter.rect_filled(rect, RADIUS, palette.secondary_bg);
+        painter.rect_filled(rect, RADIUS, theme::control(ui, theme::ControlState::Rest));
         return;
     }
 

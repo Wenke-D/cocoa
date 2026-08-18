@@ -10,4 +10,4 @@ pub mod traits;
 
 pub use coco::CocoBackend;
 pub use snapshot::{BackendSnapshot, World};
-pub use traits::{BackendError, CancelTarget, ExperimentBackend};
+pub use traits::{AddedFolders, BackendError, CancelTarget, ExperimentBackend};

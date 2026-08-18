@@ -19,8 +19,6 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
         return;
     }
 
-    let palette = theme::of(ui);
-
     ui.horizontal_wrapped(|ui| {
         ui.set_min_height(metrics::BREADCRUMB);
         ui.spacing_mut().item_spacing.x = space::SMALL;
@@ -28,12 +26,13 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
         // A back affordance is offered alongside, never instead of, breadcrumbs.
         let (rect, response) = ui.allocate_exact_size(egui::vec2(20.0, 20.0), egui::Sense::click());
         if response.hovered() {
-            ui.painter().rect_filled(rect, 3, palette.row_hover);
+            ui.painter()
+                .rect_filled(rect, 3, theme::control(ui, theme::ControlState::Hover));
         }
         icons::arrow_left(
             ui.painter(),
             egui::Rect::from_center_size(rect.center(), egui::vec2(13.0, 13.0)),
-            palette.foreground,
+            theme::ink(ui, theme::Ink::Normal),
         );
         if response
             .on_hover_cursor(egui::CursorIcon::PointingHand)
@@ -51,7 +50,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
                 icons::chevron_right(
                     ui.painter(),
                     egui::Rect::from_center_size(rect.center(), egui::vec2(9.0, 9.0)),
-                    palette.description,
+                    theme::ink(ui, theme::Ink::Muted),
                 );
             }
 
@@ -59,7 +58,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
                 Some(route) => {
                     let label = egui::RichText::new(&crumb.label)
                         .size(12.0)
-                        .color(palette.description);
+                        .color(theme::ink(ui, theme::Ink::Muted));
                     if ui.link(label).clicked() {
                         ctx.push(AppCommand::Navigate(route.clone()));
                     }
@@ -68,7 +67,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
                     ui.label(
                         egui::RichText::new(&crumb.label)
                             .size(12.0)
-                            .color(palette.foreground),
+                            .color(theme::ink(ui, theme::Ink::Normal)),
                     );
                 }
             }

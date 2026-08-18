@@ -14,6 +14,6 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
     );
 
     if clicked {
-        ctx.push(AppCommand::OpenAddFolder);
+        ctx.push(AppCommand::AddFolder);
     }
 }

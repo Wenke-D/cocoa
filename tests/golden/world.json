@@ -1,0 +1,77 @@
+{
+  "bench_runs": {},
+  "entities": [
+    {
+      "id": "<library>/benches/nightly-benchmark",
+      "kind": "Bench",
+      "last_used": {},
+      "manifest": "Valid",
+      "name": "nightly-benchmark",
+      "parameter_names": [
+        "sweep"
+      ],
+      "path": "<library>/benches/nightly-benchmark"
+    },
+    {
+      "id": "<library>/jobs/failing-solver",
+      "kind": "Job",
+      "last_used": {},
+      "manifest": "Valid",
+      "name": "failing-solver",
+      "parameter_names": [
+        "nodes",
+        "mode"
+      ],
+      "path": "<library>/jobs/failing-solver"
+    },
+    {
+      "id": "<library>/jobs/flaky-solver",
+      "kind": "Job",
+      "last_used": {},
+      "manifest": "Valid",
+      "name": "flaky-solver",
+      "parameter_names": [
+        "nodes",
+        "gpu"
+      ],
+      "path": "<library>/jobs/flaky-solver"
+    },
+    {
+      "id": "<library>/jobs/solver-gpu",
+      "kind": "Job",
+      "last_used": {
+        "gpu": "0",
+        "nodes": "64"
+      },
+      "manifest": "Valid",
+      "name": "solver-gpu",
+      "parameter_names": [
+        "nodes",
+        "gpu"
+      ],
+      "path": "<library>/jobs/solver-gpu"
+    }
+  ],
+  "job_runs": {
+    "0": {
+      "ended_at": null,
+      "error": null,
+      "id": "0",
+      "job_id": "<library>/jobs/solver-gpu",
+      "last_successful_query": "<time>",
+      "origin": "Direct",
+      "parameters": "--gpu 0 --nodes 64",
+      "query_health": "Healthy",
+      "report": "Missing",
+      "started_at": "<time>",
+      "status": "Starting"
+    }
+  },
+  "last_refresh": null,
+  "runs_by_bench": {},
+  "runs_by_job": {
+    "<library>/jobs/solver-gpu": [
+      "0"
+    ]
+  }
+}

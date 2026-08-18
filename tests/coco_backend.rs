@@ -11,7 +11,7 @@ use chrono::Local;
 
 use experiment_manager::backend::{CancelTarget, CocoBackend, ExperimentBackend};
 use experiment_manager::coco::Coco;
-use experiment_manager::model::{EntityKind, RunStatus};
+use experiment_manager::model::{EntityKind, RunId, RunStatus};
 use tempfile::TempDir;
 
 fn copy_dir(src: &Path, dst: &Path) {
@@ -59,12 +59,27 @@ fn coco_backend_drives_the_workbench_model() {
     let mut params = BTreeMap::new();
     params.insert("nodes".to_owned(), "64".to_owned());
     params.insert("gpu".to_owned(), "0".to_owned());
-    let run_id = backend.start(&entity.id.clone(), params).unwrap();
+    let entity_id = entity.id.clone();
+    let run_id = backend.start(&entity_id, params).unwrap();
 
     let snapshot = backend.snapshot();
     let run = snapshot.job_run(&run_id).unwrap();
     assert_eq!(run.parameters, "--gpu 0 --nodes 64");
     assert_eq!(run.status, RunStatus::Starting);
+
+    // The Job overview reads the history index, not the run map: a started run
+    // must appear in both its history and its active runs, or the page the
+    // start lands on looks empty.
+    let history: Vec<&RunId> = snapshot
+        .job_history(&entity_id)
+        .map(|run| &run.id)
+        .collect();
+    assert_eq!(history, [&run_id], "the run is missing from the history");
+    assert_eq!(
+        snapshot.active_runs_of(&entity_id).count(),
+        1,
+        "the run is missing from the active runs"
+    );
 
     // An automatic tick polls the folder through its mock script.
     backend.tick(Local::now());
@@ -85,4 +100,67 @@ fn coco_backend_drives_the_workbench_model() {
         snapshot.job_run(&run_id).unwrap().status,
         RunStatus::Cancelling
     );
+}
+
+/// Adding a folder is one pick in the operating system's folder picker, so a
+/// directory that holds experiment folders must register all of them — this is
+/// how the bundled `mock/` library is added, and how it is tested.
+#[test]
+fn picking_a_parent_directory_registers_the_folders_beneath_it() {
+    let dir = TempDir::new().unwrap();
+    let library = dir.path().join("library");
+    copy_dir(
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("mock"),
+        &library,
+    );
+
+    let mut backend = CocoBackend::new(Coco::new(dir.path().join("store.json")).unwrap());
+    let outcome = backend.register_folder(&library).unwrap();
+
+    assert_eq!(outcome.added.len(), 4, "{outcome:?}");
+    assert!(outcome.refused.is_empty(), "{outcome:?}");
+    let snapshot = backend.snapshot();
+    let names: Vec<&str> = snapshot
+        .entities
+        .iter()
+        .map(|entity| entity.name.as_str())
+        .collect();
+    for expected in [
+        "solver-gpu",
+        "flaky-solver",
+        "failing-solver",
+        "nightly-benchmark",
+    ] {
+        assert!(
+            names.contains(&expected),
+            "{expected} missing from {names:?}"
+        );
+    }
+
+    // The same pick again adds nothing and refuses nothing.
+    let outcome = backend.register_folder(&library).unwrap();
+    assert!(outcome.added.is_empty(), "{outcome:?}");
+    assert_eq!(outcome.already_registered, 4, "{outcome:?}");
+    assert!(outcome.refused.is_empty(), "{outcome:?}");
+}
+
+/// A picked directory with no manifest anywhere below it still joins the
+/// Library, showing its manifest error (specification §11.5).
+#[test]
+fn picking_a_directory_without_a_manifest_registers_it_as_invalid() {
+    let dir = TempDir::new().unwrap();
+    let empty = dir.path().join("not-an-experiment");
+    fs::create_dir_all(empty.join("notes")).unwrap();
+
+    let mut backend = CocoBackend::new(Coco::new(dir.path().join("store.json")).unwrap());
+    let outcome = backend.register_folder(&empty).unwrap();
+
+    assert_eq!(outcome.added, ["not-an-experiment"], "{outcome:?}");
+    let snapshot = backend.snapshot();
+    let entity = snapshot
+        .entities
+        .iter()
+        .find(|entity| entity.name == "not-an-experiment")
+        .expect("an unusable folder stays visible");
+    assert!(!entity.manifest.is_valid(), "{:?}", entity.manifest);
 }

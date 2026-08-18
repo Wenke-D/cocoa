@@ -1216,13 +1216,28 @@ fn validate_params(
     let provided_set: BTreeSet<&str> = provided.keys().map(String::as_str).collect();
     let missing: Vec<&str> = declared_set.difference(&provided_set).copied().collect();
     let extra: Vec<&str> = provided_set.difference(&declared_set).copied().collect();
-    if missing.is_empty() && extra.is_empty() {
+    // Every declared parameter is supplied by hand (convention §2.1). A key
+    // carrying a blank value was never supplied — the start form sends one
+    // entry per declared name whether or not the user typed in it, so presence
+    // alone would let an empty run through.
+    let blank: Vec<&str> = declared_set
+        .iter()
+        .copied()
+        .filter(|name| {
+            provided
+                .get(*name)
+                .is_some_and(|value| value.trim().is_empty())
+        })
+        .collect();
+    if missing.is_empty() && extra.is_empty() && blank.is_empty() {
         Ok(())
     } else {
         Err(CocoError::validation(format!(
-            "{set} parameters must match the manifest exactly; missing {}, extra {}",
+            "{set} parameters must match the manifest exactly and each one needs a value; \
+             missing {}, extra {}, empty {}",
             describe_names(&missing),
-            describe_names(&extra)
+            describe_names(&extra),
+            describe_names(&blank)
         )))
     }
 }

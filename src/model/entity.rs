@@ -55,7 +55,7 @@ impl EntityKind {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Entity {
     pub id: EntityId,
     pub kind: EntityKind,

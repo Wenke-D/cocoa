@@ -9,9 +9,10 @@ use crate::app::{AppCommand, ViewCtx};
 use crate::backend::CancelTarget;
 use crate::model::{JobRun, QueryHealth, ReportState, RunOrigin, format_duration, format_relative};
 use crate::navigation::{ReportContext, Route};
-use crate::ui::space;
 use crate::ui::widgets::button::Button;
-use crate::ui::widgets::{parameter_block, status_badge};
+use crate::ui::widgets::section::Section;
+use crate::ui::widgets::{form, parameter_block, status_badge, surface};
+use crate::ui::{space, text, theme};
 
 /// Page-specific trimmings around the shared facts.
 pub struct Surround {
@@ -30,7 +31,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun, surround: &Surro
     overview_fields(ctx, ui, run, surround);
     ui.add_space(space::PAGE);
 
-    section(ui, "PARAMETERS");
+    Section::new("PARAMETERS").show_heading(ui);
     // Never truncated on a detail page (specification §17.3).
     parameter_block::block(ui, &run.parameters);
     ui.add_space(space::PAGE);
@@ -47,13 +48,10 @@ fn header(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun, surround: &Surroun
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
             ui.heading(&name);
-            ui.label(
-                egui::RichText::new(format!(
-                    "Run {}",
-                    run.started_at.format("%Y-%m-%d %H:%M:%S")
-                ))
-                .weak(),
-            );
+            ui.label(text::muted(format!(
+                "Run {}",
+                run.started_at.format("%Y-%m-%d %H:%M:%S")
+            )));
         });
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
@@ -77,60 +75,52 @@ fn header(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun, surround: &Surroun
 
 fn overview_fields(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun, surround: &Surround) {
     let now = ctx.now;
-    section(ui, "OVERVIEW");
+    Section::new("OVERVIEW").show_heading(ui);
 
-    egui::Grid::new("run_overview")
-        .num_columns(2)
-        .spacing([space::PAGE, space::NORMAL])
-        .show(ui, |ui| {
-            field(ui, "Run ID", |ui| {
-                parameter_block::inline(ui, run.id.as_str())
+    form::grid(ui, "run_overview", |form| {
+        form.row("Run ID", |ui| parameter_block::inline(ui, run.id.as_str()));
+
+        form.row("Started", |ui| {
+            ui.label(run.started_at.format("%Y-%m-%d %H:%M:%S").to_string());
+        });
+
+        // No end time for an active run (specification §17.2).
+        if let Some(ended_at) = run.ended_at {
+            form.row("Ended", |ui| {
+                ui.label(ended_at.format("%Y-%m-%d %H:%M:%S").to_string());
             });
+        }
 
-            field(ui, "Started", |ui| {
-                ui.label(run.started_at.format("%Y-%m-%d %H:%M:%S").to_string());
-            });
+        form.row("Duration", |ui| {
+            ui.label(format_duration(run.duration(now)));
+        });
 
-            // No end time for an active run (specification §17.2).
-            if let Some(ended_at) = run.ended_at {
-                field(ui, "Ended", |ui| {
-                    ui.label(ended_at.format("%Y-%m-%d %H:%M:%S").to_string());
-                });
+        form.row("Last successful query", |ui| {
+            ui.label(format_relative(run.last_successful_query, now));
+        });
+
+        form.row("Query health", |ui| match &run.query_health {
+            QueryHealth::Healthy => {
+                ui.label("Healthy");
             }
-
-            field(ui, "Duration", |ui| {
-                ui.label(format_duration(run.duration(now)));
-            });
-
-            field(ui, "Last successful query", |ui| {
-                ui.label(format_relative(run.last_successful_query, now));
-            });
-
-            field(ui, "Query health", |ui| match &run.query_health {
-                QueryHealth::Healthy => {
-                    ui.label("Healthy");
-                }
-                QueryHealth::Delayed => {
-                    ui.label("Delayed");
-                }
-                QueryHealth::Unavailable { message } => {
-                    ui.label(
-                        egui::RichText::new(format!("Unavailable — {message}"))
-                            .color(ui.visuals().warn_fg_color),
-                    );
-                }
-            });
-
-            if surround.show_source {
-                field(ui, "Source", |ui| source_value(ctx, ui, run));
+            QueryHealth::Delayed => {
+                ui.label("Delayed");
             }
-
-            for (label, value) in &surround.extra_fields {
-                field(ui, label, |ui| {
-                    ui.label(value);
-                });
+            QueryHealth::Unavailable { message } => {
+                ui.label(text::warning(ui, format!("Unavailable — {message}")));
             }
         });
+
+        if surround.show_source {
+            form.row("Source", |ui| source_value(ctx, ui, run));
+        }
+
+        for (label, value) in &surround.extra_fields {
+            form.row(label, |ui| {
+                ui.label(value);
+            });
+        }
+    });
 }
 
 /// Where this run came from, linking back to the dispatching Bench run.
@@ -168,13 +158,13 @@ fn source_value(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun) {
 
 /// The three presentations of §17.4, which must look distinct.
 fn status_section(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun) {
-    section(ui, "STATUS");
+    Section::new("STATUS").show_heading(ui);
 
     match &run.query_health {
         // Query failure: never presented as an execution failure.
         QueryHealth::Unavailable { .. } => {
-            notice(ui, ui.visuals().warn_fg_color, |ui| {
-                ui.label(egui::RichText::new("Status unavailable").strong());
+            surface::callout(ui, theme::Level::Warning, |ui| {
+                ui.label(text::strong("Status unavailable"));
                 ui.add_space(space::NORMAL);
                 ui.label(format!("Last known status: {}", run.status.label()));
                 ui.label(format!(
@@ -191,8 +181,8 @@ fn status_section(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun) {
         }
 
         _ if run.status == crate::model::RunStatus::Failed => {
-            notice(ui, ui.visuals().error_fg_color, |ui| {
-                ui.label(egui::RichText::new("Failed").strong());
+            surface::callout(ui, theme::Level::Error, |ui| {
+                ui.label(text::strong("Failed"));
                 ui.add_space(space::NORMAL);
                 ui.label(
                     run.error
@@ -203,7 +193,7 @@ fn status_section(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun) {
         }
 
         _ => {
-            ui.label(egui::RichText::new(run.status.label()).strong());
+            ui.label(text::strong(run.status.label()));
             ui.add_space(space::NORMAL);
             ui.label(status_badge::explanation(run.display_status()));
             if run.status.is_active() {
@@ -217,7 +207,7 @@ fn status_section(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun) {
 }
 
 fn report_section(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun, surround: &Surround) {
-    section(ui, "REPORT");
+    Section::new("REPORT").show_heading(ui);
 
     match &run.report {
         ReportState::Available { .. } => {
@@ -229,36 +219,14 @@ fn report_section(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun, surround: 
             }
         }
         ReportState::ReadError { message } => {
-            notice(ui, ui.visuals().error_fg_color, |ui| {
-                ui.label(egui::RichText::new("Unable to read report.").strong());
+            surface::callout(ui, theme::Level::Error, |ui| {
+                ui.label(text::strong("Unable to read report."));
                 ui.add_space(space::NORMAL);
                 ui.label(message);
             });
         }
         other => {
-            ui.label(egui::RichText::new(other.summary()).weak());
+            ui.label(text::muted(other.summary()));
         }
     }
-}
-
-fn field(ui: &mut egui::Ui, label: &str, value: impl FnOnce(&mut egui::Ui)) {
-    ui.label(egui::RichText::new(label).weak());
-    value(ui);
-    ui.end_row();
-}
-
-fn notice(ui: &mut egui::Ui, accent: egui::Color32, contents: impl FnOnce(&mut egui::Ui)) {
-    egui::Frame::new()
-        .fill(accent.gamma_multiply(0.10))
-        .stroke(egui::Stroke::new(1.0, accent.gamma_multiply(0.5)))
-        .inner_margin(egui::Margin::same(11))
-        .corner_radius(4)
-        .show(ui, contents);
-}
-
-pub fn section(ui: &mut egui::Ui, title: &str) {
-    ui.label(egui::RichText::new(title).small().strong().weak());
-    ui.add_space(space::SMALL);
-    ui.separator();
-    ui.add_space(space::NORMAL);
 }

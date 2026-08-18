@@ -8,12 +8,13 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use chrono::{DateTime, Local};
+use serde::Serialize;
 
 use crate::model::{
     BenchProgress, BenchRun, Entity, EntityId, EntityKind, JobRun, RunId, RunStatus, progress_of,
 };
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct World {
     /// Library order is decided here, once, rather than re-sorted every frame.
     pub entities: Vec<Entity>,

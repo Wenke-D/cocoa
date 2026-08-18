@@ -11,13 +11,12 @@
 use crate::app::{AppCommand, ViewCtx};
 use crate::model::format_relative;
 use crate::ui::icons;
-use crate::ui::theme::{self, Palette, metrics};
+use crate::ui::theme::{self, metrics};
 
 /// Horizontal padding inside one status bar item.
 const PADDING: f32 = 6.0;
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
-    let palette = theme::of(ui);
     let snapshot = ctx.snapshot;
     let now = ctx.now;
 
@@ -32,23 +31,22 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
     egui::Panel::bottom("status_bar")
         .exact_size(metrics::STATUS_BAR)
         .resizable(false)
-        .frame(theme::status_bar_frame(palette))
+        .frame(theme::status_bar_frame(ui))
         .show(ui, |ui| {
             ui.spacing_mut().item_spacing = egui::Vec2::ZERO;
 
             ui.horizontal_centered(|ui| {
-                item(ui, palette, "active", None, &active_label(active));
+                item(ui, "active", None, &active_label(active));
 
                 item(
                     ui,
-                    palette,
                     "last_refresh",
                     None,
                     &format!("Last refresh {last_refresh}"),
                 );
 
                 // The one action here, so it is an icon rather than a word.
-                if icon_item(ui, palette, "refresh", Icon::Sync)
+                if icon_item(ui, "refresh", Icon::Sync)
                     .on_hover_text("Refresh now")
                     .clicked()
                 {
@@ -58,7 +56,6 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
                 if interrupted {
                     item(
                         ui,
-                        palette,
                         "interrupted",
                         Some(Icon::Warning),
                         "Some runs cannot be queried",
@@ -68,11 +65,11 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
 
                 if let Some(message) = message {
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if item(ui, palette, "dismiss", None, "Dismiss").clicked() {
+                        if item(ui, "dismiss", None, "Dismiss").clicked() {
                             ctx.state.transient_message = None;
                         }
                         let icon = message.is_error.then_some(Icon::Error);
-                        item(ui, palette, "message", icon, &message.text);
+                        item(ui, "message", icon, &message.text);
                     });
                 }
             });
@@ -94,11 +91,11 @@ enum Icon {
 }
 
 impl Icon {
-    fn color(&self, palette: &Palette) -> egui::Color32 {
+    fn color(&self, ui: &egui::Ui) -> egui::Color32 {
         match self {
-            Self::Sync => palette.foreground,
-            Self::Warning => palette.warning,
-            Self::Error => palette.error,
+            Self::Sync => theme::ink(ui, theme::Ink::Normal),
+            Self::Warning => theme::feedback(ui, theme::Level::Warning),
+            Self::Error => theme::feedback(ui, theme::Level::Error),
         }
     }
 
@@ -112,7 +109,7 @@ impl Icon {
 }
 
 /// A square, icon-only status bar item.
-fn icon_item(ui: &mut egui::Ui, palette: &Palette, id: &str, icon: Icon) -> egui::Response {
+fn icon_item(ui: &mut egui::Ui, id: &str, icon: Icon) -> egui::Response {
     let (rect, _) = ui.allocate_exact_size(
         egui::vec2(metrics::STATUS_BAR, metrics::STATUS_BAR),
         egui::Sense::hover(),
@@ -121,25 +118,19 @@ fn icon_item(ui: &mut egui::Ui, palette: &Palette, id: &str, icon: Icon) -> egui
 
     let painter = ui.painter();
     if response.hovered() {
-        painter.rect_filled(rect, 0, palette.foreground.gamma_multiply(0.12));
+        painter.rect_filled(rect, 0, theme::status_bar_hover(ui));
     }
     icon.paint(
         painter,
         egui::Rect::from_center_size(rect.center(), egui::vec2(12.0, 12.0)),
-        icon.color(palette),
+        icon.color(ui),
     );
 
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
 /// One hoverable status bar item, optionally led by an icon.
-fn item(
-    ui: &mut egui::Ui,
-    palette: &Palette,
-    id: &str,
-    icon: Option<Icon>,
-    text: &str,
-) -> egui::Response {
+fn item(ui: &mut egui::Ui, id: &str, icon: Option<Icon>, text: &str) -> egui::Response {
     let font = egui::FontId::proportional(11.0);
     let icon_width = if icon.is_some() { 16.0 } else { 0.0 };
     let width = text_width(ui, text, &font) + icon_width + PADDING * 2.0;
@@ -153,12 +144,12 @@ fn item(
     let painter = ui.painter();
     if response.hovered() {
         // `statusBarItem.hoverBackground`, which is a translucent wash.
-        painter.rect_filled(rect, 0, palette.foreground.gamma_multiply(0.12));
+        painter.rect_filled(rect, 0, theme::status_bar_hover(ui));
     }
 
     let color = icon
         .as_ref()
-        .map_or(palette.foreground, |icon| icon.color(palette));
+        .map_or(theme::ink(ui, theme::Ink::Normal), |icon| icon.color(ui));
 
     if let Some(icon) = &icon {
         icon.paint(

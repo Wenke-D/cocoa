@@ -109,6 +109,10 @@ fails to load, so that every field in the start form has exactly one meaning.
 The start form shows both sets together as one list of fields; the record
 stores them as two maps (§7.1).
 
+**Every declared param must be given a value at start.** A value that is empty
+or only whitespace is not a value: coco refuses the start, whether it came from
+the start form or from a bench plan dispatching a member.
+
 ## 3. `coco.toml` — a bench
 
 A **bench** is a fan-out launcher. Its plan turns the bench's parameters into

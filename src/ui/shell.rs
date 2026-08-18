@@ -27,8 +27,6 @@ use crate::ui::{activity_bar, overlays, pages, sidebar, space, status_bar, theme
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
     keyboard(ctx, ui);
 
-    let palette = theme::of(ui);
-
     status_bar::show(ctx, ui);
     activity_bar::show(ctx, ui);
 
@@ -37,7 +35,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
             .resizable(true)
             .default_size(ctx.state.sidebar_width)
             .size_range(egui::Rangef::new(SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH))
-            .frame(theme::side_bar_frame(palette))
+            .frame(theme::side_bar_frame(ui))
             .show(ui, |ui| sidebar::show(ctx, ui));
 
         // Remember whatever width the user dragged to.
@@ -45,7 +43,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
     }
 
     egui::CentralPanel::default()
-        .frame(theme::editor_frame(palette))
+        .frame(theme::editor_frame(ui))
         .show(ui, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink([false, false])

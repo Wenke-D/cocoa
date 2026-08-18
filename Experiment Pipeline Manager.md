@@ -934,20 +934,17 @@ It must remain selected when viewing:
 
 `Add Folder` is a secondary action. It is reached from the `+` icon button in the Library view's title row (§8.3), and from the Empty Library page's button (§12).
 
-In this prototype, clicking it opens an `Add Demo Folder` modal rather than an operating-system folder picker.
+Clicking it opens the operating system's own folder picker. The application shows no modal of its own, and a path is never typed by hand. Cancelling the picker does nothing at all.
 
-The mock modal offers:
+What the chosen directory registers:
 
-```text
-Add Demo Job
-Add Demo Bench
-Add Invalid Manifest
-Cancel
-```
+- It carries a `coco.toml` manifest: the directory itself.
+- It does not, but folders beneath it do (searched three levels down, skipping hidden directories and generated `runs/` and `report/` state): every such folder. One pick therefore adds a whole directory of experiments — the bundled `mock/` library, say.
+- No manifest anywhere below it: the directory itself, which then appears in the Library with its manifest error visible.
 
-Adding an item must immediately update the Library.
+A folder already in the Library is a no-op, never a duplicate.
 
-Do not read the real filesystem.
+Registering must immediately update the Library, select the first folder added, and report the outcome in the status bar: what was added, what was already there, and what was refused with its reason.
 
 ---
 
@@ -963,7 +960,7 @@ Add a folder containing a valid experiment manifest to begin.
 [Add Folder]
 ```
 
-For the prototype, the button opens the Add Demo Folder modal.
+The button opens the operating system's folder picker (§11.5).
 
 The empty page must not look like an error.
 
@@ -1210,12 +1207,15 @@ Do not permanently display the parameter field on the overview page.
 
 The Start modal contains:
 
-- Title: `Start Job` or `Start Bench`.
-- Entity name.
-- For a Bench, number of Jobs.
-- Free-form parameter field.
-- Default parameter hint.
-- Last-used parameter shortcut.
+- The experiment's name as the title, under a small `START JOB` / `START BENCH`
+  type label — the identity block an entity page uses (§13.1). The title takes
+  the ordinary heading colour: the accent means "interactive" everywhere else in
+  the workbench, so an accented title would read as a link.
+- For a Bench, a note that the runs to dispatch are decided at start.
+- A `PARAMETERS` section, marked `(all required)`, holding one field per
+  declared parameter.
+- The last-used shortcut as the section's one icon action, at the right of the
+  `PARAMETERS` row — the shape the sidebar's title row already uses.
 - Active-run notice when applicable, informational only and never blocking.
 - Inline validation error.
 - Cancel button.
@@ -1242,24 +1242,26 @@ Cancel                                  Start Job
 
 ### 15.2 Parameter Semantics
 
-Parameters are a free-form UTF-8 string.
+Each parameter value is a free-form UTF-8 string.
 
-The prototype must not:
+The application must not:
 
 - Parse shell syntax.
 - Split arguments.
 - Execute the string.
 - Validate command-line semantics.
 
-A mock entity may define:
+Every parameter the manifest declares is required (convention §2.1). A value
+that is empty or only whitespace counts as not supplied: Start is disabled, and
+the disabled Start names what is still missing on hover. The requirement is
+stated once, as `(all required)` beside the section title, rather than as a
+running tally of empty fields beneath them; each empty field says `required` in
+its own placeholder. An experiment that declares no parameters starts with
+none.
 
-```rust
-parameters_required: bool
-```
-
-If false, an empty string is valid.
-
-If true, an empty string disables Start and shows an inline explanation.
+The engine refuses a blank value exactly as it refuses a missing one, so a start
+reaching it by any other route — a Bench dispatching a member, say — is refused
+the same way.
 
 ### 15.3 Default Value
 
@@ -2655,17 +2657,17 @@ Run these checks on both macOS and Linux where CI is available.
 4. Confirm the modal stays open and preserves the typed parameters.
 5. Confirm no Bench run and no Job run were created anywhere in the Library.
 
-### Scenario F: Add Folder Prototype
+### Scenario F: Add Folder
 
 1. Reset to an empty Library.
-2. Click Add Folder.
-3. Add a Demo Job.
-4. Confirm it appears in the Jobs group.
-5. Add a Demo Bench.
-6. Confirm it appears in the Benches group.
-7. Add an Invalid Manifest.
-8. Confirm it appears with an error.
-9. Confirm Start is disabled for the invalid item.
+2. Click Add Folder and confirm the operating system's folder picker opens.
+3. Cancel it, and confirm the Library is unchanged.
+4. Click Add Folder again and pick the bundled `mock/` directory.
+5. Confirm its three Jobs appear in the Jobs group and its Bench in the Benches group.
+6. Confirm the status bar reports how many folders were added.
+7. Pick the same directory again, and confirm nothing is duplicated and the status bar says they are already in the Library.
+8. Pick a directory with no manifest anywhere below it.
+9. Confirm it appears with an error, and that Start is disabled for it.
 
 ### Scenario G: Window Resizing
 

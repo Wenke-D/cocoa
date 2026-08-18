@@ -18,10 +18,14 @@ use crate::model::{Entity, EntityKind, RunStatus};
 use crate::navigation::Route;
 use crate::ui::icons;
 use crate::ui::space;
+use crate::ui::text;
 use crate::ui::theme::{self, metrics};
+use crate::ui::widgets;
 
 /// Left edge of a top-level row's text, matching VS Code's tree indent.
 const ROW_INDENT: f32 = 20.0;
+/// Inset of the view header's own content from either panel edge.
+const TITLE_INSET: f32 = 12.0;
 /// Padding between the row's right edge and its status badge.
 const ROW_TRAILING: f32 = 10.0;
 
@@ -40,42 +44,42 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
 
 /// `sideBarTitle`: a row of small uppercase text plus this view's actions.
 fn title_row(ctx: &mut ViewCtx, ui: &mut egui::Ui, view: SidebarView) {
-    let palette = theme::of(ui);
-
     let (rect, _) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), metrics::VIEW_HEADER),
         egui::Sense::hover(),
     );
 
+    let (font, color) = text::panel_header_paint(ui);
     ui.painter().text(
-        egui::pos2(rect.left() + 12.0, rect.center().y),
+        egui::pos2(rect.left() + TITLE_INSET, rect.center().y),
         egui::Align2::LEFT_CENTER,
         view.title().to_uppercase(),
-        egui::FontId::proportional(11.0),
-        palette.strong_foreground,
+        font,
+        color,
     );
 
     if view == SidebarView::Library {
-        // The one title action, mirroring the Explorer's "New File" icon.
+        // The one title action, mirroring the Explorer's "New File" icon. Its
+        // box is inset from the right edge by the same amount the title text is
+        // from the left, so the row reads as one strip rather than an icon
+        // pushed against the panel border.
         let button = egui::Rect::from_center_size(
-            egui::pos2(rect.right() - 18.0, rect.center().y),
-            egui::vec2(22.0, 22.0),
+            egui::pos2(
+                rect.right() - TITLE_INSET - metrics::ICON_BUTTON / 2.0,
+                rect.center().y,
+            ),
+            egui::vec2(metrics::ICON_BUTTON, metrics::ICON_BUTTON),
         );
-        let response = ui.interact(button, ui.id().with("sidebar_add"), egui::Sense::click());
-        if response.hovered() {
-            ui.painter().rect_filled(button, 3, palette.row_hover);
-        }
-        icons::plus(
-            ui.painter(),
-            egui::Rect::from_center_size(button.center(), egui::vec2(14.0, 14.0)),
-            palette.icon_active,
-        );
-        if response
-            .on_hover_cursor(egui::CursorIcon::PointingHand)
-            .on_hover_text("Add Folder")
-            .clicked()
-        {
-            ctx.push(AppCommand::OpenAddFolder);
+        let clicked = widgets::icon_button_at(
+            ui,
+            button,
+            ui.id().with("sidebar_add"),
+            "Add Folder",
+            icons::plus,
+        )
+        .clicked();
+        if clicked {
+            ctx.push(AppCommand::AddFolder);
         }
     }
 }
@@ -123,7 +127,6 @@ fn section(
 
 /// `sideBarSectionHeader`: 22px, uppercase, with a twisty on the left.
 fn section_header(ui: &mut egui::Ui, heading: &str, open: bool) -> egui::Response {
-    let palette = theme::of(ui);
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), metrics::SECTION_HEADER),
         egui::Sense::click(),
@@ -131,26 +134,31 @@ fn section_header(ui: &mut egui::Ui, heading: &str, open: bool) -> egui::Respons
 
     let painter = ui.painter();
     if response.hovered() {
-        painter.rect_filled(rect, 0, palette.row_hover);
+        painter.rect_filled(
+            rect,
+            0,
+            theme::row(ui, theme::RowState::Hover).expect("hover has a ground"),
+        );
     }
-    painter.hline(rect.x_range(), rect.top(), theme::hairline(palette));
+    painter.hline(rect.x_range(), rect.top(), theme::hairline(ui));
 
     let twisty = egui::Rect::from_center_size(
         egui::pos2(rect.left() + 11.0, rect.center().y),
         egui::vec2(11.0, 11.0),
     );
     if open {
-        icons::chevron_down(painter, twisty, palette.foreground);
+        icons::chevron_down(painter, twisty, theme::ink(ui, theme::Ink::Normal));
     } else {
-        icons::chevron_right(painter, twisty, palette.foreground);
+        icons::chevron_right(painter, twisty, theme::ink(ui, theme::Ink::Normal));
     }
 
+    let (font, color) = text::panel_header_paint(ui);
     painter.text(
         egui::pos2(rect.left() + ROW_INDENT, rect.center().y),
         egui::Align2::LEFT_CENTER,
         heading.to_uppercase(),
-        egui::FontId::proportional(11.0),
-        palette.strong_foreground,
+        font,
+        color,
     );
 
     response.on_hover_cursor(egui::CursorIcon::PointingHand)
@@ -282,11 +290,7 @@ fn running(ctx: &mut ViewCtx, ui: &mut egui::Ui) {
 fn empty_note(ui: &mut egui::Ui, text: &str) {
     ui.horizontal(|ui| {
         ui.add_space(ROW_INDENT);
-        ui.label(
-            egui::RichText::new(text)
-                .size(11.0)
-                .color(theme::of(ui).description),
-        );
+        ui.label(crate::ui::text::chrome_note(ui, text));
     });
     ui.add_space(space::SMALL);
 }
@@ -305,7 +309,6 @@ struct Row<'a> {
 /// selection fill can be `list.activeSelectionBackground` while text selection
 /// elsewhere keeps `editor.selectionBackground`.
 fn list_row(ui: &mut egui::Ui, row: Row<'_>) -> egui::Response {
-    let palette = theme::of(ui);
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), metrics::ROW),
         egui::Sense::click(),
@@ -317,15 +320,23 @@ fn list_row(ui: &mut egui::Ui, row: Row<'_>) -> egui::Response {
 
     let painter = ui.painter();
     if row.selected {
-        painter.rect_filled(rect, 0, palette.row_selected);
+        painter.rect_filled(
+            rect,
+            0,
+            theme::row(ui, theme::RowState::Selected).expect("selection has a ground"),
+        );
         painter.rect_stroke(
             rect.shrink(0.5),
             0,
-            egui::Stroke::new(1.0, palette.accent),
+            egui::Stroke::new(1.0, theme::accent(ui)),
             egui::StrokeKind::Inside,
         );
     } else if response.hovered() {
-        painter.rect_filled(rect, 0, palette.row_hover);
+        painter.rect_filled(
+            rect,
+            0,
+            theme::row(ui, theme::RowState::Hover).expect("hover has a ground"),
+        );
     }
 
     // Lay the badge out first: it decides how much room the label has left.
@@ -338,9 +349,9 @@ fn list_row(ui: &mut egui::Ui, row: Row<'_>) -> egui::Response {
         .map_or(0.0, |(galley, _)| galley.size().x + space::NORMAL);
 
     let label_color = if row.selected {
-        palette.row_selected_fg
+        theme::row_ink(ui, theme::RowState::Selected)
     } else {
-        palette.foreground
+        theme::row_ink(ui, theme::RowState::Rest)
     };
     let label_width = (rect.width() - row.indent - badge_width - ROW_TRAILING).max(0.0);
     let galley = elided(ui, row.label, 13.0, label_color, label_width);

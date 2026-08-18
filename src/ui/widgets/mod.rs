@@ -5,11 +5,14 @@ pub mod breadcrumbs;
 pub mod button;
 pub mod dispatch_table;
 pub mod empty_state;
+pub mod form;
 pub mod parameter_block;
 pub mod progress;
 pub mod run_detail;
 pub mod run_history_table;
+pub mod section;
 pub mod status_badge;
+pub mod surface;
 
 /// Stop text selection inside a region whose rows navigate when clicked.
 ///
@@ -39,21 +42,50 @@ pub fn icon_button(
     tooltip: &str,
     paint: impl FnOnce(&egui::Painter, egui::Rect, egui::Color32),
 ) -> egui::Response {
-    use crate::ui::theme::{self, metrics};
+    use crate::ui::theme::metrics;
 
-    let palette = theme::of(ui);
     let (rect, response) = ui.allocate_exact_size(
         egui::Vec2::splat(metrics::ICON_BUTTON),
         egui::Sense::click(),
     );
+    decorate_icon_button(ui, rect, response, tooltip, paint)
+}
 
+/// The same button at a rect the caller has already worked out, for rows that
+/// are painted rather than laid out — a view header, say.
+pub fn icon_button_at(
+    ui: &mut egui::Ui,
+    rect: egui::Rect,
+    id: egui::Id,
+    tooltip: &str,
+    paint: impl FnOnce(&egui::Painter, egui::Rect, egui::Color32),
+) -> egui::Response {
+    let response = ui.interact(rect, id, egui::Sense::click());
+    decorate_icon_button(ui, rect, response, tooltip, paint)
+}
+
+/// The one place an icon action's resting, hovered and held states are decided.
+fn decorate_icon_button(
+    ui: &mut egui::Ui,
+    rect: egui::Rect,
+    response: egui::Response,
+    tooltip: &str,
+    paint: impl FnOnce(&egui::Painter, egui::Rect, egui::Color32),
+) -> egui::Response {
+    use crate::ui::theme;
     if ui.is_rect_visible(rect) {
-        let color = if response.hovered() {
+        // Hover raises a hit box the icon alone never shows; holding deepens
+        // it, so a click that opens something slow is acknowledged at once.
+        let color = if response.is_pointer_button_down_on() {
             ui.painter()
-                .rect_filled(rect, 3, palette.secondary_hover_bg);
-            palette.strong_foreground
+                .rect_filled(rect, 3, theme::control(ui, theme::ControlState::Active));
+            theme::ink(ui, theme::Ink::Strong)
+        } else if response.hovered() {
+            ui.painter()
+                .rect_filled(rect, 3, theme::control(ui, theme::ControlState::Hover));
+            theme::ink(ui, theme::Ink::Strong)
         } else {
-            palette.foreground
+            theme::ink(ui, theme::Ink::Normal)
         };
         paint(
             ui.painter(),

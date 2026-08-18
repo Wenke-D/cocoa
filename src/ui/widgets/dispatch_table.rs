@@ -12,6 +12,7 @@ use crate::app::{AppCommand, ViewCtx};
 use crate::model::{BenchRun, format_duration};
 use crate::navigation::{ReportContext, Route};
 use crate::ui::icons;
+use crate::ui::text;
 use crate::ui::widgets::{icon_button, parameter_block, rows_are_clickable, status_badge};
 
 const ROW_HEIGHT: f32 = 24.0;
@@ -50,7 +51,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, bench_run: &BenchRun) {
                 "Report",
             ] {
                 header.col(|ui| {
-                    ui.label(egui::RichText::new(title).small().strong());
+                    ui.label(text::table_header(title));
                 });
             }
         })
@@ -61,7 +62,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, bench_run: &BenchRun) {
                 let mut consumed = false;
 
                 row.col(|ui| {
-                    ui.label(egui::RichText::new(step.index.to_string()).weak());
+                    ui.label(text::muted(step.index.to_string()));
                 });
                 row.col(|ui| {
                     ui.label(snapshot.entity_name(&step.job_id));
@@ -73,7 +74,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, bench_run: &BenchRun) {
                         status_badge::badge(ui, run.display_status());
                     }
                     None => {
-                        ui.label(egui::RichText::new("—").weak());
+                        ui.label(text::none());
                     }
                 });
                 row.col(|ui| {
@@ -104,7 +105,7 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, bench_run: &BenchRun) {
                             }));
                         }
                     } else {
-                        ui.label(egui::RichText::new("—").weak());
+                        ui.label(text::none());
                     }
                 });
 

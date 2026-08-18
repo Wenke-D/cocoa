@@ -5,9 +5,10 @@
 
 use crate::app::{AppCommand, ViewCtx};
 use crate::model::{Entity, JobRun};
-use crate::ui::space;
 use crate::ui::widgets::button::Button;
+use crate::ui::widgets::section::Section;
 use crate::ui::widgets::{active_run_card, empty_state, run_history_table};
+use crate::ui::{space, text};
 
 pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity: &Entity) {
     header(ctx, ui, entity);
@@ -22,17 +23,9 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity: &Entity) {
 fn header(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity: &Entity) {
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
-            ui.label(
-                egui::RichText::new(entity.kind.label())
-                    .small()
-                    .strong()
-                    .weak(),
-            );
+            ui.label(text::eyebrow(entity.kind.label()));
             ui.heading(&entity.name);
-            ui.add(
-                egui::Label::new(egui::RichText::new(&entity.path).monospace().weak())
-                    .selectable(true),
-            );
+            ui.add(egui::Label::new(text::mono_muted(&entity.path)).selectable(true));
         });
 
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
@@ -43,7 +36,7 @@ fn header(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity: &Entity) {
     // An unusable manifest disables Start and says why (specification §13.1).
     if let Some(reason) = entity.manifest.blocking_reason() {
         ui.add_space(space::NORMAL);
-        ui.label(egui::RichText::new(reason).color(ui.visuals().error_fg_color));
+        ui.label(text::error(ui, reason));
     }
 }
 
@@ -69,42 +62,41 @@ fn start_button(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity: &Entity) {
 }
 
 fn active_runs(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity: &Entity) {
-    section_heading(ui, "ACTIVE RUNS");
-
-    let active: Vec<&JobRun> = ctx.snapshot.active_runs_of(&entity.id).collect();
-    if active.is_empty() {
-        empty_state::note(ui, "No active runs.");
-        return;
-    }
-
-    for run in active {
-        active_run_card::job_card(ctx, ui, run);
-    }
+    Section::new("ACTIVE RUNS").show(ui, |ui| {
+        let active: Vec<&JobRun> = ctx.snapshot.active_runs_of(&entity.id).collect();
+        if active.is_empty() {
+            empty_state::note(ui, "No active runs.");
+            return;
+        }
+        for run in active {
+            active_run_card::job_card(ctx, ui, run);
+        }
+    });
 }
 
 fn all_runs(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity: &Entity) {
-    section_heading(ui, "ALL RUNS");
+    Section::new("ALL RUNS").show(ui, |ui| {
+        let snapshot = ctx.snapshot;
+        let history: Vec<&JobRun> = snapshot.job_history(&entity.id).collect();
+        let filtered = filter(ctx, &history);
 
-    let snapshot = ctx.snapshot;
-    let history: Vec<&JobRun> = snapshot.job_history(&entity.id).collect();
-    let filtered = filter(ctx, &history);
+        run_history_table::filter_controls(ctx, ui, filtered.len(), history.len());
+        ui.add_space(space::NORMAL);
 
-    run_history_table::filter_controls(ctx, ui, filtered.len(), history.len());
-    ui.add_space(space::NORMAL);
+        if filtered.is_empty() {
+            empty_state::note(
+                ui,
+                if history.is_empty() {
+                    "This Job has not been run yet."
+                } else {
+                    "No runs match the current filters."
+                },
+            );
+            return;
+        }
 
-    if filtered.is_empty() {
-        empty_state::note(
-            ui,
-            if history.is_empty() {
-                "This Job has not been run yet."
-            } else {
-                "No runs match the current filters."
-            },
-        );
-        return;
-    }
-
-    run_history_table::job_history(ctx, ui, &filtered);
+        run_history_table::job_history(ctx, ui, &filtered);
+    });
 }
 
 /// Filters affect All Runs only, never Active Runs (specification §22.4).
@@ -118,11 +110,4 @@ fn filter<'a>(ctx: &ViewCtx, history: &[&'a JobRun]) -> Vec<&'a JobRun> {
         .filter(|run| filter.accepts(run.status))
         .filter(|run| needle.is_empty() || run.parameters.to_lowercase().contains(&needle))
         .collect()
-}
-
-pub fn section_heading(ui: &mut egui::Ui, text: &str) {
-    ui.label(egui::RichText::new(text).small().strong().weak());
-    ui.add_space(space::SMALL);
-    ui.separator();
-    ui.add_space(space::NORMAL);
 }

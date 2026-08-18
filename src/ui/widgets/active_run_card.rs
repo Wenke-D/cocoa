@@ -7,16 +7,16 @@ use crate::app::{AppCommand, ViewCtx};
 use crate::backend::CancelTarget;
 use crate::model::{BenchRun, JobRun, RunOrigin, format_duration};
 use crate::navigation::Route;
-use crate::ui::space;
 use crate::ui::widgets::button::Button;
-use crate::ui::widgets::{parameter_block, progress, status_badge};
+use crate::ui::widgets::{parameter_block, progress, status_badge, surface};
+use crate::ui::{space, text};
 
 /// A card for one active Job run.
 pub fn job_card(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun) {
     let now = ctx.now;
     let snapshot = ctx.snapshot;
 
-    card_frame(ui, |ui| {
+    surface::card(ui, |ui| {
         ui.horizontal(|ui| {
             status_badge::badge(ui, run.display_status());
 
@@ -40,14 +40,11 @@ pub fn job_card(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &JobRun) {
         });
 
         ui.add_space(space::SMALL);
-        ui.label(
-            egui::RichText::new(format!(
-                "Started {} · Duration {}",
-                run.started_at.format("%H:%M:%S"),
-                format_duration(run.duration(now))
-            ))
-            .weak(),
-        );
+        ui.label(text::muted(format!(
+            "Started {} · Duration {}",
+            run.started_at.format("%H:%M:%S"),
+            format_duration(run.duration(now))
+        )));
 
         ui.add_space(space::SMALL);
         parameter_block::truncated_cell(ui, &run.parameters);
@@ -78,7 +75,7 @@ pub fn bench_card(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &BenchRun) {
     let progress = ctx.snapshot.bench_progress(run);
     let statuses = ctx.snapshot.child_statuses(run);
 
-    card_frame(ui, |ui| {
+    surface::card(ui, |ui| {
         status_badge::badge(ui, run.display_status());
 
         ui.add_space(space::SMALL);
@@ -93,14 +90,11 @@ pub fn bench_card(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &BenchRun) {
         progress::bar(ui, &statuses);
 
         ui.add_space(space::SMALL);
-        ui.label(
-            egui::RichText::new(format!(
-                "Started {} · Duration {}",
-                run.started_at.format("%H:%M:%S"),
-                format_duration(run.duration(now))
-            ))
-            .weak(),
-        );
+        ui.label(text::muted(format!(
+            "Started {} · Duration {}",
+            run.started_at.format("%H:%M:%S"),
+            format_duration(run.duration(now))
+        )));
 
         ui.add_space(space::NORMAL);
         ui.horizontal(|ui| {
@@ -117,19 +111,4 @@ pub fn bench_card(ctx: &mut ViewCtx, ui: &mut egui::Ui, run: &BenchRun) {
             }
         });
     });
-}
-
-fn card_frame(ui: &mut egui::Ui, contents: impl FnOnce(&mut egui::Ui)) {
-    egui::Frame::new()
-        .fill(ui.visuals().faint_bg_color)
-        .stroke(ui.visuals().widgets.noninteractive.bg_stroke)
-        .inner_margin(egui::Margin::same(11))
-        .corner_radius(4)
-        .show(ui, |ui| {
-            // Every card spans the content region. Without this a card that
-            // happens to carry an origin link is wider than one that does not.
-            ui.set_width(ui.available_width());
-            contents(ui);
-        });
-    ui.add_space(space::NORMAL);
 }

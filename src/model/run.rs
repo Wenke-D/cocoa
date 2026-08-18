@@ -39,7 +39,7 @@ impl std::fmt::Display for RunId {
 /// Origin is presentation and navigation metadata only. It never changes how a
 /// run executes, and it never excludes a run from its Job's own history
 /// (specification §10.6).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub enum RunOrigin {
     Direct,
     BenchStep {
@@ -62,7 +62,7 @@ impl RunOrigin {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct JobRun {
     pub id: RunId,
     /// The Job this run belongs to. Always a real Library entity.
@@ -101,7 +101,7 @@ impl JobRun {
 }
 
 /// What the UI prints in a status column.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum DisplayStatus {
     Known(RunStatus),
     Unknown { last_known: RunStatus },
@@ -120,7 +120,7 @@ impl DisplayStatus {
 ///
 /// `index` is a stable display label and identity within the plan. It carries no
 /// execution ordering — every call is dispatched at once (specification §10.7).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct BenchPlanStep {
     pub index: usize,
     /// References an existing Library Job. The plan never embeds a Job.
@@ -131,7 +131,7 @@ pub struct BenchPlanStep {
     pub run_id: RunId,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct BenchPlan {
     pub steps: Vec<BenchPlanStep>,
 }
@@ -154,7 +154,7 @@ impl BenchPlan {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct BenchRun {
     pub id: RunId,
     pub bench_id: EntityId,
@@ -189,7 +189,7 @@ impl BenchRun {
 }
 
 /// Counts across a Bench run's dispatched children (specification §18.2).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct BenchProgress {
     pub total: usize,
     pub succeeded: usize,

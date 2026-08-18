@@ -6,14 +6,14 @@
 //! gets the same cheap `Arc` clone every frame.
 
 use std::cell::{Cell, RefCell};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use chrono::{DateTime, Local};
 
 use crate::backend::snapshot::{BackendSnapshot, World};
-use crate::backend::traits::{BackendError, CancelTarget, ExperimentBackend};
+use crate::backend::traits::{AddedFolders, BackendError, CancelTarget, ExperimentBackend};
 use crate::coco::{BenchRecord, Coco, CocoError, Manifest, RunRecord, Status};
 use crate::model::{
     BenchPlan, BenchPlanStep, BenchRun, Entity, EntityId, EntityKind, JobRun, ManifestState,
@@ -22,6 +22,10 @@ use crate::model::{
 
 /// How often `tick` polls every job and advances reports, automatically.
 const AUTO_REFRESH_INTERVAL: chrono::TimeDelta = chrono::TimeDelta::seconds(3);
+
+/// How deep an Add Folder pick looks for experiment folders below the chosen
+/// directory.
+const SCAN_DEPTH: usize = 3;
 
 pub struct CocoBackend {
     coco: Coco,
@@ -72,8 +76,10 @@ impl CocoBackend {
                             if let Ok(record) = run_view.record {
                                 let run = self.job_run(&view.path, record, now);
                                 let id = run.id.clone();
-                                world.index_job_run(id.clone());
-                                world.job_runs.insert(id, run);
+                                // Insert before indexing: the index reads the
+                                // run's start time back out of the map.
+                                world.job_runs.insert(id.clone(), run);
+                                world.index_job_run(id);
                             }
                         }
                     }
@@ -90,8 +96,8 @@ impl CocoBackend {
                             if let Ok(record) = run_view.record {
                                 let run = self.bench_run(&view.path, record, now);
                                 let id = run.id.clone();
-                                world.index_bench_run(id.clone());
-                                world.bench_runs.insert(id, run);
+                                world.bench_runs.insert(id.clone(), run);
+                                world.index_bench_run(id);
                             }
                         }
                     }
@@ -369,23 +375,39 @@ impl ExperimentBackend for CocoBackend {
         Ok(report_state(&folder, run_id))
     }
 
-    fn register_folder(&mut self, path: &Path) -> Result<(), BackendError> {
-        self.coco.register(path).map_err(backend_error)?;
-        self.mark_dirty();
-        Ok(())
-    }
+    fn register_folder(&mut self, path: &Path) -> Result<AddedFolders, BackendError> {
+        let folders = experiment_folders(path);
+        // A single folder is the user's literal choice: its failure is the
+        // action's failure. Within a scanned directory one bad folder must not
+        // sink the rest, so it is reported alongside what did register.
+        let single = folders.len() == 1;
+        let known: HashSet<PathBuf> = self
+            .coco
+            .entities()
+            .into_iter()
+            .map(|entity| entity.path)
+            .collect();
 
-    fn register_bundled_mock(&mut self) -> Result<usize, BackendError> {
-        let mut added = 0;
-        for folder in bundled_mock_folders() {
+        let mut outcome = AddedFolders::default();
+        for folder in folders {
+            if known.contains(&folder) {
+                outcome.already_registered += 1;
+                continue;
+            }
             match self.coco.register(&folder) {
-                Ok(()) => added += 1,
-                Err(CocoError::AlreadyRegistered(_)) => {}
-                Err(error) => return Err(backend_error(error)),
+                Ok(()) => outcome.added.push(file_name(&folder)),
+                Err(CocoError::AlreadyRegistered(_)) => outcome.already_registered += 1,
+                Err(error) if single => return Err(backend_error(error)),
+                Err(error) => outcome.refused.push(format!(
+                    "{}: {}",
+                    file_name(&folder),
+                    backend_error(error)
+                )),
             }
         }
+
         self.mark_dirty();
-        Ok(added)
+        Ok(outcome)
     }
 
     fn tick(&mut self, now: DateTime<Local>) {
@@ -498,28 +520,54 @@ fn file_name(path: &Path) -> String {
         .unwrap_or_else(|| path.display().to_string())
 }
 
-/// Every folder under `mock/` carrying a `coco.toml` manifest.
-fn bundled_mock_folders() -> Vec<PathBuf> {
+/// The experiment folders a picked directory offers.
+///
+/// The directory itself when it carries a manifest; otherwise every folder
+/// beneath it that does, so picking `mock/` adds the whole bundled library in
+/// one action. A directory with no manifest anywhere is returned unchanged, so
+/// it lands in the Library with its manifest error visible (specification §11.5)
+/// rather than disappearing into a dialog error.
+fn experiment_folders(root: &Path) -> Vec<PathBuf> {
     fn collect(dir: &Path, out: &mut Vec<PathBuf>, depth: usize) {
-        if depth > 3 {
-            return;
-        }
         if dir.join("coco.toml").is_file() {
             out.push(dir.to_owned());
             return;
         }
-        if let Ok(entries) = std::fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                if entry.path().is_dir() {
-                    collect(&entry.path(), out, depth + 1);
-                }
-            }
+        if depth >= SCAN_DEPTH {
+            return;
+        }
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return;
+        };
+        let mut children: Vec<PathBuf> = entries
+            .flatten()
+            .map(|entry| entry.path())
+            .filter(|path| path.is_dir() && !is_skipped(path))
+            .collect();
+        children.sort();
+        for child in children {
+            collect(&child, out, depth + 1);
         }
     }
-    let mut folders = Vec::new();
-    let root = Path::new("mock");
-    if root.is_dir() {
-        collect(root, &mut folders, 0);
+
+    /// Hidden directories and the state an experiment folder generates are
+    /// never experiment folders themselves.
+    fn is_skipped(path: &Path) -> bool {
+        let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+            return true;
+        };
+        name.starts_with('.') || matches!(name, "runs" | "report" | "target" | "node_modules")
     }
+
+    let mut folders = Vec::new();
+    collect(root, &mut folders, 0);
+    if folders.is_empty() {
+        folders.push(root.to_owned());
+    }
+    // Canonical form is what the store holds, so already-registered folders
+    // compare equal however the user navigated to them.
     folders
+        .into_iter()
+        .map(|path| std::fs::canonicalize(&path).unwrap_or(path))
+        .collect()
 }

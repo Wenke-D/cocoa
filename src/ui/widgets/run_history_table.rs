@@ -9,9 +9,9 @@ use crate::app::{AppCommand, ViewCtx};
 use crate::model::{BenchRun, JobRun, RunOrigin, format_duration};
 use crate::navigation::{ReportContext, Route};
 use crate::ui::icons;
-use crate::ui::space;
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::{icon_button, parameter_block, rows_are_clickable, status_badge};
+use crate::ui::{space, text};
 
 const ROW_HEIGHT: f32 = 24.0;
 const HEADER_HEIGHT: f32 = 22.0;
@@ -45,7 +45,7 @@ pub fn job_history(ctx: &mut ViewCtx, ui: &mut egui::Ui, runs: &[&JobRun]) {
                 "Report",
             ] {
                 header.col(|ui| {
-                    ui.label(egui::RichText::new(title).small().strong());
+                    ui.label(text::table_header(title));
                 });
             }
         })
@@ -62,7 +62,7 @@ pub fn job_history(ctx: &mut ViewCtx, ui: &mut egui::Ui, runs: &[&JobRun]) {
                 // Where this run came from (specification §13.3).
                 row.col(|ui| match &run.origin {
                     RunOrigin::Direct => {
-                        ui.label(egui::RichText::new("—").weak());
+                        ui.label(text::none());
                     }
                     RunOrigin::BenchStep {
                         bench_id,
@@ -100,7 +100,7 @@ pub fn job_history(ctx: &mut ViewCtx, ui: &mut egui::Ui, runs: &[&JobRun]) {
                             }));
                         }
                     } else {
-                        ui.label(egui::RichText::new("—").weak());
+                        ui.label(text::none());
                     }
                 });
 
@@ -145,7 +145,7 @@ pub fn bench_history(ctx: &mut ViewCtx, ui: &mut egui::Ui, runs: &[&BenchRun]) {
                 "Report",
             ] {
                 header.col(|ui| {
-                    ui.label(egui::RichText::new(title).small().strong());
+                    ui.label(text::table_header(title));
                 });
             }
         })
@@ -185,7 +185,7 @@ pub fn bench_history(ctx: &mut ViewCtx, ui: &mut egui::Ui, runs: &[&BenchRun]) {
                             }));
                         }
                     } else {
-                        ui.label(egui::RichText::new("—").weak());
+                        ui.label(text::none());
                     }
                 });
 
@@ -233,7 +233,7 @@ pub fn filter_controls(ctx: &mut ViewCtx, ui: &mut egui::Ui, shown: usize, total
             } else {
                 format!("{shown} of {total} {noun}")
             };
-            ui.label(egui::RichText::new(text).weak().small());
+            ui.label(text::caption(text));
         });
     });
 }

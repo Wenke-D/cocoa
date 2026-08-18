@@ -203,6 +203,21 @@ pub fn error(painter: &Painter, rect: Rect, color: Color32) {
     painter.line_segment([at(rect, 0.66, 0.34), at(rect, 0.34, 0.66)], stroke);
 }
 
+/// A clock face, for reaching back to what the last run used.
+pub fn history(painter: &Painter, rect: Rect, color: Color32) {
+    let stroke = stroke(rect, color);
+    let center = rect.center();
+    let radius = rect.width() * 0.38;
+
+    painter.circle_stroke(center, radius, stroke);
+    // Hands from the centre: one up, one to the lower right.
+    painter.line_segment([center, center + egui::vec2(0.0, -radius * 0.58)], stroke);
+    painter.line_segment(
+        [center, center + egui::vec2(radius * 0.5, radius * 0.28)],
+        stroke,
+    );
+}
+
 pub fn plus(painter: &Painter, rect: Rect, color: Color32) {
     let stroke = stroke(rect, color);
     painter.line_segment([at(rect, 0.50, 0.14), at(rect, 0.50, 0.86)], stroke);

@@ -36,8 +36,6 @@ pub enum Overlay {
         error: Option<String>,
     },
 
-    AddFolder,
-
     Settings,
 }
 

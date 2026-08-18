@@ -8,9 +8,9 @@
 use crate::app::{AppCommand, ViewCtx};
 use crate::model::{EntityId, RunId};
 use crate::navigation::ReportContext;
-use crate::ui::space;
 use crate::ui::widgets::breadcrumbs;
 use crate::ui::widgets::run_detail::{self, Surround};
+use crate::ui::{space, text};
 
 pub fn show(
     ctx: &mut ViewCtx,
@@ -35,7 +35,7 @@ pub fn show(
     // point of the corrected model. Offer navigation explicitly.
     let job_name = ctx.snapshot.entity_name(&run.job_id).to_owned();
     ui.horizontal(|ui| {
-        ui.label(egui::RichText::new("Job").weak());
+        ui.label(text::muted("Job"));
         if ui
             .link(&job_name)
             .on_hover_text("Open this Job in the Library")
