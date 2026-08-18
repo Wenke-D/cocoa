@@ -1,7 +1,7 @@
-//! The backend boundary.
+//! The seam.
 //!
 //! Everything the UI can do to domain state passes through this trait. The
-//! single implementation is [`crate::backend::coco::CocoBackend`], which
+//! single implementation is [`crate::adapter::coco::CocoAdapter`], which
 //! drives the [`crate::coco`] engine over real experiment folders.
 
 use std::collections::BTreeMap;
@@ -31,7 +31,7 @@ impl CancelTarget {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum BackendError {
+pub enum ExperimentError {
     UnknownEntity(EntityId),
     UnknownRun(RunId),
     /// Start was refused because the entity's own manifest is unusable.
@@ -54,7 +54,7 @@ pub enum BackendError {
     Operation(String),
 }
 
-impl std::fmt::Display for BackendError {
+impl std::fmt::Display for ExperimentError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::UnknownEntity(id) => write!(f, "No such entity: {id}"),
@@ -80,7 +80,7 @@ impl std::fmt::Display for BackendError {
     }
 }
 
-impl std::error::Error for BackendError {}
+impl std::error::Error for ExperimentError {}
 
 /// What one Add Folder action did.
 ///
@@ -97,7 +97,7 @@ pub struct AddedFolders {
     pub refused: Vec<String>,
 }
 
-pub trait ExperimentBackend {
+pub trait Experiments {
     /// An immutable view for rendering. Cheap to call every frame.
     fn snapshot(&self) -> Snapshot;
 
@@ -112,15 +112,15 @@ pub trait ExperimentBackend {
         &mut self,
         entity_id: &EntityId,
         parameters: BTreeMap<String, String>,
-    ) -> Result<RunId, BackendError>;
+    ) -> Result<RunId, ExperimentError>;
 
-    fn cancel(&mut self, target: CancelTarget) -> Result<(), BackendError>;
+    fn cancel(&mut self, target: CancelTarget) -> Result<(), ExperimentError>;
 
-    fn refresh(&mut self) -> Result<(), BackendError>;
+    fn refresh(&mut self) -> Result<(), ExperimentError>;
 
     /// The report's current state, including its format. An unreadable report
     /// is a state, not a failure; a missing run is the error case.
-    fn report(&self, run_id: &RunId) -> Result<ReportState, BackendError>;
+    fn report(&self, run_id: &RunId) -> Result<ReportState, ExperimentError>;
 
     /// Registers the folder the user picked (specification §11.5).
     ///
@@ -128,7 +128,7 @@ pub trait ExperimentBackend {
     /// experiment folder beneath it is registered instead, so one pick can
     /// add a whole library (the bundled `mock/` directory, say). A folder
     /// already in the library is a no-op.
-    fn register_folder(&mut self, path: &Path) -> Result<AddedFolders, BackendError>;
+    fn register_folder(&mut self, path: &Path) -> Result<AddedFolders, ExperimentError>;
 
     /// Automatic housekeeping (polling, reports, bench fan-out progression).
     fn tick(&mut self, now: DateTime<Local>);

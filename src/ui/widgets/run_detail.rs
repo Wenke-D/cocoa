@@ -5,8 +5,8 @@
 //! function; only breadcrumbs, Library selection, and the surrounding links
 //! differ, and those live in the pages.
 
+use crate::adapter::CancelTarget;
 use crate::app::{AppCommand, ViewCtx};
-use crate::backend::CancelTarget;
 use crate::navigation::{ReportContext, Route};
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::section::Section;

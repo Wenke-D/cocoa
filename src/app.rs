@@ -3,12 +3,12 @@
 //! Frame shape:
 //!
 //! ```text
-//! tick the backend → take an immutable snapshot → render → collect commands
+//! tick the adapter → take an immutable snapshot → render → collect commands
 //! → execute commands → update route/overlay → schedule repaint
 //! ```
 //!
 //! The UI is handed a snapshot and a command sink. It has no access to the
-//! backend at all, so it cannot mutate domain state even by accident.
+//! adapter at all, so it cannot mutate domain state even by accident.
 
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -16,7 +16,7 @@ use std::time::Duration;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
-use crate::backend::{CancelTarget, CocoBackend, ExperimentBackend};
+use crate::adapter::{CancelTarget, CocoAdapter, Experiments};
 use crate::coco::Coco;
 use crate::navigation::{Overlay, Route, SubmitState};
 use crate::view_model::Snapshot;
@@ -263,10 +263,10 @@ impl ViewCtx<'_> {
 }
 
 pub struct ExperimentApp {
-    backend: Box<dyn ExperimentBackend>,
+    experiments: Box<dyn Experiments>,
     pub ui: UiState,
     /// A submitted start, performed on the next frame so the `Starting…` state
-    /// is rendered and slow backends can finish before the frame returns.
+    /// is rendered and a slow engine can finish before the frame returns.
     pending_start: Option<(EntityId, BTreeMap<String, String>)>,
     /// A URL to hand to the system browser at the end of the frame.
     pending_url: Option<String>,
@@ -289,17 +289,17 @@ impl ExperimentApp {
         });
 
         Self {
-            backend: Box::new(CocoBackend::new(engine)),
+            experiments: Box::new(CocoAdapter::new(engine)),
             ui,
             pending_start: None,
             pending_url: None,
         }
     }
 
-    /// Test seam: build an app around an arbitrary backend, without eframe.
-    pub fn with_backend(backend: Box<dyn ExperimentBackend>) -> Self {
+    /// Test seam: build an app around an arbitrary implementation, without eframe.
+    pub fn with_experiments(experiments: Box<dyn Experiments>) -> Self {
         Self {
-            backend,
+            experiments,
             ui: UiState::default(),
             pending_start: None,
             pending_url: None,
@@ -313,7 +313,7 @@ impl ExperimentApp {
     }
 
     pub fn snapshot(&self) -> Snapshot {
-        self.backend.snapshot()
+        self.experiments.snapshot()
     }
 
     /// The URL queued for the system browser, if any. Exposed for tests.
@@ -326,7 +326,7 @@ impl ExperimentApp {
     }
 
     pub fn recover_route(&mut self) {
-        let snapshot = self.backend.snapshot();
+        let snapshot = self.experiments.snapshot();
         if let Some(recovery) = self.ui.route.recover(&snapshot) {
             self.ui.route = recovery.route;
             if let Some(message) = recovery.message {
@@ -357,7 +357,7 @@ impl ExperimentApp {
             }
 
             AppCommand::OpenStartModal(entity_id) => {
-                let snapshot = self.backend.snapshot();
+                let snapshot = self.experiments.snapshot();
                 let fields = snapshot
                     .entity(&entity_id)
                     .map(|entity| {
@@ -378,7 +378,7 @@ impl ExperimentApp {
 
             AppCommand::FillLastArgs(entity_id) => {
                 if let Overlay::StartRun { fields, .. } = &mut self.ui.overlay {
-                    let snapshot = self.backend.snapshot();
+                    let snapshot = self.experiments.snapshot();
                     if let Some(entity) = snapshot.entity(&entity_id) {
                         for (name, value) in &entity.last_used {
                             if fields.contains_key(name) {
@@ -406,7 +406,7 @@ impl ExperimentApp {
                 };
             }
 
-            AppCommand::ConfirmCancel(target) => match self.backend.cancel(target) {
+            AppCommand::ConfirmCancel(target) => match self.experiments.cancel(target) {
                 Ok(()) => {
                     self.ui.overlay = Overlay::None;
                 }
@@ -428,9 +428,9 @@ impl ExperimentApp {
             }
 
             AppCommand::RetryQuery(run_id) => {
-                let _ = self.backend.refresh();
+                let _ = self.experiments.refresh();
                 let healthy = self
-                    .backend
+                    .experiments
                     .snapshot()
                     .job_run(&run_id)
                     .is_none_or(|run| run.query_health.is_available());
@@ -441,7 +441,7 @@ impl ExperimentApp {
                 }
             }
 
-            AppCommand::Refresh => match self.backend.refresh() {
+            AppCommand::Refresh => match self.experiments.refresh() {
                 Ok(()) => self.ui.notify("Refreshed."),
                 Err(error) => self.ui.notify_error(error.to_string()),
             },
@@ -458,14 +458,14 @@ impl ExperimentApp {
     /// is exercisable without a dialog.
     pub fn add_folder(&mut self, path: &std::path::Path) {
         let before: Vec<EntityId> = self
-            .backend
+            .experiments
             .snapshot()
             .entities
             .iter()
             .map(|entity| entity.id.clone())
             .collect();
 
-        let outcome = match self.backend.register_folder(path) {
+        let outcome = match self.experiments.register_folder(path) {
             Ok(outcome) => outcome,
             Err(error) => {
                 self.ui.notify_error(error.to_string());
@@ -476,7 +476,7 @@ impl ExperimentApp {
         // Land on the first folder this action added, so the user sees the
         // result of the pick rather than wherever they already were.
         if let Some(entity) = self
-            .backend
+            .experiments
             .snapshot()
             .entities
             .iter()
@@ -516,12 +516,12 @@ impl ExperimentApp {
 
     fn perform_start(&mut self, entity_id: EntityId, parameters: BTreeMap<String, String>) {
         let kind = self
-            .backend
+            .experiments
             .snapshot()
             .entity(&entity_id)
             .map(|entity| entity.kind);
 
-        match self.backend.start(&entity_id, parameters) {
+        match self.experiments.start(&entity_id, parameters) {
             Ok(run_id) => {
                 self.ui.overlay = Overlay::None;
                 self.ui.route = match kind {
@@ -544,7 +544,7 @@ impl ExperimentApp {
     }
 
     fn open_report_externally(&mut self, run_id: &RunId) {
-        let state = match self.backend.report(run_id) {
+        let state = match self.experiments.report(run_id) {
             Ok(state) => state,
             Err(error) => {
                 self.ui.notify_error(error.to_string());
@@ -574,7 +574,7 @@ impl ExperimentApp {
     }
 
     fn schedule_repaint(&self, ctx: &egui::Context) {
-        let snapshot = self.backend.snapshot();
+        let snapshot = self.experiments.snapshot();
         let needs_animation = snapshot.active_run_count() > 0 || self.ui.overlay.is_open();
         if needs_animation {
             ctx.request_repaint_after(Duration::from_millis(500));
@@ -590,10 +590,10 @@ impl eframe::App for ExperimentApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let now = Local::now();
         self.poll();
-        self.backend.tick(now);
+        self.experiments.tick(now);
         self.recover_route();
 
-        let snapshot = self.backend.snapshot();
+        let snapshot = self.experiments.snapshot();
         let mut commands = Vec::new();
 
         {

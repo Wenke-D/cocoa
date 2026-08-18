@@ -1,7 +1,7 @@
 //! The seam between the workbench and the engine, and its one implementation.
 //!
 //! ```text
-//! UI → ExperimentBackend trait → CocoBackend → coco engine → experiment folder
+//! UI → Experiments trait → CocoAdapter → coco engine → experiment folder
 //! ```
 //!
 //! This is an adapter, not a domain layer — the domain is [`crate::coco`], and
@@ -18,5 +18,5 @@
 pub mod coco;
 pub mod traits;
 
-pub use coco::CocoBackend;
-pub use traits::{AddedFolders, BackendError, CancelTarget, ExperimentBackend};
+pub use coco::CocoAdapter;
+pub use traits::{AddedFolders, CancelTarget, ExperimentError, Experiments};

@@ -3,8 +3,8 @@
 //! Cancel is destructive, so it always asks first, and the copy states exactly
 //! what will and will not be touched.
 
+use crate::adapter::CancelTarget;
 use crate::app::{AppCommand, ViewCtx};
-use crate::backend::CancelTarget;
 use crate::ui::overlays::modal_frame;
 use crate::ui::widgets::button::Button;
 use crate::ui::{space, text};

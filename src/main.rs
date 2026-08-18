@@ -33,7 +33,7 @@ fn main() -> eframe::Result {
 
 /// Prints the world as JSON, on the same store the app itself would open.
 fn dump_state() {
-    use experiment_manager::backend::{CocoBackend, ExperimentBackend};
+    use experiment_manager::adapter::{CocoAdapter, Experiments};
     use experiment_manager::coco::Coco;
 
     let store = experiment_manager::app::default_store_path();
@@ -45,8 +45,8 @@ fn dump_state() {
         }
     };
 
-    let backend = CocoBackend::new(engine);
-    let snapshot = backend.snapshot();
+    let experiments = CocoAdapter::new(engine);
+    let snapshot = experiments.snapshot();
     match serde_json::to_string_pretty(&*snapshot) {
         Ok(json) => println!("{json}"),
         Err(error) => {

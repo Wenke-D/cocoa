@@ -4,7 +4,7 @@
 //! content regions — the Library sidebar on the left and one unified main
 //! content region on the right. There is never a third inspector column.
 //!
-//! Nothing here can reach the backend. Pages receive an immutable snapshot and
+//! Nothing here can reach the adapter. Pages receive an immutable snapshot and
 //! push [`crate::app::AppCommand`]s, which the app executes after the frame.
 
 pub mod activity_bar;

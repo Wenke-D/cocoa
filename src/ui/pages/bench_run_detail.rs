@@ -4,8 +4,8 @@
 //! call: a Bench dispatches everything at once, so this page reports counts and
 //! lists runs, never a position in a sequence.
 
+use crate::adapter::CancelTarget;
 use crate::app::{AppCommand, ViewCtx};
-use crate::backend::CancelTarget;
 use crate::navigation::{ReportContext, Route};
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::section::Section;

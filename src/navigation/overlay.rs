@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::backend::CancelTarget;
+use crate::adapter::CancelTarget;
 use crate::view_model::EntityId;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

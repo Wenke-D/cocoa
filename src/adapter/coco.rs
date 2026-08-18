@@ -1,4 +1,4 @@
-//! The real backend: drives the [`crate::coco`] engine and presents its data
+//! The one adapter: drives the [`crate::coco`] engine and presents its data
 //! through the snapshot model the UI renders from.
 //!
 //! The world is rebuilt lazily: every mutating operation marks it dirty, and
@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Local};
 
-use crate::backend::traits::{AddedFolders, BackendError, CancelTarget, ExperimentBackend};
+use crate::adapter::traits::{AddedFolders, CancelTarget, ExperimentError, Experiments};
 use crate::coco::{BenchRecord, Coco, CocoError, Manifest, RunRecord, Status};
 use crate::view_model::world::{Snapshot, World};
 use crate::view_model::{
@@ -27,14 +27,14 @@ const AUTO_REFRESH_INTERVAL: chrono::TimeDelta = chrono::TimeDelta::seconds(3);
 /// directory.
 const SCAN_DEPTH: usize = 3;
 
-pub struct CocoBackend {
+pub struct CocoAdapter {
     coco: Coco,
     world: RefCell<Option<Arc<World>>>,
     dirty: Cell<bool>,
     last_refresh: Option<DateTime<Local>>,
 }
 
-impl CocoBackend {
+impl CocoAdapter {
     pub fn new(coco: Coco) -> Self {
         Self {
             coco,
@@ -270,7 +270,7 @@ impl CocoBackend {
     }
 }
 
-impl ExperimentBackend for CocoBackend {
+impl Experiments for CocoAdapter {
     fn snapshot(&self) -> Snapshot {
         if self.dirty.get() || self.world.borrow().is_none() {
             let world = self.build_world(Local::now());
@@ -286,7 +286,7 @@ impl ExperimentBackend for CocoBackend {
         &mut self,
         entity_id: &EntityId,
         parameters: BTreeMap<String, String>,
-    ) -> Result<RunId, BackendError> {
+    ) -> Result<RunId, ExperimentError> {
         let path = PathBuf::from(entity_id.as_str());
         let manifest = self
             .coco
@@ -296,12 +296,12 @@ impl ExperimentBackend for CocoBackend {
         let manifest = match manifest {
             Some(Ok(manifest)) => manifest,
             Some(Err(error)) => {
-                return Err(BackendError::ManifestUnusable {
+                return Err(ExperimentError::ManifestUnusable {
                     entity: entity_id.as_str().to_owned(),
                     reason: error.to_string(),
                 });
             }
-            None => return Err(BackendError::UnknownEntity(entity_id.clone())),
+            None => return Err(ExperimentError::UnknownEntity(entity_id.clone())),
         };
 
         let run_id = match &manifest {
@@ -315,38 +315,38 @@ impl ExperimentBackend for CocoBackend {
                 .start_bench(&path, parameters)
                 .map(|start| start.run_id),
         }
-        .map_err(backend_error)?;
+        .map_err(experiment_error)?;
 
         self.mark_dirty();
         Ok(RunId::new(run_id.to_string()))
     }
 
-    fn cancel(&mut self, target: CancelTarget) -> Result<(), BackendError> {
+    fn cancel(&mut self, target: CancelTarget) -> Result<(), ExperimentError> {
         match &target {
             CancelTarget::JobRun(id) => {
                 let run_id = parse_run_id(id)?;
                 let folder = self
                     .find_run_folder(run_id)
-                    .ok_or_else(|| BackendError::UnknownRun(id.clone()))?;
+                    .ok_or_else(|| ExperimentError::UnknownRun(id.clone()))?;
                 self.coco
                     .cancel_run(&folder, run_id)
-                    .map_err(backend_error)?;
+                    .map_err(experiment_error)?;
             }
             CancelTarget::BenchRun(id) => {
                 let run_id = parse_run_id(id)?;
                 let folder = self
                     .find_bench_run_folder(run_id)
-                    .ok_or_else(|| BackendError::UnknownRun(id.clone()))?;
+                    .ok_or_else(|| ExperimentError::UnknownRun(id.clone()))?;
                 self.coco
                     .cancel_bench(&folder, run_id)
-                    .map_err(backend_error)?;
+                    .map_err(experiment_error)?;
             }
         }
         self.mark_dirty();
         Ok(())
     }
 
-    fn refresh(&mut self) -> Result<(), BackendError> {
+    fn refresh(&mut self) -> Result<(), ExperimentError> {
         let report = self.coco.refresh();
         self.last_refresh = Some(Local::now());
         self.mark_dirty();
@@ -359,23 +359,23 @@ impl ExperimentBackend for CocoBackend {
         if errors.is_empty() {
             Ok(())
         } else {
-            Err(BackendError::Operation(match errors.as_slice() {
+            Err(ExperimentError::Operation(match errors.as_slice() {
                 [only] => only.clone(),
                 _ => format!("{} (and {} more)", errors[0], errors.len() - 1),
             }))
         }
     }
 
-    fn report(&self, run_id: &RunId) -> Result<ReportState, BackendError> {
+    fn report(&self, run_id: &RunId) -> Result<ReportState, ExperimentError> {
         let run_id = parse_run_id(run_id)?;
         let folder = self
             .find_run_folder(run_id)
             .or_else(|| self.find_bench_run_folder(run_id))
-            .ok_or_else(|| BackendError::UnknownRun(RunId::new(run_id.to_string())))?;
+            .ok_or_else(|| ExperimentError::UnknownRun(RunId::new(run_id.to_string())))?;
         Ok(report_state(&folder, run_id))
     }
 
-    fn register_folder(&mut self, path: &Path) -> Result<AddedFolders, BackendError> {
+    fn register_folder(&mut self, path: &Path) -> Result<AddedFolders, ExperimentError> {
         let folders = experiment_folders(path);
         // A single folder is the user's literal choice: its failure is the
         // action's failure. Within a scanned directory one bad folder must not
@@ -397,11 +397,11 @@ impl ExperimentBackend for CocoBackend {
             match self.coco.register(&folder) {
                 Ok(()) => outcome.added.push(file_name(&folder)),
                 Err(CocoError::AlreadyRegistered(_)) => outcome.already_registered += 1,
-                Err(error) if single => return Err(backend_error(error)),
+                Err(error) if single => return Err(experiment_error(error)),
                 Err(error) => outcome.refused.push(format!(
                     "{}: {}",
                     file_name(&folder),
-                    backend_error(error)
+                    experiment_error(error)
                 )),
             }
         }
@@ -504,14 +504,14 @@ fn split_fields(
         .collect()
 }
 
-fn parse_run_id(id: &RunId) -> Result<u64, BackendError> {
+fn parse_run_id(id: &RunId) -> Result<u64, ExperimentError> {
     id.as_str()
         .parse()
-        .map_err(|_| BackendError::UnknownRun(id.clone()))
+        .map_err(|_| ExperimentError::UnknownRun(id.clone()))
 }
 
-fn backend_error(error: CocoError) -> BackendError {
-    BackendError::Operation(error.to_string())
+fn experiment_error(error: CocoError) -> ExperimentError {
+    ExperimentError::Operation(error.to_string())
 }
 
 /// The folder path as the workbench writes it (specification §24.4).

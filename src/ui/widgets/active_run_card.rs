@@ -3,8 +3,8 @@
 //! Cards sit above historical runs and are never affected by the history
 //! filters (specification §22.4).
 
+use crate::adapter::CancelTarget;
 use crate::app::{AppCommand, ViewCtx};
-use crate::backend::CancelTarget;
 use crate::navigation::Route;
 use crate::ui::widgets::button::Button;
 use crate::ui::widgets::{parameter_block, progress, status_badge, surface};

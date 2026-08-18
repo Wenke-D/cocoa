@@ -16,8 +16,8 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use experiment_manager::adapter::CancelTarget;
 use experiment_manager::app::{AppCommand, ExperimentApp, ThemePreference};
-use experiment_manager::backend::CancelTarget;
 use experiment_manager::navigation::{Overlay, Route, SubmitState};
 
 /// Frames to render before capturing, so fonts and panel sizes have settled.

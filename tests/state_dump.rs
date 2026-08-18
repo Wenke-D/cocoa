@@ -15,7 +15,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
 
-use experiment_manager::backend::{CocoBackend, ExperimentBackend};
+use experiment_manager::adapter::{CocoAdapter, Experiments};
 use experiment_manager::coco::Coco;
 use serde_json::Value;
 use tempfile::TempDir;
@@ -83,12 +83,12 @@ fn world_matches_the_golden_dump() {
         &library,
     );
 
-    let mut backend = CocoBackend::new(Coco::new(dir.path().join("store.json")).unwrap());
-    backend.register_folder(&library).unwrap();
+    let mut experiments = CocoAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
+    experiments.register_folder(&library).unwrap();
 
     // One started run, so the golden file pins the history indexes too — the
     // part the UI reads and the run map cannot vouch for.
-    let snapshot = backend.snapshot();
+    let snapshot = experiments.snapshot();
     let solver = snapshot
         .entities
         .iter()
@@ -100,10 +100,10 @@ fn world_matches_the_golden_dump() {
         .into_iter()
         .map(|(name, value)| (name.to_owned(), value.to_owned()))
         .collect();
-    backend.start(&solver, parameters).unwrap();
+    experiments.start(&solver, parameters).unwrap();
 
     let canonical = fs::canonicalize(&library).unwrap();
-    let dump = serde_json::to_value(&*backend.snapshot()).unwrap();
+    let dump = serde_json::to_value(&*experiments.snapshot()).unwrap();
     let actual =
         serde_json::to_string_pretty(&normalize(dump, canonical.to_str().unwrap())).unwrap() + "\n";
 

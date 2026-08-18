@@ -1,5 +1,5 @@
-//! Exercises the snapshot adapter the workbench UI renders from
-//! (`ExperimentBackend` → `CocoBackend` → coco engine).
+//! Exercises the adapter the workbench renders from
+//! (`Experiments` → `CocoAdapter` → coco engine).
 
 #![cfg(unix)]
 
@@ -9,7 +9,7 @@ use std::path::Path;
 
 use chrono::Local;
 
-use experiment_manager::backend::{CancelTarget, CocoBackend, ExperimentBackend};
+use experiment_manager::adapter::{CancelTarget, CocoAdapter, Experiments};
 use experiment_manager::coco::Coco;
 use experiment_manager::view_model::{EntityKind, RunId, RunStatus};
 use tempfile::TempDir;
@@ -43,10 +43,10 @@ fn coco_backend_drives_the_workbench_model() {
         }
     }
 
-    let mut backend = CocoBackend::new(Coco::new(dir.path().join("store.json")).unwrap());
-    backend.register_folder(&solver).unwrap();
+    let mut experiments = CocoAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
+    experiments.register_folder(&solver).unwrap();
 
-    let snapshot = backend.snapshot();
+    let snapshot = experiments.snapshot();
     let entity = snapshot
         .entities
         .iter()
@@ -60,9 +60,9 @@ fn coco_backend_drives_the_workbench_model() {
     params.insert("nodes".to_owned(), "64".to_owned());
     params.insert("gpu".to_owned(), "0".to_owned());
     let entity_id = entity.id.clone();
-    let run_id = backend.start(&entity_id, params).unwrap();
+    let run_id = experiments.start(&entity_id, params).unwrap();
 
-    let snapshot = backend.snapshot();
+    let snapshot = experiments.snapshot();
     let run = snapshot.job_run(&run_id).unwrap();
     assert_eq!(run.parameters, "--gpu 0 --nodes 64");
     assert_eq!(run.status, RunStatus::Starting);
@@ -82,8 +82,8 @@ fn coco_backend_drives_the_workbench_model() {
     );
 
     // An automatic tick polls the folder through its mock script.
-    backend.tick(Local::now());
-    let snapshot = backend.snapshot();
+    experiments.tick(Local::now());
+    let snapshot = experiments.snapshot();
     let run = snapshot.job_run(&run_id).unwrap();
     assert!(
         matches!(run.status, RunStatus::Pending | RunStatus::Running),
@@ -92,10 +92,10 @@ fn coco_backend_drives_the_workbench_model() {
     );
 
     // Cancel goes through the folder's cancel script.
-    backend
+    experiments
         .cancel(CancelTarget::JobRun(run_id.clone()))
         .unwrap();
-    let snapshot = backend.snapshot();
+    let snapshot = experiments.snapshot();
     assert_eq!(
         snapshot.job_run(&run_id).unwrap().status,
         RunStatus::Cancelling
@@ -114,12 +114,12 @@ fn picking_a_parent_directory_registers_the_folders_beneath_it() {
         &library,
     );
 
-    let mut backend = CocoBackend::new(Coco::new(dir.path().join("store.json")).unwrap());
-    let outcome = backend.register_folder(&library).unwrap();
+    let mut experiments = CocoAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
+    let outcome = experiments.register_folder(&library).unwrap();
 
     assert_eq!(outcome.added.len(), 4, "{outcome:?}");
     assert!(outcome.refused.is_empty(), "{outcome:?}");
-    let snapshot = backend.snapshot();
+    let snapshot = experiments.snapshot();
     let names: Vec<&str> = snapshot
         .entities
         .iter()
@@ -138,7 +138,7 @@ fn picking_a_parent_directory_registers_the_folders_beneath_it() {
     }
 
     // The same pick again adds nothing and refuses nothing.
-    let outcome = backend.register_folder(&library).unwrap();
+    let outcome = experiments.register_folder(&library).unwrap();
     assert!(outcome.added.is_empty(), "{outcome:?}");
     assert_eq!(outcome.already_registered, 4, "{outcome:?}");
     assert!(outcome.refused.is_empty(), "{outcome:?}");
@@ -152,11 +152,11 @@ fn picking_a_directory_without_a_manifest_registers_it_as_invalid() {
     let empty = dir.path().join("not-an-experiment");
     fs::create_dir_all(empty.join("notes")).unwrap();
 
-    let mut backend = CocoBackend::new(Coco::new(dir.path().join("store.json")).unwrap());
-    let outcome = backend.register_folder(&empty).unwrap();
+    let mut experiments = CocoAdapter::new(Coco::new(dir.path().join("store.json")).unwrap());
+    let outcome = experiments.register_folder(&empty).unwrap();
 
     assert_eq!(outcome.added, ["not-an-experiment"], "{outcome:?}");
-    let snapshot = backend.snapshot();
+    let snapshot = experiments.snapshot();
     let entity = snapshot
         .entities
         .iter()

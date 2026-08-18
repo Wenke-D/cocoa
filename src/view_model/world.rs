@@ -178,7 +178,7 @@ impl World {
     }
 }
 
-/// What [`crate::backend::ExperimentBackend::snapshot`] hands the UI.
+/// What [`crate::adapter::Experiments::snapshot`] hands the UI.
 #[derive(Clone, Debug, Default)]
 pub struct Snapshot {
     world: Arc<World>,

@@ -1,7 +1,7 @@
 //! Bottom status bar, styled as VS Code's status bar.
 //!
 //! Three standing items and two conditional ones (specification §8.5): how many
-//! runs are active, how long ago the backend was last read, and a button to read
+//! runs are active, how long ago the engine was last read, and a button to read
 //! it again; then the query-interruption warning and the transient message, each
 //! shown only when it applies. Never verbose logs.
 //!
