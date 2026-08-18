@@ -56,7 +56,7 @@ struct Copy {
 }
 
 fn describe(
-    snapshot: &crate::backend::BackendSnapshot,
+    snapshot: &crate::view_model::Snapshot,
     target: &CancelTarget,
     now: chrono::DateTime<chrono::Local>,
 ) -> Option<Copy> {

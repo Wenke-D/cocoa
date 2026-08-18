@@ -1,8 +1,12 @@
-//! The immutable view the UI renders from (specification §26.1).
+//! The whole view model at one instant (specification §26.1).
 //!
-//! [`World`] holds every domain fact. The UI never mutates it — all changes go
-//! through backend commands. Snapshots are `Arc` clones, so taking one every
-//! frame is free and no report text is ever copied.
+//! [`World`] holds every fact a screen can show; [`Snapshot`] is a cheap handle
+//! to one. The UI never mutates either — every change goes through a backend
+//! command, and the next snapshot shows the result.
+//!
+//! Snapshots are `Arc` clones, so taking one every frame is free and no report
+//! text is ever copied. That contract exists for the render loop, and it is the
+//! only place the UI's needs reach into this model's shape.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -10,7 +14,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Local};
 use serde::Serialize;
 
-use crate::view_model::{
+use super::{
     BenchProgress, BenchRun, Entity, EntityId, EntityKind, JobRun, RunId, RunStatus, progress_of,
 };
 
@@ -176,17 +180,17 @@ impl World {
 
 /// What [`crate::backend::ExperimentBackend::snapshot`] hands the UI.
 #[derive(Clone, Debug, Default)]
-pub struct BackendSnapshot {
+pub struct Snapshot {
     world: Arc<World>,
 }
 
-impl BackendSnapshot {
+impl Snapshot {
     pub fn new(world: Arc<World>) -> Self {
         Self { world }
     }
 }
 
-impl std::ops::Deref for BackendSnapshot {
+impl std::ops::Deref for Snapshot {
     type Target = World;
 
     fn deref(&self) -> &World {

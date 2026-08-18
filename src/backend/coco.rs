@@ -12,9 +12,9 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Local};
 
-use crate::backend::snapshot::{BackendSnapshot, World};
 use crate::backend::traits::{AddedFolders, BackendError, CancelTarget, ExperimentBackend};
 use crate::coco::{BenchRecord, Coco, CocoError, Manifest, RunRecord, Status};
+use crate::view_model::world::{Snapshot, World};
 use crate::view_model::{
     BenchPlan, BenchPlanStep, BenchRun, Entity, EntityId, EntityKind, JobRun, ManifestState,
     QueryHealth, ReportFormat, ReportState, RunId, RunOrigin, RunStatus,
@@ -271,15 +271,15 @@ impl CocoBackend {
 }
 
 impl ExperimentBackend for CocoBackend {
-    fn snapshot(&self) -> BackendSnapshot {
+    fn snapshot(&self) -> Snapshot {
         if self.dirty.get() || self.world.borrow().is_none() {
             let world = self.build_world(Local::now());
             let world = Arc::new(world);
             *self.world.borrow_mut() = Some(world.clone());
             self.dirty.set(false);
-            return BackendSnapshot::new(world);
+            return Snapshot::new(world);
         }
-        BackendSnapshot::new(self.world.borrow().clone().expect("world built"))
+        Snapshot::new(self.world.borrow().clone().expect("world built"))
     }
 
     fn start(

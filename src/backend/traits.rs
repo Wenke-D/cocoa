@@ -9,7 +9,7 @@ use std::path::Path;
 
 use chrono::{DateTime, Local};
 
-use crate::backend::snapshot::BackendSnapshot;
+use crate::view_model::world::Snapshot;
 use crate::view_model::{EntityId, ReportState, RunId};
 
 /// What the user asked to cancel.
@@ -99,7 +99,7 @@ pub struct AddedFolders {
 
 pub trait ExperimentBackend {
     /// An immutable view for rendering. Cheap to call every frame.
-    fn snapshot(&self) -> BackendSnapshot;
+    fn snapshot(&self) -> Snapshot;
 
     /// Start a Job, or fan a Bench out across existing Jobs.
     ///

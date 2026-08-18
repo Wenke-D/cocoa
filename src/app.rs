@@ -16,9 +16,10 @@ use std::time::Duration;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
-use crate::backend::{BackendSnapshot, CancelTarget, CocoBackend, ExperimentBackend};
+use crate::backend::{CancelTarget, CocoBackend, ExperimentBackend};
 use crate::coco::Coco;
 use crate::navigation::{Overlay, Route, SubmitState};
+use crate::view_model::Snapshot;
 use crate::view_model::{EntityId, ReportState, RunId, RunStatus};
 
 /// Working title. The final product name is undecided.
@@ -250,7 +251,7 @@ pub enum AppCommand {
 /// Everything the UI needs for one frame, and nowhere to put anything else.
 pub struct ViewCtx<'a> {
     pub state: &'a mut UiState,
-    pub snapshot: &'a BackendSnapshot,
+    pub snapshot: &'a Snapshot,
     pub now: DateTime<Local>,
     pub commands: &'a mut Vec<AppCommand>,
 }
@@ -311,7 +312,7 @@ impl ExperimentApp {
         }
     }
 
-    pub fn snapshot(&self) -> BackendSnapshot {
+    pub fn snapshot(&self) -> Snapshot {
         self.backend.snapshot()
     }
 

@@ -15,6 +15,7 @@ pub mod entity;
 pub mod report;
 pub mod run;
 pub mod status;
+pub mod world;
 
 pub use entity::{Entity, EntityId, EntityKind};
 pub use report::{ReportFormat, ReportState};
@@ -23,3 +24,4 @@ pub use run::{
     aggregate_status, format_duration, format_relative, progress_of,
 };
 pub use status::{ManifestState, QueryHealth, RunStatus};
+pub use world::{Snapshot, World};
