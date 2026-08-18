@@ -1,2 +1,45 @@
+# coco tasks. `via` with no arguments lists them.
+#
+# The exit code is the verdict for every task here — read that, not the output.
+# A summary line like "13 passed; 1 failed" still contains the word "passed",
+# and a run that greps for it will call a red suite green.
+
 run:
     cargo run
+
+# The whole world the UI renders from, as JSON. A symptom on screen becomes a
+# fact you can grep.
+dump:
+    cargo run -- --dump-state
+
+test:
+    cargo test
+
+lint:
+    cargo clippy --all-targets -- -D warnings
+
+# The gate before committing.
+check: lint, test
+    echo "clippy and tests are clean"
+
+# `cargo fmt --all` is deliberately not part of `check`: two engine files have
+# been unformatted since before the tooling was set up, so the check is red for
+# reasons unrelated to whatever you just changed. Format the file you touched.
+fmt file:
+    rustfmt --edition 2024 {{file}}
+
+fmt-check:
+    cargo fmt --all -- --check
+
+# One surface of the running app, captured to a PNG. Surfaces are listed at the
+# top of examples/screenshot.rs.
+#
+#     via shot dark out/modal.png start-modal
+shot theme out surface:
+    cargo run --example screenshot -- {{theme}} {{out}} {{surface}}
+
+# Reshoot the two reference images in design/. They document the visual system,
+# so anything that changes how the workbench looks should end with this.
+refs:
+    cargo run --example screenshot -- dark design/workbench-dark.png job-active
+    cargo run --example screenshot -- light design/workbench-light.png job-active

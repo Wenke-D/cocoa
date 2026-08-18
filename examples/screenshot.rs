@@ -163,7 +163,7 @@ fn arrange(app: &mut ExperimentApp, surface: &str) {
                             "call 9: `solver-xl` is not a registered job".to_owned(),
                         ],
                     }
-                    .to_string(),
+                    .explain(),
                 ),
             };
         }

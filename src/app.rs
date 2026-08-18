@@ -550,7 +550,7 @@ impl ExperimentApp {
             }
             Err(error) => {
                 if let Overlay::StartRun { submit_state, .. } = &mut self.ui.overlay {
-                    *submit_state = SubmitState::Failed(error.to_string());
+                    *submit_state = SubmitState::Failed(error.explain());
                 }
             }
         }

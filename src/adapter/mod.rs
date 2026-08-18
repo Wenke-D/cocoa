@@ -19,4 +19,4 @@ pub mod engine;
 pub mod traits;
 
 pub use engine::{EngineAdapter, display_path};
-pub use traits::{AddedFolders, CancelTarget, ExperimentError, Experiments};
+pub use traits::{AddedFolders, CancelTarget, ExperimentError, Experiments, Explained};

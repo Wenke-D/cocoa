@@ -137,9 +137,25 @@ pub fn show(ctx: &mut ViewCtx, ui: &mut egui::Ui, entity_id: &EntityId) {
             );
         }
 
-        if let SubmitState::Failed(message) = &submit_state {
+        if let SubmitState::Failed(explained) = &submit_state {
             ui.add_space(space::SECTION);
-            ui.label(text::error(ui, message));
+            ui.label(text::error(ui, &explained.lead));
+
+            // Each item is its own label inside its own indent, so a long one
+            // wraps under itself. Joined into one label they would wrap back to
+            // the left margin and run into the next, and the list would stop
+            // reading as a list (§15.4).
+            for item in &explained.items {
+                ui.add_space(space::SMALL);
+                ui.indent(item.as_str(), |ui| {
+                    ui.label(text::error(ui, item));
+                });
+            }
+
+            if let Some(note) = &explained.note {
+                ui.add_space(space::NORMAL);
+                ui.label(text::error(ui, note));
+            }
         }
 
         ui.add_space(space::SECTION);

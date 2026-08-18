@@ -5,7 +5,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::adapter::{AddedFolders, CancelTarget};
+use crate::adapter::{AddedFolders, CancelTarget, Explained};
 use crate::view_model::EntityId;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -15,7 +15,11 @@ pub enum SubmitState {
     Submitting,
     /// Submission failed. The user's parameter draft is preserved
     /// (specification §31).
-    Failed(String),
+    ///
+    /// Held in parts rather than as one string: a Bench plan can fail on
+    /// several calls at once, and the modal lays those out one per paragraph
+    /// (§15.4).
+    Failed(Explained),
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

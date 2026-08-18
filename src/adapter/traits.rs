@@ -86,6 +86,44 @@ impl std::fmt::Display for ExperimentError {
 
 impl std::error::Error for ExperimentError {}
 
+/// A failure split into the parts a surface with room lays out separately: the
+/// sentence that opens it, the things at fault one by one, and a closing note.
+///
+/// [`ExperimentError`]'s `Display` joins these into one string, which is what a
+/// status bar line or a log wants. A modal has room to do better, and the
+/// difference matters as soon as there is more than one thing at fault: joined
+/// with newlines into a single label, a long entry wraps back to the left
+/// margin and runs into the next one, so the list stops reading as a list.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct Explained {
+    pub lead: String,
+    /// One entry per thing at fault. Empty for a failure that is just a
+    /// sentence, which is most of them.
+    pub items: Vec<String>,
+    pub note: Option<String>,
+}
+
+impl ExperimentError {
+    /// This failure in parts. See [`Explained`].
+    pub fn explain(&self) -> Explained {
+        match self {
+            Self::InvalidPlan { calls, problems } => Explained {
+                lead: format!(
+                    "Cannot start this Bench. {} of its {calls} {} cannot be dispatched:",
+                    problems.len(),
+                    if *calls == 1 { "call" } else { "calls" }
+                ),
+                items: problems.clone(),
+                note: Some("No runs were dispatched.".to_owned()),
+            },
+            other => Explained {
+                lead: other.to_string(),
+                ..Explained::default()
+            },
+        }
+    }
+}
+
 /// What one Add Folder action did.
 ///
 /// A pick can name several experiment folders at once, so the outcome is a
