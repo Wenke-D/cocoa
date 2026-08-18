@@ -106,7 +106,7 @@ impl CocoBackend {
                     id: EntityId::new(view.path.display().to_string()),
                     kind: EntityKind::Job,
                     name: file_name(&view.path),
-                    path: view.path.display().to_string(),
+                    path: display_path(&view.path),
                     manifest: ManifestState::Invalid {
                         message: error.to_string(),
                     },
@@ -132,7 +132,7 @@ impl CocoBackend {
             id: EntityId::new(path.display().to_string()),
             kind,
             name: name.to_owned(),
-            path: path.display().to_string(),
+            path: display_path(path),
             manifest: ManifestState::Valid,
             parameter_names,
             last_used,
@@ -514,6 +514,42 @@ fn backend_error(error: CocoError) -> BackendError {
     BackendError::Operation(error.to_string())
 }
 
+/// The folder path as the workbench writes it (specification §24.4).
+///
+/// Under the user's home it is written with a `~`. Anywhere else — a cluster's
+/// `/scratch`, a mounted project volume, a path on a machine with no `HOME` at
+/// all — it is shown as it is. Most experiment folders on a compute site live
+/// outside home, so this shortens what it can and never rewrites what it
+/// cannot.
+fn display_path(path: &Path) -> String {
+    fold_home(path, home_dir().as_deref())
+}
+
+/// The home the paths are compared against, canonical because the store holds
+/// canonical paths: a symlinked home would otherwise never match.
+fn home_dir() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .filter(|home| !home.is_empty())?;
+    let home = PathBuf::from(home);
+    Some(std::fs::canonicalize(&home).unwrap_or(home))
+}
+
+/// Split out from [`display_path`] so the folding can be tested against a home
+/// of the test's choosing rather than the machine's.
+fn fold_home(path: &Path, home: Option<&Path>) -> String {
+    let Some(home) = home else {
+        return path.display().to_string();
+    };
+    // Component-wise, not textual: `/Users/wenke2` starts with the *string*
+    // `/Users/wenke` and is a different person's home.
+    match path.strip_prefix(home) {
+        Ok(rest) if rest.as_os_str().is_empty() => "~".to_owned(),
+        Ok(rest) => format!("~{}{}", std::path::MAIN_SEPARATOR, rest.display()),
+        Err(_) => path.display().to_string(),
+    }
+}
+
 fn file_name(path: &Path) -> String {
     path.file_name()
         .map(|name| name.to_string_lossy().into_owned())
@@ -570,4 +606,40 @@ fn experiment_folders(root: &Path) -> Vec<PathBuf> {
         .into_iter()
         .map(|path| std::fs::canonicalize(&path).unwrap_or(path))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fold_home;
+    use std::path::Path;
+
+    #[test]
+    fn folds_only_what_lives_under_home() {
+        let home = Path::new("/Users/wenke");
+
+        assert_eq!(
+            fold_home(Path::new("/Users/wenke/projects/coco/mock"), Some(home)),
+            "~/projects/coco/mock"
+        );
+        assert_eq!(fold_home(home, Some(home)), "~");
+
+        // A cluster path is not under home and stays as it is.
+        assert_eq!(
+            fold_home(Path::new("/scratch/wenke/sweep"), Some(home)),
+            "/scratch/wenke/sweep"
+        );
+
+        // Textually `/Users/wenke2` starts with `/Users/wenke`, and is someone
+        // else's home.
+        assert_eq!(
+            fold_home(Path::new("/Users/wenke2/sweep"), Some(home)),
+            "/Users/wenke2/sweep"
+        );
+
+        // No home to fold against.
+        assert_eq!(
+            fold_home(Path::new("/Users/wenke/sweep"), None),
+            "/Users/wenke/sweep"
+        );
+    }
 }
