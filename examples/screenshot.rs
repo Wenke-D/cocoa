@@ -9,9 +9,10 @@
 //! cargo run --example screenshot -- dark out/start-modal.png start-modal
 //! ```
 //!
-//! Surfaces: `job` (default) | `run-detail` | `start-modal` |
-//! `start-modal-last` (one run already started, so the modal offers its history
-//! action) | `bench-modal` | `cancel-modal`.
+//! Surfaces: `job` (default) | `job-active` (the overview with a run in
+//! flight, which is what `design/workbench-*.png` document) | `run-detail` |
+//! `start-modal` | `start-modal-last` (one run already started, so the modal
+//! offers its history action) | `bench-modal` | `cancel-modal`.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -98,8 +99,10 @@ fn arrange(app: &mut ExperimentApp, surface: &str) {
         entity_id: job.id.clone(),
     };
 
-    // A modal only offers its history action once something has run.
-    if matches!(surface, "start-modal-last" | "run-detail") {
+    // Surfaces that need something to have run: a modal only offers its
+    // history action afterwards, and the overview only shows its active-run
+    // card, side bar badge, and status bar count while one is in flight.
+    if matches!(surface, "start-modal-last" | "run-detail" | "job-active") {
         let parameters = job
             .parameter_names
             .iter()
@@ -138,6 +141,14 @@ fn arrange(app: &mut ExperimentApp, surface: &str) {
                 run_id,
             };
         }
+        // Starting navigates to the new run's own page (§15.4). This surface
+        // wants the overview it was started from, with the run in flight.
+        "job-active" => {
+            app.ui.route = Route::EntityOverview {
+                entity_id: job.id.clone(),
+            };
+        }
+
         "cancel-modal" => {
             let run_id = app
                 .snapshot()
