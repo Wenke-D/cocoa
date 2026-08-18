@@ -354,6 +354,18 @@ Do not introduce an async runtime such as Tokio in the prototype. The MockBacken
 
 Use eframe’s default native rendering configuration. Do not hardcode an OpenGL-only, Metal-only, or Linux-only renderer.
 
+### 5.1 Why Not a Web View
+
+Tauri, Electron, and an embedded WebView are non-goals (§4.3, §20). The question was re-opened once the workbench was built, and closed again on measurement rather than on preference. The record, so that it does not have to be re-argued:
+
+**Not for appearance.** Rendered side by side at 1280×820 on a 2× display — same palette, same metrics, same Inter cuts — egui and a web view are indistinguishable. macOS has drawn text with grayscale antialiasing since Mojave, so the system text stack holds no advantage there. What the workbench was missing was type weight, not a renderer (§24.1). This was not measured on Linux at 1×, where hinted system rendering may still differ, and a Linux comparison is the one thing that could revise this point.
+
+**Not for text handling.** Labels are already selectable, and the report viewer already searches, highlights matches, and copies (§20).
+
+**The engine would not move.** `src/engine/` renders an experiment’s templates into an argv list and executes it (convention §6, §7). Behind a web view that step has to be reachable from page script, and the scope wide enough to allow it is the scope that turns any injection into arbitrary command execution. Keeping it in Rust leaves the page a vocabulary of declared experiments and declared parameters, which is worth more than the language the engine happens to be written in.
+
+**What would re-open it.** Reports needing rich rendering in-app. An HTML report goes to the system browser today (§20), which is right while the report is something the user reads elsewhere. If coco becomes the place where results are read and compared, the report viewer turns into a primary surface, and a web view is what renders one. Even then, embedding a web view for that one surface is a smaller change than moving the workbench onto it.
+
 ---
 
 ## 6. Supported Platforms
