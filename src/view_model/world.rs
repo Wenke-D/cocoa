@@ -188,6 +188,13 @@ impl Snapshot {
     pub fn new(world: Arc<World>) -> Self {
         Self { world }
     }
+
+    /// Whether both snapshots view the same built world. The world is rebuilt
+    /// only when something marked it dirty, so pointer identity is change
+    /// detection.
+    pub fn same_world(&self, other: &Snapshot) -> bool {
+        Arc::ptr_eq(&self.world, &other.world)
+    }
 }
 
 impl std::ops::Deref for Snapshot {

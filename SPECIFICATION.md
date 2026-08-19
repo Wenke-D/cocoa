@@ -217,9 +217,16 @@ script's answer arrives in its own time and is collected by the refresh tick —
 a submission id completes the record; a failure or timeout moves the run to
 `ERROR` with the output attached. Only a script that cannot be spawned at all
 refuses the start itself, because that is a folder problem the submitter can
-act on now. A run whose launch was still in flight when coco closed is found
-on the next refresh and moved to `ERROR`: the stdout that carried its
-submission id died with the process that read it.
+act on now.
+
+Closing coco right after a start is normal, and must not lose the run. The
+close waits a short grace for launches still in flight — a script answers in
+seconds, so the submission id is recorded and the next open catches up on the
+run like any other (§10). A script still running past the grace is killed and
+its run moved to `ERROR` at the close, honestly. Only a *crash* leaves a run
+mid-launch with nothing recorded; the next refresh finds it and moves it to
+`ERROR`, because the stdout that carried its submission id died with the
+process that read it.
 
 Starting a Bench returns a **plan** — a list of `(existing Job, parameters)` calls,
 all dispatched at once. The Bench itself executes nothing; it fans out to Jobs.
@@ -3042,13 +3049,14 @@ window runs without an interface rather than stealing the first's.
 
 ### 43.3 Path through the application
 
-Every request is handed to the frame loop and executed where the commands from
-the screen are executed. An agent's start takes the same call a click takes —
-the same validation, the same origin stamping (§10.6), the same screen update.
-There is no second way into the engine to keep in step with the first.
+Every request is handed to the engine's one owner — the worker thread that
+also executes the commands from the screen. An agent's start takes the same
+call a click takes — the same validation, the same origin stamping (§10.6),
+the same screen update. There is no second way into the engine to keep in step
+with the first.
 
-Reads are answered from the snapshot the frame loop publishes after each frame,
-so they never wait on one. Writes wait, because the engine has one owner and the
+Reads are answered from the snapshot the worker publishes after each pass, so
+they never wait on one. Writes wait, because the engine has one owner and the
 socket thread is not it. A wait that outlives its welcome is answered `503`
 rather than left hanging.
 

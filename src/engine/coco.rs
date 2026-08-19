@@ -1113,6 +1113,36 @@ impl Coco {
         self.launching.len()
     }
 
+    /// The way a closing coco leaves its launches (§10).
+    ///
+    /// A launch script is typically done in seconds, so the close waits a
+    /// grace period and collects what lands — a start followed by closing the
+    /// window records its submission id, and the next open catches up on the
+    /// run normally. A script still running past the grace is killed and its
+    /// run moved to `ERROR` now, honestly, rather than left for the reopen
+    /// sweep to guess about.
+    pub fn shutdown_launches(&mut self, grace: std::time::Duration) {
+        let deadline = std::time::Instant::now() + grace;
+        while !self.launching.is_empty() && std::time::Instant::now() < deadline {
+            self.harvest_launches();
+            if !self.launching.is_empty() {
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+        }
+        for mut in_flight in std::mem::take(&mut self.launching) {
+            in_flight.running.kill();
+            if let Ok(mut record) = self.run_record(&in_flight.path, in_flight.run_id) {
+                record.apply_status(Status::Error, Local::now(), None);
+                record.error = Some(
+                    "coco closed while the launch script was still running; \
+                     the launch was abandoned"
+                        .to_owned(),
+                );
+                let _ = self.write_run_record(&in_flight.path, &record);
+            }
+        }
+    }
+
     pub fn refresh(&mut self) -> RefreshReport {
         let mut report = RefreshReport {
             launch_errors: self.harvest_launches(),

@@ -123,6 +123,12 @@ impl Running {
         }))
     }
 
+    /// Kills the script without collecting it. For shutdown: past this there
+    /// is no output to read and no exit to interpret.
+    pub fn kill(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
 }
 
 /// Runs `argv` with `cwd`, capturing output and enforcing `timeout`. Blocks

@@ -180,4 +180,10 @@ pub trait Experiments {
 
     /// Automatic housekeeping (polling, reports, bench fan-out progression).
     fn tick(&mut self, now: DateTime<Local>);
+
+    /// The last call before the process goes away. A launch script still in
+    /// flight is given a moment to land — a start followed by closing the
+    /// window must record its submission id, or the next open finds an orphan
+    /// (§10). Implementations without background work need nothing.
+    fn shutdown(&mut self) {}
 }

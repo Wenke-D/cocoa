@@ -3,12 +3,15 @@
 //! Frame shape:
 //!
 //! ```text
-//! tick the adapter → take an immutable snapshot → render → collect commands
-//! → execute commands → update route/overlay → schedule repaint
+//! apply the worker's events → take an immutable snapshot → render
+//! → collect commands → send or apply them → update route/overlay
+//! → schedule repaint
 //! ```
 //!
 //! The UI is handed a snapshot and a command sink. It has no access to the
-//! adapter at all, so it cannot mutate domain state even by accident.
+//! engine at all — the engine lives with its one owner, the worker
+//! ([`crate::worker`]), and everything the window asks for comes back as a
+//! [`WorkEvent`] or as the next snapshot.
 
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -16,11 +19,12 @@ use std::time::Duration;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
-use crate::adapter::{AddedFolders, CancelTarget, EngineAdapter, Experiments};
+use crate::adapter::{CancelTarget, EngineAdapter, Experiments};
 use crate::engine::Coco;
 use crate::navigation::{Overlay, Route, SubmitState};
 use crate::view_model::Snapshot;
-use crate::view_model::{EntityId, ReportState, RunId, RunStatus, Trigger};
+use crate::view_model::{EntityId, RunId, RunStatus};
+use crate::worker::{WorkCommand, WorkEvent, Worker};
 
 /// The product name, shown in the platform window title.
 pub const APP_TITLE: &str = "coco";
@@ -314,22 +318,37 @@ impl ViewCtx<'_> {
     }
 }
 
+/// Who pumps the worker.
+enum Backend {
+    /// Production: the worker runs on its own thread and wakes the window
+    /// when the world changes.
+    Threaded(crate::worker::Handle),
+    /// Tests: the same worker, pumped inline by [`ExperimentApp::apply_pending`],
+    /// so every outcome is observable as soon as the command returns. No
+    /// thread, no timing.
+    Local {
+        worker: Worker,
+        handle: crate::worker::Handle,
+    },
+}
+
+impl Backend {
+    fn handle(&self) -> &crate::worker::Handle {
+        match self {
+            Self::Threaded(handle) => handle,
+            Self::Local { handle, .. } => handle,
+        }
+    }
+}
+
 pub struct ExperimentApp {
-    experiments: Box<dyn Experiments>,
-    /// What the agent interface hands work through, when one is running
-    /// (specification §43). `None` when it could not bind — the workbench is
-    /// still a workbench without it.
-    #[cfg(unix)]
-    agent: Option<std::sync::Arc<crate::agent::Bridge>>,
+    backend: Backend,
     /// Held for its lifetime, not its methods: dropping it unbinds the socket
-    /// and removes the file.
+    /// and removes the file (specification §43).
     #[cfg(unix)]
     #[allow(dead_code, reason = "kept alive so its Drop runs at exit")]
     agent_server: Option<crate::agent::Server>,
     pub ui: UiState,
-    /// A submitted start, performed on the next frame so the `Starting…` state
-    /// is rendered and a slow engine can finish before the frame returns.
-    pending_start: Option<(EntityId, BTreeMap<String, String>)>,
     /// A URL to hand to the system browser at the end of the frame.
     pending_url: Option<String>,
 }
@@ -355,9 +374,8 @@ impl ExperimentApp {
         // or the directory is not writable, and a workbench without an agent
         // interface is still a workbench.
         #[cfg(unix)]
-        let (agent, agent_server) = {
+        let (bridge, agent_server) = {
             let bridge = crate::agent::Bridge::new();
-            bridge.attach(cc.egui_ctx.clone());
             match crate::agent::Server::start(
                 crate::agent::default_socket_path(),
                 std::sync::Arc::clone(&bridge),
@@ -370,41 +388,61 @@ impl ExperimentApp {
             }
         };
 
+        let handle = Worker::spawn(
+            Box::new(EngineAdapter::new(engine)),
+            #[cfg(unix)]
+            bridge,
+            Some(cc.egui_ctx.clone()),
+        )
+        .expect("the worker thread must start");
+
         Self {
-            experiments: Box::new(EngineAdapter::new(engine)),
+            backend: Backend::Threaded(handle),
             ui,
             #[cfg(unix)]
-            agent,
-            #[cfg(unix)]
             agent_server,
-            pending_start: None,
             pending_url: None,
         }
     }
 
-    /// Test seam: build an app around an arbitrary implementation, without eframe.
-    pub fn with_experiments(experiments: Box<dyn Experiments>) -> Self {
+    /// Test seam: build an app around an arbitrary implementation, without
+    /// eframe. The worker is owned rather than spawned, so every command's
+    /// outcome is observable as soon as the call returns.
+    pub fn with_experiments(experiments: Box<dyn Experiments + Send>) -> Self {
+        let (worker, handle) = Worker::local(experiments);
         Self {
-            experiments,
+            backend: Backend::Local { worker, handle },
             ui: UiState::default(),
             #[cfg(unix)]
-            agent: None,
-            #[cfg(unix)]
             agent_server: None,
-            pending_start: None,
             pending_url: None,
         }
     }
 
-    /// Runs the one action the previous frame deferred, if there is one.
+    /// Catches up with the worker: pumps it when this app owns it (tests),
+    /// then applies every outcome it has sent.
     pub fn apply_pending(&mut self) {
-        if let Some((entity_id, parameters)) = self.pending_start.take() {
-            self.perform_start(entity_id, parameters);
+        if let Backend::Local { worker, .. } = &mut self.backend {
+            worker.step(Local::now());
         }
+        let mut events = Vec::new();
+        while let Some(event) = self.backend.handle().next_event() {
+            events.push(event);
+        }
+        for event in events {
+            self.apply_event(event);
+        }
+    }
+
+    /// Hands the worker a command and catches up, so that in a test the
+    /// outcome is already applied when this returns.
+    fn send(&mut self, command: WorkCommand) {
+        self.backend.handle().send(command);
+        self.apply_pending();
     }
 
     pub fn snapshot(&self) -> Snapshot {
-        self.experiments.snapshot()
+        self.backend.handle().snapshot()
     }
 
     /// The URL queued for the system browser, if any. Exposed for tests.
@@ -417,7 +455,7 @@ impl ExperimentApp {
     }
 
     pub fn recover_route(&mut self) {
-        let snapshot = self.experiments.snapshot();
+        let snapshot = self.snapshot();
         if let Some(recovery) = self.ui.route.recover(&snapshot) {
             self.ui.route = recovery.route;
             if let Some(message) = recovery.message {
@@ -448,7 +486,7 @@ impl ExperimentApp {
             }
 
             AppCommand::OpenStartPage(entity_id) => {
-                let snapshot = self.experiments.snapshot();
+                let snapshot = self.snapshot();
                 let names = snapshot
                     .entity(&entity_id)
                     .map(|entity| entity.parameter_names.clone())
@@ -459,7 +497,7 @@ impl ExperimentApp {
             }
 
             AppCommand::FillLastArgs(entity_id) => {
-                let snapshot = self.experiments.snapshot();
+                let snapshot = self.snapshot();
                 if let Some(entity) = snapshot.entity(&entity_id) {
                     for (name, value) in &entity.last_used {
                         if self.ui.start_draft.fields.contains_key(name) {
@@ -476,8 +514,13 @@ impl ExperimentApp {
                 entity_id,
                 parameters,
             } => {
+                // `Submitting` renders until the worker answers with
+                // `Started` or `StartRefused`.
                 self.ui.start_draft.submit_state = SubmitState::Submitting;
-                self.pending_start = Some((entity_id, parameters));
+                self.send(WorkCommand::Start {
+                    entity_id,
+                    parameters,
+                });
             }
 
             AppCommand::RequestCancel(target) => {
@@ -487,18 +530,9 @@ impl ExperimentApp {
                 };
             }
 
-            AppCommand::ConfirmCancel(target) => match self.experiments.cancel(target) {
-                Ok(()) => {
-                    self.ui.overlay = Overlay::None;
-                }
-                Err(error) => {
-                    let message = error.to_string();
-                    if let Overlay::ConfirmCancel { error: slot, .. } = &mut self.ui.overlay {
-                        *slot = Some(message.clone());
-                    }
-                    self.ui.notify_error(message);
-                }
-            },
+            // The overlay stays open until the worker answers: closed by
+            // `CancelSucceeded`, annotated by `CancelFailed`.
+            AppCommand::ConfirmCancel(target) => self.send(WorkCommand::Cancel(target)),
 
             AppCommand::CloseOverlay => self.ui.overlay = Overlay::None,
 
@@ -508,119 +542,34 @@ impl ExperimentApp {
                 }
             }
 
-            AppCommand::RetryQuery(run_id) => {
-                let _ = self.experiments.refresh();
-                let healthy = self
-                    .experiments
-                    .snapshot()
-                    .job_run(&run_id)
-                    .is_none_or(|run| run.query_health.is_available());
-                if healthy {
-                    self.ui.notify("Query succeeded.");
-                } else {
-                    self.ui.notify_error("The status is still unavailable.");
-                }
+            AppCommand::RetryQuery(run_id) => self.send(WorkCommand::RetryQuery(run_id)),
+
+            AppCommand::Refresh => self.send(WorkCommand::Refresh),
+
+            AppCommand::OpenReportExternally(run_id) => {
+                self.send(WorkCommand::OpenReportExternally(run_id));
             }
-
-            AppCommand::Refresh => match self.experiments.refresh() {
-                Ok(()) => self.ui.notify("Refreshed."),
-                Err(error) => self.ui.notify_error(error.to_string()),
-            },
-
-            AppCommand::OpenReportExternally(run_id) => self.open_report_externally(&run_id),
 
             AppCommand::Notify(text) => self.ui.notify(text),
         }
     }
 
-    /// Registers a folder the user chose and reports what happened.
-    ///
-    /// Separate from the picker so the whole outcome — messages, navigation —
-    /// is exercisable without a dialog.
+    /// Registers a folder the user chose; the outcome — messages, navigation,
+    /// the report modal — comes back as a [`WorkEvent::FoldersAdded`].
     pub fn add_folder(&mut self, path: &std::path::Path) {
-        let before: Vec<EntityId> = self
-            .experiments
-            .snapshot()
-            .entities
-            .iter()
-            .map(|entity| entity.id.clone())
-            .collect();
-
-        let picked = crate::adapter::display_path(path);
-
-        let outcome = match self.experiments.register_folder(path) {
-            Ok(outcome) => outcome,
-            // A pick that named exactly one folder reports that folder's
-            // refusal as the call's error rather than in the tally. Same event
-            // for the user, so it gets the same modal.
-            Err(error) => {
-                self.ui.overlay = Overlay::AddFolderReport {
-                    picked,
-                    outcome: AddedFolders {
-                        refused: vec![error.to_string()],
-                        ..AddedFolders::default()
-                    },
-                };
-                return;
-            }
-        };
-
-        // Land on the first folder this action added, so the user sees the
-        // result of the pick rather than wherever they already were.
-        if let Some(entity) = self
-            .experiments
-            .snapshot()
-            .entities
-            .iter()
-            .find(|entity| !before.contains(&entity.id))
-        {
-            self.ui.route = Route::EntityOverview {
-                entity_id: entity.id.clone(),
-            };
-        }
-
-        // What was registered goes to the status bar, which is where the trace
-        // of a successful pick belongs. Refusals do not: each carries its own
-        // reason, and one line cannot hold a list of them (specification
-        // §11.5).
-        let mut parts = Vec::new();
-        match outcome.added.len() {
-            0 => {}
-            1 => parts.push(format!("Added {}.", outcome.added[0])),
-            count => parts.push(format!("Added {count} folders.")),
-        }
-        if outcome.already_registered > 0 {
-            parts.push(format!(
-                "{} already in the Explorer.",
-                outcome.already_registered
-            ));
-        }
-
-        if !parts.is_empty() {
-            self.ui.notify(parts.join(" "));
-        } else if outcome.refused.is_empty() {
-            self.ui.notify("Nothing to add.");
-        }
-
-        if !outcome.refused.is_empty() {
-            self.ui.overlay = Overlay::AddFolderReport { picked, outcome };
-        }
+        self.send(WorkCommand::RegisterFolder(path.to_owned()));
     }
 
-    fn perform_start(&mut self, entity_id: EntityId, parameters: BTreeMap<String, String>) {
-        let kind = self
-            .experiments
-            .snapshot()
-            .entity(&entity_id)
-            .map(|entity| entity.kind);
-
-        // The workbench is a person's surface. Every other one declares
-        // itself (specification §10.6).
-        match self
-            .experiments
-            .start(&entity_id, parameters, Trigger::Human)
-        {
-            Ok(run_id) => {
+    /// Applies one outcome the worker sent. Everything the engine did to the
+    /// world is already in the snapshot; this is only what the *window* does
+    /// about it — where to land, what to say, what to open.
+    fn apply_event(&mut self, event: WorkEvent) {
+        match event {
+            WorkEvent::Started {
+                entity_id,
+                kind,
+                run_id,
+            } => {
                 // The draft did its job. Discarding it here means coming back
                 // to Start for this experiment opens the empty form §15.3 asks
                 // for, rather than the values that already ran.
@@ -636,94 +585,81 @@ impl ExperimentApp {
                     },
                 };
             }
-            Err(error) => {
-                self.ui.start_draft.submit_state = SubmitState::Failed(error.explain());
+
+            WorkEvent::StartRefused { entity_id, error } => {
+                // Only the draft that asked shows the refusal; a form the
+                // user already left is not decorated in absentia.
+                if self.ui.start_draft.entity_id.as_ref() == Some(&entity_id) {
+                    self.ui.start_draft.submit_state = SubmitState::Failed(error);
+                }
             }
-        }
-    }
 
-    fn open_report_externally(&mut self, run_id: &RunId) {
-        let state = match self.experiments.report(run_id) {
-            Ok(state) => state,
-            Err(error) => {
-                self.ui.notify_error(error.to_string());
-                return;
+            WorkEvent::CancelSucceeded { target } => {
+                if matches!(&self.ui.overlay, Overlay::ConfirmCancel { target: t, .. } if *t == target)
+                {
+                    self.ui.overlay = Overlay::None;
+                }
             }
-        };
 
-        let ReportState::Available { format, text } = state else {
-            self.ui.notify_error("That report is not available.");
-            return;
-        };
-
-        let path = std::env::temp_dir().join(format!(
-            "experiment-report-{run_id}.{}",
-            format.file_extension()
-        ));
-
-        match std::fs::write(&path, text.as_bytes()) {
-            Ok(()) => {
-                self.pending_url = Some(format!("file://{}", encode_path(&path)));
-                self.ui.notify("Opening the report in your browser…");
+            WorkEvent::CancelFailed { target, message } => {
+                if let Overlay::ConfirmCancel {
+                    target: t,
+                    error: slot,
+                } = &mut self.ui.overlay
+                    && *t == target
+                {
+                    *slot = Some(message.clone());
+                }
+                self.ui.notify_error(message);
             }
-            Err(error) => self
-                .ui
-                .notify_error(format!("Could not write the report: {error}")),
-        }
-    }
 
-    /// Runs whatever the agent interface has queued, and answers it.
-    ///
-    /// Every request goes through the same call a click goes through, so an
-    /// agent cannot reach anything a person could not, and cannot reach it by a
-    /// path with different rules.
-    #[cfg(unix)]
-    fn serve_agent(&mut self) {
-        use crate::agent::Request;
+            WorkEvent::FoldersAdded {
+                picked,
+                first_new,
+                outcome,
+            } => {
+                // Land on the first folder this action added, so the user sees
+                // the result of the pick rather than wherever they already were.
+                if let Some(entity_id) = first_new {
+                    self.ui.route = Route::EntityOverview { entity_id };
+                }
 
-        let Some(agent) = self.agent.clone() else {
-            return;
-        };
-        for pending in agent.take_pending() {
-            let answer = match pending.request {
-                Request::Start {
-                    experiment,
-                    parameters,
-                } => self.start_by_name(&experiment, parameters, Trigger::Agent),
-            };
-            // The caller may have hung up; that is their business.
-            let _ = pending.reply.send(answer);
-        }
-    }
+                // What was registered goes to the status bar, which is where
+                // the trace of a successful pick belongs. Refusals do not: each
+                // carries its own reason, and one line cannot hold a list of
+                // them (specification §11.5).
+                let mut parts = Vec::new();
+                match outcome.added.len() {
+                    0 => {}
+                    1 => parts.push(format!("Added {}.", outcome.added[0])),
+                    count => parts.push(format!("Added {count} folders.")),
+                }
+                if outcome.already_registered > 0 {
+                    parts.push(format!(
+                        "{} already in the Explorer.",
+                        outcome.already_registered
+                    ));
+                }
 
-    /// Starts an experiment named rather than addressed.
-    ///
-    /// An agent knows `solver-gpu`, not the folder it lives in. Names are unique
-    /// across the Explorer (convention §5), so the lookup is total.
-    #[cfg(unix)]
-    fn start_by_name(
-        &mut self,
-        name: &str,
-        parameters: BTreeMap<String, String>,
-        by: Trigger,
-    ) -> Result<crate::agent::Reply, String> {
-        let snapshot = self.experiments.snapshot();
-        let Some(entity) = snapshot.entities.iter().find(|entity| entity.name == name) else {
-            return Err(format!("No such entity: {name}"));
-        };
-        let entity_id = entity.id.clone();
-        drop(snapshot);
+                if !parts.is_empty() {
+                    self.ui.notify(parts.join(" "));
+                } else if outcome.refused.is_empty() {
+                    self.ui.notify("Nothing to add.");
+                }
 
-        match self.experiments.start(&entity_id, parameters, by) {
-            Ok(run_id) => Ok(crate::agent::Reply::Started {
-                run_id: run_id.to_string(),
-            }),
-            Err(error) => Err(error.to_string()),
+                if !outcome.refused.is_empty() {
+                    self.ui.overlay = Overlay::AddFolderReport { picked, outcome };
+                }
+            }
+
+            WorkEvent::OpenUrl(url) => self.pending_url = Some(url),
+            WorkEvent::Notice(text) => self.ui.notify(text),
+            WorkEvent::ErrorNotice(text) => self.ui.notify_error(text),
         }
     }
 
     fn schedule_repaint(&self, ctx: &egui::Context) {
-        let snapshot = self.experiments.snapshot();
+        let snapshot = self.snapshot();
         let needs_animation = snapshot.active_run_count() > 0 || self.ui.overlay.is_open();
         if needs_animation {
             ctx.request_repaint_after(Duration::from_millis(500));
@@ -738,11 +674,12 @@ impl eframe::App for ExperimentApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let now = Local::now();
+        // What the worker did since the last frame arrives first, so the
+        // frame renders a world that already includes it.
         self.apply_pending();
-        self.experiments.tick(now);
         self.recover_route();
 
-        let snapshot = self.experiments.snapshot();
+        let snapshot = self.snapshot();
         let mut commands = Vec::new();
 
         {
@@ -758,26 +695,13 @@ impl eframe::App for ExperimentApp {
         for command in commands {
             self.execute(command);
         }
-
-        // Requests from the agent interface are executed here, alongside the
-        // commands the screen just produced, because they are the same kind of
-        // thing: something asked for, done once, by the one owner of the store
-        // (specification §43).
-        #[cfg(unix)]
-        self.serve_agent();
+        self.apply_pending();
 
         if let Some(url) = self.pending_url.take() {
             ui.ctx().open_url(egui::OpenUrl::new_tab(url));
         }
 
         self.recover_route();
-
-        // Published after the frame, so a read over the socket sees what the
-        // window is showing rather than what it was showing.
-        #[cfg(unix)]
-        if let Some(agent) = &self.agent {
-            agent.publish(self.experiments.snapshot());
-        }
 
         self.schedule_repaint(ui.ctx());
     }
@@ -796,18 +720,6 @@ fn pick_folder() -> Option<std::path::PathBuf> {
 }
 
 /// Percent-encode the few characters that make a `file://` URL ambiguous.
-fn encode_path(path: &std::path::Path) -> String {
-    path.to_string_lossy()
-        .chars()
-        .map(|c| match c {
-            ' ' => "%20".to_owned(),
-            '#' => "%23".to_owned(),
-            '?' => "%3F".to_owned(),
-            other => other.to_string(),
-        })
-        .collect()
-}
-
 /// The engine's default private store location (convention §5), overridable
 /// through `COCO_STORE_PATH` for development and tests.
 pub fn default_store_path() -> std::path::PathBuf {

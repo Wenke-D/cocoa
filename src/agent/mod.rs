@@ -1,27 +1,28 @@
 //! The seam an agent drives coco through (specification §43).
 //!
 //! An agent asks coco to do things; it never runs an experiment's scripts
-//! itself. Everything it can ask for arrives here, is handed to the workbench's
-//! own frame loop, and takes exactly the path a click takes — the same
-//! validation, the same origin stamping, the same screen update. There is no
-//! second way into the engine to keep in step with the first.
+//! itself. Everything it can ask for arrives here, is handed to the engine's
+//! one owner — the worker ([`crate::worker`]) — and takes exactly the path a
+//! click takes: the same validation, the same origin stamping, the same
+//! screen update. There is no second way into the engine to keep in step with
+//! the first.
 //!
 //! coco must be running. That is a decision, not a limitation to work around:
-//! the store has one owner, and the owner is the window. A run started here
-//! belongs to the same store the user is looking at, and appears in it as it
-//! appears for a click.
+//! the store has one owner, and the owner lives inside the running window's
+//! process. A run started here belongs to the same store the user is looking
+//! at, and appears in it as it appears for a click.
 //!
 //! # Shape
 //!
 //! ```text
-//! socket thread                        UI thread
+//! socket thread                        worker thread
 //!   read request  ─────── queue ──────▶ drain, execute, reply
-//!   read snapshot ◀────── published ─── publish after every frame
+//!   read snapshot ◀────── published ─── publish after every pass
 //! ```
 //!
-//! Reads are answered from a snapshot the frame loop publishes, so they never
-//! wait on a frame. Writes go through the queue, because the engine has one
-//! owner and this is not it.
+//! Reads are answered from a snapshot the worker publishes, so they never
+//! wait on it. Writes go through the queue, because the engine has one owner
+//! and this is not it.
 
 pub mod http;
 mod server;
@@ -54,24 +55,23 @@ pub enum Reply {
     Started { run_id: String },
 }
 
-/// A request waiting for the frame loop, and where to send the answer.
+/// A request waiting for the engine's owner, and where to send the answer.
 pub struct Pending {
     pub request: Request,
     pub reply: mpsc::Sender<Result<Reply, String>>,
 }
 
-/// What the socket thread and the frame loop share.
+/// What the socket thread and the engine's owner share.
 ///
-/// Deliberately small: a queue in one direction, a snapshot in the other, and a
-/// handle to wake the window. The frame loop is idle when nothing is running,
-/// so a request that only sat in the queue would sit there until the user moved
-/// the mouse.
+/// Deliberately small: a queue in one direction, a snapshot in the other, and
+/// a way to wake the owner. The owner sleeps when nothing asks for anything,
+/// so a request that only sat in the queue would wait out that sleep.
 pub struct Bridge {
     queue: Mutex<Vec<Pending>>,
     latest: Mutex<Snapshot>,
-    /// Wakes the window so a queued request is drained now rather than at the
-    /// next repaint someone else causes.
-    wake: Mutex<Option<egui::Context>>,
+    /// Wakes the owner so a queued request is drained now rather than on its
+    /// next scheduled look.
+    wake: Mutex<Option<Box<dyn Fn() + Send>>>,
 }
 
 impl Bridge {
@@ -83,24 +83,24 @@ impl Bridge {
         })
     }
 
-    /// Called once, when the window exists.
-    pub fn attach(&self, ctx: egui::Context) {
-        *self.wake.lock().expect("bridge lock") = Some(ctx);
+    /// Called once, by whoever owns the engine and drains this queue.
+    pub fn attach(&self, wake: impl Fn() + Send + 'static) {
+        *self.wake.lock().expect("bridge lock") = Some(Box::new(wake));
     }
 
     /// Ask the workbench to do something, and wait for it to.
     ///
-    /// Blocks the socket thread, never the UI thread. The timeout is what keeps
-    /// a caller from hanging forever if the window is wedged: a reply is one
-    /// frame away in the normal case.
+    /// Blocks the socket thread, never the owner. The timeout is what keeps a
+    /// caller from hanging forever if the owner is wedged: a reply is one
+    /// pass away in the normal case.
     pub fn submit(&self, request: Request, timeout: std::time::Duration) -> Result<Reply, String> {
         let (sender, receiver) = mpsc::channel();
         self.queue.lock().expect("bridge lock").push(Pending {
             request,
             reply: sender,
         });
-        if let Some(ctx) = self.wake.lock().expect("bridge lock").as_ref() {
-            ctx.request_repaint();
+        if let Some(wake) = self.wake.lock().expect("bridge lock").as_ref() {
+            wake();
         }
         match receiver.recv_timeout(timeout) {
             Ok(result) => result,
@@ -108,19 +108,19 @@ impl Bridge {
         }
     }
 
-    /// Everything queued since the last frame.
+    /// Everything queued since the last look.
     pub fn take_pending(&self) -> Vec<Pending> {
         std::mem::take(&mut *self.queue.lock().expect("bridge lock"))
     }
 
-    /// The frame loop publishes what it just rendered from.
+    /// The owner publishes what it last built.
     ///
     /// Cheap: a snapshot is an `Arc` clone (specification §26.1).
     pub fn publish(&self, snapshot: Snapshot) {
         *self.latest.lock().expect("bridge lock") = snapshot;
     }
 
-    /// The last published snapshot. At most one frame old, which is what a read
+    /// The last published snapshot. At most one pass old, which is what a read
     /// over a socket is anyway.
     pub fn snapshot(&self) -> Snapshot {
         self.latest.lock().expect("bridge lock").clone()

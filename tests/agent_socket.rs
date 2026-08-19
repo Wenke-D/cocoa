@@ -3,8 +3,9 @@
 //! The parts worth pinning down are the ones a running coco would make hard to
 //! reach: what happens to a socket file the last window left behind, what a
 //! second coco does when the first still owns it, and what each route answers.
-//! The frame loop is stood in for by a thread that drains the bridge, which is
-//! exactly what `ExperimentApp` does once a frame.
+//! For the route tests the worker is stood in for by a thread that drains the
+//! bridge, which is exactly what `coco::worker::Worker` does once a pass; one
+//! test runs the real worker end to end.
 
 #![cfg(unix)]
 
@@ -40,7 +41,7 @@ fn post(path: &str, body: &str) -> Request {
     request("POST", path, body)
 }
 
-/// Stands in for the frame loop: drains what the socket queued, answers it.
+/// Stands in for the worker: drains what the socket queued, answers it.
 fn drain_with(
     bridge: Arc<Bridge>,
     answer: impl Fn(coco::agent::Request) -> Result<Reply, String> + Send + 'static,
@@ -192,6 +193,101 @@ fn the_socket_answers_http_a_curl_can_speak() {
     assert!(reply.starts_with("HTTP/1.1 200 OK\r\n"), "{reply}");
     assert!(reply.contains("Content-Type: application/json"), "{reply}");
     assert!(reply.contains("entities"), "{reply}");
+}
+
+/// The whole promise of §43, with nothing stood in for: a start over the
+/// socket reaches the real worker on its real thread, runs the folder's own
+/// launch script, and the world that follows shows the run with its origin.
+#[test]
+fn a_start_over_the_socket_runs_through_the_real_worker() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = tempfile::TempDir::new().unwrap();
+    let folder = dir.path().join("solver");
+    std::fs::create_dir_all(&folder).unwrap();
+    std::fs::write(folder.join("job.tmpl"), "#!/bin/sh\necho {{ size }}\n").unwrap();
+    for (name, body) in [
+        ("launch.sh", "#!/bin/sh\necho 'COCO_RETURN: sub-77'\n"),
+        ("poll.sh", "#!/bin/sh\necho 'COCO_RETURN: sub-77 RUNNING'\n"),
+        ("report.sh", "#!/bin/sh\necho ok\n"),
+        ("cancel.sh", "#!/bin/sh\necho ok\n"),
+    ] {
+        let script = folder.join(name);
+        std::fs::write(&script, body).unwrap();
+        let mut permissions = std::fs::metadata(&script).unwrap().permissions();
+        permissions.set_mode(0o755);
+        std::fs::set_permissions(&script, permissions).unwrap();
+    }
+    std::fs::write(
+        folder.join("coco.toml"),
+        r#"
+kind     = "job"
+name     = "solver"
+
+[render]
+template = "job.tmpl"
+params   = ["size"]
+
+[launch]
+command  = "./launch.sh"
+params   = []
+
+[poll]
+command  = "./poll.sh"
+
+[report]
+command  = "./report.sh"
+
+[cancel]
+command  = "./cancel.sh"
+"#,
+    )
+    .unwrap();
+
+    let mut adapter = coco::adapter::EngineAdapter::new(
+        coco::engine::Coco::new(dir.path().join("store.json")).unwrap(),
+    );
+    use coco::adapter::Experiments as _;
+    adapter.register_folder(&folder).unwrap();
+
+    let path = socket_path("real-worker");
+    let bridge = Bridge::new();
+    let _server = Server::start(path.clone(), Arc::clone(&bridge)).unwrap();
+    let _handle = coco::worker::Worker::spawn(Box::new(adapter), Some(bridge), None).unwrap();
+
+    let mut stream = UnixStream::connect(&path).unwrap();
+    let body = r#"{"parameters": {"size": "1"}}"#;
+    stream
+        .write_all(
+            format!(
+                "POST /experiments/solver/runs HTTP/1.1\r\nHost: coco\r\n\
+                 Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+    let mut reply = String::new();
+    stream.read_to_string(&mut reply).unwrap();
+    assert!(reply.starts_with("HTTP/1.1 201 "), "{reply}");
+    assert!(reply.contains("run_id"), "{reply}");
+
+    // The world that follows shows the run, stamped with who asked for it.
+    // The worker publishes right after answering; this allows it a moment.
+    let mut world = String::new();
+    for _ in 0..200 {
+        let mut stream = UnixStream::connect(&path).unwrap();
+        stream
+            .write_all(b"GET /world HTTP/1.1\r\nHost: coco\r\nConnection: close\r\n\r\n")
+            .unwrap();
+        world.clear();
+        stream.read_to_string(&mut world).unwrap();
+        if world.contains("\"origin\":\"Agent\"") {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    assert!(world.contains("\"origin\":\"Agent\""), "{world}");
 }
 
 /// A body too large to be a mistake is refused on its declared length, before

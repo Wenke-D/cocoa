@@ -423,6 +423,13 @@ impl Experiments for EngineAdapter {
             self.mark_dirty();
         }
     }
+
+    fn shutdown(&mut self) {
+        // Generous for a script that answers in seconds, short enough that a
+        // wedged one cannot hold the window open noticeably.
+        self.coco
+            .shutdown_launches(std::time::Duration::from_secs(5));
+    }
 }
 
 fn display_status_of(record: &RunRecord) -> (RunStatus, QueryHealth) {

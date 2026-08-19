@@ -298,6 +298,61 @@ fn launch_failure_lands_the_run_in_error() {
     assert_eq!(run_id, 1);
 }
 
+/// Closing coco right after a start is normal (§10): the launch script gets
+/// its moment to land, so the submission id is recorded and the next open
+/// catches up on the run instead of finding an orphan.
+#[test]
+fn a_close_right_after_a_start_still_records_the_submission() {
+    let dir = TempDir::new().unwrap();
+    let job = job_folder(&dir, "close-me");
+    let mut coco = engine(&dir);
+    coco.register(&job).unwrap();
+    let run_id = coco
+        .start_job(
+            &job,
+            params(&[("size", "1")]),
+            params(&[("gpu", "0")]),
+            Trigger::Human,
+        )
+        .unwrap();
+
+    coco.shutdown_launches(std::time::Duration::from_secs(5));
+
+    let record = coco.run_record(&job, run_id).unwrap();
+    assert_eq!(record.status, Status::Starting);
+    assert_eq!(record.submission_id, format!("sub-{run_id}"));
+}
+
+/// A script still running past the shutdown grace is killed and its run moved
+/// to `ERROR` now, honestly, rather than left for the reopen sweep to guess
+/// about.
+#[test]
+fn a_launch_hung_past_the_shutdown_grace_is_abandoned_as_error() {
+    let dir = TempDir::new().unwrap();
+    let job = job_folder(&dir, "hung");
+    write_script(&job, "launch.sh", "sleep 30\necho 'COCO_RETURN: late'\n");
+    let mut coco = engine(&dir);
+    coco.register(&job).unwrap();
+    let run_id = coco
+        .start_job(
+            &job,
+            params(&[("size", "1")]),
+            params(&[("gpu", "0")]),
+            Trigger::Human,
+        )
+        .unwrap();
+
+    coco.shutdown_launches(std::time::Duration::from_millis(50));
+
+    let record = coco.run_record(&job, run_id).unwrap();
+    assert_eq!(record.status, Status::Error);
+    assert!(
+        record.error.as_deref().unwrap().contains("abandoned"),
+        "{:?}",
+        record.error
+    );
+}
+
 /// A record still "launching" in a coco that holds no script for it is a
 /// previous coco's leftover (§10): the stdout that carried its submission id
 /// died with that process, so refresh moves it to `ERROR` rather than leaving
