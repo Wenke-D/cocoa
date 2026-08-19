@@ -3019,8 +3019,12 @@ filesystem's own permissions decide who may. Socket paths are bounded well below
 a filesystem's path limit, so a failure to bind is reported with the path in it.
 
 The wire format is HTTP/1.1, so `curl --unix-socket` is the whole client
-library. One request, one response, connection closed: no keep-alive, no chunked
-encoding. Anything outside that subset is answered `400` rather than guessed at.
+library. The protocol itself is spoken by `tiny_http`, a small synchronous
+server crate with no async runtime behind it (§5): parsing, framing, and status
+lines are common code rather than coco's own. What stays coco's is what no
+library decides — who may bind the socket, when the file goes away, and where a
+request's answer comes from. Request bodies are capped at 64 KiB; a larger
+declared length is answered `413` before a byte of it is read.
 
 Failing to bind is not fatal. Another coco already owns the socket, or the
 directory is not writable; either way the workbench is still a workbench, and it

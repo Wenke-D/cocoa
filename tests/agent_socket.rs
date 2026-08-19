@@ -8,11 +8,12 @@
 
 #![cfg(unix)]
 
-use std::os::unix::net::UnixListener;
+use std::io::{Read, Write};
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::Arc;
 use std::time::Duration;
 
-use coco::agent::http::{Request, Response, read_request};
+use coco::agent::http::Request;
 use coco::agent::{Bridge, Reply, Server};
 
 /// Unix socket paths are bounded (`SUN_LEN`), and a temp dir under a long home
@@ -23,19 +24,20 @@ fn socket_path(name: &str) -> std::path::PathBuf {
     path
 }
 
+fn request(method: &str, path: &str, body: &str) -> Request {
+    Request {
+        method: method.to_owned(),
+        path: path.to_owned(),
+        body: body.as_bytes().to_vec(),
+    }
+}
+
 fn get(path: &str) -> Request {
-    read_request(&mut format!("GET {path} HTTP/1.1\r\n\r\n").as_bytes()).unwrap()
+    request("GET", path, "")
 }
 
 fn post(path: &str, body: &str) -> Request {
-    read_request(
-        &mut format!(
-            "POST {path} HTTP/1.1\r\nContent-Length: {}\r\n\r\n{body}",
-            body.len()
-        )
-        .as_bytes(),
-    )
-    .unwrap()
+    request("POST", path, body)
 }
 
 /// Stands in for the frame loop: drains what the socket queued, answers it.
@@ -153,11 +155,7 @@ fn unknown_routes_and_methods_are_told_so() {
     let bridge = Bridge::new();
     assert_eq!(coco::agent::route(&get("/nope"), &bridge).status, 404);
     assert_eq!(
-        coco::agent::route(
-            &read_request(&mut "DELETE /world HTTP/1.1\r\n\r\n".as_bytes()).unwrap(),
-            &bridge
-        )
-        .status,
+        coco::agent::route(&request("DELETE", "/world", ""), &bridge).status,
         405
     );
 }
@@ -178,12 +176,40 @@ fn a_window_that_never_answers_times_out() {
     assert!(started.elapsed() < Duration::from_secs(5));
 }
 
-/// The response has to be something curl can read.
+/// The whole wire, end to end: what curl would write, what curl would read.
 #[test]
-fn responses_are_well_formed_http() {
-    let mut out = Vec::new();
-    Response::json(200, "{}").write(&mut out).unwrap();
-    let text = String::from_utf8(out).unwrap();
-    assert!(text.starts_with("HTTP/1.1 200 OK\r\n"), "{text}");
-    assert!(text.contains("Connection: close\r\n"), "{text}");
+fn the_socket_answers_http_a_curl_can_speak() {
+    let path = socket_path("wire");
+    let _server = Server::start(path.clone(), Bridge::new()).unwrap();
+
+    let mut stream = UnixStream::connect(&path).unwrap();
+    stream
+        .write_all(b"GET /world HTTP/1.1\r\nHost: coco\r\nConnection: close\r\n\r\n")
+        .unwrap();
+    let mut reply = String::new();
+    stream.read_to_string(&mut reply).unwrap();
+
+    assert!(reply.starts_with("HTTP/1.1 200 OK\r\n"), "{reply}");
+    assert!(reply.contains("Content-Type: application/json"), "{reply}");
+    assert!(reply.contains("entities"), "{reply}");
+}
+
+/// A body too large to be a mistake is refused on its declared length, before
+/// a byte of it is read.
+#[test]
+fn an_oversized_body_is_refused_at_the_door() {
+    let path = socket_path("oversized");
+    let _server = Server::start(path.clone(), Bridge::new()).unwrap();
+
+    let mut stream = UnixStream::connect(&path).unwrap();
+    stream
+        .write_all(
+            b"POST /experiments/x/runs HTTP/1.1\r\nHost: coco\r\n\
+              Content-Length: 10000000\r\nConnection: close\r\n\r\n",
+        )
+        .unwrap();
+    let mut reply = String::new();
+    stream.read_to_string(&mut reply).unwrap();
+
+    assert!(reply.starts_with("HTTP/1.1 413 "), "{reply}");
 }
