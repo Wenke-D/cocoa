@@ -51,6 +51,9 @@ fn bundled_mock_library_registers_and_runs() {
     let run_id = coco
         .start_job(&solver, render, launch, Trigger::Human)
         .unwrap();
+    // The launch script runs in its own time (§7.1); the record settles once
+    // it lands.
+    coco.settle_launches();
     assert_eq!(
         coco.run_record(&solver, run_id).unwrap().submission_id,
         format!("slurm-{run_id}")

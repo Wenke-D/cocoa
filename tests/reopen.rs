@@ -96,8 +96,13 @@ fn a_run_that_finished_while_coco_was_closed_settles_on_reopen() {
     let run_id = {
         let mut coco = Coco::new(&store).unwrap();
         coco.register(&job).unwrap();
-        coco.start_job(&job, params(&[("size", "1")]), params(&[]), Trigger::Human)
-            .unwrap()
+        let run_id = coco
+            .start_job(&job, params(&[("size", "1")]), params(&[]), Trigger::Human)
+            .unwrap();
+        // The launch lands before the window closes; closing *during* a launch
+        // is the orphan case, covered by the engine's own tests.
+        coco.settle_launches();
+        run_id
     };
     // The window closes here: nothing of coco is left running.
 

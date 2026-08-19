@@ -83,14 +83,21 @@ fn coco_backend_drives_the_workbench_model() {
         "the run is missing from the active runs"
     );
 
-    // An automatic tick polls the folder through its mock script.
-    experiments.tick(Local::now());
-    let snapshot = experiments.snapshot();
-    let run = snapshot.job_run(&run_id).unwrap();
+    // An automatic tick collects the launch and polls the folder through its
+    // mock script. The launch script runs in its own time (§7.1), so this
+    // ticks until the poll has something to say.
+    let mut status = RunStatus::Starting;
+    for tick in 1..=200 {
+        experiments.tick(Local::now() + chrono::TimeDelta::seconds(4 * tick));
+        status = experiments.snapshot().job_run(&run_id).unwrap().status;
+        if !matches!(status, RunStatus::Starting) {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
     assert!(
-        matches!(run.status, RunStatus::Pending | RunStatus::Running),
-        "expected PENDING or RUNNING after the first poll, got {:?}",
-        run.status
+        matches!(status, RunStatus::Pending | RunStatus::Running),
+        "expected PENDING or RUNNING once the poll ran, got {status:?}"
     );
 
     // Cancel goes through the folder's cancel script.

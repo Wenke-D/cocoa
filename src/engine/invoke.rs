@@ -6,7 +6,7 @@
 
 use std::io::{self, Read};
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -39,8 +39,21 @@ impl Invocation {
     }
 }
 
-/// Runs `argv` with `cwd`, capturing output and enforcing `timeout`.
-pub fn run(cwd: &Path, argv: &[String], timeout: Duration) -> io::Result<Invocation> {
+/// A script that has been started and not yet collected.
+///
+/// Holds the child and its output readers so a caller may do other work while
+/// the script runs, checking in with [`Running::try_finish`]. Blocking is a
+/// choice the caller makes (by looping), not one this module makes for it.
+pub struct Running {
+    child: Child,
+    deadline: Instant,
+    out_reader: Option<thread::JoinHandle<String>>,
+    err_reader: Option<thread::JoinHandle<String>>,
+}
+
+/// Starts `argv` with `cwd`, capturing output. The timeout starts now; it is
+/// enforced by [`Running::try_finish`], which kills the child at the deadline.
+pub fn spawn(cwd: &Path, argv: &[String], timeout: Duration) -> io::Result<Running> {
     debug_assert!(!argv.is_empty(), "argv must name the script or interpreter");
 
     let mut child = Command::new(&argv[0])
@@ -64,32 +77,64 @@ pub fn run(cwd: &Path, argv: &[String], timeout: Duration) -> io::Result<Invocat
         text
     });
 
-    let deadline = Instant::now() + timeout;
-    let (exit, timed_out) = loop {
-        match child.try_wait()? {
-            Some(status) => break (status.code(), false),
-            None if Instant::now() >= deadline => {
-                let _ = child.kill();
-                let _ = child.wait();
-                break (None, true);
-            }
-            None => thread::sleep(Duration::from_millis(10)),
-        }
-    };
-
-    let stdout = out_reader
-        .join()
-        .map_err(|_| io::Error::other("stdout reader panicked"))?;
-    let stderr = err_reader
-        .join()
-        .map_err(|_| io::Error::other("stderr reader panicked"))?;
-
-    Ok(Invocation {
-        exit,
-        timed_out,
-        stdout,
-        stderr,
+    Ok(Running {
+        child,
+        deadline: Instant::now() + timeout,
+        out_reader: Some(out_reader),
+        err_reader: Some(err_reader),
     })
+}
+
+impl Running {
+    /// Collects the script if it has finished, without waiting for it.
+    ///
+    /// Past the deadline the child is killed and the invocation comes back
+    /// `timed_out`, exactly as the blocking [`run`] reports it. After
+    /// `Ok(Some(_))` or `Err(_)` the script is spent; do not call again.
+    pub fn try_finish(&mut self) -> io::Result<Option<Invocation>> {
+        let (exit, timed_out) = match self.child.try_wait()? {
+            Some(status) => (status.code(), false),
+            None if Instant::now() >= self.deadline => {
+                let _ = self.child.kill();
+                let _ = self.child.wait();
+                (None, true)
+            }
+            None => return Ok(None),
+        };
+
+        let stdout = self
+            .out_reader
+            .take()
+            .expect("collected once")
+            .join()
+            .map_err(|_| io::Error::other("stdout reader panicked"))?;
+        let stderr = self
+            .err_reader
+            .take()
+            .expect("collected once")
+            .join()
+            .map_err(|_| io::Error::other("stderr reader panicked"))?;
+
+        Ok(Some(Invocation {
+            exit,
+            timed_out,
+            stdout,
+            stderr,
+        }))
+    }
+
+}
+
+/// Runs `argv` with `cwd`, capturing output and enforcing `timeout`. Blocks
+/// until the script finishes or the deadline kills it.
+pub fn run(cwd: &Path, argv: &[String], timeout: Duration) -> io::Result<Invocation> {
+    let mut running = spawn(cwd, argv, timeout)?;
+    loop {
+        if let Some(invocation) = running.try_finish()? {
+            return Ok(invocation);
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
 }
 
 /// Every stdout line beginning with `COCO_RETURN: `, with the prefix and

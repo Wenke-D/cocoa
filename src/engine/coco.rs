@@ -133,6 +133,9 @@ pub struct RefreshReport {
     pub poll_errors: Vec<EngineError>,
     pub reports_run: usize,
     pub report_errors: Vec<EngineError>,
+    /// Launch scripts that finished badly since the last refresh. The run
+    /// itself already reads `ERROR`; this carries the sentence for a notice.
+    pub launch_errors: Vec<EngineError>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -143,11 +146,25 @@ pub enum ReportMode {
     Manual,
 }
 
+/// A launch script still running (§7.1).
+///
+/// A start returns once the script is *spawned*; what the script eventually
+/// says arrives here and is collected by [`Coco::harvest_launches`]. The run's
+/// record already exists — with an empty `submission_id`, which is what marks
+/// it as still launching.
+struct LaunchInFlight {
+    path: PathBuf,
+    run_id: u64,
+    script: String,
+    running: invoke::Running,
+}
+
 /// The engine over one private store.
 pub struct Coco {
     store_path: PathBuf,
     store: Store,
     config: Config,
+    launching: Vec<LaunchInFlight>,
 }
 
 impl Coco {
@@ -165,6 +182,7 @@ impl Coco {
             store_path,
             store,
             config,
+            launching: Vec::new(),
         })
     }
 
@@ -370,21 +388,32 @@ impl Coco {
             argv.push(value.clone());
         }
 
-        let invocation = invoke::run(path, &argv, self.config.launch_timeout)
+        // The script is spawned, not awaited (§7.1): a start means "launched",
+        // and the run is visible from here on. What the script eventually says
+        // — a submission id, or a failure that moves the run to `ERROR` — is
+        // collected by `harvest_launches`. Only a script that cannot be
+        // started at all refuses the start itself, because that is a folder
+        // problem the submitter can act on now.
+        let running = invoke::spawn(path, &argv, self.config.launch_timeout)
             .map_err(|source| EngineError::io(path, source))?;
-        let submission_id = parse_launch_return(&invocation).map_err(|detail| {
-            invocation_error(manifest.launch.display.clone(), &invocation, &detail)
-        })?;
 
+        // An empty submission id is what marks a record as still launching;
+        // poll skips it, and `harvest_launches` fills it in.
         let record = RunRecord::new(
             run_id,
-            submission_id,
+            String::new(),
             render.clone(),
             launch.clone(),
             origin,
             Local::now(),
         );
         self.write_run_record(path, &record)?;
+        self.launching.push(LaunchInFlight {
+            path: path.to_owned(),
+            run_id,
+            script: manifest.launch.display.clone(),
+            running,
+        });
 
         let mut last_args = render.clone();
         last_args.extend(launch);
@@ -406,7 +435,12 @@ impl Coco {
             .filter_map(|view| {
                 view.record
                     .ok()
-                    .filter(|record| !record.status.is_terminal())
+                    // A run whose launch script has not returned yet has no
+                    // submission id to poll by; it is the launch's business
+                    // until `harvest_launches` collects it.
+                    .filter(|record| {
+                        !record.status.is_terminal() && !record.submission_id.is_empty()
+                    })
                     .map(|record| (record.run_id, record))
             })
             .collect();
@@ -602,6 +636,13 @@ impl Coco {
             return Err(EngineError::validation(format!(
                 "run {run_id} ({}) cannot be cancelled",
                 record.status.label()
+            )));
+        }
+        // No submission id yet means the launch script is still running (§7.1):
+        // there is nothing on the cluster to point the cancel script at.
+        if record.submission_id.is_empty() {
+            return Err(EngineError::validation(format!(
+                "run {run_id} is still launching; there is no submission to cancel yet"
             )));
         }
         let mut argv = manifest.cancel.words.clone();
@@ -1009,8 +1050,74 @@ impl Coco {
     /// One refresh tick: polls every job with active runs, auto-reports
     /// `COMPLETED` runs, and advances bench reports once their members all
     /// succeeded (§7.5, §10).
+    /// Collects launch scripts that have finished since the last look (§7.1).
+    ///
+    /// One that returned a submission id completes the record it belongs to;
+    /// one that failed or timed out moves its run to `ERROR` with the output
+    /// attached. Cheap when nothing is in flight.
+    pub fn harvest_launches(&mut self) -> Vec<EngineError> {
+        let mut errors = Vec::new();
+        let mut still = Vec::new();
+        for mut in_flight in std::mem::take(&mut self.launching) {
+            let outcome = match in_flight.running.try_finish() {
+                Ok(None) => {
+                    still.push(in_flight);
+                    continue;
+                }
+                Ok(Some(invocation)) => parse_launch_return(&invocation).map_err(|detail| {
+                    invocation_error(in_flight.script.clone(), &invocation, &detail)
+                }),
+                Err(source) => Err(EngineError::io(&in_flight.path, source)),
+            };
+            match outcome {
+                Ok(submission_id) => match self.run_record(&in_flight.path, in_flight.run_id) {
+                    Ok(mut record) => {
+                        record.submission_id = submission_id;
+                        if let Err(error) = self.write_run_record(&in_flight.path, &record) {
+                            errors.push(error);
+                        }
+                    }
+                    Err(error) => errors.push(error),
+                },
+                Err(error) => {
+                    if let Ok(mut record) = self.run_record(&in_flight.path, in_flight.run_id) {
+                        record.apply_status(Status::Error, Local::now(), None);
+                        record.error = Some(error.to_string());
+                        let _ = self.write_run_record(&in_flight.path, &record);
+                    }
+                    errors.push(error);
+                }
+            }
+        }
+        self.launching = still;
+        errors
+    }
+
+    /// Waits until no launch is in flight, collecting each as it lands.
+    ///
+    /// For tests and shutdown. The workbench itself never waits — it harvests
+    /// on refresh.
+    pub fn settle_launches(&mut self) -> Vec<EngineError> {
+        let mut errors = Vec::new();
+        while !self.launching.is_empty() {
+            errors.extend(self.harvest_launches());
+            if !self.launching.is_empty() {
+                std::thread::sleep(std::time::Duration::from_millis(5));
+            }
+        }
+        errors
+    }
+
+    /// How many launch scripts are still running.
+    pub fn launches_in_flight(&self) -> usize {
+        self.launching.len()
+    }
+
     pub fn refresh(&mut self) -> RefreshReport {
-        let mut report = RefreshReport::default();
+        let mut report = RefreshReport {
+            launch_errors: self.harvest_launches(),
+            ..RefreshReport::default()
+        };
         let entities: Vec<(PathBuf, Result<Manifest, EngineError>)> = self
             .entities()
             .into_iter()
@@ -1034,6 +1141,29 @@ impl Coco {
                     };
                     for view in runs {
                         let Ok(record) = &view.record else { continue };
+                        // A run still "launching" whose script this engine is
+                        // not holding is a previous coco's leftover (§10): the
+                        // stdout that carried its submission id died with that
+                        // process, so there is nothing left to wait for.
+                        if record.submission_id.is_empty()
+                            && !record.status.is_terminal()
+                            && !self
+                                .launching
+                                .iter()
+                                .any(|in_flight| in_flight.run_id == view.run_id)
+                        {
+                            let mut orphan = record.clone();
+                            orphan.apply_status(Status::Error, Local::now(), None);
+                            orphan.error = Some(
+                                "coco closed while the launch script was running; \
+                                 the submission id is lost"
+                                    .to_owned(),
+                            );
+                            if let Err(error) = self.write_run_record(&path, &orphan) {
+                                report.report_errors.push(error);
+                            }
+                            continue;
+                        }
                         if matches!(record.status, Status::Completed | Status::Analyzing) {
                             report.reports_run += 1;
                             if let Err(error) =

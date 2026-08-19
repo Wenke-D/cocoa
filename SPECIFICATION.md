@@ -211,7 +211,15 @@ Query
 Cancel
 ```
 
-Starting a Job begins execution directly.
+Starting a Job begins execution directly. A start means *launched*: the run
+exists, visibly `STARTING`, from the moment its launch script is spawned. The
+script's answer arrives in its own time and is collected by the refresh tick —
+a submission id completes the record; a failure or timeout moves the run to
+`ERROR` with the output attached. Only a script that cannot be spawned at all
+refuses the start itself, because that is a folder problem the submitter can
+act on now. A run whose launch was still in flight when coco closed is found
+on the next refresh and moved to `ERROR`: the stdout that carried its
+submission id died with the process that read it.
 
 Starting a Bench returns a **plan** — a list of `(existing Job, parameters)` calls,
 all dispatched at once. The Bench itself executes nothing; it fans out to Jobs.

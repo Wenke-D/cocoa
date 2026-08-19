@@ -188,6 +188,15 @@ fn engine(dir: &TempDir) -> Coco {
     Coco::new(dir.path().join("store.json")).unwrap()
 }
 
+/// Waits for every launch script to land, as the workbench's refresh tick
+/// would collect them one by one. Tests assert on the settled record.
+fn settle(coco: &mut Coco) -> Vec<String> {
+    coco.settle_launches()
+        .into_iter()
+        .map(|error| error.to_string())
+        .collect()
+}
+
 #[test]
 fn full_job_lifecycle() {
     let dir = TempDir::new().unwrap();
@@ -203,6 +212,7 @@ fn full_job_lifecycle() {
             Trigger::Human,
         )
         .unwrap();
+    assert_eq!(settle(&mut coco), Vec::<String>::new());
 
     let record = coco.run_record(&job, run_id).unwrap();
     assert_eq!(record.status, Status::Starting);
@@ -242,31 +252,38 @@ fn full_job_lifecycle() {
     assert!(coco.cancel_run(&job, run_id).is_err());
 }
 
+/// A start means "launched" (§7.1): the run exists from the moment the script
+/// is spawned, and a script that then fails moves that run to `ERROR` rather
+/// than un-happening it.
 #[test]
-fn launch_failure_records_nothing_and_burns_the_id() {
+fn launch_failure_lands_the_run_in_error() {
     let dir = TempDir::new().unwrap();
     let job = job_folder(&dir, "broken-launch");
     write_script(&job, "launch.sh", "echo 'cluster refused' >&2\nexit 1\n");
     let mut coco = engine(&dir);
     coco.register(&job).unwrap();
 
-    let err = coco
+    let run_id = coco
         .start_job(
             &job,
             params(&[("size", "1")]),
             params(&[("gpu", "0")]),
             Trigger::Human,
         )
-        .unwrap_err();
-    assert!(err.to_string().contains("cluster refused"), "{err}");
+        .unwrap();
+    assert_eq!(run_id, 0);
 
-    let runs_dir = job.join("runs");
-    let run_dirs: Vec<_> = fs::read_dir(&runs_dir)
-        .unwrap()
-        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
-        .collect();
-    assert_eq!(run_dirs.len(), 1, "artifact dir remains for inspection");
-    assert!(!runs_dir.join("0").join("run.json").exists(), "no record");
+    let errors = settle(&mut coco);
+    assert_eq!(errors.len(), 1);
+    assert!(errors[0].contains("cluster refused"), "{}", errors[0]);
+
+    let record = coco.run_record(&job, run_id).unwrap();
+    assert_eq!(record.status, Status::Error);
+    assert!(
+        record.error.as_deref().unwrap().contains("cluster refused"),
+        "{:?}",
+        record.error
+    );
 
     // The failed id is consumed: the next start gets id 1, never 0.
     write_script(&job, "launch.sh", "echo 'COCO_RETURN: ok-1'\n");
@@ -279,6 +296,64 @@ fn launch_failure_records_nothing_and_burns_the_id() {
         )
         .unwrap();
     assert_eq!(run_id, 1);
+}
+
+/// A record still "launching" in a coco that holds no script for it is a
+/// previous coco's leftover (§10): the stdout that carried its submission id
+/// died with that process, so refresh moves it to `ERROR` rather than leaving
+/// a run that can never advance.
+#[test]
+fn a_launch_orphaned_by_a_crash_is_swept_to_error_on_refresh() {
+    let dir = TempDir::new().unwrap();
+    let job = job_folder(&dir, "interrupted");
+    // A slow script stands in for a coco that died mid-launch: the first
+    // engine is dropped while the script still runs.
+    write_script(&job, "launch.sh", "sleep 30\necho 'COCO_RETURN: late'\n");
+    let mut coco = engine(&dir);
+    coco.register(&job).unwrap();
+    let run_id = coco
+        .start_job(
+            &job,
+            params(&[("size", "1")]),
+            params(&[("gpu", "0")]),
+            Trigger::Human,
+        )
+        .unwrap();
+    drop(coco);
+
+    let mut reopened = engine(&dir);
+    reopened.refresh();
+    let record = reopened.run_record(&job, run_id).unwrap();
+    assert_eq!(record.status, Status::Error);
+    assert!(
+        record.error.as_deref().unwrap().contains("closed"),
+        "{:?}",
+        record.error
+    );
+}
+
+/// A script that cannot be started at all — no interpreter, no file — is a
+/// folder problem the submitter can fix now, so it refuses the start itself
+/// and no run is recorded.
+#[test]
+fn a_launch_script_that_cannot_spawn_refuses_the_start() {
+    let dir = TempDir::new().unwrap();
+    let job = job_folder(&dir, "unspawnable");
+    fs::remove_file(job.join("launch.sh")).unwrap();
+    let mut coco = engine(&dir);
+    coco.register(&job).unwrap();
+
+    coco.start_job(
+        &job,
+        params(&[("size", "1")]),
+        params(&[("gpu", "0")]),
+        Trigger::Human,
+    )
+    .unwrap_err();
+    assert!(
+        !job.join("runs").join("0").join("run.json").exists(),
+        "a start that never spawned recorded a run"
+    );
 }
 
 #[test]
@@ -295,6 +370,7 @@ fn poll_failure_sets_unreachable_and_returns_loud_error() {
             Trigger::Human,
         )
         .unwrap();
+    settle(&mut coco);
 
     write_script(&job, "poll.py", "echo 'squeue broke' >&2\nexit 3\n");
     let err = coco.poll_job(&job).unwrap_err();
@@ -346,6 +422,7 @@ fn cancel_failure_keeps_status_and_success_moves_to_cancelling() {
             Trigger::Human,
         )
         .unwrap();
+    settle(&mut coco);
     fs::write(job.join("poll-state"), "RUNNING").unwrap();
     coco.poll_job(&job).unwrap();
 
@@ -379,6 +456,7 @@ fn unknown_poll_status_is_ignored_with_a_warning() {
             Trigger::Human,
         )
         .unwrap();
+    settle(&mut coco);
 
     write_script(&job, "poll.py", "echo 'COCO_RETURN: sub-0 HYPERDRIVE'\n");
     let report = coco.poll_job(&job).unwrap();
@@ -464,7 +542,9 @@ fn bench_fanout_records_members_and_launch_failures() {
     let dir = TempDir::new().unwrap();
     let good = job_folder(&dir, "good-job");
     let bad = job_folder(&dir, "bad-job");
-    write_script(&bad, "launch.sh", "echo 'no capacity' >&2\nexit 1\n");
+    // A dispatch failure is a member that never spawned (§8.2). A script that
+    // spawns and then fails is a member in `ERROR`, covered elsewhere.
+    fs::remove_file(bad.join("launch.sh")).unwrap();
     let bench = bench_folder(&dir, "sweep", &["good-job", "bad-job"], "");
 
     let mut coco = engine(&dir);
@@ -475,6 +555,7 @@ fn bench_fanout_records_members_and_launch_failures() {
     let start = coco
         .start_bench(&bench, params(&[("mesh", "fine")]), Trigger::Human)
         .unwrap();
+    settle(&mut coco);
     assert_eq!(start.members.len(), 1);
     assert_eq!(start.launch_failures.len(), 1);
     assert_eq!(start.launch_failures[0].job, "bad-job");
@@ -511,6 +592,7 @@ fn bench_report_requires_every_member_succeeded() {
     let start = coco
         .start_bench(&bench, params(&[("mesh", "fine")]), Trigger::Human)
         .unwrap();
+    settle(&mut coco);
 
     fs::write(good.join("poll-state"), "FAILED no convergence").unwrap();
     coco.poll_job(&good).unwrap();
@@ -541,6 +623,7 @@ fn bench_reports_when_every_member_succeeded() {
     let start = coco
         .start_bench(&bench, params(&[("mesh", "fine")]), Trigger::Human)
         .unwrap();
+    settle(&mut coco);
 
     let status = coco.bench_status(&bench, start.run_id).unwrap();
     assert_eq!(status.status, Status::Starting);
@@ -644,6 +727,7 @@ fn manual_report_heals_a_failed_auto_report() {
             Trigger::Human,
         )
         .unwrap();
+    settle(&mut coco);
     fs::write(job.join("poll-state"), "COMPLETED").unwrap();
     coco.poll_job(&job).unwrap();
 

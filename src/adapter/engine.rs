@@ -352,8 +352,9 @@ impl Experiments for EngineAdapter {
         self.last_refresh = Some(Local::now());
         self.mark_dirty();
         let errors: Vec<String> = report
-            .poll_errors
+            .launch_errors
             .iter()
+            .chain(&report.poll_errors)
             .chain(&report.report_errors)
             .map(ToString::to_string)
             .collect();
