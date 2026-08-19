@@ -3063,24 +3063,54 @@ rather than left hanging.
 ### 43.4 Surface
 
 ```text
+GET  /help                         what this is, and every route, from the tool itself
 GET  /world                        the world, as §26.1's dump prints it
+GET  /jobs                         every Job: name, folder, parameters, run tallies
+GET  /benches                      every Bench, same shape
+GET  /jobs/{name}                  one Job and its runs, with file locations
+GET  /benches/{name}               one Bench, its runs, their calls and locations
 POST /experiments/{name}/runs      {"parameters": {…}} → 201 {"run_id": "…"}
 ```
 
 Experiments are addressed by name, which is unique across the Explorer
 (convention §5): an agent should not have to know folder paths.
 
+The interface describes itself: `/help` names every route, so an agent can
+discover the surface from the surface. It lives beside the routes in the code,
+where the description and the behaviour cannot drift apart unnoticed.
+
+**Locations, not contents.** Every caller is on this machine (§43.2), so a
+detail response points at files — the experiment folder, a run's directory and
+`run.json`, the report file when one exists — rather than carrying their
+bytes. An agent reads those paths directly; the socket stays a control channel
+and never becomes a file server.
+
 A refusal carries the workbench's own text, unchanged — an agent reading it sees
 what a person would have been shown — under the status that says who can act:
 `404` for something that is not there, `400` for a request that was refused,
-`503` when coco did not answer.
+`503` when coco did not answer. A name asked for as the wrong kind is pointed at
+the right route rather than flatly refused.
 
-### 43.5 What is not here
+### 43.5 The MCP binary
+
+`coco-mcp-server` serves this same surface as MCP tools (`coco_help`,
+`coco_list_jobs`, `coco_job`, `coco_start`, …) so an agent runtime speaks to
+coco through its own tool protocol instead of raw HTTP. An agent's MCP client
+launches the binary and speaks JSON-RPC over stdio; every tool call becomes
+one request over the socket, and the socket's answers pass through verbatim.
+It decides nothing — it is a translator, and the window must still be running
+for it to answer. The MCP subset it needs (initialize, tools/list, tools/call,
+one JSON message per line) is written out by hand: the Rust MCP SDKs bring an
+async runtime, and the prototype does not (§5).
+
+### 43.6 What is not here
 
 No approval step and no separate notification: a run records who asked (§10.6),
 and that record is where the question is answered. No authentication: the socket
 is reachable only by processes that can open the file, and coco runs on the
-user's own workstation.
+user's own workstation. No cancel, no registration, and no event stream yet —
+each is one route, one request variant, and one worker arm away when a real
+agent needs it.
 
 ---
 

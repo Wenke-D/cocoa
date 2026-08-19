@@ -20,6 +20,12 @@ tiny_http = "0.12"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 env_logger = "0.11"
 
+# The agent interface (§43) as an MCP server: an agent's MCP client launches
+# this and speaks stdio; each tool call becomes one request over the socket.
+[[bin]]
+name = "coco-mcp-server"
+path = "src/bin/coco_mcp_server.rs"
+
 # Only the `screenshot` example needs a PNG encoder; eframe already builds it.
 [dev-dependencies]
 image = { version = "0.25", default-features = false, features = ["png"] }
