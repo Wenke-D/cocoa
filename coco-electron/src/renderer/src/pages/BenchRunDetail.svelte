@@ -77,13 +77,23 @@
   </dl>
 
   <h2>Dispatched calls</h2>
-  <table>
+  <table class="runs">
+    <!-- Parameters last, and the remainder: it is the column whose content has
+         no bound — a sweep is what varies it — so it gets the leftover width,
+         and the leftover width belongs to the last column (§22.2). -->
+    <colgroup>
+      <col style="width: 44px" />
+      <col style="width: 180px" />
+      <col style="width: 116px" />
+      <col />
+    </colgroup>
     <thead>
-      <tr><th>#</th><th>Job</th><th>Parameters</th><th>Status</th></tr>
+      <tr><th>#</th><th>Job</th><th>Status</th><th>Parameters</th></tr>
     </thead>
     <tbody>
       {#each run.plan.steps as step (step.run_id)}
         {@const child = app.world.job_runs[step.run_id]}
+        {@const jobName = entityOf(step.job_id)?.name ?? '(removed)'}
         <!-- The bench's context, not the job's: same run, other address
              (§2.3.1), and the Explorer stays on the bench (§19). -->
         <tr
@@ -96,8 +106,7 @@
             })}
         >
           <td>{step.index}</td>
-          <td>{entityOf(step.job_id)?.name ?? '(removed)'}</td>
-          <td class="mono">{step.parameters}</td>
+          <td title={jobName}>{jobName}</td>
           <td>
             {#if child !== undefined}
               <StatusPill status={child.status} health={child.query_health} />
@@ -105,6 +114,7 @@
               <span class="missing">not listed</span>
             {/if}
           </td>
+          <td class="mono" title={step.parameters}>{step.parameters}</td>
         </tr>
       {/each}
     </tbody>
@@ -175,34 +185,6 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--strong-foreground);
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  th {
-    text-align: left;
-    font-weight: 500;
-    font-size: 11px;
-    color: var(--description);
-    border-bottom: 1px solid var(--border);
-    padding: 4px 10px 4px 0;
-  }
-
-  td {
-    padding: 4px 10px 4px 0;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-  }
-
-  tbody tr {
-    cursor: pointer;
-  }
-
-  tbody tr:hover {
-    background: var(--row-hover);
   }
 
   .missing {

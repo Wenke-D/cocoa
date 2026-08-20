@@ -52,7 +52,19 @@
     {#if jobRuns.length === 0}
       <p class="none">No runs yet.</p>
     {:else}
-      <table>
+      <table class="runs">
+        <!-- Sized for the widest value each column actually holds: `CANCELLING`
+             with its dot, a bench name and call number, a locale timestamp.
+             The slack goes to the *last* column, so on a wide window the empty
+             space collects at the table's edge instead of opening a gap in the
+             middle of every row. Duration only ever needs `HH:MM:SS`. -->
+        <colgroup>
+          <col style="width: 72px" />
+          <col style="width: 116px" />
+          <col style="width: 240px" />
+          <col style="width: 190px" />
+          <col />
+        </colgroup>
         <thead>
           <tr><th>Run</th><th>Status</th><th>By</th><th>Started</th><th>Duration</th></tr>
         </thead>
@@ -61,8 +73,8 @@
             <tr onclick={() => navigate({ page: 'jobRun', jobId: entityId, runId: run.id })}>
               <td class="mono">{run.id}</td>
               <td><StatusPill status={run.status} health={run.query_health} /></td>
-              <td>{originLabel(run.origin)}</td>
-              <td>{formatStartedAt(run.started_at)}</td>
+              <td title={originLabel(run.origin)}>{originLabel(run.origin)}</td>
+              <td title={formatStartedAt(run.started_at)}>{formatStartedAt(run.started_at)}</td>
               <td class="mono">{formatDuration(run.started_at, run.ended_at, app.nowMs)}</td>
             </tr>
           {/each}
@@ -72,18 +84,28 @@
   {:else if benchRuns.length === 0}
     <p class="none">No runs yet.</p>
   {:else}
-    <table>
+    <table class="runs">
+      <colgroup>
+        <col style="width: 72px" />
+        <col style="width: 116px" />
+        <col style="width: 240px" />
+        <col style="width: 60px" />
+        <col style="width: 190px" />
+        <col />
+      </colgroup>
       <thead>
-        <tr><th>Run</th><th>Status</th><th>By</th><th>Calls</th><th>Started</th><th>Duration</th></tr>
+        <tr
+          ><th>Run</th><th>Status</th><th>By</th><th>Calls</th><th>Started</th><th>Duration</th></tr
+        >
       </thead>
       <tbody>
         {#each benchRuns as run (run.id)}
           <tr onclick={() => navigate({ page: 'benchRun', benchId: entityId, runId: run.id })}>
             <td class="mono">{run.id}</td>
             <td><StatusPill status={run.status} health={run.query_health} /></td>
-            <td>{triggerLabel(run.by)}</td>
+            <td title={triggerLabel(run.by)}>{triggerLabel(run.by)}</td>
             <td>{run.plan.steps.length}</td>
-            <td>{formatStartedAt(run.started_at)}</td>
+            <td title={formatStartedAt(run.started_at)}>{formatStartedAt(run.started_at)}</td>
             <td class="mono">{formatDuration(run.started_at, run.ended_at, app.nowMs)}</td>
           </tr>
         {/each}
@@ -148,33 +170,5 @@
   .none {
     color: var(--description);
     font-style: italic;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  th {
-    text-align: left;
-    font-weight: 500;
-    font-size: 11px;
-    color: var(--description);
-    border-bottom: 1px solid var(--border);
-    padding: 4px 10px 4px 0;
-  }
-
-  td {
-    padding: 4px 10px 4px 0;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
-  }
-
-  tbody tr {
-    cursor: pointer;
-  }
-
-  tbody tr:hover {
-    background: var(--row-hover);
   }
 </style>

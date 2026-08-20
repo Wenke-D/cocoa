@@ -150,3 +150,56 @@ code,
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   font-size: 12px;
 }
+
+/* The one run-table treatment: job history, bench history, dispatch calls
+   (specification §22). Global for the same reason the buttons are — it was on
+   its third copy.
+
+   `table-layout: fixed` on declared `<col>` widths is the whole point. Under
+   automatic layout every column is measured from its content, so a status
+   going from RUNNING to CANCELLING widens its cell and shoves the columns
+   beside it sideways — on a 3s tick, in a table the user is reading. Declared
+   widths mean the only thing that changes is the text.
+
+   Widths are set per table, since the column sets differ. The convention:
+   every column is fixed except the one §22.2 calls the remainder, which is
+   left without a width and takes what is left. */
+table.runs {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+/* Pinned to the top of `main`, which is the scrollport (§22.1). The
+   background is opaque so rows scroll under it rather than through it. */
+table.runs th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--description);
+  background: var(--editor-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 4px 10px 4px 0;
+}
+
+/* Truncation is the rule, not the exception: a fixed column cannot grow, so
+   anything longer than its width ends in an ellipsis and carries the full
+   value as hover text (§22.3, §36). */
+table.runs td {
+  padding: 4px 10px 4px 0;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+table.runs tbody tr {
+  cursor: pointer;
+}
+
+table.runs tbody tr:hover {
+  background: var(--row-hover);
+}
