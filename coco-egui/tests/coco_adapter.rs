@@ -32,7 +32,7 @@ fn coco_backend_drives_the_workbench_model() {
     let dir = TempDir::new().unwrap();
     let solver = dir.path().join("solver-gpu");
     copy_dir(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("mock/jobs/solver-gpu"),
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../mock/jobs/solver-gpu"),
         &solver,
     );
     // The repo's mock folder may carry state from other test runs.
@@ -119,7 +119,7 @@ fn picking_a_parent_directory_registers_the_folders_beneath_it() {
     let dir = TempDir::new().unwrap();
     let library = dir.path().join("library");
     copy_dir(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("mock"),
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../mock"),
         &library,
     );
 
@@ -189,7 +189,7 @@ fn an_entity_whose_manifest_breaks_later_stays_listed() {
     let dir = TempDir::new().unwrap();
     let library = dir.path().join("library");
     copy_dir(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("mock"),
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../mock"),
         &library,
     );
 
@@ -237,7 +237,7 @@ fn a_run_keeps_its_origin_when_its_bench_leaves_the_explorer() {
     let dir = TempDir::new().unwrap();
     let library = dir.path().join("library");
     copy_dir(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("mock"),
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../mock"),
         &library,
     );
 

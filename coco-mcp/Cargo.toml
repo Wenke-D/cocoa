@@ -1,0 +1,19 @@
+# The agent interface (§43) as an MCP server: an agent's MCP client launches
+# this and speaks stdio; each tool call becomes one request over coco's socket.
+#
+# Its own crate because it is the one Rust artifact still in use. It speaks the
+# socket protocol and nothing else, so it drives either implementation — see
+# the module docs in src/main.rs.
+
+[package]
+name = "coco-mcp"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+
+[[bin]]
+name = "coco-mcp-server"
+path = "src/main.rs"
+
+[dependencies]
+serde_json = "1"

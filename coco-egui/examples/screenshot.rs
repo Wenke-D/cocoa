@@ -233,7 +233,7 @@ fn main() -> eframe::Result {
             app.ui.theme = theme;
             app.ui.theme.apply(&cc.egui_ctx);
             app.ui.sidebar_open = true;
-            app.add_folder(std::path::Path::new("mock"));
+            app.add_folder(std::path::Path::new("../mock"));
             arrange(&mut app, &surface);
 
             Ok(Box::new(Harness {

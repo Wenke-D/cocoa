@@ -80,7 +80,7 @@ fn world_matches_the_golden_dump() {
     let dir = TempDir::new().unwrap();
     let library = dir.path().join("library");
     copy_experiments(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("mock"),
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../mock"),
         &library,
     );
 

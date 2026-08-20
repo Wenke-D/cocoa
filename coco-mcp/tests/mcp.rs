@@ -1,14 +1,20 @@
 //! The `coco-mcp-server` binary, driven as an agent's MCP client would drive it:
-//! JSON-RPC lines over stdio, each tool call crossing the real socket.
+//! JSON-RPC lines over stdio, each tool call crossing a real Unix socket.
+//!
+//! The socket is answered by a stub in this file rather than by a real coco.
+//! That is the boundary this crate owns: whether a tool call becomes the right
+//! request, and whether the answer comes back as tool content. Whether coco
+//! answers *correctly* is coco's own test, and the two implementations have
+//! one each. Standing a real engine up here would tie the one artifact meant
+//! to outlive them to whichever one is currently alive.
 
 #![cfg(unix)]
 
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::process::{Child, ChildStdin, Command, Stdio};
-use std::sync::Arc;
-use std::time::Duration;
+use std::thread::JoinHandle;
 
-use coco::agent::{Bridge, Reply, Server};
 use serde_json::{Value, json};
 
 fn socket_path() -> std::path::PathBuf {
@@ -17,39 +23,93 @@ fn socket_path() -> std::path::PathBuf {
     path
 }
 
-/// One Job in the world, and a stand-in worker that answers starts.
-fn serve() -> (Arc<Bridge>, Server) {
-    use coco::view_model::{Entity, EntityId, EntityKind, ManifestState, Snapshot, World};
+/// Stops the stub when the test drops it, so a failed assertion does not leave
+/// a listener and a stale socket file behind.
+struct Stub {
+    handle: Option<JoinHandle<()>>,
+    path: std::path::PathBuf,
+}
 
-    let world = World {
-        entities: vec![Entity {
-            id: EntityId::new("/tmp/lab/solver"),
-            kind: EntityKind::Job,
-            name: "solver".to_owned(),
-            path: "~/lab/solver".to_owned(),
-            manifest: ManifestState::Valid,
-            parameter_names: vec!["size".to_owned()],
-            last_used: Default::default(),
-        }],
-        ..World::default()
-    };
-    let bridge = Bridge::new();
-    bridge.publish(Snapshot::new(Arc::new(world)));
-
-    let drain = Arc::clone(&bridge);
-    std::thread::spawn(move || {
-        for _ in 0..600 {
-            for pending in drain.take_pending() {
-                let _ = pending.reply.send(Ok(Reply::Started {
-                    run_id: "9".to_owned(),
-                }));
-            }
-            std::thread::sleep(Duration::from_millis(5));
+impl Drop for Stub {
+    fn drop(&mut self) {
+        // Unblock the accept loop, then let it finish.
+        let _ = UnixStream::connect(&self.path);
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
         }
+        let _ = std::fs::remove_file(&self.path);
+    }
+}
+
+/// Answers the two routes this test exercises, and 404s the rest — the subset
+/// of §43.2 the binary speaks: one request, one response, connection closed.
+fn serve() -> Stub {
+    let path = socket_path();
+    let listener = UnixListener::bind(&path).unwrap();
+    let listening = path.clone();
+
+    let handle = std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let Ok(mut stream) = stream else { break };
+            let Some(request) = read_request_line(&mut stream) else {
+                // The connection Drop makes to unblock accept sends nothing.
+                break;
+            };
+            let (status, body) = match request.as_str() {
+                "GET /jobs" => (200, json!([{ "name": "solver" }]).to_string()),
+                "POST /experiments/solver/runs" => (201, json!({ "run_id": "9" }).to_string()),
+                _ => (404, json!({ "error": "no such route" }).to_string()),
+            };
+            let _ = stream.write_all(
+                format!(
+                    "HTTP/1.1 {status} \r\nContent-Type: application/json\r\n\
+                     Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                )
+                .as_bytes(),
+            );
+            // The client reads to EOF, so the close is part of the reply.
+            let _ = stream.shutdown(std::net::Shutdown::Write);
+        }
+        let _ = std::fs::remove_file(&listening);
     });
 
-    let server = Server::start(socket_path(), Arc::clone(&bridge)).unwrap();
-    (bridge, server)
+    Stub {
+        handle: Some(handle),
+        path,
+    }
+}
+
+/// `METHOD path`, with the headers and any body drained so the write side is
+/// not answering into a half-read request.
+fn read_request_line(stream: &mut UnixStream) -> Option<String> {
+    let mut reader = BufReader::new(stream.try_clone().ok()?);
+    let mut first = String::new();
+    if reader.read_line(&mut first).ok()? == 0 {
+        return None;
+    }
+    let mut parts = first.split_whitespace();
+    let method = parts.next()?.to_owned();
+    let path = parts.next()?.to_owned();
+
+    let mut length = 0usize;
+    loop {
+        let mut header = String::new();
+        if reader.read_line(&mut header).ok()? == 0 {
+            break;
+        }
+        if header == "\r\n" || header == "\n" {
+            break;
+        }
+        if let Some(value) = header.to_ascii_lowercase().strip_prefix("content-length:") {
+            length = value.trim().parse().unwrap_or(0);
+        }
+    }
+    if length > 0 {
+        let mut body = vec![0u8; length];
+        reader.read_exact(&mut body).ok()?;
+    }
+    Some(format!("{method} {path}"))
 }
 
 fn send(stdin: &mut ChildStdin, message: Value) {
@@ -73,7 +133,7 @@ fn spawn_mcp() -> Child {
 
 #[test]
 fn the_mcp_binary_serves_the_socket_as_tools() {
-    let (_bridge, _server) = serve();
+    let _stub = serve();
     let mut child = spawn_mcp();
     let mut stdin = child.stdin.take().unwrap();
     let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
@@ -134,7 +194,10 @@ fn the_mcp_binary_serves_the_socket_as_tools() {
     assert_eq!(reply["result"]["isError"], false, "{reply}");
     let text = reply["result"]["content"][0]["text"].as_str().unwrap();
     let jobs: Value = serde_json::from_str(text).unwrap();
-    assert_eq!(jobs[0]["name"], "solver");
+    assert_eq!(
+        jobs[0]["name"], "solver",
+        "the socket's answer passes through verbatim"
+    );
 
     // A start goes through the same door a click goes through.
     send(

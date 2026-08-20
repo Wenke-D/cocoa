@@ -3,8 +3,10 @@
 // start a click makes — same engine, same queue, same screen — and the run
 // shows up in the window stamped `agent`.
 //
-// The last act runs the *Rust* `coco-mcp-server` binary against this socket,
-// unchanged, which is the whole point of keeping the paths and shapes.
+// The last act runs the `coco-mcp-server` binary against this socket,
+// unchanged, which is the whole point of keeping the paths and shapes. It is
+// its own crate (`coco-mcp/`) because it speaks only this protocol and so
+// drives either implementation; build it with `cargo build` in there.
 
 import http from 'node:http'
 import { spawn } from 'node:child_process'
@@ -12,7 +14,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
-const MCP_BIN = path.join(REPO_ROOT, 'target/debug/coco-mcp-server')
+const MCP_BIN = path.join(REPO_ROOT, 'coco-mcp/target/debug/coco-mcp-server')
 
 function call(socketPath, method, routePath, body) {
   return new Promise((resolve, reject) => {

@@ -13,7 +13,7 @@ use coco::engine::{Coco, Status, Trigger};
 use tempfile::TempDir;
 
 fn mock_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("mock")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../mock")
 }
 
 /// The bundled mock folders are real experiment folders; each test run resets

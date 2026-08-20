@@ -7,14 +7,35 @@
 //! sentence a person would have been shown.
 //!
 //! The MCP subset needed — initialize, tools/list, tools/call, one line of
-//! JSON per message — is written out rather than taken as a dependency: the
-//! Rust MCP SDKs bring an async runtime, and the prototype does not (§5).
+//! JSON per message — is written out rather than taken as a dependency, which
+//! is also what keeps this crate free of an async runtime.
+//!
+//! It is its own crate because it outlived the implementation it was written
+//! in. It speaks only the socket protocol of §43.2, and both cocos serve that
+//! protocol identically, so it drives the Electron workbench unchanged and
+//! never learns which one is listening. Building it needs nothing but
+//! `serde_json`; `coco-egui` appears only as a dev-dependency, for the test
+//! that stands a real server up to talk to.
 
 use std::collections::BTreeMap;
 use std::io::{BufRead, Read, Write};
 use std::os::unix::net::UnixStream;
+use std::path::PathBuf;
 
 use serde_json::{Value, json};
+
+/// Where the socket lives — the same resolution coco's own server uses
+/// (§43.2). Copied rather than imported: this crate must build without the
+/// workbench it talks to.
+fn socket_path() -> PathBuf {
+    if let Ok(path) = std::env::var("COCO_SOCKET_PATH") {
+        return PathBuf::from(path);
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        return PathBuf::from(home).join(".local/share/coco/coco.sock");
+    }
+    PathBuf::from("coco.sock")
+}
 
 fn main() {
     let stdin = std::io::stdin();
@@ -187,7 +208,7 @@ fn encoded_name(arguments: &Value) -> Result<String, (i64, String)> {
 
 /// One request, one response, connection closed — the subset §43.2 serves.
 fn http(method: &str, path: &str, body: Option<String>) -> Result<(u16, String), String> {
-    let socket = coco::agent::socket_path();
+    let socket = socket_path();
     let mut stream = UnixStream::connect(&socket).map_err(|error| {
         format!(
             "coco is not answering on {} ({error}); the interface exists only while \
