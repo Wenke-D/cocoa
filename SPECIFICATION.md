@@ -1055,11 +1055,9 @@ It must remain selected when viewing:
 
 Clicking it opens the operating system's own folder picker. Nothing stands between the click and the picker, and a path is never typed by hand. Cancelling the picker does nothing at all.
 
-What the chosen directory registers:
+**One pick is one folder.** The chosen directory registers if it carries a `coco.toml` of its own, and is refused if it does not. coco does not search inside it for experiments.
 
-- It carries a `coco.toml` manifest: the directory itself.
-- It does not, but folders beneath it do (searched three levels down, skipping hidden directories and generated `runs/` and `report/` state): every such folder. One pick therefore adds a whole directory of experiments — the bundled `mock/` library, say.
-- No manifest anywhere below it: nothing. The pick is refused and says so.
+This is a decision, not a shortfall. A scan has to guess how deep to look and what to skip, and it answers a pick with a list the user did not choose — several folders registered at once, some refused, each for its own reason, none of it visible until afterwards. Picking the folder you mean is one more click and no guessing. `coco-egui/` searched three levels down and needed a modal to report what it had done; that modal is what the rule below replaces.
 
 A folder registers only if its manifest is usable at the moment it is picked. An unusable one is refused with the reason — a missing table, a name already taken, a folder that cannot be read.
 
@@ -1067,41 +1065,17 @@ A manifest that breaks *afterwards* is the opposite case: the entity stays in th
 
 A folder already in the Explorer is a no-op, never a duplicate.
 
-Registering must immediately update the Explorer, select the first folder added, and report what was added and what was already there in the status bar.
+Registering must immediately update the Explorer and select the folder that was added, so the user lands on the result of their action rather than wherever they were.
 
-Refusals are reported in a modal instead. One pick can name a whole directory of experiments, so refusals arrive as a list, each with its own reason; the status bar is a single line, which is exactly where those reasons are lost. A pick that refused nothing opens no modal.
-
-The modal names the directory that was picked, since a refused folder is one of many the pick found, and lists each refusal with its reason. When the same pick also registered something, it says so — the pick partly worked, and the Explorer has already changed behind the modal.
+One pick has one outcome, so it needs one sentence, not a modal:
 
 ```text
-ADD FOLDER
-Some folders were not added
-
-Added 2 folders. 1 already in the Explorer.
-
-~/experiments
-
-NOT ADDED
-
-  solver-copy: an entity named `solver-gpu` is already registered
-  old-sweep: coco.toml: missing required table `[launch]`
-
-                                                       Close
+Folder added.                                 registered
+That folder is already in the Explorer.       a no-op, and says so
+coco.toml: missing required table `[launch]`  refused, with the reason
 ```
 
-The modal only reports. It offers no retry and no partial undo: the pick is finished, and what it registered stays registered.
-
-> **Known gap.** The workbench does not implement the scan. `addFolder` in
-> `src/main/operations.ts` calls `engine.register()` on exactly the directory
-> that was picked, and `register` requires a `coco.toml` in that directory
-> itself. So one pick is one folder: picking `~/experiments` — or the bundled
-> `mock/` — is *refused* rather than registering everything beneath it, and
-> because a pick can only refuse one folder for one reason, the refusal-list
-> modal above has nothing to list and does not exist. The status-bar and
-> selection rules hold; the three-levels-down search, the hidden-directory
-> skip, and the modal do not. `coco-egui/` implements this section in full
-> (`experiment_folders` in `coco-egui/src/adapter/engine.rs`), so the intended
-> behavior can be seen there.
+A refusal is an error notice and stays until dismissed (§8.5); the other two fade. The reason is the engine's own sentence, unchanged — the user picked this folder, so the answer is about this folder.
 
 ---
 
@@ -1929,16 +1903,23 @@ Solver GPU                     Running
 ## 22. Run-History Table Behavior
 
 Job history, Bench history, and Bench dispatch tables share one table
-treatment. The rules below are requirements on that treatment, not on any
-particular layout primitive.
+treatment, defined once (`table.runs` in `theme.css`) rather than per page.
 
-> **Known gap.** The current implementation renders these as a plain `<table>`
-> under automatic layout, with no sticky header and no declared column widths.
-> Durations are monospaced, so digits do not shift, but a duration crossing
-> `9s` → `10s` still gains a character and can move the columns beside it, and
-> a long history scrolls its header away. §22.1's "fixed header", "vertically
-> scrolling body", "no horizontal layout jitter" and "stable status-column
-> width" are therefore specified but not yet met.
+**Widths are declared, never measured.** The layout is fixed, and each column's
+width is set by a `<col>`. Under automatic layout a column is sized from its
+content, so a status going from `RUNNING` to `CANCELLING` widens its own cell
+and shoves its neighbours sideways — on a three-second tick, in a table
+somebody is reading. Declared widths mean the only thing that changes is the
+text inside a cell.
+
+**Slack goes to the last column.** A window is usually wider than the table
+needs. Whichever column is left without a width absorbs the difference, so it
+must be the rightmost one: give it to a column in the middle and every row
+opens a gap through it. The empty space belongs at the table's edge.
+
+**Anything can overflow, so everything truncates.** A fixed column cannot grow.
+Content longer than its width ends in an ellipsis and carries the full value as
+hover text (§22.3, §36).
 
 ### 22.1 General Rules
 
@@ -1955,40 +1936,45 @@ particular layout primitive.
 
 ### 22.2 Suggested Column Behavior
 
+Each column is sized for the widest value it can actually hold — `CANCELLING`
+with its dot, a bench name and call number, a locale timestamp — and the last
+one takes what is left.
+
 Job history:
 
 ```text
-Started: fixed or initial width
-Parameters: remainder
-Source: fixed
-Status: fixed
-Duration: fixed
-Report: fixed
+Run        72    a run id
+Status    116    the longest status word, plus its dot
+By        240    `you`, `agent`, or a bench name and call number
+Started   190    a locale date and time
+Duration    —    remainder; only ever needs `HH:MM:SS`
 ```
 
 Bench history:
 
 ```text
-Started: fixed or initial width
-Parameters: remainder
-Dispatched: fixed
-Progress: fixed
-Status: fixed
-Duration: fixed
-Report: fixed
+Run        72
+Status    116
+By        240
+Calls      60    a count
+Started   190
+Duration    —    remainder
 ```
 
 Bench dispatch:
 
 ```text
-Call: fixed
-Job: fixed or initial width
-Parameters: remainder
-Status: fixed
-Started: fixed
-Duration: fixed
-Report: fixed
+#          44    the call index
+Job       180    an experiment name
+Status    116
+Parameters  —    remainder
 ```
+
+Dispatch puts Status before Parameters, which is not the reading order the
+other two suggest. Parameters is the one column here whose content has no
+bound — a sweep is what varies them — so it is the one worth spending the
+leftover width on, and the rule above says the remainder goes last. The order
+follows from that.
 
 ### 22.3 Long Parameters
 
@@ -2820,18 +2806,27 @@ Test:
 The repository should pass:
 
 ```bash
-npm run check      # svelte-check on the renderer, tsc --noEmit on main + preload
-npm test           # vitest
+npm run gate       # format:check → lint → check → test, cheapest failure first
 npm run build      # the three bundles
+```
+
+or each on its own:
+
+```bash
+npm run format:check   # prettier
+npm run lint           # eslint, with type-aware rules
+npm run check          # svelte-check on the renderer, tsc --noEmit on main + preload
+npm test               # vitest
 ```
 
 Run these on both macOS and Linux where CI is available.
 
-> **Known gap.** There is no linter and no formatter. The egui implementation
-> gated on `cargo fmt --check` and `cargo clippy -D warnings`; nothing equivalent
-> is configured here, so style and the class of bug clippy catches are unenforced.
-> Adding ESLint and Prettier, and putting all three commands behind one gate, is
-> outstanding work.
+Two ESLint rules are on for a reason rather than by default:
+`no-floating-promises`, because an unawaited engine call leaves the queue and
+races the refresh tick (§26.2), and `no-misused-promises`. One is off for a
+reason: `require-await`, because here `async` is usually the *contract* — an
+IPC handler answers a promise, a `Turn` takes one — and a body that does not
+await yet is not a defect.
 
 ---
 
@@ -3025,13 +3020,6 @@ folder, cancel with confirmation. The application menu and an electron-builder
 package.
 
 **Outstanding:**
-
-- No linter or formatter, and no single gate command (§37.4).
-- Add Folder does not scan a directory for experiments (§11.5). One pick is one
-  folder, so the bundled `mock/` library must be registered folder by folder,
-  and the refusal-report modal is unbuilt.
-- Run-history tables do not meet §22.1: no sticky header, no stable column
-  widths.
 - The agent interface has no cancel, no registration, and no event stream
   (§43.6).
 - Linux has not been exercised: neither the build nor the rendering comparison
@@ -3269,8 +3257,7 @@ A change is done when all of the following hold.
 
 **Checks**
 
-- `npm run check` succeeds.
-- `npm test` succeeds.
+- `npm run gate` succeeds — format, lint, types, tests.
 - `npm run build` succeeds.
 - README instructions reproduce the build on macOS.
 

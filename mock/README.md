@@ -16,11 +16,10 @@ In the Explorer, click the **+** button and pick an experiment folder — one of
 the directories listed below, the one holding the `coco.toml`. Repeat for each
 one you want.
 
-> The workbench registers exactly the folder you pick. Picking this `mock/`
-> directory itself is refused: it has no manifest of its own. `coco-egui/`
-> scans a picked directory and registers everything beneath it in one go, which
-> is what `SPECIFICATION.md` §11.5 describes and what the workbench does not yet
-> do — see the gap noted there.
+> One pick is one folder (`SPECIFICATION.md` §11.5). Picking this `mock/`
+> directory itself is refused — it has no manifest of its own. `coco-egui/`
+> scans a picked directory and registers everything beneath it in one go; that
+> is the older behaviour, not the specified one.
 
 The scripts simulate a scheduler with timers, so statuses advance on their own
 while the app polls every few seconds.
