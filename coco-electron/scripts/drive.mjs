@@ -60,10 +60,7 @@ function seedLibrary(seed) {
     : seed === 'library-only'
       ? []
       : folders
-  fs.writeFileSync(
-    STORE_PATH,
-    JSON.stringify({ entities, last_args: {}, next_run_id: 0 }, null, 2)
-  )
+  fs.writeFileSync(STORE_PATH, JSON.stringify({ entities, last_args: {}, next_run_id: 0 }, null, 2))
   // Whatever page a previous drive was left on is not this run's starting
   // point either.
   fs.rmSync(UI_STATE_PATH, { force: true })

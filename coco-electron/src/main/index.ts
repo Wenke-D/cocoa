@@ -278,14 +278,12 @@ ipcMain.handle(
 // A cancel that was accepted has already moved the run to `CANCELLING`, and
 // the modal closes on the answer — so the events must precede it here too, or
 // the page behind the modal would still read `RUNNING`.
-ipcMain.handle(
-  'coco:cancel',
-  async (_event, target: CancelTarget): Promise<CancelResult> =>
-    onEngine(async () => {
-      const result = await operations.cancel(engine, target)
-      publishCycle(null)
-      return result
-    })
+ipcMain.handle('coco:cancel', async (_event, target: CancelTarget): Promise<CancelResult> =>
+  onEngine(async () => {
+    const result = await operations.cancel(engine, target)
+    publishCycle(null)
+    return result
+  })
 )
 
 // Nothing stands between the click and the picker, and a path is never typed
@@ -307,14 +305,12 @@ ipcMain.handle('coco:addFolder', async (): Promise<AddFolderResult> => {
   })
 })
 
-ipcMain.handle(
-  'coco:removeFolder',
-  async (_event, entityId: string): Promise<RemoveFolderResult> =>
-    onEngine(async () => {
-      const result = operations.removeFolder(engine, entityId)
-      publishCycle(null)
-      return result
-    })
+ipcMain.handle('coco:removeFolder', async (_event, entityId: string): Promise<RemoveFolderResult> =>
+  onEngine(async () => {
+    const result = operations.removeFolder(engine, entityId)
+    publishCycle(null)
+    return result
+  })
 )
 
 // Reading a report neither changes engine state nor runs a script, so it
@@ -361,7 +357,7 @@ async function startAgentInterface(): Promise<void> {
   }
 }
 
-app.whenReady().then(() => {
+void app.whenReady().then(() => {
   // Read once, here: `userData` has no answer before the app is ready.
   uiStatePath = defaultUiStatePath(app.getPath('userData'))
   ui = loadUiState(uiStatePath)

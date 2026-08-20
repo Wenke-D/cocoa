@@ -46,7 +46,7 @@ describe('invocation', () => {
 
   it('runs a script in the folder and captures both streams', async () => {
     const dir = tempDir()
-    writeScript(dir, 'say.sh', "echo out\necho err >&2\nexit 0\n")
+    writeScript(dir, 'say.sh', 'echo out\necho err >&2\nexit 0\n')
     const invocation = await run(dir, ['./say.sh'], 5_000)
     expect(invocationOk(invocation)).toBe(true)
     expect(invocation.stdout.trim()).toBe('out')

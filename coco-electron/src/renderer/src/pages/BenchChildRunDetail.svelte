@@ -16,11 +16,8 @@
   import RunFacts from '../lib/RunFacts.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
 
-  let {
-    benchId,
-    benchRunId,
-    runId
-  }: { benchId: string; benchRunId: string; runId: string } = $props()
+  let { benchId, benchRunId, runId }: { benchId: string; benchRunId: string; runId: string } =
+    $props()
 
   const benchRun = $derived(app.world.bench_runs[benchRunId])
   const bench = $derived(entityOf(benchId))
@@ -76,7 +73,10 @@
         {#if step !== undefined}
           <!-- Explicit navigation: arriving through the bench must not move the
                Explorer selection, but asking for the job by name may (§19). -->
-          <button class="job-link" onclick={() => navigate({ page: 'entity', entityId: step.job_id })}>
+          <button
+            class="job-link"
+            onclick={() => navigate({ page: 'entity', entityId: step.job_id })}
+          >
             {job?.name ?? '(removed)'}
           </button>
         {:else}

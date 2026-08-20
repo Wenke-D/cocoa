@@ -32,7 +32,7 @@ export async function run({ app, page, shot, log, waitText, library }) {
   await page.locator('main button.primary').click()
   await waitText('solver-gpu', 10_000)
   log('after add:', (await page.locator('aside').innerText()).replace(/\n/g, ' | '))
-  log('landed on:', (await page.locator('main h1').innerText()))
+  log('landed on:', await page.locator('main h1').innerText())
   await shot('added')
 
   // Picking the same folder again is a no-op, not a duplicate.
@@ -45,7 +45,7 @@ export async function run({ app, page, shot, log, waitText, library }) {
   await pick(app, library)
   await page.locator('aside button.add').click()
   await waitText('no coco.toml', 10_000)
-  log('picked the library root:', (await page.locator('.notice').innerText()))
+  log('picked the library root:', await page.locator('.notice').innerText())
   await shot('refused')
 
   await pick(app, path.join(library, 'benches/nightly-benchmark'))

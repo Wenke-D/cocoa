@@ -40,14 +40,14 @@
       <p class="path mono">{entity.path}</p>
       <p class="gap"></p>
       <p>
-        The folder is left exactly as it is — its manifest, its runs and its
-        reports all stay on disk. Adding it again brings the history back.
+        The folder is left exactly as it is — its manifest, its runs and its reports all stay on
+        disk. Adding it again brings the history back.
       </p>
       {#if activeRuns > 0}
         <p class="gap"></p>
         <p class="warning">
-          {activeRuns === 1 ? '1 run is' : `${activeRuns} runs are`} still active. They keep
-          running; coco just stops watching them.
+          {activeRuns === 1 ? '1 run is' : `${activeRuns} runs are`} still active. They keep running;
+          coco just stops watching them.
         </p>
       {/if}
     {/snippet}

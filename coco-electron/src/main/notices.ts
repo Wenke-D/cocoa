@@ -27,11 +27,9 @@ type Errors = Pick<RefreshReport, 'launchErrors' | 'pollErrors' | 'reportErrors'
  * for a sentence, and the run rows carry the detail.
  */
 export function refreshSummary(report: Errors): string | null {
-  const errors = [
-    ...report.launchErrors,
-    ...report.pollErrors,
-    ...report.reportErrors
-  ].map((error) => error.message)
+  const errors = [...report.launchErrors, ...report.pollErrors, ...report.reportErrors].map(
+    (error) => error.message
+  )
   if (errors.length === 0) return null
   if (errors.length === 1) return errors[0]
   return `${errors[0]} (and ${errors.length - 1} more)`

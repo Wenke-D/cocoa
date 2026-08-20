@@ -9,7 +9,7 @@ import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { StartResult, World } from '@shared/world'
+import type { World } from '@shared/world'
 import { emptyWorld } from '@shared/world'
 import type { AgentDeps, AgentServer } from '../src/main/agent'
 import { route, segments, serve, socketPath } from '../src/main/agent'
@@ -91,7 +91,7 @@ function world(): World {
 function deps(start?: AgentDeps['start']): AgentDeps {
   return {
     world,
-    start: start ?? (async () => ({ ok: true, runId: '7' }) as StartResult)
+    start: start ?? (async () => ({ ok: true, runId: '7' }))
   }
 }
 
@@ -127,7 +127,9 @@ describe('reads', () => {
     const { status, json } = await ask('GET', '/help')
     expect(status).toBe(200)
     expect(json).toHaveProperty('endpoints')
-    const paths = (json as unknown as { endpoints: { path: string }[] }).endpoints.map((e) => e.path)
+    const paths = (json as unknown as { endpoints: { path: string }[] }).endpoints.map(
+      (e) => e.path
+    )
     expect(paths).toContain('/world')
     expect(paths).toContain('/experiments/{name}/runs')
   })
@@ -178,7 +180,10 @@ describe('reads', () => {
   it('gives a bench its calls and its members file', async () => {
     const { json } = await ask('GET', '/benches/nightly')
     const detail = json as unknown as {
-      runs: { calls: { call: number; job: string; run_id: string }[]; location: { members: string } }[]
+      runs: {
+        calls: { call: number; job: string; run_id: string }[]
+        location: { members: string }
+      }[]
     }
     expect(detail.runs[0].calls).toEqual([
       { call: 0, job: 'solver-gpu', parameters: '--nodes 4', run_id: '0' }
@@ -242,12 +247,10 @@ describe('starting a run', () => {
   // The workbench's own refusal text, unchanged: an agent should see what a
   // person would have been shown.
   it("passes the workbench's refusal through as a 400", async () => {
-    const { status, json } = await ask(
-      'POST',
-      '/experiments/solver-gpu/runs',
-      '',
-      async () => ({ ok: false, message: 'parameters must match the manifest exactly' })
-    )
+    const { status, json } = await ask('POST', '/experiments/solver-gpu/runs', '', async () => ({
+      ok: false,
+      message: 'parameters must match the manifest exactly'
+    }))
     expect(status).toBe(400)
     expect(json.error).toBe('parameters must match the manifest exactly')
   })
@@ -284,7 +287,12 @@ describe('the socket', () => {
   }> {
     return new Promise((resolve, reject) => {
       const call = http.request(
-        { socketPath: socket, path: routePath, method, headers: { 'Content-Type': 'application/json' } },
+        {
+          socketPath: socket,
+          path: routePath,
+          method,
+          headers: { 'Content-Type': 'application/json' }
+        },
         (response) => {
           let text = ''
           response.setEncoding('utf8')
@@ -313,7 +321,8 @@ describe('the socket', () => {
     const answer = await request(file, 'GET', '/jobs')
     expect(answer.status).toBe(200)
     expect(answer.type).toBe('application/json')
-    expect(JSON.parse(answer.text)[0].name).toBe('solver-gpu')
+    const jobs = JSON.parse(answer.text) as { name: string }[]
+    expect(jobs[0].name).toBe('solver-gpu')
   })
 
   it('starts a run over the wire', async () => {

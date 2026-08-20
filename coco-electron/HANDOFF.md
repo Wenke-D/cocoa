@@ -10,7 +10,7 @@ TypeScript port of the Rust engine in `src/main/engine/`.
 implementation under development; the Rust/egui one moved from the repository
 root to `coco-egui/` and is no longer developed, kept for its history and for
 the convention it worked out. The `coco-mcp-server` binary this app uses came
-*out* of it into its own crate, `coco-mcp/`, because that one stays in use —
+_out_ of it into its own crate, `coco-mcp/`, because that one stays in use —
 build it with `cargo build` there. `SPECIFICATION.md` §5.1 records why the
 framework decision was reversed. Both engines speak the same on-disk convention (`coco.toml`,
 `runs/*/run.json`, `report/`, `store.json`), so experiment folders remain
@@ -55,7 +55,7 @@ deliberately rather than a consequence of both being maintained.
   (§19) shows the same record as `jobRun` — the facts come from one component,
   `RunFacts.svelte`, so they cannot drift — with the bench's breadcrumbs, the
   call index, and the Explorer still on the bench. Reports opened from there
-  keep that trail while reading the file out of the *job's* folder.
+  keep that trail while reading the file out of the _job's_ folder.
 - **It packages** (2026-08-20): `npm run package` (electron-builder, unsigned)
   builds `coco.app`; there is an application menu with Add Experiment Folder
   (Cmd+O) and Refresh Now (Cmd+R), both routed through the window so a menu
@@ -87,6 +87,9 @@ deliberately rather than a consequence of both being maintained.
 ```bash
 cd coco-electron
 env -u ELECTRON_RUN_AS_NODE npm run dev     # VSCode terminals leak ELECTRON_RUN_AS_NODE; it breaks Electron
+npm run gate                                # format:check → lint → check → test
+npm run format                              # prettier --write .
+npm run lint                                # eslint, type-aware
 npm run check                               # svelte-check + tsc (includes tests/)
 npm test                                    # vitest, ~9 s
 npm run test:watch                          # vitest in watch mode
@@ -124,25 +127,25 @@ the run-id counter.
 
 ### Operations wired in the engine but missing UI/IPC
 
-| Feature | Rust reference | TS engine | Missing piece |
-|---|---|---|---|
-| Manual report re-run (heals report-failed ERROR) | §11 | `reportRun(folder, id, 'manual')` done | IPC + button on run detail |
-| Retry query | `RetryQuery` command, status-bar interruption banner | poll happens every tick anyway; the status bar's Refresh now forces one and reports how it went | the interruption banner (world has `query_health`), and aiming a retry at one run rather than refreshing everything |
+| Feature                                          | Rust reference                                       | TS engine                                                                                       | Missing piece                                                                                                       |
+| ------------------------------------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Manual report re-run (heals report-failed ERROR) | §11                                                  | `reportRun(folder, id, 'manual')` done                                                          | IPC + button on run detail                                                                                          |
+| Retry query                                      | `RetryQuery` command, status-bar interruption banner | poll happens every tick anyway; the status bar's Refresh now forces one and reports how it went | the interruption banner (world has `query_health`), and aiming a retry at one run rather than refreshing everything |
 
 ### Missing entirely
 
-| Feature | Rust reference | Notes |
-|---|---|---|
-| **Open report externally** | `OpenReportExternally` | Both formats now render in-app (see Deliberate divergences), so this is a convenience rather than the only way to read HTML: a `shell.openPath` on the report file, offered as a secondary action in the viewer's header (§20.1). |
-| **Report viewer virtualisation** | rows laid out only when visible (§35) | The viewer renders every line. Fine for the reports seen so far; a report of tens of thousands of lines wants windowing. Wrapping is off by default precisely so rows stay uniform height, which is what makes windowing possible later. |
-| **Explorer/run filtering** | `status_filter` (persisted), `run_search`, sidebar search | None. The arrangement file has a place to keep the filter when it exists. |
-| **Theme setting** | in-app Light/Dark toggle (Settings overlay), persisted | Electron follows the system only; `theme.css` already has both palettes. |
-| **Overlays** | `ConfirmCancel`, `AddFolderReport`, `Settings` | `ConfirmCancel` is ported, and `confirmRemove` joins it on the same `ModalFrame`; `AddFolderReport` and `Settings` are not. As in coco, overlay state is deliberately outside `Route` (§9) and never persisted. |
-| **`--dump-state`** | prints the exact world as JSON | trivial: a `node` entry point or `npm run dump` calling `buildWorld`. |
-| **Activity bar / view headers** | shell chrome (§8) | Electron shell is minimal: sidebar + page + status bar. Breadcrumbs exist per page (`Breadcrumbs.svelte`), not as a shell-level bar. |
-| **Shortcuts beyond the menu** | n/a (egui) | Cmd+O and Cmd+R come from the app menu; there is no in-page keyboard surface (report search, sidebar focus, run filtering). |
-| **Signed / notarised packaging** | n/a | `npm run package` builds an unsigned `coco.app` (`identity: null`) plus dmg/zip; Gatekeeper will object. mac targets are exercised, linux/win are configured but unbuilt. |
-| **Renderer tests** | `Backend::Local` sync test seam drives the UI in-process | The engine, world builder and sync layer are covered (see Tests); nothing exercises the Svelte components or the IPC handlers in `index.ts`. Needs a component runner (vitest browser mode or @testing-library/svelte) and an `index.ts` refactor that lets the handlers be called without `app.whenReady()`. |
+| Feature                          | Rust reference                                            | Notes                                                                                                                                                                                                                                                                                                         |
+| -------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Open report externally**       | `OpenReportExternally`                                    | Both formats now render in-app (see Deliberate divergences), so this is a convenience rather than the only way to read HTML: a `shell.openPath` on the report file, offered as a secondary action in the viewer's header (§20.1).                                                                             |
+| **Report viewer virtualisation** | rows laid out only when visible (§35)                     | The viewer renders every line. Fine for the reports seen so far; a report of tens of thousands of lines wants windowing. Wrapping is off by default precisely so rows stay uniform height, which is what makes windowing possible later.                                                                      |
+| **Explorer/run filtering**       | `status_filter` (persisted), `run_search`, sidebar search | None. The arrangement file has a place to keep the filter when it exists.                                                                                                                                                                                                                                     |
+| **Theme setting**                | in-app Light/Dark toggle (Settings overlay), persisted    | Electron follows the system only; `theme.css` already has both palettes.                                                                                                                                                                                                                                      |
+| **Overlays**                     | `ConfirmCancel`, `AddFolderReport`, `Settings`            | `ConfirmCancel` is ported, and `confirmRemove` joins it on the same `ModalFrame`; `AddFolderReport` and `Settings` are not. As in coco, overlay state is deliberately outside `Route` (§9) and never persisted.                                                                                               |
+| **`--dump-state`**               | prints the exact world as JSON                            | trivial: a `node` entry point or `npm run dump` calling `buildWorld`.                                                                                                                                                                                                                                         |
+| **Activity bar / view headers**  | shell chrome (§8)                                         | Electron shell is minimal: sidebar + page + status bar. Breadcrumbs exist per page (`Breadcrumbs.svelte`), not as a shell-level bar.                                                                                                                                                                          |
+| **Shortcuts beyond the menu**    | n/a (egui)                                                | Cmd+O and Cmd+R come from the app menu; there is no in-page keyboard surface (report search, sidebar focus, run filtering).                                                                                                                                                                                   |
+| **Signed / notarised packaging** | n/a                                                       | `npm run package` builds an unsigned `coco.app` (`identity: null`) plus dmg/zip; Gatekeeper will object. mac targets are exercised, linux/win are configured but unbuilt.                                                                                                                                     |
+| **Renderer tests**               | `Backend::Local` sync test seam drives the UI in-process  | The engine, world builder and sync layer are covered (see Tests); nothing exercises the Svelte components or the IPC handlers in `index.ts`. Needs a component runner (vitest browser mode or @testing-library/svelte) and an `index.ts` refactor that lets the handlers be called without `app.whenReady()`. |
 
 ### Settled questions (asked and answered — do not re-open without new facts)
 
@@ -172,14 +175,14 @@ the run-id counter.
 - Runs started from this UI are `origin: human` (the v1 socket-client
   prototype could only produce `agent`).
 - **Add Folder registers only the folder that was picked** (user decision,
-  2026-08-19), where §11.5 also searches three levels beneath it. One pick =
-  one experiment; a directory of experiments is added one at a time. The Rust
-  implementation keeps its scan (`experiment_folders`, `SCAN_DEPTH` in
-  `coco-egui/src/adapter/engine.rs`) and the specification is unchanged — this is the
-  Electron side diverging deliberately, not a spec revision. Knock-on: the
-  `AddFolderReport` modal exists because one pick could refuse a whole batch
-  (§11.5); with one folder per pick, a refusal is a single line and the status
-  bar can carry it, so that modal is probably not worth porting.
+  2026-08-19; **no longer a divergence** — §11.5 was rewritten to say this on
+  2026-08-20, and the scan is not wanted). One pick = one experiment; a
+  directory of experiments is added one at a time. `coco-egui/` keeps its scan
+  (`experiment_folders`, `SCAN_DEPTH` in `coco-egui/src/adapter/engine.rs`),
+  which is now the older behaviour rather than the specified one. Knock-on: the
+  `AddFolderReport` modal existed because one pick could refuse a whole batch;
+  with one folder per pick a refusal is a single sentence, so that modal is not
+  being ported.
 - **The automatic tick reports its failures**, where the Rust adapter's tick
   swallows them (`let _ = self.coco.refresh()` in `coco-egui/src/adapter/engine.rs`) and
   only an explicit Refresh reports. Rust's silence is a flood-control measure —
@@ -195,7 +198,7 @@ the run-id counter.
   browser engine is out of the question — Tauri, Electron and WebView are
   non-goals (§4.3)", which is exactly the constraint this form does not have.
   The intent behind it — render a report faithfully or not at all, never a
-  half-styled approximation — is *better* served here, so §20.5's
+  half-styled approximation — is _better_ served here, so §20.5's
   `Open in Browser` becomes a secondary action, not the only one.
   When implementing: report HTML is written by experiment scripts and is not
   trusted. Load it in a sandboxed frame with no preload and no node
@@ -207,26 +210,26 @@ the run-id counter.
 `child_process`: every scenario writes real folders and real executable
 scripts into a temp directory and lets the engine spawn them.
 
-| File | Covers |
-|---|---|
-| `tests/engine.test.ts` | All 20 end-to-end scenarios of `coco-egui/tests/coco_engine.rs`, plus registration idempotence + unregister and two reconcile cases the Rust engine has no equivalent of (a hand-edited record, a deleted run folder). The corrupt-`run.json` scenario becomes a reconcile test here: disk is not this engine's truth, so the damage lands at the next tick rather than the next read. |
-| `tests/mock-library.test.ts` | The bundled `mock/` library end to end — port of `coco-egui/tests/coco_mock_library.rs`, but over a **copy** in a temp dir, so a test run leaves no `runs/`/`report/` in the repo. |
-| `tests/world.test.ts` | `buildWorld`: entity shape, run shape, report state, UNREACHABLE display (last known status + unavailable query health), bench plan steps, bench-origin members, history ordering. |
-| `tests/agent.test.ts` | The agent interface (§43): every route as a function of a world and a start, then the same routes over a **real unix socket** with a real HTTP client — a start crossing the wire, an oversize body refused, a socket a live coco is answering on left alone, a stale one replaced, the file removed on stop, and every reply framed with a `Content-Length` (see below). |
-| `tests/uiState.test.ts` | What a relaunch restores: `sanitize` (a report never comes back, a Start page becomes its experiment, widths clamped, unknown routes dropped, a window position taken only as a pair) and the file round trip, including one that does not parse. |
-| `tests/notices.test.ts` | `refreshSummary` (one error in full, the rest as a count) and the `NoticeGate`: a repeating failure announced once, a changed one announced again, a clean pass re-arming it, and a manual refresh that always answers and counts as said. |
-| `tests/sync.test.ts` | `diffWorlds`: silence when nothing moved, the `last_successful_query` exclusion, upserts/removals for all three entry kinds, one batch for a member and its bench. |
-| `tests/operations.test.ts` | What the renderer can ask for (`src/main/operations.ts`): start by name with the manifest's parameter split, cancel a run, cancel a bench, read a report (including the plain-text-wins rule the world builder also follows, an unregistered folder, and a run id that is not one), add a folder (including that a folder of experiments is *not* searched), remove one (and that the disk is untouched) — each answered, never thrown. |
-| `tests/serial.test.ts` | The engine's one-turn-at-a-time queue, and the race it exists for (below). |
-| `tests/state.svelte.test.ts` | The renderer's state, compiled as runes: event application, the run index, every `recover()` rule, the notice (an error waits to be dismissed, anything else fades, an older timer never clears a newer message), and the two-addresses rules for a dispatched run (§19) — the bench stays selected, the fallbacks step back through the bench run, and a report reads from the job's folder. It covers what the state *holds*, not what it *notifies* — see the note at the top of the file. |
-| `tests/manifest.test.ts` `tests/template.test.ts` `tests/words.test.ts` `tests/status.test.ts` `tests/store.test.ts` `tests/invoke.test.ts` | Ports of the corresponding Rust inline `#[cfg(test)]` modules, plus a few cases for the async spawn/harvest seam this port introduces. |
+| File                                                                                                                                        | Covers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/engine.test.ts`                                                                                                                      | All 20 end-to-end scenarios of `coco-egui/tests/coco_engine.rs`, plus registration idempotence + unregister and two reconcile cases the Rust engine has no equivalent of (a hand-edited record, a deleted run folder). The corrupt-`run.json` scenario becomes a reconcile test here: disk is not this engine's truth, so the damage lands at the next tick rather than the next read.                                                                                                        |
+| `tests/mock-library.test.ts`                                                                                                                | The bundled `mock/` library end to end — port of `coco-egui/tests/coco_mock_library.rs`, but over a **copy** in a temp dir, so a test run leaves no `runs/`/`report/` in the repo.                                                                                                                                                                                                                                                                                                            |
+| `tests/world.test.ts`                                                                                                                       | `buildWorld`: entity shape, run shape, report state, UNREACHABLE display (last known status + unavailable query health), bench plan steps, bench-origin members, history ordering.                                                                                                                                                                                                                                                                                                            |
+| `tests/agent.test.ts`                                                                                                                       | The agent interface (§43): every route as a function of a world and a start, then the same routes over a **real unix socket** with a real HTTP client — a start crossing the wire, an oversize body refused, a socket a live coco is answering on left alone, a stale one replaced, the file removed on stop, and every reply framed with a `Content-Length` (see below).                                                                                                                     |
+| `tests/uiState.test.ts`                                                                                                                     | What a relaunch restores: `sanitize` (a report never comes back, a Start page becomes its experiment, widths clamped, unknown routes dropped, a window position taken only as a pair) and the file round trip, including one that does not parse.                                                                                                                                                                                                                                             |
+| `tests/notices.test.ts`                                                                                                                     | `refreshSummary` (one error in full, the rest as a count) and the `NoticeGate`: a repeating failure announced once, a changed one announced again, a clean pass re-arming it, and a manual refresh that always answers and counts as said.                                                                                                                                                                                                                                                    |
+| `tests/sync.test.ts`                                                                                                                        | `diffWorlds`: silence when nothing moved, the `last_successful_query` exclusion, upserts/removals for all three entry kinds, one batch for a member and its bench.                                                                                                                                                                                                                                                                                                                            |
+| `tests/operations.test.ts`                                                                                                                  | What the renderer can ask for (`src/main/operations.ts`): start by name with the manifest's parameter split, cancel a run, cancel a bench, read a report (including the plain-text-wins rule the world builder also follows, an unregistered folder, and a run id that is not one), add a folder (including that a folder of experiments is _not_ searched), remove one (and that the disk is untouched) — each answered, never thrown.                                                       |
+| `tests/serial.test.ts`                                                                                                                      | The engine's one-turn-at-a-time queue, and the race it exists for (below).                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `tests/state.svelte.test.ts`                                                                                                                | The renderer's state, compiled as runes: event application, the run index, every `recover()` rule, the notice (an error waits to be dismissed, anything else fades, an older timer never clears a newer message), and the two-addresses rules for a dispatched run (§19) — the bench stays selected, the fallbacks step back through the bench run, and a report reads from the job's folder. It covers what the state _holds_, not what it _notifies_ — see the note at the top of the file. |
+| `tests/manifest.test.ts` `tests/template.test.ts` `tests/words.test.ts` `tests/status.test.ts` `tests/store.test.ts` `tests/invoke.test.ts` | Ports of the corresponding Rust inline `#[cfg(test)]` modules, plus a few cases for the async spawn/harvest seam this port introduces.                                                                                                                                                                                                                                                                                                                                                        |
 
 The fixture experiment folders are **real folders in the repository**:
 `mock/.fixtures/job` and `mock/.fixtures/bench` (see their README). Tests copy
 one per scenario and rename it in the copy, so one folder serves twenty-odd
 cases. The `job` fixture answers from a `poll-state`/`report-state` file and
 the `bench` fixture plans from a `plan-lines` file, so most tests change
-behaviour by writing data, not by rewriting a script; a test whose *subject*
+behaviour by writing data, not by rewriting a script; a test whose _subject_
 is a broken script still overwrites that one script in its copy. The directory
 is hidden because the Add Folder scan skips dot-names — picking `mock/` still
 registers exactly the four demonstration experiments.
@@ -253,7 +256,7 @@ own write in the same millisecond.
   globals — `range`, `cycler`, `joiner` — so a template that would fail at
   render is refused at analysis, which is the whole point of analysis.
 - **`template.ts` counted `is`-test names as variables.** `{{ size is
-  defined }}` demanded a param called `defined`. The walker now handles `Is`
+defined }}` demanded a param called `defined`. The walker now handles `Is`
   nodes: the left side is data, the test name is language, and the test's
   arguments are data again.
 
@@ -272,7 +275,7 @@ Neither of these could have been found by a green test suite; both came from
   the poll's answer — formed before the cancellation existed — then landed on
   top, and the run read `RUNNING` again with the user's cancel visibly
   undone. The Rust engine cannot hit this because it owns its state on one
-  thread (§43.3); the `refreshing` flag here only stopped two *refreshes*
+  thread (§43.3); the `refreshing` flag here only stopped two _refreshes_
   overlapping. Fixed by `src/main/serial.ts`: every engine operation —
   refresh, start, cancel — takes its turn. `tests/serial.test.ts` reproduces
   the stomp and holds the fix.
@@ -284,8 +287,8 @@ Neither of these could have been found by a green test suite; both came from
 
 One behaviour worth knowing rather than fixing: a run in `STARTING` whose
 launch script has not been harvested yet has no submission id, so cancelling
-it is refused with *"run 0 is still launching; there is no submission to
-cancel yet"* until the next tick (≤3 s). The button is offered because the
+it is refused with _"run 0 is still launching; there is no submission to
+cancel yet"_ until the next tick (≤3 s). The button is offered because the
 world carries no submission id — exactly as in the Rust UI, whose snapshot
 does not carry one either. The refusal is shown in the modal, which stays
 open.
@@ -327,7 +330,7 @@ open.
   framing every reply with a `Content-Length`; the test now parses the body
   rather than searching it.
 - **The sidebar drag stopped halfway.** The handle relied on pointer capture,
-  and the handle moves *with* the sidebar it is resizing — so the moment the
+  and the handle moves _with_ the sidebar it is resizing — so the moment the
   width lagged the pointer or capture was dropped, the pointer was over the
   page instead and the drag ended at whatever width the last event it saw
   happened to name. It now listens on the window for the duration of the drag.

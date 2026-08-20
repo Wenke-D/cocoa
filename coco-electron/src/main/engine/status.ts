@@ -27,7 +27,10 @@ export function isActive(status: Status): boolean {
 
 export function isCancellable(status: Status): boolean {
   return (
-    status === 'STARTING' || status === 'PENDING' || status === 'RUNNING' || status === 'UNREACHABLE'
+    status === 'STARTING' ||
+    status === 'PENDING' ||
+    status === 'RUNNING' ||
+    status === 'UNREACHABLE'
   )
 }
 

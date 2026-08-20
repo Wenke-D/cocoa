@@ -1,6 +1,6 @@
 <script lang="ts">
   import { manifestBlockingReason } from '@shared/world'
-  import { app, entityOf, navigate, notify } from '../state.svelte'
+  import { entityOf, navigate, notify } from '../state.svelte'
 
   let { entityId }: { entityId: string } = $props()
 

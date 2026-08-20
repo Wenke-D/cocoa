@@ -79,8 +79,7 @@ export async function cancel(engine: Coco, target: CancelTarget): Promise<Cancel
     const failures = results.filter((result) => !result.ok)
     if (failures.length === 0) return { ok: true }
     const first = failures[0]
-    const rest =
-      failures.length > 1 ? ` (and ${failures.length - 1} more member(s) refused)` : ''
+    const rest = failures.length > 1 ? ` (and ${failures.length - 1} more member(s) refused)` : ''
     return {
       ok: false,
       message: `run ${first.runId} of \`${first.job}\` was not cancelled: ${first.error}${rest}`

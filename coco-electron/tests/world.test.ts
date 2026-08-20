@@ -109,7 +109,7 @@ describe('buildWorld', () => {
     const run = buildWorld(coco, null).job_runs[String(runId)]
     expect(run.status).toBe('Running')
     expect(run.query_health).toEqual({
-      Unavailable: { message: expect.stringContaining('poll script failed') }
+      Unavailable: { message: expect.stringContaining('poll script failed') as string }
     })
   })
 
@@ -125,7 +125,7 @@ describe('buildWorld', () => {
     expect(world.entities).toHaveLength(1)
     expect(world.entities[0].name).toBe('was-fine')
     expect(world.entities[0].manifest).toMatchObject({
-      Invalid: { message: expect.stringContaining('kind') }
+      Invalid: { message: expect.stringContaining('kind') as string }
     })
     expect(world.entities[0].parameter_names).toEqual([])
   })

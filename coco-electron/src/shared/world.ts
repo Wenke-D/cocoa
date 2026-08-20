@@ -179,8 +179,7 @@ export type AddFolderResult =
 export type RemoveFolderResult = { ok: true } | { ok: false; message: string }
 
 export type ReportResult =
-  | { ok: true; format: ReportFormat; text: string }
-  | { ok: false; message: string }
+  { ok: true; format: ReportFormat; text: string } | { ok: false; message: string }
 
 // ---------------------------------------------------------------------------
 // Presentation helpers, mirroring the impls on the Rust types.

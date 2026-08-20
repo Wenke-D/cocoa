@@ -36,7 +36,7 @@
   }
 </script>
 
-<dialog bind:this={dialog} onclose={onclose} onclick={onBackdrop}>
+<dialog bind:this={dialog} {onclose} onclick={onBackdrop}>
   <h2>{title}</h2>
   {@render body()}
   {#if error !== null}

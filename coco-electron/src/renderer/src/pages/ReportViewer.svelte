@@ -208,7 +208,7 @@
   <pre class="body" class:wrap={app.reportWrap}>{#each lines as line, index (index)}<span
         class="line"
         data-line={index}
-      >{#if matchedLines.has(index)}{#each pieces(line) as piece, part (part)}{#if piece.at < 0}{piece.text}{:else}<mark
+        >{#if matchedLines.has(index)}{#each pieces(line) as piece, part (part)}{#if piece.at < 0}{piece.text}{:else}<mark
                 class:current={matches[current]?.line === index &&
                   matches[current]?.at === piece.at}>{piece.text}</mark
               >{/if}{/each}{:else}{line}{/if}</span
@@ -216,7 +216,6 @@
 {/if}
 
 <style>
-
   header {
     display: flex;
     align-items: center;

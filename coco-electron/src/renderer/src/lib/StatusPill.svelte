@@ -16,7 +16,10 @@
 </script>
 
 <span class="pill">
-  <span class="dot" class:pulsing={isActive(status) && label !== 'Unknown'} style="background: {color}"
+  <span
+    class="dot"
+    class:pulsing={isActive(status) && label !== 'Unknown'}
+    style="background: {color}"
   ></span>
   {label}
 </span>

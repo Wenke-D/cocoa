@@ -56,8 +56,11 @@ export async function run({ page, shot, log, waitText, library }) {
 
   // The folder is exactly where it was, run record and all.
   const folder = path.join(library, 'jobs/solver-gpu')
-  log('on disk:', JSON.stringify({
-    manifest: fs.existsSync(path.join(folder, 'coco.toml')),
-    run: fs.existsSync(path.join(folder, 'runs/0/run.json'))
-  }))
+  log(
+    'on disk:',
+    JSON.stringify({
+      manifest: fs.existsSync(path.join(folder, 'coco.toml')),
+      run: fs.existsSync(path.join(folder, 'runs/0/run.json'))
+    })
+  )
 }

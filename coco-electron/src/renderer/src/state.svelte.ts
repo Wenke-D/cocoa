@@ -30,8 +30,7 @@ export type { ReportContext, Route } from '@shared/ui'
  * kept out of `Route` — it is never persisted and never restored.
  */
 export type Overlay = { error: string | null; busy: boolean } & (
-  | { kind: 'confirmCancel'; target: CancelTarget }
-  | { kind: 'confirmRemove'; entityId: string }
+  { kind: 'confirmCancel'; target: CancelTarget } | { kind: 'confirmRemove'; entityId: string }
 )
 
 /** An open context menu: which row, and where the pointer was. */
@@ -52,14 +51,34 @@ export interface Notice {
   level: NoticeLevel
 }
 
-export const app = $state({
-  connected: false,
-  world: emptyWorld() as World,
-  route: { page: 'empty' } as Route,
-  overlay: null as Overlay | null,
-  menu: null as ContextMenu | null,
-  notice: null as Notice | null,
+/**
+ * The renderer's whole mutable state (specification §34). Named rather than
+ * inferred: written inline, `route` would infer as the literal shape of the
+ * empty page and reject every other route, which is why each field used to
+ * need widening with `as`.
+ */
+export interface AppState {
+  connected: boolean
+  /** A mirror of the backend's world, never a source: only events write it. */
+  world: World
+  route: Route
+  overlay: Overlay | null
+  menu: ContextMenu | null
+  notice: Notice | null
   // Arrangement, not content: persisted across launches (see `persistUi`).
+  sidebarWidth: number
+  reportWrap: boolean
+  /** The one clock every duration on screen is computed from. */
+  nowMs: number
+}
+
+export const app: AppState = $state({
+  connected: false,
+  world: emptyWorld(),
+  route: { page: 'empty' },
+  overlay: null,
+  menu: null,
+  notice: null,
   sidebarWidth: defaultUiState().sidebarWidth,
   reportWrap: defaultUiState().reportWrapLines,
   nowMs: Date.now()
@@ -442,7 +461,9 @@ export function recover(): void {
       return
     case 'jobRun':
       if (!(route.runId in world.job_runs)) {
-        app.route = entityGone(route.jobId) ? { page: 'empty' } : { page: 'entity', entityId: route.jobId }
+        app.route = entityGone(route.jobId)
+          ? { page: 'empty' }
+          : { page: 'entity', entityId: route.jobId }
         notify('That run is no longer listed.')
       }
       return

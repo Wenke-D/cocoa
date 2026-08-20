@@ -100,7 +100,10 @@ function requireParams(value: unknown, manifestPath: string, key: string): strin
       throw EngineError.manifest(manifestPath, `\`${key}\` contains an empty parameter name`)
     }
     if (seen.has(name)) {
-      throw EngineError.manifest(manifestPath, `\`${key}\` declares duplicate parameter \`${name}\``)
+      throw EngineError.manifest(
+        manifestPath,
+        `\`${key}\` declares duplicate parameter \`${name}\``
+      )
     }
     seen.add(name)
   }
@@ -167,9 +170,12 @@ export function loadManifest(folder: string): Manifest {
   }
   let value: TomlTable
   try {
-    value = parseToml(text) as TomlTable
+    value = parseToml(text)
   } catch (cause) {
-    throw EngineError.manifest(manifestPath, `coco.toml does not parse: ${(cause as Error).message}`)
+    throw EngineError.manifest(
+      manifestPath,
+      `coco.toml does not parse: ${(cause as Error).message}`
+    )
   }
 
   const kind = typeof value.kind === 'string' ? value.kind : ''
@@ -178,11 +184,18 @@ export function loadManifest(folder: string): Manifest {
   if (kind === '') {
     throw EngineError.manifest(manifestPath, 'missing required key `kind`')
   }
-  throw EngineError.manifest(manifestPath, `\`kind\` must be \`job\` or \`bench\`, found \`${kind}\``)
+  throw EngineError.manifest(
+    manifestPath,
+    `\`kind\` must be \`job\` or \`bench\`, found \`${kind}\``
+  )
 }
 
 function loadJob(folder: string, manifestPath: string, raw: TomlTable): JobManifest {
-  rejectUnknownKeys(raw, ['kind', 'name', 'description', 'render', 'launch', 'poll', 'report', 'cancel'], manifestPath)
+  rejectUnknownKeys(
+    raw,
+    ['kind', 'name', 'description', 'render', 'launch', 'poll', 'report', 'cancel'],
+    manifestPath
+  )
 
   const name = requireName(raw.name, manifestPath)
   const render = requireTable(raw.render, manifestPath, 'render')
@@ -230,11 +243,27 @@ function loadJob(folder: string, manifestPath: string, raw: TomlTable): JobManif
     description: typeof raw.description === 'string' ? raw.description : undefined,
     template: templateName,
     render_params: renderParams,
-    launch: parseCommand(requireString(launch.command, manifestPath, '[launch].command'), manifestPath, '[launch].command'),
+    launch: parseCommand(
+      requireString(launch.command, manifestPath, '[launch].command'),
+      manifestPath,
+      '[launch].command'
+    ),
     launch_params: launchParams,
-    poll: parseCommand(requireString(poll.command, manifestPath, '[poll].command'), manifestPath, '[poll].command'),
-    report: parseCommand(requireString(report.command, manifestPath, '[report].command'), manifestPath, '[report].command'),
-    cancel: parseCommand(requireString(cancel.command, manifestPath, '[cancel].command'), manifestPath, '[cancel].command')
+    poll: parseCommand(
+      requireString(poll.command, manifestPath, '[poll].command'),
+      manifestPath,
+      '[poll].command'
+    ),
+    report: parseCommand(
+      requireString(report.command, manifestPath, '[report].command'),
+      manifestPath,
+      '[report].command'
+    ),
+    cancel: parseCommand(
+      requireString(cancel.command, manifestPath, '[cancel].command'),
+      manifestPath,
+      '[cancel].command'
+    )
   }
 }
 
@@ -251,8 +280,16 @@ function loadBench(manifestPath: string, raw: TomlTable): BenchManifest {
     kind: 'bench',
     name,
     description: typeof raw.description === 'string' ? raw.description : undefined,
-    plan: parseCommand(requireString(plan.command, manifestPath, '[plan].command'), manifestPath, '[plan].command'),
+    plan: parseCommand(
+      requireString(plan.command, manifestPath, '[plan].command'),
+      manifestPath,
+      '[plan].command'
+    ),
     plan_params: requireParams(plan.params, manifestPath, '[plan].params'),
-    report: parseCommand(requireString(report.command, manifestPath, '[report].command'), manifestPath, '[report].command')
+    report: parseCommand(
+      requireString(report.command, manifestPath, '[report].command'),
+      manifestPath,
+      '[report].command'
+    )
   }
 }

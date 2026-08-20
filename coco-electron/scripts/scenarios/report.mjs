@@ -70,5 +70,4 @@ export async function run({ page, shot, log, waitText, library }) {
   await page.locator('pre.body').waitFor({ timeout: 5_000 })
   log('source head:', (await page.locator('pre.body').innerText()).slice(0, 60))
   await shot('report-html-source')
-
 }

@@ -14,9 +14,7 @@ export type Trigger = 'human' | 'agent'
 
 /** serde: `#[serde(tag = "by", rename_all = "snake_case")]` */
 export type RunOrigin =
-  | { by: 'human' }
-  | { by: 'agent' }
-  | { by: 'bench'; run_id: number; name: string; call: number }
+  { by: 'human' } | { by: 'agent' } | { by: 'bench'; run_id: number; name: string; call: number }
 
 export interface RunRecord {
   run_id: number

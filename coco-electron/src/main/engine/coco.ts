@@ -906,9 +906,7 @@ export class Coco {
       .filter((record): record is RunRecord => record !== null)
 
     const status =
-      missing.length > 0
-        ? 'ERROR'
-        : deriveBenchStatus(members, record, reportOnDisk(folder, runId))
+      missing.length > 0 ? 'ERROR' : deriveBenchStatus(members, record, reportOnDisk(folder, runId))
 
     const counts: BenchStatusView = {
       status,
@@ -1228,11 +1226,7 @@ function artifactName(templateRel: string): string {
 }
 
 /** Declared params and provided values must be exactly the same set (§2). */
-function validateParams(
-  declared: string[],
-  provided: Record<string, string>,
-  set: string
-): void {
+function validateParams(declared: string[], provided: Record<string, string>, set: string): void {
   const declaredSet = new Set(declared)
   const providedSet = new Set(Object.keys(provided))
   const missing = [...declaredSet].filter((name) => !providedSet.has(name)).sort()
@@ -1277,7 +1271,7 @@ function parsePlanLine(line: string): PlanLine {
   try {
     value = JSON.parse(line)
   } catch (cause) {
-    throw new Error(`not a JSON object: ${(cause as Error).message}`)
+    throw new Error(`not a JSON object: ${(cause as Error).message}`, { cause })
   }
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error('must be a JSON object')

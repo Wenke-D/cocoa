@@ -148,9 +148,6 @@ describe('diffWorlds', () => {
       bench_runs: { '1': benchRun('1', { status: 'Analyzing' }) }
     })
     const events = diffWorlds(before, after)
-    expect(events.map((event) => event.kind)).toEqual([
-      'job-run-upserted',
-      'bench-run-upserted'
-    ])
+    expect(events.map((event) => event.kind)).toEqual(['job-run-upserted', 'bench-run-upserted'])
   })
 })

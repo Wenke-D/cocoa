@@ -4,15 +4,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { serialize } from '../src/main/serial'
-import {
-  cleanupTempDirs,
-  engine,
-  jobFolder,
-  settle,
-  tempDir,
-  write,
-  writeScript
-} from './support'
+import { cleanupTempDirs, engine, jobFolder, settle, tempDir, write, writeScript } from './support'
 import { cancel } from '../src/main/operations'
 
 afterEach(cleanupTempDirs)

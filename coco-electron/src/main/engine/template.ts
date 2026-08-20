@@ -13,7 +13,10 @@ import nunjucks from 'nunjucks'
 // createRequire keeps this working whether the bundle lands as ESM or CJS.
 const requireModule = createRequire(import.meta.url)
 const parser = requireModule('nunjucks/src/parser') as { parse(source: string): AstNode }
-const nodes = requireModule('nunjucks/src/nodes') as Record<string, new (...args: never[]) => AstNode>
+const nodes = requireModule('nunjucks/src/nodes') as Record<
+  string,
+  new (...args: never[]) => AstNode
+>
 
 interface AstNode {
   typename?: string
@@ -74,9 +77,7 @@ class Collector {
     const type = typeName(node)
 
     if (IMPORTING.has(type)) {
-      throw new TemplateError(
-        `uses \`{% ${type.toLowerCase()} %}\`, which pulls in another file`
-      )
+      throw new TemplateError(`uses \`{% ${type.toLowerCase()} %}\`, which pulls in another file`)
     }
 
     switch (type) {
@@ -125,7 +126,7 @@ class Collector {
             if (child !== name) this.walk(child)
           }
           if (name !== undefined) {
-            const argsOnly = (name.children ?? []) as unknown[]
+            const argsOnly = name.children ?? []
             for (const child of argsOnly) if (isNode(child)) this.walk(child)
           }
           return

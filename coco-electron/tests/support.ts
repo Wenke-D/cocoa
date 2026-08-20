@@ -117,7 +117,7 @@ export function benchFolder(dir: string, name: string, jobNames: string[]): stri
   const folder = copyFixture('bench', dir, name)
   planLines(
     folder,
-    jobNames.map((job) => `{"job": "${job}", "params": {"size": "256", "gpu": "0"}}`),
+    jobNames.map((job) => `{"job": "${job}", "params": {"size": "256", "gpu": "0"}}`)
   )
   return folder
 }
@@ -133,7 +133,7 @@ function copyFixture(fixture: 'job' | 'bench', dir: string, name: string): strin
   const manifest = path.join(folder, 'coco.toml')
   fs.writeFileSync(
     manifest,
-    fs.readFileSync(manifest, 'utf8').replace(`"fixture-${fixture}"`, `"${name}"`),
+    fs.readFileSync(manifest, 'utf8').replace(`"fixture-${fixture}"`, `"${name}"`)
   )
   return folder
 }

@@ -95,12 +95,7 @@ export function buildMenu(): void {
     {
       label: 'Window',
       submenu: mac
-        ? [
-            { role: 'minimize' },
-            { role: 'zoom' },
-            { type: 'separator' },
-            { role: 'front' }
-          ]
+        ? [{ role: 'minimize' }, { role: 'zoom' }, { type: 'separator' }, { role: 'front' }]
         : [{ role: 'minimize' }, { role: 'close' }]
     }
   ]

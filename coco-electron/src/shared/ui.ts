@@ -122,7 +122,9 @@ function sanitizeRoute(route: Route | null | undefined): Route {
     // would open an empty form nobody asked for. Land on the experiment it
     // belonged to instead (§15).
     case 'start':
-      return typeof route.entityId === 'string' ? { page: 'entity', entityId: route.entityId } : empty
+      return typeof route.entityId === 'string'
+        ? { page: 'entity', entityId: route.entityId }
+        : empty
     case 'jobRun':
       return typeof route.jobId === 'string' && typeof route.runId === 'string' ? route : empty
     case 'benchRun':

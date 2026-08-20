@@ -50,12 +50,7 @@
 </script>
 
 {#if copy !== null}
-  <ModalFrame
-    title={copy.title}
-    error={overlay.error}
-    busy={overlay.busy}
-    onclose={closeOverlay}
-  >
+  <ModalFrame title={copy.title} error={overlay.error} busy={overlay.busy} onclose={closeOverlay}>
     {#snippet body()}
       <p class="subject">{copy.subject}</p>
       {#each copy.lines as line, index (index)}

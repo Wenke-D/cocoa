@@ -40,7 +40,12 @@ export class EngineError extends Error {
     return new EngineError('template', `${path}: ${message}`)
   }
 
-  static invocation(script: string, exit: number | null, timedOut: boolean, output: string): EngineError {
+  static invocation(
+    script: string,
+    exit: number | null,
+    timedOut: boolean,
+    output: string
+  ): EngineError {
     const cause = timedOut ? 'timed out' : exit !== null ? `exited ${exit}` : 'was killed'
     const trimmed = output.trimEnd()
     const message = trimmed === '' ? `\`${script}\` ${cause}` : `\`${script}\` ${cause}: ${trimmed}`

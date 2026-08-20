@@ -15,7 +15,12 @@ export async function run({ page, shot, log, waitText }) {
   // The bench run detail lists what it dispatched.
   await page.locator('table tbody tr').first().waitFor({ timeout: 20_000 })
   const benchRunId = (await page.locator('header h1').innerText()).trim()
-  log('bench run:', benchRunId, '·', (await page.locator('table').innerText()).replace(/\n/g, ' | '))
+  log(
+    'bench run:',
+    benchRunId,
+    '·',
+    (await page.locator('table').innerText()).replace(/\n/g, ' | ')
+  )
   await shot('bench-run')
 
   await page.locator('table tbody tr').nth(1).click()

@@ -84,7 +84,11 @@ command     = "./report.py"
 
   it('accepts empty params lists', () => {
     const dir = tempDir()
-    write(dir, 'coco.toml', VALID_JOB.replace('params      = ["size", "backend"]', 'params      = []'))
+    write(
+      dir,
+      'coco.toml',
+      VALID_JOB.replace('params      = ["size", "backend"]', 'params      = []')
+    )
     write(dir, 'job.sbatch.tmpl', '#SBATCH --nodes=4\n')
     expect(() => loadManifest(dir)).not.toThrow()
   })
@@ -167,7 +171,11 @@ params = []
 
   it('rejects a command that does not split into words', () => {
     const dir = tempDir()
-    write(dir, 'coco.toml', VALID_JOB.replace('command     = "./poll.py"', `command     = "./poll.py 'oops"`))
+    write(
+      dir,
+      'coco.toml',
+      VALID_JOB.replace('command     = "./poll.py"', `command     = "./poll.py 'oops"`)
+    )
     write(dir, 'job.sbatch.tmpl', '{{ size }} {{ backend }}\n')
     expect(refused(dir)).toContain('unclosed')
   })
@@ -226,8 +234,10 @@ params = []
     write(
       folder,
       'coco.toml',
-      VALID_JOB.replace('template    = "job.sbatch.tmpl"', 'template    = "../outside.tmpl"')
-        .replace('params      = ["size", "backend"]', 'params      = []')
+      VALID_JOB.replace(
+        'template    = "job.sbatch.tmpl"',
+        'template    = "../outside.tmpl"'
+      ).replace('params      = ["size", "backend"]', 'params      = []')
     )
     expect(refused(folder)).toContain('inside the folder')
   })

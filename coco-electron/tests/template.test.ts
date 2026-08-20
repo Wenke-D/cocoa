@@ -18,17 +18,12 @@ function rejected(source: string, params: string[]): string {
 describe('analyze', () => {
   it('accepts an exact match', () => {
     expect(() =>
-      analyze('#SBATCH --nodes={{ size }}\n./solver --backend {{ backend }}\n', [
-        'size',
-        'backend'
-      ])
+      analyze('#SBATCH --nodes={{ size }}\n./solver --backend {{ backend }}\n', ['size', 'backend'])
     ).not.toThrow()
   })
 
   it('rejects undefined variables and unused params', () => {
-    expect(rejected('{{ size }}', ['size', 'backend'])).toBe(
-      'declared param never used: backend'
-    )
+    expect(rejected('{{ size }}', ['size', 'backend'])).toBe('declared param never used: backend')
     expect(rejected('{{ size }} {{ nodes }}', ['size'])).toBe('undefined variable: nodes')
     expect(rejected('{{ nodes }}', ['size', 'backend'])).toBe(
       'undefined variable: nodes; declared params never used: backend, size'
@@ -80,9 +75,7 @@ describe('analyze', () => {
     expect(() => analyze('{{ size is defined }}', ['size'])).not.toThrow()
     // A test's arguments are data, and are checked like any other reference.
     expect(() => analyze('{{ size is divisibleby(step) }}', ['size', 'step'])).not.toThrow()
-    expect(rejected('{{ size is divisibleby(step) }}', ['size'])).toBe(
-      'undefined variable: step'
-    )
+    expect(rejected('{{ size is divisibleby(step) }}', ['size'])).toBe('undefined variable: step')
   })
 
   it('does not count macro calls as variable references', () => {

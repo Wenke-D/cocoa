@@ -129,11 +129,7 @@ function match(parts: string[], expected: string[]): boolean {
   return parts.length === expected.length && parts.every((part, at) => part === expected[at])
 }
 
-async function startRun(
-  name: string,
-  body: string,
-  deps: AgentDeps
-): Promise<AgentResponse> {
+async function startRun(name: string, body: string, deps: AgentDeps): Promise<AgentResponse> {
   let parameters: Record<string, string> = {}
   if (body.trim() !== '') {
     try {
@@ -163,7 +159,10 @@ async function startRun(
 async function withTimeout(work: Promise<StartResult>): Promise<StartResult> {
   let timer: NodeJS.Timeout | undefined
   const expiry = new Promise<StartResult>((resolve) => {
-    timer = setTimeout(() => resolve({ ok: false, message: 'coco did not answer in time' }), REPLY_TIMEOUT_MS)
+    timer = setTimeout(
+      () => resolve({ ok: false, message: 'coco did not answer in time' }),
+      REPLY_TIMEOUT_MS
+    )
   })
   try {
     return await Promise.race([work, expiry])
@@ -464,9 +463,11 @@ async function handle(
   deps: AgentDeps
 ): Promise<void> {
   const answer = await read(incoming).then(
-    (body) => route({ method: incoming.method ?? 'GET', url: incoming.url ?? '/', body }, deps),
-    (error: AgentResponse | Error) =>
-      'status' in error ? error : failure(400, (error as Error).message)
+    (body) =>
+      typeof body === 'string'
+        ? route({ method: incoming.method ?? 'GET', url: incoming.url ?? '/', body }, deps)
+        : body,
+    (error: Error) => failure(400, error.message)
   )
   // `Content-Length`, never chunked: the bundled `coco-mcp-server` reads a
   // reply as "everything after the blank line" — the minimal HTTP a client on
@@ -487,13 +488,19 @@ async function handle(
 /**
  * Reads the body, refusing one that is too large — on the declared length
  * first, before a byte of it is read.
+ *
+ * A refusal *resolves* as the 413. It is an answer coco decided to give, not a
+ * failure of the read, and carrying it as a rejection meant rejecting with
+ * something that was not an Error — invisible to `instanceof`, to a stack
+ * trace, and to any generic handler upstream. Only a genuine stream error
+ * rejects, and it rejects with the Error the stream gave us.
  */
-function read(incoming: http.IncomingMessage): Promise<string> {
+function read(incoming: http.IncomingMessage): Promise<string | AgentResponse> {
   return new Promise((resolve, reject) => {
     const declared = Number(incoming.headers['content-length'] ?? 0)
     if (Number.isFinite(declared) && declared > MAX_BODY) {
       incoming.resume()
-      reject(failure(413, 'request body is too large'))
+      resolve(failure(413, 'request body is too large'))
       return
     }
     const chunks: Buffer[] = []
@@ -503,7 +510,7 @@ function read(incoming: http.IncomingMessage): Promise<string> {
       if (size > MAX_BODY) {
         // Stop reading, but leave the connection alive long enough to say why.
         incoming.pause()
-        reject(failure(413, 'request body is too large'))
+        resolve(failure(413, 'request body is too large'))
         return
       }
       chunks.push(chunk)
