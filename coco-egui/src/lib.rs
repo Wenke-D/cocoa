@@ -1,5 +1,5 @@
 //! coco — an experiment pipeline manager that drives real experiment folders
-//! through the folder's own scripts (see `design/CONVENTION.md`).
+//! through the folder's own scripts (see `doc/convention.md`).
 //!
 //! [`crate::engine`] is the engine and the domain; [`crate::view_model`] is what
 //! the workbench shows; [`crate::adapter`] maps one onto the other,

@@ -10,7 +10,7 @@
 //! ```
 //!
 //! Surfaces: `job` (default) | `job-active` (the overview with a run in
-//! flight, which is what `design/workbench-*.png` document) | `run-detail` |
+//! flight, which is what `doc/images/workbench-*.png` document) | `run-detail` |
 //! `start-page` | `start-page-last` (one run already started, so the page
 //! offers its history action) | `bench-start` | `cancel-modal` |
 //! `folder-report` (what an Add Folder pick refused) | `bench-plan-failed`

@@ -16,7 +16,7 @@ In the Explorer, click the **+** button and pick an experiment folder — one of
 the directories listed below, the one holding the `coco.toml`. Repeat for each
 one you want.
 
-> One pick is one folder (`SPECIFICATION.md` §11.5). Picking this `mock/`
+> One pick is one folder ([doc/screens.md](../doc/screens.md) §11.5). Picking this `mock/`
 > directory itself is refused — it has no manifest of its own. `coco-egui/`
 > scans a picked directory and registers everything beneath it in one go; that
 > is the older behaviour, not the specified one.
