@@ -15,8 +15,11 @@ beforeEach(() => {
   delete process.env.COCO_STORE_PATH
 })
 afterEach(() => {
-  if (saved === undefined) delete process.env.COCO_STORE_PATH
-  else process.env.COCO_STORE_PATH = saved
+  if (saved === undefined) {
+    delete process.env.COCO_STORE_PATH
+  } else {
+    process.env.COCO_STORE_PATH = saved
+  }
 })
 
 function legacy_with(entities: string[]): string {

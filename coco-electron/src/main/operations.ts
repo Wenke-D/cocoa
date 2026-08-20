@@ -46,8 +46,11 @@ export async function start_run(
       const render: Record<string, string> = {}
       const launch: Record<string, string> = {}
       for (const [key, value] of Object.entries(parameters)) {
-        if (view.manifest.render_params.includes(key)) render[key] = value
-        else launch[key] = value
+        if (view.manifest.render_params.includes(key)) {
+          render[key] = value
+        } else {
+          launch[key] = value
+        }
       }
       run_id = await engine.start_job(view.path, render, launch, trigger)
     } else {
@@ -77,7 +80,9 @@ export async function cancel(engine: Coco, target: CancelTarget): Promise<Cancel
     }
     const results = await engine.cancel_bench(target.bench_id, Number(target.run_id))
     const failures = results.filter((result) => !result.ok)
-    if (failures.length === 0) return { ok: true }
+    if (failures.length === 0) {
+      return { ok: true }
+    }
     const first = failures[0]
     const rest = failures.length > 1 ? ` (and ${failures.length - 1} more member(s) refused)` : ''
     return {
@@ -117,7 +122,9 @@ export function read_report(engine: Coco, target: ReportTarget): ReportResult {
     } catch {
       continue
     }
-    if (!stat.isFile()) continue
+    if (!stat.isFile()) {
+      continue
+    }
     if (stat.size > MAX_REPORT_BYTES) {
       return {
         ok: false,
@@ -150,7 +157,9 @@ export function add_folder(engine: Coco, folder: string): AddFolderResult {
     return { ok: false, cancelled: false, message: (error as Error).message }
   }
   const added = engine.entities().find((entity) => !before.has(entity.path))
-  if (added !== undefined) return { ok: true, entity_id: added.path, already: false }
+  if (added !== undefined) {
+    return { ok: true, entity_id: added.path, already: false }
+  }
 
   // `register` returns silently for a folder already in the store. Which one
   // it was is answered in the store's own terms — canonical paths, since that

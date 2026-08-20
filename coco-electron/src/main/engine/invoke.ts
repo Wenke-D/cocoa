@@ -23,9 +23,15 @@ export function invocation_ok(invocation: Invocation): boolean {
 export function invocation_output(invocation: Invocation): string {
   const out = invocation.stdout.trimEnd()
   const err = invocation.stderr.trimEnd()
-  if (out === '' && err === '') return ''
-  if (err === '') return out
-  if (out === '') return err
+  if (out === '' && err === '') {
+    return ''
+  }
+  if (err === '') {
+    return out
+  }
+  if (out === '') {
+    return err
+  }
   return `${out}\n${err}`
 }
 
@@ -55,7 +61,9 @@ export class Running {
   readonly started: Promise<void>
 
   constructor(cwd: string, argv: string[], timeout_ms: number) {
-    if (argv.length === 0) throw new Error('argv must name the script or interpreter')
+    if (argv.length === 0) {
+      throw new Error('argv must name the script or interpreter')
+    }
     this.closed = new Promise((resolve) => {
       this.settle = resolve
     })
@@ -98,9 +106,13 @@ export class Running {
   }
 
   private finish(code: number | null): void {
-    if (this.finished !== null) return
+    if (this.finished !== null) {
+      return
+    }
     clearTimeout(this.timer)
-    if (this.drain_timer !== null) clearTimeout(this.drain_timer)
+    if (this.drain_timer !== null) {
+      clearTimeout(this.drain_timer)
+    }
     this.finished = {
       exit: this.timed_out ? null : code,
       timed_out: this.timed_out,

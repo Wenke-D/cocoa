@@ -26,7 +26,9 @@ export function load_store(store_path: string): StoreData {
   try {
     text = fs.readFileSync(store_path, 'utf8')
   } catch (cause) {
-    if ((cause as NodeJS.ErrnoException).code === 'ENOENT') return empty_store()
+    if ((cause as NodeJS.ErrnoException).code === 'ENOENT') {
+      return empty_store()
+    }
     throw EngineError.io(store_path, cause)
   }
   let parsed: unknown

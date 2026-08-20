@@ -31,8 +31,12 @@ export function refresh_summary(report: Errors): Maybe<string> {
   const errors = [...report.launch_errors, ...report.poll_errors, ...report.report_errors].map(
     (error) => error.message
   )
-  if (errors.length === 0) return null
-  if (errors.length === 1) return errors[0]
+  if (errors.length === 0) {
+    return null
+  }
+  if (errors.length === 1) {
+    return errors[0]
+  }
   return `${errors[0]} (and ${errors.length - 1} more)`
 }
 
@@ -59,7 +63,9 @@ export class NoticeGate {
       this.announced = null
       return null
     }
-    if (summary === this.announced) return null
+    if (summary === this.announced) {
+      return null
+    }
     this.announced = summary
     return error(summary)
   }

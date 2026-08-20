@@ -32,7 +32,9 @@
 
   /** The backdrop is the dialog element itself; a click on it dismisses. */
   function on_backdrop(event: MouseEvent): void {
-    if (event.target === dialog && !busy) onclose()
+    if (event.target === dialog && !busy) {
+      onclose()
+    }
   }
 </script>
 

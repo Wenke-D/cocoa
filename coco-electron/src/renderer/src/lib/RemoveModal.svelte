@@ -15,7 +15,9 @@
 
   /** Runs coco would stop watching. They keep running on the cluster. */
   const active_runs = $derived.by(() => {
-    if (entity === undefined) return 0
+    if (entity === undefined) {
+      return 0
+    }
     const world = app.world
     const ids =
       entity.kind === 'Job'

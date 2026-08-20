@@ -36,7 +36,9 @@ export function announce(notice: Maybe<CocoEvent>): CocoEvent[] {
 
 /** Says something that must survive the window not being ready to hear it. */
 export function announce_when_heard(events: CocoEvent[]): void {
-  if (events.length === 0) return
+  if (events.length === 0) {
+    return
+  }
   if (!bootstrapped) {
     pending_notices.push(...events)
     return

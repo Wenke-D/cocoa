@@ -37,7 +37,9 @@ export async function run({ page, shot, log, wait_text }) {
       await page.evaluate(() => {
         const dialog = document.querySelector('dialog')
         const button = dialog?.querySelector('button.primary')
-        if (!dialog || !button) return { dialog: Boolean(dialog), button: false }
+        if (!dialog || !button) {
+          return { dialog: Boolean(dialog), button: false }
+        }
         const box = button.getBoundingClientRect()
         const at = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)
         return {

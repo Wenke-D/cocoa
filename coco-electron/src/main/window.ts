@@ -69,7 +69,9 @@ export function create_window(remembered: Maybe<WindowBounds>, hooks: WindowHook
 }
 
 export function send(events: CocoEvent[]): void {
-  if (events.length > 0) window?.webContents.send('coco:events', events)
+  if (events.length > 0) {
+    window?.webContents.send('coco:events', events)
+  }
 }
 
 /**
@@ -91,8 +93,12 @@ export function send_command(command: string): void {
  * the screen, and open that way for ever after.
  */
 export function window_bounds(): Maybe<WindowBounds> {
-  if (window === null || window.isDestroyed() || window.isMinimized()) return null
-  if (window.isMaximized() || window.isFullScreen()) return null
+  if (window === null || window.isDestroyed() || window.isMinimized()) {
+    return null
+  }
+  if (window.isMaximized() || window.isFullScreen()) {
+    return null
+  }
   const bounds = window.getBounds()
   return { width: bounds.width, height: bounds.height, x: bounds.x, y: bounds.y }
 }

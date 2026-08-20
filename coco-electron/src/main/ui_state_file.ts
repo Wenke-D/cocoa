@@ -50,9 +50,33 @@ export function write_ui_state(file_path: string, state: UiState): void {
   }
 }
 
-/** `COCO_UI_STATE_PATH` exists so a drive run cannot touch the real one. */
+/**
+ * Where the window's arrangement is kept: `ui-state.json` in Electron's
+ * `userData`, beside the engine's `store.json`.
+ *
+ * `userData` is per-application and per-user, and the platform already has an
+ * answer for where that is — `~/Library/Application Support/coco` on macOS,
+ * `~/.config/coco` on Linux. That is the whole reason to use it rather than a
+ * path of coco's own choosing.
+ *
+ * The directory arrives as an argument rather than being read from
+ * `app.getPath` here, which is what keeps this module free of Electron. A
+ * module that imports Electron can only be tested with an app around it; this
+ * one is tested against a temp directory (`tests/ui_state_file.test.ts`).
+ *
+ * @param user_data_dir Electron's `userData`, from `app.getPath('userData')`.
+ *   The caller reads it once at `whenReady` and passes it down (`index.ts`).
+ * @returns The file's absolute path — or whatever `COCO_UI_STATE_PATH` names,
+ *   if it is set. That override exists for one reason: a drive run (§28) has
+ *   to quit and relaunch the app to see what survives a launch, and it must
+ *   not decide where the real window opens next. `scripts/drive.mjs` points it
+ *   at a scratch file under `.drive/`; nothing else sets it, and nothing else
+ *   reads it.
+ */
 export function ui_state_path(user_data_dir: string): string {
   const override = process.env['COCO_UI_STATE_PATH']
-  if (override !== undefined && override !== '') return override
+  if (override !== undefined && override !== '') {
+    return override
+  }
   return path.join(user_data_dir, 'ui-state.json')
 }

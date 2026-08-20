@@ -119,8 +119,11 @@ describe('paths', () => {
     expect(socket_path()).toBe(path.join(process.env['HOME'] ?? '', '.local/share/coco/coco.sock'))
     process.env['COCO_SOCKET_PATH'] = '/tmp/elsewhere.sock'
     expect(socket_path()).toBe('/tmp/elsewhere.sock')
-    if (previous === undefined) delete process.env['COCO_SOCKET_PATH']
-    else process.env['COCO_SOCKET_PATH'] = previous
+    if (previous === undefined) {
+      delete process.env['COCO_SOCKET_PATH']
+    } else {
+      process.env['COCO_SOCKET_PATH'] = previous
+    }
   })
 })
 
@@ -265,8 +268,12 @@ describe('the socket', () => {
   const dirs: string[] = []
 
   afterEach(async () => {
-    for (const server of open.splice(0)) await server.close()
-    for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true })
+    for (const server of open.splice(0)) {
+      await server.close()
+    }
+    for (const dir of dirs.splice(0)) {
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   function socket_file(): string {
@@ -311,7 +318,9 @@ describe('the socket', () => {
         }
       )
       call.on('error', reject)
-      if (body !== undefined) call.write(body)
+      if (body !== undefined) {
+        call.write(body)
+      }
       call.end()
     })
   }

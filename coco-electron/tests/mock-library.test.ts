@@ -40,10 +40,15 @@ function walk_folders(root: string): string[] {
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
     // The picker's scan skips hidden directories, and so does this: the
     // fixtures under `.fixtures` are not part of the demonstration library.
-    if (!entry.isDirectory() || entry.name.startsWith('.')) continue
+    if (!entry.isDirectory() || entry.name.startsWith('.')) {
+      continue
+    }
     const child = path.join(root, entry.name)
-    if (fs.existsSync(path.join(child, 'coco.toml'))) found.push(child)
-    else found.push(...walk_folders(child))
+    if (fs.existsSync(path.join(child, 'coco.toml'))) {
+      found.push(child)
+    } else {
+      found.push(...walk_folders(child))
+    }
   }
   return found
 }

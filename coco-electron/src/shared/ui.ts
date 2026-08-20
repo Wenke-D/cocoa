@@ -76,7 +76,9 @@ export function default_ui_state(): UiState {
 }
 
 function clamp(value: number, low: number, high: number, fallback: number): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback
+  }
   return Math.min(high, Math.max(low, value))
 }
 
@@ -107,7 +109,9 @@ export function sanitize(state: Partial<UiState> | null | undefined): UiState {
 
 function sanitize_route(route: Route | null | undefined): Route {
   const empty: Route = { page: 'empty' }
-  if (route === null || route === undefined || typeof route !== 'object') return empty
+  if (route === null || route === undefined || typeof route !== 'object') {
+    return empty
+  }
   switch (route.page) {
     case 'empty':
       return empty
@@ -143,7 +147,9 @@ function sanitize_route(route: Route | null | undefined): Route {
 }
 
 function sanitize_window(bounds: WindowBounds | null | undefined): WindowBounds | null {
-  if (bounds === null || bounds === undefined || typeof bounds !== 'object') return null
+  if (bounds === null || bounds === undefined || typeof bounds !== 'object') {
+    return null
+  }
   const width = clamp(bounds.width, WINDOW_MIN.width, Number.MAX_SAFE_INTEGER, WINDOW_DEFAULT.width)
   const height = clamp(
     bounds.height,

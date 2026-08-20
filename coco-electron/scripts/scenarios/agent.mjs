@@ -34,7 +34,9 @@ function call(socket_path, method, route_path, body) {
       }
     )
     request.on('error', reject)
-    if (body !== undefined) request.write(body)
+    if (body !== undefined) {
+      request.write(body)
+    }
     request.end()
   })
 }
@@ -54,11 +56,15 @@ async function mcp(socket_path, messages) {
     while (at >= 0) {
       const line = buffer.slice(0, at).trim()
       buffer = buffer.slice(at + 1)
-      if (line !== '') replies.push(JSON.parse(line))
+      if (line !== '') {
+        replies.push(JSON.parse(line))
+      }
       at = buffer.indexOf('\n')
     }
   })
-  for (const message of messages) child.stdin.write(`${JSON.stringify(message)}\n`)
+  for (const message of messages) {
+    child.stdin.write(`${JSON.stringify(message)}\n`)
+  }
   const wanted = messages.filter((message) => message.id !== undefined).length
   const deadline = Date.now() + 10_000
   while (replies.length < wanted && Date.now() < deadline) {
@@ -74,12 +80,16 @@ export async function run({ page, shot, log, wait_text, socket_path }) {
 
   const help = await call(socket_path, 'GET', '/help')
   log('GET /help →', help.status, `${JSON.parse(help.text).endpoints.length} endpoints`)
-  if (help.status !== 200) throw new Error('the socket did not answer /help')
+  if (help.status !== 200) {
+    throw new Error('the socket did not answer /help')
+  }
 
   const jobs = await call(socket_path, 'GET', '/jobs')
   const names = JSON.parse(jobs.text).map((job) => job.name)
   log('GET /jobs →', jobs.status, names.join(', '))
-  if (!names.includes('solver-gpu')) throw new Error(`/jobs is missing solver-gpu: ${jobs.text}`)
+  if (!names.includes('solver-gpu')) {
+    throw new Error(`/jobs is missing solver-gpu: ${jobs.text}`)
+  }
 
   const detail = await call(socket_path, 'GET', '/jobs/solver-gpu')
   log('GET /jobs/solver-gpu →', detail.status, 'parameters', JSON.parse(detail.text).parameters)
@@ -92,7 +102,9 @@ export async function run({ page, shot, log, wait_text, socket_path }) {
     JSON.stringify({ parameters: { nodes: '8', gpu: '1' } })
   )
   log('POST /experiments/solver-gpu/runs →', started.status, started.text)
-  if (started.status !== 201) throw new Error(`the start was refused: ${started.text}`)
+  if (started.status !== 201) {
+    throw new Error(`the start was refused: ${started.text}`)
+  }
   const run_id = JSON.parse(started.text).run_id
 
   // The window is the same workbench: the run appears in it, stamped agent.
@@ -112,7 +124,9 @@ export async function run({ page, shot, log, wait_text, socket_path }) {
   const folder = world.entities.find((entity) => entity.name === 'solver-gpu').id
   const run = world.job_runs[folder][run_id]
   log('world says run', run_id, 'is', run.status, 'origin', JSON.stringify(run.origin))
-  if (run.origin !== 'Agent') throw new Error(`origin is ${JSON.stringify(run.origin)}`)
+  if (run.origin !== 'Agent') {
+    throw new Error(`origin is ${JSON.stringify(run.origin)}`)
+  }
 
   // Finally: the Rust MCP binary, unchanged, against this socket.
   const replies = await mcp(socket_path, [
@@ -148,19 +162,26 @@ export async function run({ page, shot, log, wait_text, socket_path }) {
   log('mcp initialize →', by_id.get(1)?.result?.serverInfo?.name)
   const tools = by_id.get(2)?.result?.tools?.map((tool) => tool.name) ?? []
   log('mcp tools/list →', tools.join(', '))
-  if (!tools.includes('coco_start')) throw new Error('the MCP binary listed no coco_start')
+  if (!tools.includes('coco_start')) {
+    throw new Error('the MCP binary listed no coco_start')
+  }
   const listed = by_id.get(3)?.result?.content?.[0]?.text ?? ''
   const listed_jobs = JSON.parse(listed).map((job) => job.name)
-  if (!listed_jobs.includes('solver-gpu')) throw new Error(`coco_list_jobs answered ${listed}`)
+  if (!listed_jobs.includes('solver-gpu')) {
+    throw new Error(`coco_list_jobs answered ${listed}`)
+  }
   const mcp_start = by_id.get(4)?.result
   const start_text = mcp_start?.content?.[0]?.text ?? ''
   log('mcp coco_start →', JSON.stringify(start_text))
-  if (mcp_start?.isError !== false)
+  if (mcp_start?.isError !== false) {
     throw new Error(`coco_start failed: ${JSON.stringify(mcp_start)}`)
+  }
   // Parsed, not merely searched: a reply the client could not frame properly
   // still *contains* the run id, surrounded by chunk sizes.
   const mcp_run_id = JSON.parse(start_text).run_id
-  if (typeof mcp_run_id !== 'string') throw new Error(`coco_start answered ${start_text}`)
+  if (typeof mcp_run_id !== 'string') {
+    throw new Error(`coco_start answered ${start_text}`)
+  }
 
   await wait_text('Running', 25_000)
   await shot('after-mcp-start')

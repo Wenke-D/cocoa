@@ -189,7 +189,9 @@ export class Coco {
    */
   private next_run_id(records: Map<string, Map<number, unknown>>, folder: string): number {
     const mine = records.get(folder)
-    if (mine === undefined || mine.size === 0) return 0
+    if (mine === undefined || mine.size === 0) {
+      return 0
+    }
     return Math.max(...mine.keys()) + 1
   }
 
@@ -219,7 +221,9 @@ export class Coco {
         error = as_engine_error(folder, cause)
       }
       this.manifests.set(folder, { manifest, error })
-      if (manifest === null) continue
+      if (manifest === null) {
+        continue
+      }
 
       if (manifest.kind === 'job') {
         this.reconcile_runs(folder, map_for(this.job_records, folder))
@@ -239,7 +243,9 @@ export class Coco {
     }
     const on_disk = new Set<number>()
     for (const entry of entries) {
-      if (!/^\d+$/.test(entry)) continue
+      if (!/^\d+$/.test(entry)) {
+        continue
+      }
       const run_id = Number(entry)
       on_disk.add(run_id)
       const record_path = path.join(runs_dir, entry, 'run.json')
@@ -253,7 +259,9 @@ export class Coco {
         })
         continue
       }
-      if (this.file_mtimes.get(record_path) === mtime && slots.has(run_id)) continue
+      if (this.file_mtimes.get(record_path) === mtime && slots.has(run_id)) {
+        continue
+      }
       try {
         const text = fs.readFileSync(record_path, 'utf8')
         slots.set(run_id, { record: JSON.parse(text) as T, error: null })
@@ -269,7 +277,9 @@ export class Coco {
       this.file_mtimes.set(record_path, mtime)
     }
     for (const run_id of [...slots.keys()]) {
-      if (!on_disk.has(run_id)) slots.delete(run_id)
+      if (!on_disk.has(run_id)) {
+        slots.delete(run_id)
+      }
     }
   }
 
@@ -287,10 +297,14 @@ export class Coco {
     if (!fs.statSync(canonical).isDirectory()) {
       throw EngineError.validation(`${canonical} is not a folder`)
     }
-    if (this.store.entities.includes(canonical)) return
+    if (this.store.entities.includes(canonical)) {
+      return
+    }
     const manifest = load_manifest(canonical)
     const collision = this.find_name_collision(manifest.name)
-    if (collision !== null) throw EngineError.name_collision(collision)
+    if (collision !== null) {
+      throw EngineError.name_collision(collision)
+    }
     this.store.entities.push(canonical)
     save_store(this.store_path, this.store)
     this.reconcile()
@@ -492,10 +506,14 @@ export class Coco {
     }
 
     const report: PollReport = { polled: active.length, changed: [], warnings: [] }
-    if (active.length === 0) return report
+    if (active.length === 0) {
+      return report
+    }
 
     const by_submission = new Map<string, [number, RunRecord]>()
-    for (const [run_id, record] of active) by_submission.set(record.submission_id, [run_id, record])
+    for (const [run_id, record] of active) {
+      by_submission.set(record.submission_id, [run_id, record])
+    }
     const submissions = [...by_submission.keys()].sort()
 
     const argv = [...manifest.poll.words, '--submissions', submissions.join(',')]
@@ -551,7 +569,9 @@ export class Coco {
           report.warnings.push(`unknown status \`${word}\` for run ${run_id} ignored`)
           continue
         }
-        if (is_terminal(record.status)) continue
+        if (is_terminal(record.status)) {
+          continue
+        }
         if (record.status !== status) {
           apply_status(record, status, now, reason)
           this.write_run_record(folder, record)
@@ -734,16 +754,23 @@ export class Coco {
       const extra = [...provided].filter((name) => !expected.has(name)).sort()
       if (missing.length > 0 || extra.length > 0) {
         const wrong: string[] = []
-        if (missing.length > 0) wrong.push(`missing ${describe_names(missing)}`)
-        if (extra.length > 0) wrong.push(`extra ${describe_names(extra)}`)
+        if (missing.length > 0) {
+          wrong.push(`missing ${describe_names(missing)}`)
+        }
+        if (extra.length > 0) {
+          wrong.push(`extra ${describe_names(extra)}`)
+        }
         problems.push(`call ${call}: job \`${planned.job}\` — ${wrong.join(', ')}`)
         continue
       }
       const render: Record<string, string> = {}
       const launch: Record<string, string> = {}
       for (const [name, value] of Object.entries(planned.params)) {
-        if (job.render_params.includes(name)) render[name] = value
-        else launch[name] = value
+        if (job.render_params.includes(name)) {
+          render[name] = value
+        } else {
+          launch[name] = value
+        }
       }
       instances.push({ job_path, job_name: job.name, render, launch })
     }
@@ -906,7 +933,9 @@ export class Coco {
       } catch {
         continue
       }
-      if (!is_cancellable(member_record.status)) continue
+      if (!is_cancellable(member_record.status)) {
+        continue
+      }
       try {
         await this.cancel_run(job_path, member.run_id)
         results.push({ run_id: member.run_id, job: member.job, ok: true })
@@ -1016,7 +1045,9 @@ export class Coco {
     const errors: EngineError[] = []
     while (this.launching.length > 0) {
       errors.push(...this.harvest_launches())
-      if (this.launching.length > 0) await sleep(5)
+      if (this.launching.length > 0) {
+        await sleep(5)
+      }
     }
     return errors
   }
@@ -1030,7 +1061,9 @@ export class Coco {
     const deadline = Date.now() + grace_ms
     while (this.launching.length > 0 && Date.now() < deadline) {
       this.harvest_launches()
-      if (this.launching.length > 0) await sleep(5)
+      if (this.launching.length > 0) {
+        await sleep(5)
+      }
     }
     for (const in_flight of this.launching) {
       in_flight.running.kill()
@@ -1066,7 +1099,9 @@ export class Coco {
 
     for (const view of this.entities()) {
       const manifest = view.manifest
-      if (manifest === null) continue
+      if (manifest === null) {
+        continue
+      }
       if (manifest.kind === 'job') {
         report.polls += 1
         try {
@@ -1078,7 +1113,9 @@ export class Coco {
         }
         for (const run_view of this.job_runs(view.path)) {
           const record = run_view.record
-          if (record === null) continue
+          if (record === null) {
+            continue
+          }
           // A run still "launching" whose script this engine is not holding
           // is a previous session's leftover (§10): the stdout that carried
           // its submission id died with that process.
@@ -1109,9 +1146,13 @@ export class Coco {
       } else {
         for (const run_view of this.bench_runs(view.path)) {
           const record = run_view.record
-          if (record === null) continue
+          if (record === null) {
+            continue
+          }
           const needs_report = record.report === undefined || !record.report.attempted
-          if (!needs_report) continue
+          if (!needs_report) {
+            continue
+          }
           try {
             const status = this.bench_status(view.path, run_view.run_id)
             if (status.status === 'ANALYZING') {
@@ -1133,7 +1174,9 @@ export class Coco {
 
   private find_name_collision(name: string): string | null {
     for (const slot of this.manifests.values()) {
-      if (slot.manifest !== null && slot.manifest.name === name) return slot.manifest.name
+      if (slot.manifest !== null && slot.manifest.name === name) {
+        return slot.manifest.name
+      }
     }
     return null
   }
@@ -1210,7 +1253,9 @@ function map_for<T>(
 function views_of<T>(
   slots: Map<number, RecordSlot<T>> | undefined
 ): { run_id: number; record: T | null; record_error: EngineError | null }[] {
-  if (slots === undefined) return []
+  if (slots === undefined) {
+    return []
+  }
   const views = [...slots.entries()].map(([run_id, slot]) => ({
     run_id,
     record: slot.record,
@@ -1226,17 +1271,31 @@ function derive_bench_status(
   bench: BenchRecord,
   report_exists: boolean
 ): Status {
-  if (members.some((member) => member.status === 'CANCELLING')) return 'CANCELLING'
+  if (members.some((member) => member.status === 'CANCELLING')) {
+    return 'CANCELLING'
+  }
   if (members.some((member) => !is_terminal(member.status))) {
-    if (members.every((member) => member.status === 'STARTING')) return 'STARTING'
+    if (members.every((member) => member.status === 'STARTING')) {
+      return 'STARTING'
+    }
     return 'RUNNING'
   }
-  if (bench.launch_failures.length > 0 || members.some((m) => m.status === 'ERROR')) return 'ERROR'
-  if (members.some((m) => m.status === 'FAILED')) return 'FAILED'
-  if (members.some((m) => m.status === 'CANCELLED')) return 'CANCELLED'
+  if (bench.launch_failures.length > 0 || members.some((m) => m.status === 'ERROR')) {
+    return 'ERROR'
+  }
+  if (members.some((m) => m.status === 'FAILED')) {
+    return 'FAILED'
+  }
+  if (members.some((m) => m.status === 'CANCELLED')) {
+    return 'CANCELLED'
+  }
   if (bench.report !== undefined && bench.report.attempted) {
-    if (bench.report.error !== undefined) return 'ERROR'
-    if (!report_exists) return 'ERROR'
+    if (bench.report.error !== undefined) {
+      return 'ERROR'
+    }
+    if (!report_exists) {
+      return 'ERROR'
+    }
   }
   return report_exists ? 'SUCCEEDED' : 'ANALYZING'
 }
@@ -1249,7 +1308,9 @@ export function report_on_disk(folder: string, run_id: number): boolean {
 /** Strips a trailing `.tmpl` from the template's file name (§6.1). */
 function artifact_name(template_rel: string): string {
   const name = path.basename(template_rel)
-  if (name.endsWith('.tmpl') && name !== '.tmpl') return name.slice(0, -'.tmpl'.length)
+  if (name.endsWith('.tmpl') && name !== '.tmpl') {
+    return name.slice(0, -'.tmpl'.length)
+  }
   return name
 }
 
@@ -1263,7 +1324,9 @@ function validate_params(declared: string[], provided: Record<string, string>, s
   const blank = [...declared_set]
     .filter((name) => provided[name] !== undefined && provided[name].trim() === '')
     .sort()
-  if (missing.length === 0 && extra.length === 0 && blank.length === 0) return
+  if (missing.length === 0 && extra.length === 0 && blank.length === 0) {
+    return
+  }
   throw EngineError.validation(
     `${set} parameters must match the manifest exactly and each one needs a value; ` +
       `missing ${describe_names(missing)}, extra ${describe_names(extra)}, empty ${describe_names(blank)}`
@@ -1271,7 +1334,9 @@ function validate_params(declared: string[], provided: Record<string, string>, s
 }
 
 function describe_names(names: string[]): string {
-  if (names.length === 0) return 'none'
+  if (names.length === 0) {
+    return 'none'
+  }
   return names.map((name) => `\`${name}\``).join(', ')
 }
 
@@ -1334,7 +1399,9 @@ function invocation_error(script: string, invocation: Invocation, detail: string
 /** BTreeMap parity: object keys in sorted order, so JSON output is stable. */
 function sorted(map: Record<string, string>): Record<string, string> {
   const result: Record<string, string> = {}
-  for (const key of Object.keys(map).sort()) result[key] = map[key]
+  for (const key of Object.keys(map).sort()) {
+    result[key] = map[key]
+  }
   return result
 }
 

@@ -44,10 +44,14 @@ function seed_library(seed) {
   const folders = []
   for (const group of ['jobs', 'benches']) {
     const dir = path.join(library, group)
-    if (!fs.existsSync(dir)) continue
+    if (!fs.existsSync(dir)) {
+      continue
+    }
     for (const name of fs.readdirSync(dir).sort()) {
       const folder = path.join(dir, name)
-      if (!fs.existsSync(path.join(folder, 'coco.toml'))) continue
+      if (!fs.existsSync(path.join(folder, 'coco.toml'))) {
+        continue
+      }
       // Whatever a previous drive generated is not this run's history.
       for (const generated of ['runs', 'report']) {
         fs.rmSync(path.join(folder, generated), { recursive: true, force: true })
@@ -148,7 +152,9 @@ async function launch() {
   page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
   page.on('console', (message) => {
-    if (message.type() === 'error') failures.push(`console error: ${message.text()}`)
+    if (message.type() === 'error') {
+      failures.push(`console error: ${message.text()}`)
+    }
   })
   page.on('pageerror', (error) => failures.push(`page error: ${error.message}`))
   return { app, page }
@@ -224,7 +230,9 @@ try {
   // close cannot swallow it.
   if (failures.length > 0) {
     console.error('\nRENDERER ERRORS:')
-    for (const failure of failures) console.error('  ' + failure)
+    for (const failure of failures) {
+      console.error('  ' + failure)
+    }
     process.exitCode = 1
   } else {
     console.log('no renderer errors')

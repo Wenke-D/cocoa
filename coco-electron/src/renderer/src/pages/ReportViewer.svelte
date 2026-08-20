@@ -95,7 +95,9 @@
    */
   const matches = $derived.by(() => {
     const needle = query.trim().toLowerCase()
-    if (needle === '') return []
+    if (needle === '') {
+      return []
+    }
     const found: { line: number; at: number }[] = []
     lines.forEach((line, index) => {
       const haystack = line.toLowerCase()
@@ -113,7 +115,9 @@
   const matched_lines = $derived(new Set(matches.map((match) => match.line)))
 
   $effect(() => {
-    if (current >= matches.length) current = 0
+    if (current >= matches.length) {
+      current = 0
+    }
   })
 
   /** One line cut into alternating plain and matching pieces. */
@@ -125,17 +129,23 @@
     let from = 0
     let at = haystack.indexOf(lowered)
     while (at >= 0) {
-      if (at > from) out.push({ text: line.slice(from, at), at: -1 })
+      if (at > from) {
+        out.push({ text: line.slice(from, at), at: -1 })
+      }
       out.push({ text: line.slice(at, at + needle.length), at })
       from = at + needle.length
       at = haystack.indexOf(lowered, from)
     }
-    if (from < line.length) out.push({ text: line.slice(from), at: -1 })
+    if (from < line.length) {
+      out.push({ text: line.slice(from), at: -1 })
+    }
     return out
   }
 
   function step(delta: number): void {
-    if (matches.length === 0) return
+    if (matches.length === 0) {
+      return
+    }
     current = (current + delta + matches.length) % matches.length
     document
       .querySelector(`[data-line="${matches[current].line}"]`)

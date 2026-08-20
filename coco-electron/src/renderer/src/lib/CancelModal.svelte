@@ -22,7 +22,9 @@
     const target = overlay.target
     if (target.kind === 'job_run') {
       const run = job_run(app.world, target.job_id, target.run_id)
-      if (run === undefined) return null
+      if (run === undefined) {
+        return null
+      }
       return {
         title: 'Cancel this Job run?',
         subject: entity_of(target.job_id)?.name ?? '(removed)',
@@ -36,7 +38,9 @@
       }
     }
     const run = bench_run(app.world, target.bench_id, target.run_id)
-    if (run === undefined) return null
+    if (run === undefined) {
+      return null
+    }
     const children = run.plan.steps
       .map((step) => job_run(app.world, step.job_id, step.run_id))
       .filter((child) => child !== undefined)

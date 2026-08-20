@@ -68,9 +68,13 @@ class Collector {
   collect_macro_names(node: AstNode): void {
     if (type_name(node) === 'Macro') {
       const name = (node.name as AstNode | undefined)?.value
-      if (typeof name === 'string') this.macros.add(name)
+      if (typeof name === 'string') {
+        this.macros.add(name)
+      }
     }
-    for (const child of children_of(node)) this.collect_macro_names(child)
+    for (const child of children_of(node)) {
+      this.collect_macro_names(child)
+    }
   }
 
   walk(node: AstNode): void {
@@ -82,7 +86,9 @@ class Collector {
 
     switch (type) {
       case 'Symbol': {
-        if (typeof node.value === 'string') this.reference(node.value)
+        if (typeof node.value === 'string') {
+          this.reference(node.value)
+        }
         return
       }
       case 'For': {
@@ -90,14 +96,22 @@ class Collector {
         this.scopes.push(new Set())
         bind_target(node.name as AstNode, (name) => this.bind(name))
         this.bind('loop')
-        if (node.body !== undefined && node.body !== null) this.walk(node.body as AstNode)
-        if (node.else_ !== undefined && node.else_ !== null) this.walk(node.else_ as AstNode)
+        if (node.body !== undefined && node.body !== null) {
+          this.walk(node.body as AstNode)
+        }
+        if (node.else_ !== undefined && node.else_ !== null) {
+          this.walk(node.else_ as AstNode)
+        }
         this.scopes.pop()
         return
       }
       case 'Set': {
-        if (node.value !== undefined && node.value !== null) this.walk(node.value as AstNode)
-        if (node.body !== undefined && node.body !== null) this.walk(node.body as AstNode)
+        if (node.value !== undefined && node.value !== null) {
+          this.walk(node.value as AstNode)
+        }
+        if (node.body !== undefined && node.body !== null) {
+          this.walk(node.body as AstNode)
+        }
         for (const target of (node.targets as AstNode[] | undefined) ?? []) {
           bind_target(target, (name) => this.bind(name))
         }
@@ -105,13 +119,19 @@ class Collector {
       }
       case 'Macro': {
         const definition = node.name as AstNode | undefined
-        if (typeof definition?.value === 'string') this.macros.add(definition.value)
+        if (typeof definition?.value === 'string') {
+          this.macros.add(definition.value)
+        }
         this.scopes.push(new Set())
         const args = (node.args as AstNode | undefined)?.children ?? []
         for (const arg of args) {
-          if (is_node(arg)) bind_target(arg, (name) => this.bind(name))
+          if (is_node(arg)) {
+            bind_target(arg, (name) => this.bind(name))
+          }
         }
-        if (node.body !== undefined && node.body !== null) this.walk(node.body as AstNode)
+        if (node.body !== undefined && node.body !== null) {
+          this.walk(node.body as AstNode)
+        }
         this.scopes.pop()
         return
       }
@@ -123,15 +143,23 @@ class Collector {
         const name = node.name as AstNode | undefined
         if (type === 'Filter') {
           for (const child of children_of(node)) {
-            if (child !== name) this.walk(child)
+            if (child !== name) {
+              this.walk(child)
+            }
           }
           if (name !== undefined) {
             const args_only = name.children ?? []
-            for (const child of args_only) if (is_node(child)) this.walk(child)
+            for (const child of args_only) {
+              if (is_node(child)) {
+                this.walk(child)
+              }
+            }
           }
           return
         }
-        for (const child of children_of(node)) this.walk(child)
+        for (const child of children_of(node)) {
+          this.walk(child)
+        }
         return
       }
       case 'Is': {
@@ -142,7 +170,9 @@ class Collector {
         const test = node.right as AstNode | undefined
         if (test !== undefined && type_name(test) === 'FunCall') {
           for (const child of children_of(test)) {
-            if (child !== test.name) this.walk(child)
+            if (child !== test.name) {
+              this.walk(child)
+            }
           }
         }
         return
@@ -153,7 +183,9 @@ class Collector {
         return
       }
       default: {
-        for (const child of children_of(node)) this.walk(child)
+        for (const child of children_of(node)) {
+          this.walk(child)
+        }
       }
     }
   }
@@ -163,9 +195,14 @@ function children_of(node: AstNode): AstNode[] {
   const found: AstNode[] = []
   for (const key of Object.keys(node)) {
     const value = node[key]
-    if (is_node(value)) found.push(value)
-    else if (Array.isArray(value)) {
-      for (const item of value) if (is_node(item)) found.push(item)
+    if (is_node(value)) {
+      found.push(value)
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        if (is_node(item)) {
+          found.push(item)
+        }
+      }
     }
   }
   return found
@@ -177,7 +214,9 @@ function bind_target(target: AstNode, bind: (name: string) => void): void {
     bind(target.value)
     return
   }
-  for (const child of children_of(target)) bind_target(child, bind)
+  for (const child of children_of(target)) {
+    bind_target(child, bind)
+  }
 }
 
 /** Validates that a template's variable references are exactly `params`. */
@@ -197,7 +236,9 @@ export function analyze(source: string, params: string[]): void {
   const undefined_names = [...collector.referenced].filter((name) => !declared.has(name)).sort()
   const unused = params.filter((name) => !collector.referenced.has(name)).sort()
 
-  if (undefined_names.length === 0 && unused.length === 0) return
+  if (undefined_names.length === 0 && unused.length === 0) {
+    return
+  }
 
   const parts: string[] = []
   if (undefined_names.length > 0) {

@@ -24,7 +24,9 @@
   })
 
   function on_key(event: KeyboardEvent): void {
-    if (event.key === 'Escape') close_menu()
+    if (event.key === 'Escape') {
+      close_menu()
+    }
   }
 </script>
 

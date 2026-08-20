@@ -80,12 +80,16 @@ export class EngineError extends Error {
 }
 
 function describe_cause(cause: unknown): string {
-  if (cause instanceof Error) return cause.message
+  if (cause instanceof Error) {
+    return cause.message
+  }
   return String(cause)
 }
 
 /** Coerces an unknown thrown value into an EngineError, as an io failure. */
 export function as_engine_error(path: string, cause: unknown): EngineError {
-  if (cause instanceof EngineError) return cause
+  if (cause instanceof EngineError) {
+    return cause
+  }
   return EngineError.io(path, cause)
 }

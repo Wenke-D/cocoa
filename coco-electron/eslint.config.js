@@ -53,6 +53,11 @@ export default ts.config(
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
       ],
+      // A body always gets braces, and Prettier then always puts it on its own
+      // line. `if (x) return` reads as one thought and hides that it is two:
+      // the condition and what happens. Making the second one a line of its
+      // own is also what leaves room to add to it without first restructuring.
+      curly: ['error', 'all'],
       // Off deliberately. Here `async` is usually the *contract* rather than
       // an implementation detail — `ipcMain.handle` answers a promise, a
       // `Turn` takes one — and a body that happens not to await yet is not a

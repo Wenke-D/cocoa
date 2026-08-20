@@ -48,8 +48,11 @@
     const unsubscribe = window.coco.on_events(apply_events)
     // A menu item runs exactly what the button runs.
     const unlisten = window.coco.on_command((command) => {
-      if (command === 'add_folder') void add_folder()
-      else if (command === 'refresh') void refresh_now()
+      if (command === 'add_folder') {
+        void add_folder()
+      } else if (command === 'refresh') {
+        void refresh_now()
+      }
     })
     void bootstrap()
     const clock = setInterval(() => {
@@ -77,7 +80,9 @@
   }
 
   function drag(event: PointerEvent): void {
-    if (!dragging) return
+    if (!dragging) {
+      return
+    }
     app.sidebar_width = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, event.clientX))
   }
 

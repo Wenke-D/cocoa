@@ -50,7 +50,9 @@ describe('load_manifest', () => {
 
     const manifest = load_manifest(dir)
     expect(manifest.kind).toBe('job')
-    if (manifest.kind !== 'job') return
+    if (manifest.kind !== 'job') {
+      return
+    }
     expect(manifest.name).toBe('solver-gpu')
     expect(manifest.render_params).toEqual(['size', 'backend'])
     expect(manifest.launch_params).toEqual(['mesh', 'gpu'])
@@ -77,7 +79,9 @@ command     = "./report.py"
     )
     const manifest = load_manifest(dir)
     expect(manifest.kind).toBe('bench')
-    if (manifest.kind !== 'bench') return
+    if (manifest.kind !== 'bench') {
+      return
+    }
     expect(manifest.name).toBe('nightly-benchmark')
     expect(manifest.plan_params).toEqual(['mesh'])
   })

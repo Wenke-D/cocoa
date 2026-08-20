@@ -103,7 +103,9 @@ export async function add_folder(): Promise<void> {
     return
   }
   if (!result.ok) {
-    if (result.cancelled) return
+    if (result.cancelled) {
+      return
+    }
     notify(result.message, 'error')
     return
   }
@@ -139,7 +141,9 @@ export function close_overlay(): void {
  */
 export async function confirm_remove(): Promise<void> {
   const overlay = app.overlay
-  if (overlay === null || overlay.kind !== 'confirm_remove' || overlay.busy) return
+  if (overlay === null || overlay.kind !== 'confirm_remove' || overlay.busy) {
+    return
+  }
   overlay.busy = true
   overlay.error = null
 
@@ -148,7 +152,9 @@ export async function confirm_remove(): Promise<void> {
   // accident, and this is not one — the user asked for it. The route is put
   // back if the removal is refused.
   const previous = app.route
-  if (selected_entity_id() === overlay.entity_id) app.route = { page: 'empty' }
+  if (selected_entity_id() === overlay.entity_id) {
+    app.route = { page: 'empty' }
+  }
 
   let result: RemoveFolderResult
   try {
@@ -157,7 +163,9 @@ export async function confirm_remove(): Promise<void> {
     result = { ok: false, message: (error as Error).message }
   }
 
-  if (app.overlay !== overlay) return
+  if (app.overlay !== overlay) {
+    return
+  }
   if (result.ok) {
     app.overlay = null
     notify('Removed from the Explorer. The folder is untouched on disk.')
@@ -176,7 +184,9 @@ export async function confirm_remove(): Promise<void> {
  */
 export async function confirm_cancel(): Promise<void> {
   const overlay = app.overlay
-  if (overlay === null || overlay.kind !== 'confirm_cancel' || overlay.busy) return
+  if (overlay === null || overlay.kind !== 'confirm_cancel' || overlay.busy) {
+    return
+  }
   overlay.busy = true
   overlay.error = null
 
@@ -192,7 +202,9 @@ export async function confirm_cancel(): Promise<void> {
 
   // The user may have dismissed it while the script ran; that overlay is
   // gone, and its answer is not this one's business.
-  if (app.overlay !== overlay) return
+  if (app.overlay !== overlay) {
+    return
+  }
   if (result.ok) {
     app.overlay = null
     return
@@ -223,9 +235,13 @@ export function notify(text: string, level: NoticeLevel = 'info'): void {
   // A failure stays until it is dismissed or replaced. It is the only place a
   // refresh that cannot run reports itself, and a message that fades before
   // it is read is the same as no message at all.
-  if (level === 'error') return
+  if (level === 'error') {
+    return
+  }
   setTimeout(() => {
-    if (notice_seq === mine) app.notice = null
+    if (notice_seq === mine) {
+      app.notice = null
+    }
   }, NOTICE_MS)
 }
 
@@ -277,8 +293,12 @@ let persist_timer: ReturnType<typeof setTimeout> | null = null
  * because an experiment is gone is exactly the state worth remembering.
  */
 export function persist_ui(): void {
-  if (!restored) return
-  if (persist_timer !== null) clearTimeout(persist_timer)
+  if (!restored) {
+    return
+  }
+  if (persist_timer !== null) {
+    clearTimeout(persist_timer)
+  }
   // The state is read when the timer fires, not when it is set: a drag's
   // hundred widths must collapse to the width it ended on.
   persist_timer = setTimeout(() => {
@@ -304,8 +324,11 @@ export function apply_events(events: CocoEvent[]): void {
     switch (event.kind) {
       case 'entity-upserted': {
         const at = world.entities.findIndex((entity) => entity.id === event.entity.id)
-        if (at >= 0) world.entities[at] = event.entity
-        else world.entities.push(event.entity)
+        if (at >= 0) {
+          world.entities[at] = event.entity
+        } else {
+          world.entities.push(event.entity)
+        }
         break
       }
       case 'entity-removed':
@@ -350,14 +373,20 @@ function upsert_run<Run extends { id: string; started_at: string }>(
   // the store and change nothing on screen. That is why an entity's *first*
   // run never lit its Explorer dot, and it applies to the run map for exactly
   // the same reason it applies to the index.
-  if (runs[owner_id] === undefined) runs[owner_id] = {}
+  if (runs[owner_id] === undefined) {
+    runs[owner_id] = {}
+  }
   const mine = runs[owner_id]
   mine[run.id] = run
 
-  if (index[owner_id] === undefined) index[owner_id] = []
+  if (index[owner_id] === undefined) {
+    index[owner_id] = []
+  }
   const list = index[owner_id]
   const existing = list.indexOf(run.id)
-  if (existing >= 0) list.splice(existing, 1)
+  if (existing >= 0) {
+    list.splice(existing, 1)
+  }
   const start_ms = Date.parse(run.started_at)
   let position = list.length
   for (let i = 0; i < list.length; i += 1) {
@@ -381,11 +410,17 @@ function remove_run(
   id: string
 ): void {
   const mine = runs[owner_id]
-  if (mine !== undefined) delete mine[id]
+  if (mine !== undefined) {
+    delete mine[id]
+  }
   const list = index[owner_id]
-  if (list === undefined) return
+  if (list === undefined) {
+    return
+  }
   const at = list.indexOf(id)
-  if (at >= 0) list.splice(at, 1)
+  if (at >= 0) {
+    list.splice(at, 1)
+  }
 }
 
 export function entity_of(id: string): Entity | undefined {
@@ -471,10 +506,14 @@ export function recover(): void {
           ? job_run(world, overlay.target.job_id, overlay.target.run_id) === undefined
           : bench_run(world, overlay.target.bench_id, overlay.target.run_id) === undefined
         : entity_gone(overlay.entity_id)
-    if (gone) app.overlay = null
+    if (gone) {
+      app.overlay = null
+    }
   }
   // A menu about a row that is no longer there closes with it.
-  if (app.menu !== null && entity_gone(app.menu.entity_id)) app.menu = null
+  if (app.menu !== null && entity_gone(app.menu.entity_id)) {
+    app.menu = null
+  }
 
   switch (route.page) {
     case 'empty':

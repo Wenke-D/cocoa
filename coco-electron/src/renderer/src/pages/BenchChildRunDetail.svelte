@@ -38,7 +38,9 @@
    */
   const leaf = $derived.by(() => {
     const name = job?.name ?? '(removed)'
-    if (step === undefined) return name
+    if (step === undefined) {
+      return name
+    }
     const parameters = step.parameters === '' ? '' : ` ${step.parameters}`
     return `${name}${parameters} · call ${step.index}`
   })

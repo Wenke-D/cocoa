@@ -61,13 +61,17 @@ function bench_run(id: string, extra: Partial<BenchRun> = {}): BenchRun {
  */
 function job_runs(...runs: JobRun[]): RunsByEntity<JobRun> {
   const out: RunsByEntity<JobRun> = {}
-  for (const run of runs) (out[run.job_id] ??= {})[run.id] = run
+  for (const run of runs) {
+    ;(out[run.job_id] ??= {})[run.id] = run
+  }
   return out
 }
 
 function bench_runs(...runs: BenchRun[]): RunsByEntity<BenchRun> {
   const out: RunsByEntity<BenchRun> = {}
-  for (const run of runs) (out[run.bench_id] ??= {})[run.id] = run
+  for (const run of runs) {
+    ;(out[run.bench_id] ??= {})[run.id] = run
+  }
   return out
 }
 

@@ -26,7 +26,9 @@ export function split_command(input: string): string[] {
         }
         current += q
       }
-      if (!closed) fail('unclosed single quote')
+      if (!closed) {
+        fail('unclosed single quote')
+      }
     } else if (c === '"') {
       in_word = true
       let closed = false
@@ -49,11 +51,17 @@ export function split_command(input: string): string[] {
         }
         current += q
       }
-      if (escaped) fail('bad escape at end of input')
-      if (!closed) fail('unclosed double quote')
+      if (escaped) {
+        fail('bad escape at end of input')
+      }
+      if (!closed) {
+        fail('unclosed double quote')
+      }
     } else if (c === '\\') {
       in_word = true
-      if (i >= input.length) fail('bad escape at end of input')
+      if (i >= input.length) {
+        fail('bad escape at end of input')
+      }
       current += input[i]
       i += 1
     } else if (/\s/.test(c)) {
@@ -68,6 +76,8 @@ export function split_command(input: string): string[] {
     }
   }
 
-  if (in_word) words.push(current)
+  if (in_word) {
+    words.push(current)
+  }
   return words
 }

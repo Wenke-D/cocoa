@@ -18,7 +18,9 @@ let refreshing = false
  * person asking: a person's refresh is never dropped, and always answers.
  */
 export async function refresh_and_publish(manual = false): Promise<void> {
-  if (refreshing && !manual) return
+  if (refreshing && !manual) {
+    return
+  }
   refreshing = true
   try {
     await on_engine(async () => {

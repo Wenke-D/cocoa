@@ -87,7 +87,9 @@ void app.whenReady().then(() => {
   void start_agent_interface()
 
   app.on('activate', () => {
-    if (!any_window_open()) open_window()
+    if (!any_window_open()) {
+      open_window()
+    }
   })
 })
 
@@ -99,13 +101,19 @@ app.on('will-quit', (event) => {
   // next launch decide whether a live coco owns it.
   void agent?.close()
   agent = null
-  if (shutting_down) return
-  if (engine.launches_in_flight() === 0) return
+  if (shutting_down) {
+    return
+  }
+  if (engine.launches_in_flight() === 0) {
+    return
+  }
   event.preventDefault()
   shutting_down = true
   void engine.shutdown_launches(5_000).then(() => app.quit())
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
 })

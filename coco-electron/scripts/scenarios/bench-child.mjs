@@ -37,7 +37,9 @@ export async function run({ page, shot, log, wait_text }) {
 
   const facts = (await page.locator('dl').innerText()).replace(/\n/g, ' | ')
   log('facts:', facts)
-  if (!facts.includes('Call')) throw new Error('the call index is missing from the facts')
+  if (!facts.includes('Call')) {
+    throw new Error('the call index is missing from the facts')
+  }
 
   // The Explorer must still be on the bench, not on the job that ran it.
   const selected = await page.locator('aside .selected').first().innerText()

@@ -241,15 +241,23 @@ export function display_status(status: RunStatus, health: QueryHealth): string {
 }
 
 export function manifest_blocking_reason(state: ManifestState): string | null {
-  if (state === 'Valid') return null
-  if (state === 'Missing') return 'No manifest was found in this folder.'
+  if (state === 'Valid') {
+    return null
+  }
+  if (state === 'Missing') {
+    return 'No manifest was found in this folder.'
+  }
   return `Manifest is invalid: ${state.Invalid.message}`
 }
 
 /** Mirrors `RunOrigin`'s history-row label: `you`, `agent`, or the Bench. */
 export function origin_label(origin: RunOrigin): string {
-  if (origin === 'Human') return 'you'
-  if (origin === 'Agent') return 'agent'
+  if (origin === 'Human') {
+    return 'you'
+  }
+  if (origin === 'Agent') {
+    return 'agent'
+  }
   return `${origin.Bench.name} · call ${origin.Bench.call}`
 }
 
@@ -258,9 +266,15 @@ export function trigger_label(by: Trigger): string {
 }
 
 export function report_summary(report: ReportState): string {
-  if (report === 'Unavailable') return 'Report is not yet available.'
-  if (report === 'Generating') return 'Report is being generated.'
-  if (report === 'Missing') return 'Report is missing.'
+  if (report === 'Unavailable') {
+    return 'Report is not yet available.'
+  }
+  if (report === 'Generating') {
+    return 'Report is being generated.'
+  }
+  if (report === 'Missing') {
+    return 'Report is missing.'
+  }
   if ('Available' in report) {
     const label = report.Available.format === 'Html' ? 'HTML' : 'Plain text'
     return `${label} report is available.`
@@ -287,25 +301,41 @@ export function format_duration(
 /** "38 seconds ago", mirrors `format_relative`. */
 export function format_relative(then: string, now_ms: number): string {
   const seconds = Math.max(0, Math.floor((now_ms - Date.parse(then)) / 1000))
-  if (seconds === 0) return 'just now'
-  if (seconds === 1) return '1 second ago'
-  if (seconds < 60) return `${seconds} seconds ago`
-  if (seconds < 120) return '1 minute ago'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`
-  if (seconds < 7200) return '1 hour ago'
+  if (seconds === 0) {
+    return 'just now'
+  }
+  if (seconds === 1) {
+    return '1 second ago'
+  }
+  if (seconds < 60) {
+    return `${seconds} seconds ago`
+  }
+  if (seconds < 120) {
+    return '1 minute ago'
+  }
+  if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)} minutes ago`
+  }
+  if (seconds < 7200) {
+    return '1 hour ago'
+  }
   return `${Math.floor(seconds / 3600)} hours ago`
 }
 
 /** `HH:MM:SS` in local time, as the cancel modal states a start (§16.1). */
 export function format_clock(iso: string): string {
   const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
+  if (Number.isNaN(date.getTime())) {
+    return iso
+  }
   const pad = (n: number): string => String(n).padStart(2, '0')
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 export function format_started_at(started_at: string): string {
   const date = new Date(started_at)
-  if (Number.isNaN(date.getTime())) return started_at
+  if (Number.isNaN(date.getTime())) {
+    return started_at
+  }
   return date.toLocaleString()
 }

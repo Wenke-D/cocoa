@@ -10,7 +10,9 @@
   let asking = $state(false)
 
   async function refresh(): Promise<void> {
-    if (asking) return
+    if (asking) {
+      return
+    }
     asking = true
     try {
       await refresh_now()

@@ -41,7 +41,9 @@ export function persist_ui_state_now(): void {
     clearTimeout(save_timer)
     save_timer = null
   }
-  if (state_path === null) return
+  if (state_path === null) {
+    return
+  }
   state.window = window_bounds() ?? state.window
   write_ui_state(state_path, state)
 }
@@ -53,8 +55,12 @@ export function persist_ui_state_now(): void {
  * who leave it where it opens.
  */
 export function persist_ui_state(): void {
-  if (state_path === null) return
-  if (save_timer !== null) clearTimeout(save_timer)
+  if (state_path === null) {
+    return
+  }
+  if (save_timer !== null) {
+    clearTimeout(save_timer)
+  }
   save_timer = setTimeout(() => {
     save_timer = null
     persist_ui_state_now()

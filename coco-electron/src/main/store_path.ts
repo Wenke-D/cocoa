@@ -25,7 +25,9 @@ export function legacy_store_path(): string {
  */
 export function resolve_store_path(user_data_dir: string, legacy = legacy_store_path()): string {
   const override = process.env.COCO_STORE_PATH
-  if (override !== undefined && override !== '') return override
+  if (override !== undefined && override !== '') {
+    return override
+  }
 
   const target = path.join(user_data_dir, 'store.json')
   carry_over(legacy, target)
@@ -46,7 +48,9 @@ export function resolve_store_path(user_data_dir: string, legacy = legacy_store_
  */
 function carry_over(legacy: string, target: string): void {
   try {
-    if (fs.existsSync(target) || !fs.existsSync(legacy)) return
+    if (fs.existsSync(target) || !fs.existsSync(legacy)) {
+      return
+    }
     fs.mkdirSync(path.dirname(target), { recursive: true })
     fs.copyFileSync(legacy, target)
     console.log('store: carried over from', legacy)

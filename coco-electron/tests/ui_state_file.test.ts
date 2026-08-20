@@ -20,7 +20,9 @@ function temp_file(): string {
 }
 
 afterEach(() => {
-  for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true })
+  for (const dir of temps.splice(0)) {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 describe('sanitize', () => {

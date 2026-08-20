@@ -13,14 +13,20 @@ async function click_menu(app, id) {
   await app.evaluate(async ({ Menu }, wanted) => {
     const find = (items) => {
       for (const item of items) {
-        if (item.id === wanted) return item
+        if (item.id === wanted) {
+          return item
+        }
         const found = item.submenu ? find(item.submenu.items) : null
-        if (found !== null) return found
+        if (found !== null) {
+          return found
+        }
       }
       return null
     }
     const item = find(Menu.getApplicationMenu().items)
-    if (item === null) throw new Error(`no menu item ${wanted}`)
+    if (item === null) {
+      throw new Error(`no menu item ${wanted}`)
+    }
     item.click()
   }, id)
 }
@@ -33,7 +39,9 @@ export async function run({ app, page, shot, log, wait_text, library }) {
   )
   log('menu:', labels.join(' · '))
   for (const expected of ['File', 'Edit', 'View', 'Window']) {
-    if (!labels.includes(expected)) throw new Error(`the menu has no ${expected}: ${labels}`)
+    if (!labels.includes(expected)) {
+      throw new Error(`the menu has no ${expected}: ${labels}`)
+    }
   }
 
   // Refresh Now: the same manual refresh the status bar's button asks for,

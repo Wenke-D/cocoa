@@ -77,13 +77,17 @@ function diff_runs<T extends object>(
     const before = previous[entity_id] ?? {}
     for (const [id, run] of Object.entries(runs)) {
       const old = before[id]
-      if (old === undefined || identity(old) !== identity(run)) events.push(upserted(run))
+      if (old === undefined || identity(old) !== identity(run)) {
+        events.push(upserted(run))
+      }
     }
   }
   for (const [entity_id, runs] of Object.entries(previous)) {
     const after = next[entity_id] ?? {}
     for (const id of Object.keys(runs)) {
-      if (!(id in after)) events.push(removed(entity_id, id))
+      if (!(id in after)) {
+        events.push(removed(entity_id, id))
+      }
     }
   }
 }

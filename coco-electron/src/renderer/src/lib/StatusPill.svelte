@@ -7,10 +7,18 @@
   const label = $derived(display_status(status, health))
 
   const color = $derived.by(() => {
-    if (label === 'Unknown') return 'var(--chart-yellow)'
-    if (status === 'Succeeded') return 'var(--chart-green)'
-    if (status === 'Failed' || status === 'Error') return 'var(--chart-red)'
-    if (status === 'Cancelled') return 'var(--chart-gray)'
+    if (label === 'Unknown') {
+      return 'var(--chart-yellow)'
+    }
+    if (status === 'Succeeded') {
+      return 'var(--chart-green)'
+    }
+    if (status === 'Failed' || status === 'Error') {
+      return 'var(--chart-red)'
+    }
+    if (status === 'Cancelled') {
+      return 'var(--chart-gray)'
+    }
     return 'var(--chart-blue)'
   })
 </script>

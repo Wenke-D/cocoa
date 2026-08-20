@@ -336,12 +336,18 @@ npm test               # vitest
 
 Run these on both macOS and Linux where CI is available.
 
-Two ESLint rules are on for a reason rather than by default:
-`no-floating-promises`, because an unawaited engine call leaves the queue and
-races the refresh tick (§26.2), and `no-misused-promises`. One is off for a
-reason: `require-await`, because here `async` is usually the *contract* — an
-IPC handler answers a promise, a `Turn` takes one — and a body that does not
-await yet is not a defect.
+Three ESLint rules are on for a reason rather than by default:
+
+- `no-floating-promises`, because an unawaited engine call leaves the queue and
+  races the refresh tick (§26.2), and `no-misused-promises` with it.
+- `curly: all`, so a body always gets braces and Prettier then always puts it
+  on its own line. `if (x) return` reads as one thought and hides that it is
+  two — the condition, and what happens — and a body on its own line is also
+  what leaves room to add to it without restructuring first.
+
+One is off for a reason: `require-await`, because here `async` is usually the
+*contract* — an IPC handler answers a promise, a `Turn` takes one — and a body
+that does not await yet is not a defect.
 
 ---
 

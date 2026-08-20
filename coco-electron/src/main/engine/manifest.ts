@@ -179,8 +179,12 @@ export function load_manifest(folder: string): Manifest {
   }
 
   const kind = typeof value.kind === 'string' ? value.kind : ''
-  if (kind === 'job') return load_job(folder, manifest_path, value)
-  if (kind === 'bench') return load_bench(manifest_path, value)
+  if (kind === 'job') {
+    return load_job(folder, manifest_path, value)
+  }
+  if (kind === 'bench') {
+    return load_bench(manifest_path, value)
+  }
   if (kind === '') {
     throw EngineError.manifest(manifest_path, 'missing required key `kind`')
   }

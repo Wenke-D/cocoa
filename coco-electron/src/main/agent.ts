@@ -94,8 +94,12 @@ export function segments(target: string): string[] {
  * refused, and the caller is the one who can act.
  */
 function status_for(message: string): number {
-  if (message.startsWith('No such entity')) return 404
-  if (message.includes('did not answer in time')) return 503
+  if (message.startsWith('No such entity')) {
+    return 404
+  }
+  if (message.includes('did not answer in time')) {
+    return 503
+  }
   return 400
 }
 
@@ -105,15 +109,27 @@ export async function route(request: AgentRequest, deps: AgentDeps): Promise<Age
   const method = request.method.toUpperCase()
 
   if (method === 'GET') {
-    if (match(parts, ['help'])) return help()
+    if (match(parts, ['help'])) {
+      return help()
+    }
     // Everything the workbench renders from, as the workbench last saw it.
     // The same JSON `--dump-state` prints, and for the same reason: a symptom
     // becomes a fact you can grep.
-    if (match(parts, ['world'])) return json(200, deps.world())
-    if (match(parts, ['jobs'])) return list_entities(deps.world(), 'Job')
-    if (match(parts, ['benches'])) return list_entities(deps.world(), 'Bench')
-    if (parts.length === 2 && parts[0] === 'jobs') return job_detail(deps.world(), parts[1])
-    if (parts.length === 2 && parts[0] === 'benches') return bench_detail(deps.world(), parts[1])
+    if (match(parts, ['world'])) {
+      return json(200, deps.world())
+    }
+    if (match(parts, ['jobs'])) {
+      return list_entities(deps.world(), 'Job')
+    }
+    if (match(parts, ['benches'])) {
+      return list_entities(deps.world(), 'Bench')
+    }
+    if (parts.length === 2 && parts[0] === 'jobs') {
+      return job_detail(deps.world(), parts[1])
+    }
+    if (parts.length === 2 && parts[0] === 'benches') {
+      return bench_detail(deps.world(), parts[1])
+    }
     return failure(404, 'no such endpoint')
   }
 
@@ -145,12 +161,16 @@ async function start_run(name: string, body: string, deps: AgentDeps): Promise<A
   // The name is answered for here so the refusal reads the same as the Rust
   // interface's, which is what decides the status code.
   const known = deps.world().entities.some((entity) => entity.name === name)
-  if (!known) return failure(404, `No such entity: ${name}`)
+  if (!known) {
+    return failure(404, `No such entity: ${name}`)
+  }
 
   const result = await with_timeout(deps.start(name, parameters))
   // The workbench's own failure text, unchanged: an agent reading it should
   // see what a person would have been shown.
-  if (!result.ok) return failure(status_for(result.message), result.message)
+  if (!result.ok) {
+    return failure(status_for(result.message), result.message)
+  }
   return json(201, { run_id: result.run_id })
 }
 
@@ -169,7 +189,9 @@ async function with_timeout(work: Promise<StartResult>): Promise<StartResult> {
   try {
     return await Promise.race([work, expiry])
   } finally {
-    if (timer !== undefined) clearTimeout(timer)
+    if (timer !== undefined) {
+      clearTimeout(timer)
+    }
   }
 }
 
@@ -231,7 +253,9 @@ function no_such_entity(world: World, name: string, asked: 'Job' | 'Bench'): Age
 
 function job_detail(world: World, name: string): AgentResponse {
   const entity = find_entity(world, name, 'Job')
-  if (entity === undefined) return no_such_entity(world, name, 'Job')
+  if (entity === undefined) {
+    return no_such_entity(world, name, 'Job')
+  }
   const folder = entity.id
 
   const runs = run_ids_of(world, entity)
@@ -268,7 +292,9 @@ function job_detail(world: World, name: string): AgentResponse {
 
 function bench_detail(world: World, name: string): AgentResponse {
   const entity = find_entity(world, name, 'Bench')
-  if (entity === undefined) return no_such_entity(world, name, 'Bench')
+  if (entity === undefined) {
+    return no_such_entity(world, name, 'Bench')
+  }
   const folder = entity.id
 
   const name_of = (entity_id: string): string =>
@@ -388,9 +414,13 @@ function help(): AgentResponse {
  */
 export function socket_path(): string {
   const override = process.env['COCO_SOCKET_PATH']
-  if (override !== undefined && override !== '') return override
+  if (override !== undefined && override !== '') {
+    return override
+  }
   const home = process.env['HOME']
-  if (home !== undefined && home !== '') return path.join(home, '.local/share/coco/coco.sock')
+  if (home !== undefined && home !== '') {
+    return path.join(home, '.local/share/coco/coco.sock')
+  }
   return 'coco.sock'
 }
 
@@ -484,7 +514,9 @@ async function handle(
   // A caller that was refused mid-body is told first and hung up on second:
   // destroying the socket before the reply is written is how a refusal turns
   // into "connection reset", which explains nothing.
-  if (!incoming.complete) incoming.destroy()
+  if (!incoming.complete) {
+    incoming.destroy()
+  }
 }
 
 /**

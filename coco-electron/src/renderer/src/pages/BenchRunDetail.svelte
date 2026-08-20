@@ -24,7 +24,9 @@
   ])
 
   const finished = $derived.by(() => {
-    if (run === undefined) return 0
+    if (run === undefined) {
+      return 0
+    }
     return run.plan.steps.filter((step) => {
       const child = job_run(app.world, step.job_id, step.run_id)
       return child !== undefined && is_terminal(child.status)

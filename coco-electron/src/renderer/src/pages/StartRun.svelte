@@ -14,14 +14,18 @@
   $effect(() => {
     if (entity !== undefined) {
       const draft: Record<string, string> = {}
-      for (const name of entity.parameter_names) draft[name] = ''
+      for (const name of entity.parameter_names) {
+        draft[name] = ''
+      }
       values = draft
     }
   })
 
   async function submit(event: SubmitEvent): Promise<void> {
     event.preventDefault()
-    if (entity === undefined || submitting) return
+    if (entity === undefined || submitting) {
+      return
+    }
     submitting = true
     error = null
     const result = await window.coco.start_run(entity.name, $state.snapshot(values))

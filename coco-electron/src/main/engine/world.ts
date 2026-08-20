@@ -57,7 +57,9 @@ export function build_world(coco: Coco, last_refresh: string | null): World {
       // insertion order — ascending run id — is what keeps them
       // chronological.
       for (const run_view of [...coco.job_runs(view.path)].reverse()) {
-        if (run_view.record === null) continue
+        if (run_view.record === null) {
+          continue
+        }
         const run = job_run_of(coco, view.path, run_view.record, now_iso)
         const runs = (world.job_runs[run.job_id] ??= {})
         runs[run.id] = run
@@ -68,7 +70,9 @@ export function build_world(coco: Coco, last_refresh: string | null): World {
         entity_for(coco, view.path, manifest.name, 'Bench', [...manifest.plan_params])
       )
       for (const run_view of [...coco.bench_runs(view.path)].reverse()) {
-        if (run_view.record === null) continue
+        if (run_view.record === null) {
+          continue
+        }
         const run = bench_run_of(coco, view.path, run_view.record, now_iso)
         const runs = (world.bench_runs[run.bench_id] ??= {})
         runs[run.id] = run
@@ -142,8 +146,12 @@ function job_run_of(coco: Coco, job_path: string, record: RunRecord, now_iso: st
 
 function origin_of(coco: Coco, record: RunRecord): RunOrigin {
   const origin = record.origin ?? { by: 'human' }
-  if (origin.by === 'human') return 'Human'
-  if (origin.by === 'agent') return 'Agent'
+  if (origin.by === 'human') {
+    return 'Human'
+  }
+  if (origin.by === 'agent') {
+    return 'Agent'
+  }
   return {
     Bench: {
       name: origin.name,
@@ -271,13 +279,17 @@ function format_params(params: Record<string, string>): string {
 /** `~`-folds paths under home, component-wise (specification §24.4). */
 export function display_path(folder: string): string {
   let home = process.env.HOME ?? ''
-  if (home === '') return folder
+  if (home === '') {
+    return folder
+  }
   try {
     home = fs.realpathSync(home)
   } catch {
     // Compare against the un-canonicalized home.
   }
-  if (folder === home) return '~'
+  if (folder === home) {
+    return '~'
+  }
   if (folder.startsWith(home + path.sep)) {
     return `~${path.sep}${folder.slice(home.length + 1)}`
   }
