@@ -3,6 +3,14 @@
 How a screen in this application is built. The specification says *what* each
 screen shows; this says *what to reach for* when drawing it.
 
+> **Which implementation this describes.** The principles below — a call site
+> states a purpose rather than an appearance, the colour roles, the type scale,
+> the spacing steps — are the design system, and the workbench in
+> `coco-electron/` implements them in `src/renderer/src/theme.css` as CSS custom
+> properties and utility classes. The **module table and code examples are
+> egui's**, from `coco-egui/`, and have not been rewritten for the workbench.
+> Read them as the reference statement of each rule, not as the API to call.
+
 The rule behind everything below: **a call site states a purpose, never an
 appearance.** `text::caption(…)` rather than `.weak().small()`,
 `theme::control(ui, Hover)` rather than `palette.secondary_hover_bg`. Two files
@@ -136,7 +144,7 @@ action in a table behaves exactly like one in a title row.
 Then look at it:
 
 ```sh
-cargo run --example screenshot -- dark out/screen.png job
+cd coco-egui && cargo run --example screenshot -- dark out/screen.png job
 ```
 
 Surfaces: `job`, `run-detail`, `start-modal`, `start-modal-last`,

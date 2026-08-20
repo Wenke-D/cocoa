@@ -1,34 +1,54 @@
 # coco  
-## Interactive Rust/egui Prototype Specification
+## Electron Workbench Specification
 
-**Document status:** Implementation-ready prototype specification  
+**Document status:** Implementation specification for the workbench under development  
 **Primary production platform:** Linux desktop  
-**Mandatory prototype platforms:** macOS and Linux desktop  
-**UI framework:** Rust, eframe, egui, egui_extras  
-**Backend for this phase:** Deterministic MockBackend only  
-**Crate name:** `coco`  
+**Mandatory platforms:** macOS and Linux desktop  
+**Shell:** Electron  
+**Renderer:** Svelte 5 and TypeScript  
+**Main process:** a TypeScript engine over the folder convention (`design/CONVENTION.md`)  
+**Package name:** `coco-electron`  
 **Application title:** `coco`
 
 > **Naming note.** The system is named **coco**. The earlier working title
 > "Experiment Pipeline Manager" is retired: "Pipeline" was a misnomer under the
 > Bench model in §2.2 — a Bench fans out, it does not sequence.
 
+> **Which tree this describes.** The repository holds three:
+>
+> | | |
+> |---|---|
+> | `coco-electron/` | **the workbench** — what this document specifies, and the only implementation under development |
+> | `coco-mcp/` | the MCP server (§43.5), its own crate, in continued use — it speaks the socket protocol and nothing else, so it drives the workbench unchanged |
+> | `coco-egui/` | the first implementation, Rust and eframe/egui. No longer developed; kept for its history and for the convention it worked out |
+>
+> Where coco-electron and coco-egui differ, coco-electron is right and this
+> document follows it. §5.1 records why the framework decision was reversed.
+
+> **Not a mock any more.** This document began as the specification for a
+> mock-data prototype, and phrases from that phase survived into sections it no
+> longer describes. Both implementations read real manifests, render real
+> templates, and spawn real processes. Where a section still says *mock*, it
+> means the demonstration library in `mock/` — real experiment folders holding
+> shell scripts — and never simulated data.
+
 ---
 
 ## 1. Mission
 
-Build a fully interactive desktop UI prototype for managing local experiments.
+Build a desktop workbench for managing local experiments.
 
 The application manages two kinds of entities:
 
 1. **Job**
 2. **Bench**
 
-Both entities will eventually exist as folders on the local computer. Each folder will contain a manifest that defines how the application starts, queries, and cancels a run.
+Both exist as folders on the local computer. Each folder holds a manifest
+(`coco.toml`) that defines how the application starts, queries, reports on, and
+cancels a run, and the folder is the record: `runs/*/run.json` and `report/` are
+written where the experiment lives, not into a database (`design/CONVENTION.md`).
 
-The prototype must not implement the real manifest or process logic. It must reproduce the complete user experience using deterministic mock data and simulated state transitions.
-
-The prototype must allow a user to:
+The application must allow a user to:
 
 1. Select a Job or Bench.
 2. See its current runs and complete run history.
@@ -41,9 +61,10 @@ The prototype must allow a user to:
 9. Open a plain-text report.
 10. For a Bench, inspect every run it dispatched.
 11. Open the detail page of an individual dispatched run.
-12. Simulate successful, failed, cancelled, and unavailable-query states.
+12. See successful, failed, cancelled, and unavailable-query states told apart.
 
-The result must be a real, runnable egui application rather than a static mockup.
+The result must be a real, runnable desktop application rather than a static
+mockup, and must work against real experiment folders.
 
 ---
 
@@ -166,7 +187,7 @@ Bench run detail → dispatched runs     → BenchChildJobDetail
 Both routes display the same underlying run. They differ only in breadcrumbs
 and in which Explorer row stays highlighted. See §19.
 
-The prototype must not duplicate run records to serve both views.
+coco must not duplicate run records to serve both views.
 
 ### 2.3.2 Start Preconditions
 
@@ -232,13 +253,13 @@ Starting a Bench returns a **plan** — a list of `(existing Job, parameters)` c
 all dispatched at once. The Bench itself executes nothing; it fans out to Jobs.
 Each dispatch is an ordinary Job Start.
 
-For this prototype:
+Who triggers what:
 
-- **Start** is triggered by the user.
+- **Start** is triggered by the user, or by an agent through §43.
 - **Cancel** is triggered by the user after confirmation.
-- **Query** is automatic and simulated by the MockBackend.
+- **Query** is automatic, on the refresh tick.
 - Query must not be presented as a primary user action.
-- A small manual Refresh action may be provided as a fallback.
+- A small manual Refresh action must be provided as a fallback.
 
 Report retrieval is treated as read-only data access rather than an experiment operation.
 
@@ -248,10 +269,10 @@ Report retrieval is treated as read-only data access rather than an experiment o
 
 ### 4.1 P0 Requirements
 
-The first implementation must include:
+The workbench must include:
 
-- Native macOS application.
-- Native Linux application.
+- A macOS desktop application.
+- A Linux desktop application.
 - Activity bar selecting the sidebar's view.
 - Narrow persistent left sidebar.
 - Large unified main-content region.
@@ -263,123 +284,176 @@ The first implementation must include:
 - Job run-detail page.
 - Bench run-detail page.
 - Bench child-run detail page.
-- Plain-text report viewer.
+- Report viewer, plain text and HTML (§20).
 - Active Runs section.
 - All Runs table.
 - Bench dispatch table.
 - Breadcrumb navigation.
-- Mock data.
-- Mock run-state progression.
-- Mock query failure.
-- Mock report generation.
+- Real manifests, templates, and process execution (`design/CONVENTION.md`).
+- The demonstration library in `mock/` registering and running unchanged.
+- Query failure shown without overwriting the last known status.
+- Automatic and manual report retrieval.
 - Active Runs sidebar view.
 - Status filtering in run history.
 - Window resizing.
 - Keyboard interaction.
 - Light and dark theme compatibility.
 - Basic persistence of UI preferences.
-- Unit tests for backend state transitions.
+- Unit tests for engine state transitions.
 - README with macOS and Linux run instructions.
 
 ### 4.2 Optional P1 Features
 
 The following may be added after all P0 requirements work:
 
-- WASM build.
 - Sortable table headers.
 - Column-width persistence.
 - Keyboard selection inside tables.
-- Context menu for removing an item from the Explorer.
 - Visual snapshot tests.
-- macOS application bundle.
+- Code signing and notarization.
 - Linux AppImage or package.
+- Auto-update.
 
 ### 4.3 Explicit Non-Goals
 
-Do not implement any of the following in this phase:
+Do not implement any of the following:
 
-- Real manifest parsing.
-- Real folder scanning.
-- Real filesystem watchers.
-- Real folder picker.
-- Real process execution.
-- Real shell commands.
-- Real remote execution.
-- SSH.
-- Slurm.
-- Real polling.
-- Real cancellation signals.
-- Process stdout or stderr capture.
+- Filesystem watchers. The refresh tick is the only clock (§7.5).
+- Remote execution arranged by coco itself. A manifest's own scripts may reach
+  a cluster over SSH or Slurm; coco runs the script and knows nothing of what it
+  reaches.
 - Authentication.
 - User accounts.
-- Network server.
-- Database.
-- React.
-- Tauri.
-- Electron.
-- Flutter.
-- Qt.
-- A separate HTML/CSS prototype.
+- A network server. The agent interface is a unix socket (§43.2).
+- A database. The experiment folders are the record.
 - DAG editing.
 - Pipeline editing.
 - Drag-and-drop pipeline construction.
-- Production packaging.
-- Code signing.
-- macOS notarization.
-- Auto-update.
 - System tray integration.
 - Notification-center integration.
 - Plugin architecture.
 - Full localization.
 
-Do not allow these non-goals to delay the interactive prototype.
+Do not allow these non-goals to delay the workbench.
+
+Removed from this list, and no longer non-goals: real manifest parsing, folder
+scanning, the OS folder picker, process execution, polling, cancellation
+signals, and stdout capture were the mock-phase exclusions, and are all
+implemented. Electron was a non-goal until the decision recorded in §5.1 was
+reversed; React, Flutter, and Qt were listed beside it and are simply not the
+stack — see §5.
 
 ---
 
 ## 5. Technology Baseline
 
-Use the following baseline:
+The workbench is the classic Electron shape: the renderer is a web client, the
+main process is the server, and the whole domain lives on the server side.
 
-```toml
-[package]
-name = "coco"
-version = "0.1.0"
-edition = "2024"
-rust-version = "1.95"
-
-[dependencies]
-egui = "=0.36.1"
-eframe = { version = "=0.36.1", features = ["persistence"] }
-egui_extras = "=0.36.1"
-serde = { version = "1", features = ["derive"] }
-chrono = { version = "0.4", features = ["serde", "clock"] }
-log = "0.4"
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.11"
+```jsonc
+// coco-electron/package.json — the versions that matter
+{
+  "dependencies": {
+    "nunjucks":  "^3.2.4",   // template rendering (§15.2)
+    "smol-toml": "^1.8.0"    // coco.toml
+  },
+  "devDependencies": {
+    "electron":         "^43.4.1",
+    "svelte":           "^5.56.9",   // runes; no store library
+    "typescript":       "^6.0.3",
+    "vite":             "^7.3.6",
+    "electron-vite":    "^5.0.0",
+    "vitest":           "^4.1.11",
+    "electron-builder": "^26.15.3",
+    "playwright-core":  "^1.62.1"    // drives the built app (§28)
+  }
+}
 ```
 
-The exact egui-family versions must be pinned. Commit `Cargo.lock`.
+Commit `package-lock.json`.
 
-The `0.36.1` baseline follows the current egui release line; the official eframe template uses Rust edition 2024, Rust `1.95`, native execution, optional persistence, and a shared native/web application structure.
+**The renderer is a client, not the application.** It holds no domain logic. It
+renders what the main process sends and asks for operations by name (§26). Node
+integration stays off and context isolation stays on: the page's entire
+vocabulary is what `src/preload/index.ts` puts on `window.coco` through
+`contextBridge`: eight operations — `bootstrap`, `startRun`, `cancel`,
+`addFolder`, `removeFolder`, `report`, `refreshNow`, `saveUi` — and two event
+subscriptions, `onCommand` and `onEvents`. Nothing else crosses.
 
-Additional dependencies may be added only when clearly justified.
+**Templates are Jinja on both sides.** The engine renders an experiment's
+templates with nunjucks; the egui implementation used minijinja. Both are
+Jinja-family with the same delimiters and the same `{{ name }}` substitution, so
+one experiment folder renders identically under either, which is what makes the
+folders interchangeable. Template analysis is exact-match in both directions and
+imports are rejected (§15.2).
 
-Do not introduce an async runtime such as Tokio in the prototype. The MockBackend must be synchronous and deterministic.
+**No async framework beyond what Node gives.** The engine's own operations are
+synchronous and deterministic; the asynchrony in the application is the refresh
+tick, the spawned scripts, and IPC.
 
-Use eframe’s default native rendering configuration. Do not hardcode an OpenGL-only, Metal-only, or Linux-only renderer.
+Additional dependencies may be added only when clearly justified. Do not let
+them float; do not upgrade without recording the reason.
 
-### 5.1 Why Not a Web View
+### 5.1 Why a Web View, Reversed
 
-Tauri, Electron, and an embedded WebView are non-goals (§4.3, §20). The question was re-opened once the workbench was built, and closed again on measurement rather than on preference. The record, so that it does not have to be re-argued:
+This section previously argued that Tauri, Electron, and an embedded WebView
+were non-goals, and that the question had been *closed on measurement rather
+than on preference*. The decision was reversed on 2026-08-20. Both records are
+kept, because the reversal is only legible next to what it overturned.
 
-**Not for appearance.** Rendered side by side at 1280×820 on a 2× display — same palette, same metrics, same Inter cuts — egui and a web view are indistinguishable. macOS has drawn text with grayscale antialiasing since Mojave, so the system text stack holds no advantage there. What the workbench was missing was type weight, not a renderer (§24.1). This was not measured on Linux at 1×, where hinted system rendering may still differ, and a Linux comparison is the one thing that could revise this point.
+**What the old argument said, and what became of each part.**
 
-**Not for text handling.** Labels are already selectable, and the report viewer already searches, highlights matches, and copies (§20).
+*Not for appearance.* Rendered side by side at 1280×820 on a 2× display — same
+palette, same metrics, same Inter cuts — egui and a web view were
+indistinguishable. This was measured and it still holds; nothing about it was
+wrong. It was an argument that switching would buy no *fidelity*, and it did
+not. What it did not measure is the cost of arriving at a given design, which is
+where the difference turned out to be.
 
-**The engine would not move.** `src/engine/` renders an experiment’s templates into an argv list and executes it (convention §6, §7). Behind a web view that step has to be reachable from page script, and the scope wide enough to allow it is the scope that turns any injection into arbitrary command execution. Keeping it in Rust leaves the page a vocabulary of declared experiments and declared parameters, which is worth more than the language the engine happens to be written in.
+*Not for text handling.* Labels were already selectable and the report viewer
+already searched, highlighted, and copied. Also still true, also not what
+decided it.
 
-**What would re-open it.** Reports needing rich rendering in-app. An HTML report goes to the system browser today (§20), which is right while the report is something the user reads elsewhere. If coco becomes the place where results are read and compared, the report viewer turns into a primary surface, and a web view is what renders one. Even then, embedding a web view for that one surface is a smaller change than moving the workbench onto it.
+*The engine would not move.* This was the load-bearing objection: behind a web
+view the step that renders templates into an argv list and executes it has to be
+reachable from page script, and the scope wide enough to allow that is the scope
+that turns any injection into arbitrary command execution. **The classic
+Electron split answers it.** The engine did not move into page script — it moved
+into the main process, a Node process the page cannot call into except through
+the ten declared members above. The property that actually mattered — that the
+page's vocabulary is declared experiments and declared parameters, never a
+command line — is preserved exactly, and by the same reasoning. The objection
+was sound against an embedded WebView driving the engine. It was never an
+argument against a main process holding it.
+
+*What would re-open it.* The old record named the trigger: reports needing rich
+rendering in-app, at which point the report viewer becomes a primary surface and
+a web view is what renders one. That trigger fired — §20 now renders HTML
+reports in a sandboxed frame instead of handing them to the system browser.
+
+**What actually decided it.** Iteration speed and legibility of the programming
+model, stated as preference and recorded as such rather than dressed up as a
+measurement. A visual change is faster to make and to judge in CSS than in
+immediate-mode layout code; the retained-mode, event-driven model is the one the
+author reasons about most readily; and a workbench whose look is still being
+worked out is worth more when its look is cheap to change. None of this
+contradicts the measurements above — it is a different axis, and it is the axis
+that mattered.
+
+**What would re-open it again.** A hard startup-time or memory requirement that
+Electron cannot meet; a target platform without a Chromium build; or a Linux-at-1×
+comparison that finds the two renderers meaningfully different in the direction
+the old record flagged as unmeasured. None of these is in play, and the egui
+implementation is kept in `coco-egui/` so the comparison remains possible rather
+than hypothetical.
+
+**What the reversal did not throw away.** The convention the folders follow, the
+protocol §43 serves, and the questions the test suites ask were all worked out in
+the egui implementation and all survived the move intact — which is the argument
+for having written them down separately from the UI in the first place. The MCP
+server survived as a *running artifact*: it was extracted to `coco-mcp/` and
+drives the workbench without a line changed, because it only ever knew the
+socket.
 
 ---
 
@@ -387,19 +461,22 @@ Tauri, Electron, and an embedded WebView are non-goals (§4.3, §20). The questi
 
 ### 6.1 Mandatory
 
-The application must build and run using:
+The application must run and build using:
 
 ```bash
-cargo run
-cargo run --release
+npm install
+npm run dev            # electron-vite, hot reload in the renderer
+npm run build          # type-check and bundle main, preload, renderer
+npm run package        # electron-builder, an installable coco.app
 ```
 
 on:
 
-- macOS on the developer’s native architecture.
-- Linux on the developer’s native architecture.
+- macOS on the developer's native architecture.
+- Linux on the developer's native architecture.
 
-The implementation must not contain architecture-specific code that prevents either Apple Silicon or Intel macOS builds.
+The implementation must not contain architecture-specific code that prevents
+either Apple Silicon or Intel macOS builds.
 
 ### 6.2 macOS Requirements
 
@@ -408,29 +485,30 @@ On macOS:
 - Use the normal operating-system window frame and title bar.
 - Do not implement a custom frameless title bar.
 - Respect Retina/HiDPI scaling.
-- Use platform-aware command shortcuts.
-- Display `⌘`-style behavior through egui’s platform command modifier.
+- Use platform-aware command shortcuts: the application menu declares
+  `CmdOrCtrl` accelerators, and a menu pick and a click must route through the
+  same operation (§25).
 - Do not assume `/home/...` paths.
-- Mock paths should use `~/Experiments/...`.
 - Do not depend on Bash-specific commands.
-- Do not depend on Homebrew packages to run the prototype.
+- Do not depend on Homebrew packages to run the application.
 - The application must remain usable at 100%, 150%, and Retina scaling.
 
 ### 6.3 Linux Requirements
 
 On Linux:
 
-- The same source tree must compile without UI forks.
+- The same source tree must build without UI forks.
 - Do not hardcode macOS-specific paths or keyboard labels.
 - Support normal window resizing.
-- Preserve the application’s main two-column structure at small sizes.
-- Document any system build dependencies in the README.
+- Preserve the application's main two-column structure at small sizes.
+- Document any required distribution packages in the README.
 
-### 6.4 Optional WASM Target
+### 6.4 No Browser Target
 
-WASM support is optional.
-
-The architecture should not intentionally prevent a future WASM build, but WASM compatibility must not delay macOS or Linux completion.
+coco is a desktop application. The renderer is a web client, but it is not a web
+page: it depends on the main process for every fact it shows and every operation
+it performs, and that process spawns local scripts against local folders. There
+is no hosted build and none is planned.
 
 ---
 
@@ -614,70 +692,46 @@ Do not display verbose logs here.
 
 ## 9. Navigation Model
 
-Use an explicit route enum.
+Use an explicit route union. A route is an **address, never content**: it names
+what to show, and every fact on the page is looked up from the world by that
+address at render time. A route must never carry a copy of a run.
 
-A suitable starting model is:
+```ts
+// coco-electron/src/shared/ui.ts
+export type ReportContext =
+  | { kind: 'jobRun'; jobId: string }
+  | { kind: 'benchRun'; benchId: string }
+  | { kind: 'benchChild'; benchId: string; benchRunId: string }
 
-```rust
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Route {
-    EmptyExplorer,
-
-    EntityOverview {
-        entity_id: EntityId,
-    },
-
-    /// The start form (§15). Only the identity: what the user has typed is a
-    /// draft held outside the route.
-    StartRun {
-        entity_id: EntityId,
-    },
-
-    JobRunDetail {
-        job_id: EntityId,
-        run_id: RunId,
-    },
-
-    BenchRunDetail {
-        bench_id: EntityId,
-        run_id: RunId,
-    },
-
-    BenchChildRunDetail {
-        bench_id: EntityId,
-        bench_run_id: RunId,
-        child_run_id: RunId,
-    },
-
-    ReportViewer {
-        context: ReportContext,
-        run_id: RunId,
-    },
-}
+export type Route =
+  | { page: 'empty' }
+  | { page: 'entity'; entityId: string }
+  /** The start form (§15). Only the identity: what the user has typed is a
+   *  draft held outside the route. */
+  | { page: 'start'; entityId: string }
+  | { page: 'jobRun'; jobId: string; runId: string }
+  | { page: 'benchRun'; benchId: string; runId: string }
+  /** A run dispatched by a bench, seen in the bench's context (§19). */
+  | { page: 'benchChild'; benchId: string; benchRunId: string; runId: string }
+  | { page: 'report'; context: ReportContext; runId: string }
 ```
 
-Use a separate overlay enum:
+Overlays are separate state, held by the renderer and never persisted:
 
-```rust
-#[derive(Clone, Debug)]
-pub enum Overlay {
-    None,
-
-    ConfirmCancel {
-        target: CancelTarget,
-    },
-
-    /// What an Add Folder pick refused (§11.5).
-    AddFolderReport {
-        picked: String,
-        outcome: AddedFolders,
-    },
-
-    Settings,
-}
+```ts
+// src/renderer/src/state.svelte.ts — `null` is "no overlay"; every overlay
+// carries its own error and busy flag, because a modal that has asked for an
+// operation has to show the refusal in place rather than dismiss into a toast.
+export type Overlay = { error: string | null; busy: boolean } & (
+  | { kind: 'confirmCancel'; target: CancelTarget }
+  | { kind: 'confirmRemove'; entityId: string }
+)
 ```
 
-Do not encode modal state inside `Route`.
+§11.5's refusal-report modal is not in this union; see the gap noted there.
+
+Do not encode modal state inside `Route`. A modal is an action, not a place: it
+does not survive a relaunch (§32) and it is not a breadcrumb.
 
 ### 9.1 Sidebar Navigation
 
@@ -742,53 +796,68 @@ A simple back arrow may additionally be shown, but breadcrumbs are the authorita
 
 ## 10. Domain Types
 
-Use strongly typed IDs.
+The domain types live in `src/shared/world.ts` because both sides need them: the
+main process builds them, the renderer reads them, and one definition is what
+keeps the two from drifting.
 
-```rust
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct EntityId(pub String);
+Ids are plain strings. TypeScript has no newtype, and a branded type would buy
+compile-time separation at the cost of every boundary — JSON, the socket, the
+records on disk — needing a cast. The field name carries the meaning instead:
+`jobId`, `runId`, `benchRunId` are never spelled `id` where the kind is
+ambiguous.
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct RunId(pub String);
+```ts
+export type EntityKind = 'Job' | 'Bench'
 ```
 
-### 10.1 Entity Kind
+The unions below are serialized the way serde writes an externally-tagged enum —
+a unit variant is a bare string, a struct variant is `{ Variant: { ...fields } }`.
+This is not a TypeScript idiom; it is deliberate. It is the wire format the
+records on disk and the agent socket already use (`design/CONVENTION.md`), so a
+record written by either implementation is read by the other without a
+translation layer.
 
-```rust
-pub enum EntityKind {
-    Job,
-    Bench,
-}
-```
+### 10.1 Entity Kind### 10.1 Entity Kind
+
+An entity is a folder holding a `coco.toml`; the manifest's own `kind` decides
+which of the two it is.
 
 ### 10.2 Execution Status
 
-```rust
-pub enum RunStatus {
-    Starting,
-    Pending,
-    Running,
-    Succeeded,
-    Failed,
-    Cancelling,
-    Cancelled,
-}
+```ts
+export type RunStatus =
+  | 'Starting'    // launch script spawned, no submission id yet (§3)
+  | 'Pending'     // queued by the cluster, not yet running
+  | 'Running'
+  | 'Completed'   // finished; the report has not been taken yet
+  | 'Analyzing'   // the report script is running
+  | 'Succeeded'
+  | 'Failed'
+  | 'Cancelling'
+  | 'Cancelled'
+  | 'Error'       // coco could not carry out its own side of the protocol
 ```
 
-`Unknown` should not permanently overwrite the last known execution status.
+`Completed` and `Analyzing` are the report's half of the lifecycle: a run whose
+work is done but whose report has not been produced is not yet `Succeeded`,
+because the user opens the report to find out what happened (§7.1).
+
+`Error` is coco's own failure, not the experiment's — a poll that cannot be
+spawned, a launch whose output never arrived, a report script that exits
+non-zero. It must be told apart from `Failed`, which is the experiment's verdict.
+
+`Unknown` is not a status. It should not permanently overwrite the last known
+execution status.
 
 Instead, query availability must be tracked separately.
 
 ### 10.3 Query Health
 
-```rust
-pub enum QueryHealth {
-    Healthy,
-    Delayed,
-    Unavailable {
-        message: String,
-    },
-}
+```ts
+export type QueryHealth =
+  | 'Healthy'
+  | 'Delayed'
+  | { Unavailable: { message: string } }
 ```
 
 When query health is unavailable, the UI may present the display status as:
@@ -812,39 +881,33 @@ Execution Failed ≠ Query Unavailable
 
 ### 10.4 Manifest State
 
-```rust
-pub enum ManifestState {
-    Valid,
-    Invalid {
-        message: String,
-    },
-    Missing,
-}
+```ts
+export type ManifestState =
+  | 'Valid'
+  | 'Missing'
+  | { Invalid: { message: string } }
 ```
 
 An invalid or missing manifest disables Start.
 
 ### 10.5 Report State
 
-```rust
-pub enum ReportFormat {
-    PlainText,
-    Html,
-}
+```ts
+export type ReportFormat = 'PlainText' | 'Html'
 
-pub enum ReportState {
-    Unavailable,
-    Generating,
-    Available {
-        format: ReportFormat,
-        text: Arc<str>,
-    },
-    Missing,
-    ReadError {
-        message: String,
-    },
-}
+export type ReportState =
+  | 'Unavailable'
+  | 'Generating'
+  | 'Missing'
+  | { Available: { format: ReportFormat; text_bytes: number } }
+  | { ReadError: { message: string } }
 ```
+
+`Available` carries the report's **size, not its text**. A report can be
+megabytes, the world is sent to the renderer on every change (§26), and a run
+list has no use for the body. The text is fetched by its own request when the
+viewer opens (§20), which is also the only place a read error can be raised
+against the file as it is now rather than as it was at the last tick.
 
 Format decides presentation, never availability. See §20.
 
@@ -858,25 +921,22 @@ A succeeded run may temporarily have no report.
 
 Every Job run records how it was started, and every Bench run records who asked.
 
-```rust
-pub enum RunOrigin {
-    Human,
-    Agent,
+```ts
+export type RunOrigin =
+  | 'Human'
+  | 'Agent'
+  | {
+      Bench: {
+        name: string
+        bench_id: string | null
+        bench_run_id: string
+        call: number
+      }
+    }
 
-    Bench {
-        name: String,
-        bench_id: Option<EntityId>,
-        bench_run_id: RunId,
-        call: usize,
-    },
-}
-
-/// A Bench is never dispatched by another Bench (§2.2), so it gets a type that
-/// cannot say otherwise.
-pub enum Trigger {
-    Human,
-    Agent,
-}
+/** A Bench is never dispatched by another Bench (§2.2), so who asked for one
+ *  gets a type that cannot say otherwise. */
+export type Trigger = 'Human' | 'Agent'
 ```
 
 Exactly one of the three is true of any run, so the history's Source column is
@@ -905,16 +965,16 @@ run executes, and it must not exclude the run from the owning Job's history.
 
 ### 10.7 Bench Plan
 
-```rust
-pub struct BenchPlan {
-    pub steps: Vec<BenchPlanStep>,
+```ts
+export interface BenchPlanStep {
+  index: number
+  job_id: string
+  parameters: string
+  run_id: string
 }
 
-pub struct BenchPlanStep {
-    pub index: usize,
-    pub job_id: EntityId,
-    pub parameters: String,
-    pub run_id: RunId,
+export interface BenchPlan {
+  steps: BenchPlanStep[]
 }
 ```
 
@@ -1030,6 +1090,18 @@ NOT ADDED
 ```
 
 The modal only reports. It offers no retry and no partial undo: the pick is finished, and what it registered stays registered.
+
+> **Known gap.** The workbench does not implement the scan. `addFolder` in
+> `src/main/operations.ts` calls `engine.register()` on exactly the directory
+> that was picked, and `register` requires a `coco.toml` in that directory
+> itself. So one pick is one folder: picking `~/experiments` — or the bundled
+> `mock/` — is *refused* rather than registering everything beneath it, and
+> because a pick can only refuse one folder for one reason, the refusal-list
+> modal above has nothing to list and does not exist. The status-bar and
+> selection rules hold; the three-levels-down search, the hidden-directory
+> skip, and the modal do not. `coco-egui/` implements this section in full
+> (`experiment_folders` in `coco-egui/src/adapter/engine.rs`), so the intended
+> behavior can be seen there.
 
 ---
 
@@ -1391,7 +1463,7 @@ On submission:
 
 1. Disable the Start button.
 2. Show `Starting…`.
-3. Call the MockBackend Start operation.
+3. Call the Start operation (§26).
 4. On success:
    - Close the modal.
    - Create a new run.
@@ -1742,20 +1814,29 @@ nor their styling:
 
 ```text
 Plain text   rendered in-app
-HTML         opened in the system browser
+HTML         rendered in-app, in a sandboxed frame
 ```
 
 An experiment writes whatever report it writes. Two HTML reports from two
-experiments may share no styling at all, so any in-app approximation would
-misrepresent them. The browser is the only thing that renders them faithfully.
+experiments may share no styling at all, and any in-app approximation of them
+would misrepresent them — so coco does not approximate. It renders the file.
 
-Embedding a browser engine is out of the question — Tauri, Electron, and WebView
-are non-goals (§4.3). The report is written to the operating system's temporary
-directory and opened as a `file://` URL through the framework's own URL handler.
-No shell command is run from the UI (§41).
+The renderer is a browser engine, which is what makes this possible; the egui
+implementation had to hand an HTML report to the system browser instead, and
+§5.1 named exactly this as the thing that would re-open the framework question.
+It did.
 
-This is the sole filesystem write in the prototype. No manifest is read and no
-experiment folder is touched.
+**The frame is the boundary.** The body goes into an `<iframe>` by `srcdoc`,
+with `sandbox="allow-scripts"` and nothing else. `allow-scripts` is granted so
+that a charting report — the common case for a benchmark — works at all.
+`allow-same-origin` is deliberately withheld: without it the frame is an opaque
+origin, so the report cannot reach coco's storage, its DOM, or `window.coco`.
+A report is a file some experiment's script wrote, and it is treated as
+untrusted input, not as part of the application.
+
+The report's text is not part of the world (§10.5). The viewer asks for it by
+run, and the read happens then, so a file deleted or broken since the last tick
+raises its error at the moment the user asks to see it.
 
 The viewer opens in the full main-content area.
 
@@ -1847,7 +1928,17 @@ Solver GPU                     Running
 
 ## 22. Run-History Table Behavior
 
-Use `egui_extras::TableBuilder` for Job history, Bench history, and Bench dispatch tables.
+Job history, Bench history, and Bench dispatch tables share one table
+treatment. The rules below are requirements on that treatment, not on any
+particular layout primitive.
+
+> **Known gap.** The current implementation renders these as a plain `<table>`
+> under automatic layout, with no sticky header and no declared column widths.
+> Durations are monospaced, so digits do not shift, but a duration crossing
+> `9s` → `10s` still gains a character and can move the columns beside it, and
+> a long history scrolls its header away. §22.1's "fixed header", "vertically
+> scrolling body", "no horizontal layout jitter" and "stable status-column
+> width" are therefore specified but not yet met.
 
 ### 22.1 General Rules
 
@@ -1918,12 +2009,13 @@ Filters affect All Runs only, not Active Runs.
 
 ### 22.5 Dataset Size
 
-The mock fixtures must support at least 500 history rows without making the UI unusable.
+The demonstration library must support at least 500 history rows without making
+the UI unusable.
 
 A Bench plan must support at least 50 dispatched runs, since a parameter sweep is
 the primary use case. The dispatch table must stay usable at that size.
 
-A prototype developer control may generate a larger dataset.
+A drive scenario (§28) may start a larger dataset to check this.
 
 ---
 
@@ -2056,129 +2148,132 @@ Focus requirements:
 
 ---
 
-## 26. Mock Backend
+## 26. The Engine Boundary
 
-Implement a deterministic `MockBackend`.
+The engine is the whole domain: manifests, templates, the run lifecycle, the
+poll protocol, reports, cancel, bench fan-out. It lives in the **main process**
+(`src/main/engine/`) and the renderer never contains a copy of any of it.
 
-The UI must interact with the backend through an interface rather than directly mutating fixture vectors.
+The renderer reads a snapshot and asks for operations by name. It must not
+mutate domain state, and there must be no path by which it could.
 
-A suitable interface is:
-
-```rust
-pub trait ExperimentBackend {
-    fn snapshot(&self) -> BackendSnapshot;
-
-    fn start(
-        &mut self,
-        entity_id: &EntityId,
-        parameters: String,
-    ) -> Result<RunId, BackendError>;
-
-    fn cancel(
-        &mut self,
-        target: CancelTarget,
-    ) -> Result<(), BackendError>;
-
-    fn refresh(&mut self) -> Result<(), BackendError>;
-
-    fn report(
-        &self,
-        run_id: &RunId,
-    ) -> Result<Option<String>, BackendError>;
-
-    fn tick(&mut self, now: chrono::DateTime<chrono::Local>);
-}
+```ts
+// src/main/operations.ts — plain functions over the engine, so they can be
+// exercised without an Electron app around them. The ipcMain handlers in
+// index.ts are wiring: call one of these, publish, answer.
+start(engine, name, parameters, trigger): StartResult
+cancel(engine, target): CancelResult
+addFolder(engine, picked): AddFolderResult
+removeFolder(engine, entityId): RemoveFolderResult
+report(engine, target): ReportResult
+refresh(engine): RefreshReport
 ```
 
-Exact signatures may change, but the architectural boundary is mandatory.
+Every one of them **answers rather than throws**. A refusal is an outcome the
+user reads — an invalid manifest, a bench plan with a bad call, a report too
+large to send — not a crash and not an exception the renderer has to catch.
 
 `start` on a Bench entity performs the whole fan-out: it produces the plan,
 validates it against the Explorer, dispatches every call, and returns the Bench
-`RunId`. Plan production lives behind this boundary — the UI never builds a plan.
+run id. Plan production lives behind this boundary — the UI never builds a plan.
 
-Because a Bench dispatch creates several Job runs at once, `start` must be atomic
-from the UI's perspective: either the Bench run and all its child runs exist, or
-nothing was created.
+Because a Bench dispatch creates several Job runs at once, `start` must be
+atomic from the UI's perspective: either the Bench run and all its child runs
+exist, or nothing was created.
 
-### 26.1 Snapshot Rule
+`trigger` — `Human` or `Agent` — is the whole difference between a click and an
+agent's call (§43): same lookup, same validation, same queue, one word on the
+record (§10.6).
 
-The UI reads an immutable snapshot.
+### 26.1 Memory Is the Truth
 
-The UI must not mutate:
+The engine holds the domain in memory. Reads never touch disk. Writes go to
+memory first and are then written through to the experiment folders, so the
+folders stay the record (`design/CONVENTION.md`) without being on the read path.
 
-- Run status.
-- Report text.
-- Bench progress.
-- Query health.
+Each refresh tick runs a reconcile pass that pulls hand-edited files back in by
+mtime. A file edited by hand between two ticks while coco writes the same run is
+a lost update, and that is accepted: coco is a single local instance and the
+alternative is a locking protocol over a directory tree.
 
-All domain changes pass through backend commands.
+`store.json` persists only what is not in the folders — the registered folders,
+each experiment's `last_args`, and the run-id counter.
 
-### 26.2 Immediate-Mode Command Handling
+### 26.2 One Turn at a Time
 
-To avoid borrow conflicts during an egui frame:
+Operations are serialized (`src/main/serial.ts`). A poll, a start, and a cancel
+run one after another and never interleave.
 
-1. Render from a snapshot.
-2. Collect UI intentions as commands.
-3. Execute commands after the relevant UI block has finished.
-4. Update route or overlay state.
-5. Request repaint when necessary.
+This is not optional bookkeeping. Every operation awaits a script, so without a
+queue a poll that *started* before a cancel can *finish* after it and write the
+pre-cancel status back over `CANCELLING`. A "refresh in progress" flag does not
+help: it only stops two refreshes overlapping.
 
-A suitable command enum is:
+Queued, not dropped — a user's cancel waits its turn rather than being lost. A
+failed turn does not cancel the queue; the next one runs either way and each
+caller still sees its own outcome.
 
-```rust
-pub enum AppCommand {
-    SelectEntity(EntityId),
-    OpenRun(RunId),
-    OpenReport(RunId),
-    OpenStartModal(EntityId),
-    StartRun {
-        entity_id: EntityId,
-        parameters: String,
-    },
-    RequestCancel(CancelTarget),
-    ConfirmCancel(CancelTarget),
-    Refresh,
-    AdvanceMockState,
-    FailMockRun(RunId),
-    ToggleMockQueryFailure(RunId),
-    GenerateMockReport(RunId),
-}
+### 26.3 The Backend Judges Change
+
+The renderer is told conclusions, never asked to work them out.
+
+The main process keeps its own model of the world, rebuilds it each cycle, and
+turns the difference into events (`diffWorlds` in `src/main/sync.ts`):
+
+```text
+coco:bootstrap   once, on load — the one full-state message
+coco:events      batches thereafter:
+                   entity   | job-run | bench-run   upserted | removed
+                   notice
+                   refreshed                        (content-free heartbeat)
 ```
+
+Rules that make this safe:
+
+- **Upserts carry the whole entry.** Entry-level over-push, never field diffs.
+- **One batch per logical operation**, so the renderer never sees a torn world.
+  A start's events are sent *before* its answer resolves.
+- **`last_successful_query` is excluded from entry identity.** It changes on
+  every rebuild, so including it would mark every entry changed on every tick.
+  When query health actually flips, other fields change with it.
+- A fresh page owns nothing, which is why bootstrap is irreducible.
+
+### 26.4 Notices
+
+A refresh that fails sends a `notice` event. The engine refreshes every three
+seconds, so a cluster answering badly answers badly on every tick: the question
+worth putting on screen is never "did this pass fail" but "is this a new
+failure". `src/main/notices.ts` announces a failure once and then holds still
+while it repeats.
+
+A refresh the user asked for always answers, including `Refreshed.` when there
+is nothing else to say. Errors stay until dismissed; anything else fades.
 
 ---
 
-## 27. Mock State Progression
+## 27. Lifecycle Progression
 
 ### 27.1 Job Start
 
-Starting a Job creates a new run:
-
 ```text
-Starting
-→ Running
-→ Succeeded
+Starting → Running → Completed → Analyzing → Succeeded
 ```
 
-The prototype must also allow:
+`Starting` means the launch script was spawned, not that it answered (§3). The
+refresh tick harvests the submission id. The poll script's reported word drives
+the rest; `Completed` and `Analyzing` are the report's half (§10.2).
+
+Also reachable:
 
 ```text
-Running
-→ Failed
-```
-
-and:
-
-```text
-Running
-→ Cancelling
-→ Cancelled
+Running → Failed
+Running → Cancelling → Cancelled
+anywhere → Error          (coco could not carry out its own side)
 ```
 
 ### 27.2 Bench Start
 
 Starting a Bench creates a Bench run plus one Job run per plan call, all at once.
-
-Initial state:
 
 ```text
 Bench: Starting
@@ -2189,11 +2284,10 @@ Call 3: Starting
 ...
 ```
 
-Every call starts together. No call is ever `Pending`.
+Every call starts together. No call is ever `Pending` on coco's account — only
+the cluster can make a run pending.
 
-Progression: each child advances independently on its own mock schedule. The
-mock must give children differing durations so the UI is exercised with children
-finishing out of order.
+Children advance independently, and finish out of order:
 
 ```text
 Bench Running · 0 / 6 finished
@@ -2206,67 +2300,47 @@ Call 4 Succeeded          Bench Failed  · 6 / 6   ← aggregate resolves last
 ```
 
 The Bench must not reach a terminal status while any child is still active, and
-a failed child must not stop its siblings.
+a failed child must not stop its siblings. The Bench's status is **derived** from
+its children, not stored independently of them.
 
-### 27.3 Automatic and Manual Progression
+### 27.3 The Refresh Tick
 
-Provide both:
+One interval drives everything: `REFRESH_INTERVAL_MS = 3000` in
+`src/main/index.ts`. On each tick the engine harvests pending launches, polls
+active runs, takes reports that are due, reconciles hand-edited files, rebuilds
+the world, and publishes the difference.
 
-1. Automatic progression mode.
-2. Prototype-only manual controls.
-
-Automatic mode may progress a run every few seconds.
-
-Manual controls make testing deterministic.
-
-### 27.4 Repaint Scheduling
-
-While an active run exists:
-
-- Schedule periodic repaint.
-- Do not use a busy loop.
-- Do not repaint continuously at maximum frame rate without reason.
-
-When no animation, modal, or active run exists, allow normal idle behavior.
+There is no filesystem watcher (§4.3) and no per-run timer. Duration fields tick
+in the renderer off a clock of its own; they are display, and they must not
+cause a request.
 
 ---
 
-## 28. Prototype Developer Controls
+## 28. Development Controls
 
-Include a collapsible section or development menu visible only in the prototype.
+There are no mock controls, because there is no mock: state advances because a
+real script said so. What replaces them is a way to drive the real application.
 
-Suggested label:
+`npm run drive scripts/scenarios/<name>.mjs` launches the **built** app under
+Playwright over Electron's own binary and runs a scenario against it — the
+"click it and look" path, not headless CI. A scenario is a module exporting
+`run({ page, app, shot, log, waitText })`.
+
+A drive run is fully isolated from the real one, and must stay that way:
 
 ```text
-Mock Controls
+COCO_STORE_PATH      a scratch store    — the two cocos must not race the run-id counter
+COCO_UI_STATE_PATH   a scratch layout   — a drive run must not move the user's window
+COCO_SOCKET_PATH     a scratch socket   — must not take the socket a real coco answers on
 ```
 
-Actions:
+The library is seeded as a private copy of `mock/`, never the user's own.
 
-```text
-Advance selected run
-Complete selected run
-Fail selected run
-Toggle query unavailable
-Generate report
-Remove report
-Create 500 history rows
-Reset demo data
-Toggle automatic progression
-Complete all children of selected Bench run
-Fail one child of selected Bench run
-Dispatch a 50-call sweep
-```
+Scenarios cover: add-folder, remove-folder, cancel, cancel-bench, bench-child,
+report, notice, menu, persistence, agent, agent-busy.
 
-These controls must not be visually confused with production actions.
-
-They may appear:
-
-- In a collapsible bottom section.
-- In a top-bar developer menu.
-- Behind a `Prototype` menu.
-
-Do not put them inside normal run-history rows.
+Everything else is a test (§37). Do not add developer affordances to the
+production UI, and do not put them inside run-history rows.
 
 ---
 
@@ -2465,142 +2539,175 @@ Keep the user on the report or detail page.
 
 ## 32. Persistence
 
-Use eframe persistence for limited UI preferences.
+The window's own arrangement lives in `ui-state.json` in Electron's `userData`
+directory, written by `src/main/uiState.ts`. It is a **second, smaller file**
+next to the engine's `store.json`: the store is the *experiments'* memory
+(convention §5) and has no business holding which page was open.
+
+`COCO_UI_STATE_PATH` overrides the location, which is what lets a drive run
+(§28) keep its hands off the user's real window.
 
 Persist:
 
-- Theme selection.
+- Route, when it is a place worth returning to.
 - Sidebar width.
-- Last selected entity ID.
-- Last non-report route when valid.
-- Status filter.
+- Report wrap setting.
+- Window geometry.
+
+Geometry is recorded as it changes, not only on close: on macOS, quitting with
+the window open never fires a close at all.
 
 Do not persist:
 
 - Anything about runs. The experiment folders hold their own records, and the
   engine's store holds the run counter and the values each experiment last used
   (convention §5) — the UI keeps no copy of either.
-- Temporary modals.
-- Temporary error banners.
-- Parameter drafts. A modal is a temporary action; a draft survives a failed
-  submission (§31) and nothing longer.
+- Overlays. A modal is an action, not a place (§9).
+- Transient notices.
+- Parameter drafts. A draft survives a failed submission (§31) and nothing
+  longer.
 
-If persisted state is invalid after fixtures change, fall back safely.
+**What comes back is untrusted.** The file may be older or newer than this
+build, or edited by hand. Everything loaded goes through `sanitize()` in
+`src/shared/ui.ts`, which clamps the sidebar width and the window box and
+repairs the route:
+
+- A `report` route is **never** restored. A report is something you opened, not
+  somewhere you live, and the file may be gone.
+- A `start` route comes back as its experiment. Half a filled-in form is not a
+  place either.
+- A route naming an entity or run the world no longer contains is recovered to
+  the nearest valid ancestor, with a message (`recover`, mirroring the Rust
+  `Route::recover`).
+
+A file that fails to parse is not an error worth stopping for. The worst case is
+a window that opens where it always opens.
 
 ---
 
 ## 33. Project Structure
 
-Use a modular structure similar to:
-
 ```text
-src/
-├── main.rs
-├── lib.rs
-├── app.rs
+coco-electron/
+├── package.json
+├── electron.vite.config.ts        # three builds: main, preload, renderer
+├── electron-builder.yml
+├── vitest.config.ts
+├── svelte.config.mjs
+├── tsconfig.node.json             # main + preload
+├── tsconfig.web.json              # renderer
 │
-├── model/
-│   ├── mod.rs
-│   ├── entity.rs
-│   ├── run.rs
-│   ├── status.rs
-│   └── report.rs
-│
-├── backend/
-│   ├── mod.rs
-│   ├── traits.rs
-│   ├── snapshot.rs
-│   └── mock.rs
-│
-├── navigation/
-│   ├── mod.rs
-│   ├── route.rs
-│   └── overlay.rs
-│
-├── fixtures/
-│   ├── mod.rs
-│   └── demo.rs
-│
-├── ui/
-│   ├── mod.rs
-│   ├── shell.rs
-│   ├── top_bar.rs
-│   ├── sidebar.rs
-│   ├── status_bar.rs
+├── src/
+│   ├── shared/                    # both sides import these; one definition
+│   │   ├── world.ts               #   domain types + the IPC protocol (§10, §26.3)
+│   │   └── ui.ts                  #   Route, UiState, sanitize (§9, §32)
 │   │
-│   ├── pages/
-│   │   ├── mod.rs
-│   │   ├── empty_explorer.rs
-│   │   ├── job_overview.rs
-│   │   ├── bench_overview.rs
-│   │   ├── job_run_detail.rs
-│   │   ├── bench_run_detail.rs
-│   │   ├── child_run_detail.rs
-│   │   └── report_viewer.rs
+│   ├── main/                      # the server: owns everything
+│   │   ├── index.ts               #   window, menu, IPC handlers, refresh tick
+│   │   ├── engine/                #   the domain — no Electron import anywhere
+│   │   │   ├── coco.ts            #     the engine proper
+│   │   │   ├── manifest.ts        #     coco.toml, fully validated
+│   │   │   ├── template.ts        #     analyze / render (§15.2)
+│   │   │   ├── invoke.ts          #     lexical command split, spawn
+│   │   │   ├── record.ts          #     run.json, byte-compatible
+│   │   │   ├── status.ts          #     the poll protocol (§10.2)
+│   │   │   ├── store.ts           #     store.json, atomic writes
+│   │   │   ├── words.ts           #     the protocol's vocabulary
+│   │   │   ├── world.ts           #     folders → World
+│   │   │   └── errors.ts
+│   │   ├── operations.ts          #   what the renderer may ask for (§26)
+│   │   ├── serial.ts              #   one turn at a time (§26.2)
+│   │   ├── sync.ts                #   diffWorlds — the backend judges change (§26.3)
+│   │   ├── notices.ts             #   announce once, then hold still (§26.4)
+│   │   ├── uiState.ts             #   ui-state.json (§32)
+│   │   ├── menu.ts                #   application menu, routed through the window
+│   │   └── agent.ts               #   the unix socket (§43)
 │   │
-│   ├── overlays/
-│   │   ├── mod.rs
-│   │   ├── cancel_modal.rs
-│   │   ├── add_demo_folder.rs
-│   │   └── settings.rs
+│   ├── preload/index.ts           # the typed bridge — the page's whole vocabulary
 │   │
-│   └── widgets/
-│       ├── mod.rs
-│       ├── breadcrumbs.rs
-│       ├── status_badge.rs
-│       ├── active_run_card.rs
-│       ├── run_history_table.rs
-│       ├── dispatch_table.rs
-│       ├── parameter_block.rs
-│       └── empty_state.rs
+│   └── renderer/                  # the client: renders, asks, holds nothing
+│       ├── index.html
+│       └── src/
+│           ├── main.ts
+│           ├── App.svelte
+│           ├── state.svelte.ts    #   the one rune (§34)
+│           ├── theme.css          #   the design system (design/UI-SYSTEM.md)
+│           ├── lib/               #   Sidebar, StatusBar, StatusPill, Breadcrumbs,
+│           │                      #   ModalFrame, CancelModal, RemoveModal,
+│           │                      #   ContextMenu, RunFacts
+│           └── pages/             #   Empty, EntityOverview, StartRun,
+│                                  #   JobRunDetail, BenchRunDetail,
+│                                  #   BenchChildRunDetail, ReportViewer
 │
-└── tests/
-    └── state_transitions.rs
+├── scripts/drive.mjs + scenarios/ # drive the built app (§28)
+└── tests/                         # vitest (§37)
 ```
 
-Exact module boundaries may be adjusted, but do not place the entire prototype in one file.
+Beside it in the repository:
+
+```text
+coco-mcp/         the MCP server (§43.5) — one binary, serde_json, nothing else
+coco-egui/        the superseded first implementation (§5.1)
+mock/             the demonstration library, shared; .fixtures/ for the suites
+design/           CONVENTION.md (the folder contract), UI-SYSTEM.md
+```
+
+Two boundaries are structural rather than stylistic, and must hold:
+
+1. **`src/main/engine/` imports nothing from Electron.** It is the domain over a
+   filesystem, and that is what makes it testable against real temp folders with
+   no app around it, and portable between the two implementations.
+2. **`src/renderer/` imports nothing from `src/main/`.** Its only channel is
+   `window.coco` (§5). If the renderer needs a fact, the fact belongs in the
+   world or in an operation's answer.
+
+`RunFacts.svelte` exists because a dispatched run has two addresses (§2.3.1,
+§19): the job-run page and the bench-child page show the same record, so the
+facts come from one component and cannot drift.
 
 ---
 
 ## 34. Application State
 
-A suitable high-level model is:
+Domain state and application state are separate, and they live in separate
+processes — which is the strongest form of that separation available.
 
-```rust
-pub struct ExperimentApp {
-    backend: Box<dyn ExperimentBackend>,
-    ui: UiState,
-}
+The renderer's whole mutable state is one rune:
 
-pub struct UiState {
-    route: Route,
-    overlay: Overlay,
-
-    sidebar_search: String,
-    run_search: String,
-    status_filter: StatusFilter,
-
-    sidebar_width: f32,
-    theme: ThemePreference,
-
-    report_search: String,
-    report_wrap_lines: bool,
-
-    transient_message: Option<TransientMessage>,
-}
+```ts
+// src/renderer/src/state.svelte.ts
+export const app = $state({
+  connected: false,
+  world: emptyWorld() as World,     // a mirror; only events write it
+  route: { page: 'empty' } as Route,
+  overlay: null as Overlay | null,  // never persisted (§9)
+  menu: null as ContextMenu | null,
+  notice: null as Notice | null,
+  sidebarWidth: ...,                // arrangement, persisted (§32)
+  reportWrap: ...,
+  nowMs: Date.now()                 // the clock durations tick off
+})
 ```
 
-The application state and backend state must remain conceptually separate.
+`world` is a **mirror, not a source**. Only `coco:bootstrap` and `coco:events`
+write it. No component may edit it to reflect an action it just took — the
+action's events are what update the screen, and they arrive before the action's
+answer resolves (§26.3).
+
+There is exactly one `notice`: the newest thing to say is the thing worth
+saying, and a stack of them is the verbose log §8.5 rules out.
 
 Do not let route changes modify execution state.
 
-Do not let backend refreshes unexpectedly reset route state.
+Do not let a refresh reset route state. A refresh may *invalidate* a route — the
+entity was removed, the run is gone — and then it is recovered explicitly, with
+a message (§32), never silently.
 
 ---
 
 ## 35. Performance Requirements
 
-The prototype must remain responsive with:
+The application must remain responsive with:
 
 - 500 historical runs.
 - A Bench run that dispatched 50 concurrent child runs.
@@ -2610,14 +2717,19 @@ The prototype must remain responsive with:
 
 Avoid:
 
-- Cloning complete long reports every frame.
-- Rebuilding fixtures every frame.
-- Sorting large history vectors every frame without caching.
-- Continuous maximum-rate repaint.
-- Blocking sleeps in the UI thread.
-- Excessive allocation in status rendering.
+- Putting report text in the world (§10.5). Reports are fetched when opened, and
+  refused above `MAX_REPORT_BYTES` rather than sent whole.
+- Re-sorting large history arrays on every render where a derived value would do.
+- A timer per run. One clock updates `nowMs`; durations are computed from it.
+- Blocking the main process. It answers IPC, serves the agent socket, and runs
+  the tick; a synchronous read of a large file there stalls all three.
+- Re-bootstrapping to recover from a missed event. If events can be missed, the
+  protocol is wrong (§26.3).
 
-Use shared ownership such as `Arc<str>` for large immutable report text when useful.
+The world is re-sent as **entries**, never as a whole, after the first message.
+This is the v1 protocol: entry-level over-push. It is sized for a local library
+of tens of experiments, and the note on the v2 keyed protocol records what would
+justify moving to it.
 
 ---
 
@@ -2635,13 +2747,28 @@ Required:
 - Do not silently discard parameter drafts.
 - Do not hide query errors.
 
-The application does not need full screen-reader certification in the prototype, but widgets should have meaningful labels.
+The application does not need full screen-reader certification, but controls
+should carry meaningful accessible names, and a clickable row should be
+reachable and activatable from the keyboard.
 
 ---
 
 ## 37. Testing
 
-### 37.1 Unit Tests
+Tests run under vitest against **real temp folders and real executable
+scripts** — never mocks of the filesystem or of a process. The shared fixtures
+live in `mock/.fixtures/` (see its README); a suite copies one, points it at a
+scratch store, and drives it.
+
+The end-to-end scenarios are ports of the egui implementation's suite, so both
+engines answer the same questions and a divergence shows up as a failing test
+rather than as a surprise.
+
+Current coverage: 190 cases across 16 files — `engine`, `manifest`, `template`,
+`invoke`, `status`, `store`, `words`, `world`, `operations`, `serial`, `sync`,
+`notices`, `uiState`, `agent`, `state.svelte`, `mock-library`.
+
+### 37.1 Engine Tests
 
 At minimum, test:
 
@@ -2677,19 +2804,34 @@ Test:
 - Opening and closing a report returns to the correct parent.
 - Missing entity and missing run routes recover without panic.
 
-### 37.3 Build Checks
+### 37.3 Sync and Protocol Tests
+
+Test:
+
+- A rebuild with no change produces only the `refreshed` heartbeat.
+- A `last_successful_query` stamp moving on its own produces no upsert.
+- One logical operation produces one batch.
+- A removed entity produces a `removed` event, and its runs go with it.
+- A restored `ui-state.json` that is stale, malformed, or hand-edited comes back
+  sanitized rather than rejected (§32).
+
+### 37.4 Build Checks
 
 The repository should pass:
 
 ```bash
-cargo fmt --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test
-cargo build
-cargo build --release
+npm run check      # svelte-check on the renderer, tsc --noEmit on main + preload
+npm test           # vitest
+npm run build      # the three bundles
 ```
 
-Run these checks on both macOS and Linux where CI is available.
+Run these on both macOS and Linux where CI is available.
+
+> **Known gap.** There is no linter and no formatter. The egui implementation
+> gated on `cargo fmt --check` and `cargo clippy -D warnings`; nothing equivalent
+> is configured here, so style and the class of bug clippy catches are unenforced.
+> Adding ESLint and Prettier, and putting all three commands behind one gate, is
+> outstanding work.
 
 ---
 
@@ -2819,190 +2961,146 @@ The README must contain:
 
 ### Overview
 
-- What the prototype demonstrates.
+- What coco is: a workbench over experiment folders on the local machine.
 - Job and Bench concepts, stating explicitly that a Bench fans out to existing
   Jobs and is not a pipeline.
-- MockBackend limitation.
+- That the folder is the record — coco keeps no database (`design/CONVENTION.md`).
 - Screens implemented.
+- That `coco-egui/` is the superseded first implementation (§5.1).
 - A note that the working name contains "Pipeline" for historical reasons only.
 
-### macOS Run Instructions
+### Run Instructions
 
 ```bash
-rustup toolchain install 1.95
-rustup override set 1.95
-cargo run
+cd coco-electron
+npm install
+npm run dev
 ```
 
-Also include:
+and, for a real application bundle:
 
 ```bash
-cargo run --release
+npm run package        # electron-builder, unsigned
 ```
 
-Mention that Xcode Command Line Tools may be required for native Rust linking, but do not add external runtime dependencies.
-
-### Linux Run Instructions
-
-Include:
-
-```bash
-rustup toolchain install 1.95
-rustup override set 1.95
-cargo run
-```
-
-Document any required distribution packages based on the selected eframe backend.
+Document any required Linux distribution packages. Do not add external runtime
+dependencies beyond Node and npm for development.
 
 ### Test Instructions
 
 ```bash
-cargo fmt --check
-cargo clippy --all-targets --all-features -- -D warnings
-cargo test
+npm run check
+npm test
+npm run drive scripts/scenarios/cancel.mjs      # drive the built app (§28)
 ```
-
-### Prototype Controls
-
-Document all Mock Controls and state transitions.
 
 ### Architecture
 
 Briefly explain:
 
 ```text
-UI
-→ ExperimentBackend trait
-→ MockBackend
+renderer (Svelte)  — renders, asks; holds no domain
+    ↕ window.coco  — the typed bridge, the page's whole vocabulary
+main process       — operations → serialized turns → engine
+    ↕ folders      — coco.toml, runs/*/run.json, report/
 ```
 
-Explain that a future ManifestBackend can replace MockBackend.
+and that `src/main/engine/` imports nothing from Electron, which is what keeps
+it testable and portable (§33).
 
 ---
 
-## 40. Implementation Order
+## 40. Current State and Outstanding Work
 
-Implement in this order.
+The workbench is built. What follows is the standing list, not a build order.
 
-### Phase 1: Project Skeleton
+**Working:** the engine port in full — manifests, templates, the job lifecycle,
+the poll protocol, auto and manual reports with ERROR healing, cancel, bench
+plan and fan-out, derived bench status, orphan detection, shutdown grace.
+Memory as the truth with write-through and mtime reconcile (§26.1). Event-driven
+sync (§26.3). Notices (§26.4). The agent socket and the MCP binary (§43). The
+persisted arrangement (§32). Explorer, overview, start, run detail, bench run
+detail, bench child detail, report viewer for both formats, add and remove
+folder, cancel with confirmation. The application menu and an electron-builder
+package.
 
-- Initialize eframe application.
-- Pin dependencies.
-- Configure native window.
-- Verify macOS build.
-- Verify Linux build where available.
-- Add app shell.
-- Add placeholder sidebar and central region.
+**Outstanding:**
 
-### Phase 2: Domain and MockBackend
-
-- Add IDs.
-- Add entity types.
-- Add run types.
-- Add status and report types.
-- Add deterministic fixtures.
-- Add state transitions.
-- Add unit tests.
-
-### Phase 3: Navigation
-
-- Implement Route.
-- Implement Overlay.
-- Implement sidebar selection.
-- Implement breadcrumbs.
-- Implement safe missing-route recovery.
-
-### Phase 4: Overview Pages
-
-- Job overview.
-- Bench overview.
-- Active-run cards.
-- All Runs tables.
-- Search and status filter.
-
-### Phase 5: Modals
-
-- Start page.
-- Parameter handling.
-- Cancel confirmation.
-- Add Demo Folder.
-- Inline operation errors.
-
-### Phase 6: Detail Pages
-
-- Job Run Detail.
-- Bench Run Detail.
-- Bench child-run detail.
-- Dispatch table.
-- Dual-route access to the same run record.
-
-### Phase 7: Report Viewer
-
-- Full-width report page.
-- Search.
-- Match count.
-- Wrap toggle.
-- Copy.
-
-### Phase 8: Mock Controls
-
-- Manual progression.
-- Failure simulation.
-- Query failure.
-- Report generation.
-- Large history generation.
-- Reset.
-
-### Phase 9: Polish
-
-- Theme support.
-- Keyboard shortcuts.
-- Persistence.
-- Resizing.
-- Status consistency.
-- Empty states.
-- Error states.
-- Performance checks.
-
-### Phase 10: Verification
-
-- Format.
-- Clippy.
-- Tests.
-- macOS run.
-- Linux build.
-- Manual acceptance scenarios.
-- README completion.
+- No linter or formatter, and no single gate command (§37.4).
+- Add Folder does not scan a directory for experiments (§11.5). One pick is one
+  folder, so the bundled `mock/` library must be registered folder by folder,
+  and the refusal-report modal is unbuilt.
+- Run-history tables do not meet §22.1: no sticky header, no stable column
+  widths.
+- The agent interface has no cancel, no registration, and no event stream
+  (§43.6).
+- Linux has not been exercised: neither the build nor the rendering comparison
+  §5.1 flags as the one measurement that could revise its own record.
+- Packaging is unsigned; no notarization, no auto-update (§4.2).
 
 ---
 
-## 41. Agent Constraints
+## 41. Implementation Constraints
 
-The coding agent must follow these constraints:
+1. Keep the domain in the main process. Do not move engine logic into the
+   renderer, and do not add a second copy of it there.
+2. Do not let `src/main/engine/` import from Electron (§33).
+3. Do not let the renderer import from `src/main/` (§33).
+4. Do not widen the preload bridge to a general channel. Every capability the
+   page has is a named member of that object, and that is the security property
+   §5.1 turns on.
+5. Do not let the renderer mutate `app.world` to reflect an action it took.
+   Events update the screen (§34).
+6. Do not make the renderer judge change or compute a diff (§26.3).
+7. Do not bypass the serialized turn (§26.2).
+8. Do not put report text in the world (§10.5).
+9. Do not run a shell from the UI. Commands are split lexically from the
+   manifest and spawned without a shell (`invoke.ts`).
+10. Do not trust a report's content. It renders in a sandboxed frame without
+    `allow-same-origin` (§20).
+11. Do not trust `ui-state.json`. Everything loaded goes through `sanitize`
+    (§32).
+12. Do not create a permanent right-side inspector.
+13. Do not put the parameter field permanently on overview pages.
+14. Do not display full run details only in a sidebar.
+15. Do not conflate query failure with experiment failure, or coco's `Error`
+    with the experiment's `Failed` (§10.2).
+16. Do not model a Bench as owning, defining, or sequencing Jobs.
+17. Do not duplicate a run record to serve both the Job and Bench views.
+18. Do not reintroduce a concurrency policy or block Start on active runs.
+19. Do not make the Query operation a prominent manual action.
+20. Do not remove active runs from the UI when navigating elsewhere.
+21. Do not silently discard user-entered parameters after a failed Start.
+22. Do not let dependency versions float; do not upgrade without recording the
+    reason.
+23. Keep the on-disk convention byte-compatible with `coco-egui/`. A folder that
+    stops being interchangeable is a regression, and the ported test suites are
+    what catch it.
 
-1. Build a real interactive egui application.
-2. Do not replace egui with another framework.
-3. Do not create a separate web frontend.
-4. Do not implement production backend behavior.
-5. Do not read or execute real manifests.
-6. Do not start real processes.
-7. Do not run shell commands from the UI.
-8. Do not add Tokio unless a later specification explicitly requires it.
-9. Do not use unsafe Rust.
-10. Do not put the whole project in one source file.
-11. Do not create a permanent right-side inspector.
-12. Do not put the parameter field permanently on overview pages.
-13. Do not display full run details only in a sidebar.
-14. Do not conflate query failure with experiment failure.
-15. Do not model a Bench as owning, defining, or sequencing Jobs.
-16. Do not duplicate a run record to serve both the Job and Bench views.
-17. Do not reintroduce a concurrency policy or block Start on active runs.
-18. Do not make the Query operation a prominent manual action.
-19. Do not remove active runs from the UI when navigating elsewhere.
-20. Do not silently discard user-entered parameters after a failed Start.
-21. Do not allow egui dependency versions to float during implementation.
-22. Do not upgrade dependencies without explicitly documenting the reason.
-23. Complete and compile each implementation phase before proceeding.
+---
+
+## 42. Deliverables
+
+A delivery must include:
+
+1. Complete TypeScript source for main, preload, and renderer.
+2. `package.json` and a committed `package-lock.json`.
+3. The demonstration library in `mock/` and the fixtures in `mock/.fixtures/`.
+4. Tests (§37).
+5. README (§39).
+6. macOS run verification.
+7. Linux build verification or a documented limitation.
+8. Screenshots of:
+    - Job overview, including a Bench-sourced history row.
+    - Start page.
+    - Job run detail.
+    - Bench run detail with the dispatch table.
+    - A parameter-sweep Bench run.
+    - Child-run detail.
+    - Report viewer, plain text and HTML.
+    - Query-unavailable state.
+9. No unhandled rejection or crash in the listed acceptance scenarios.
+10. No permanent right-side detail panel.
 
 ---
 
@@ -3034,9 +3132,10 @@ filesystem's own permissions decide who may. Socket paths are bounded well below
 a filesystem's path limit, so a failure to bind is reported with the path in it.
 
 The wire format is HTTP/1.1, so `curl --unix-socket` is the whole client
-library. The protocol itself is spoken by `tiny_http`, a small synchronous
-server crate with no async runtime behind it (§5): parsing, framing, and status
-lines are common code rather than coco's own. What stays coco's is what no
+library. In the workbench the protocol is spoken by Node's own `http` server
+bound to the socket path; the egui implementation used `tiny_http`. Either way
+parsing, framing, and status lines are common code rather than coco's own. What
+stays coco's is what no
 library decides — who may bind the socket, when the file goes away, and where a
 request's answer comes from. Request bodies are capped at 64 KiB; a larger
 declared length is answered `413` before a byte of it is read.
@@ -3100,8 +3199,25 @@ launches the binary and speaks JSON-RPC over stdio; every tool call becomes
 one request over the socket, and the socket's answers pass through verbatim.
 It decides nothing — it is a translator, and the window must still be running
 for it to answer. The MCP subset it needs (initialize, tools/list, tools/call,
-one JSON message per line) is written out by hand: the Rust MCP SDKs bring an
-async runtime, and the prototype does not (§5).
+one JSON message per line) is written out by hand rather than taken from an SDK.
+
+The binary is Rust and lives in its own crate, `coco-mcp/` — `cargo build`
+there, and nothing else is needed: its only dependency is `serde_json`, and it
+imports nothing from either workbench.
+
+That independence is the design, not an accident of packaging. It speaks the
+socket protocol of §43.2 and nothing else, and both implementations serve that
+protocol identically, so it never had to know which coco was listening — it
+drives the Electron workbench **unchanged**, which is why it outlived the
+implementation it was written in. Its tests answer the socket with a stub for
+the same reason: the boundary this crate owns is whether a tool call becomes the
+right request and whether the answer returns as tool content, and tying that
+test to a live engine would tie the one artifact meant to outlive both to
+whichever one is currently alive.
+
+It remains the repository's only Rust that is still developed. Porting it to
+Node would remove the last build dependency on a Rust toolchain; nothing
+requires that.
 
 ### 43.6 What is not here
 
@@ -3114,88 +3230,72 @@ agent needs it.
 
 ---
 
-## 42. Deliverables
+## 44. Definition of Done
 
-The final prototype delivery must include:
+A change is done when all of the following hold.
 
-1. Complete Rust source code.
-2. `Cargo.toml`.
-3. Committed `Cargo.lock`.
-4. `rust-toolchain.toml`.
-5. Demo fixtures.
-6. Unit tests.
-7. README.
-8. macOS run verification.
-9. Linux build verification or documented limitation.
-10. Screenshots of:
-    - Job overview, including a Bench-sourced history row.
-    - Start page.
-    - Job run detail.
-    - Bench run detail with the dispatch table.
-    - A parameter-sweep Bench run.
-    - Child-run detail.
-    - Report viewer.
-    - Query-unavailable state.
-11. No known panic in the listed acceptance scenarios.
-12. No permanent right-side detail panel.
-13. No real backend side effects.
+**Product**
 
----
-
-## 43. Definition of Done
-
-The prototype is complete when all of the following are true:
-
-- It launches as a native macOS desktop application.
-- It builds as a native Linux desktop application.
-- The Explorer contains mock Jobs and Benches.
+- It launches as a macOS desktop application.
+- It builds as a Linux desktop application.
+- The Explorer registers the demonstration library in `mock/` and runs it.
 - Selecting an entity shows its status and history.
-- Start opens a modal rather than an inline permanent form.
-- Starting creates a simulated run.
-- A new run immediately opens in full-page detail.
-- Active status updates are visible.
+- Start is a page under the experiment, not a modal over it (§15).
+- Starting spawns the real launch script and the run is visible immediately (§3).
+- A new run opens in full-page detail.
+- Active status updates are visible without a manual action.
 - Cancel uses a confirmation modal.
-- Query failure is visually distinct from execution failure.
+- Query failure is visually distinct from execution failure, and coco's `Error`
+  from the experiment's `Failed` (§10.2).
 - Clicking any history row opens a full run-detail page.
 - Bench runs display a full-width dispatch table of every run they started.
 - A Bench dispatches all of its calls at once, with no ordering or dependency.
 - A run dispatched by a Bench appears in the referenced Job's own history, stored
-  once and reachable from both contexts.
-- Clicking a Bench child run opens a full detail page.
-- Reports open in the full main-content area.
+  once and reachable from both contexts, showing the same facts either way (§19).
+- Reports open in the full main-content area, plain text and HTML alike (§20).
 - Reports can be searched, wrapped, selected, and copied.
 - The sidebar remains the only persistent navigation panel.
+- The arrangement survives a relaunch, sanitized (§32).
 - The application remains usable at 900 × 600.
 - The application remains responsive with 500 run-history rows.
-- `cargo fmt --check` succeeds.
-- `cargo clippy --all-targets --all-features -- -D warnings` succeeds.
-- `cargo test` succeeds.
-- `cargo build --release` succeeds.
+
+**Architecture**
+
+- `src/main/engine/` imports nothing from Electron.
+- `src/renderer/` imports nothing from `src/main/`.
+- The preload bridge gained no general-purpose channel.
+- The renderer judged no change and mutated no world entry.
+- Records stay byte-compatible with `coco-egui/`.
+
+**Checks**
+
+- `npm run check` succeeds.
+- `npm test` succeeds.
+- `npm run build` succeeds.
 - README instructions reproduce the build on macOS.
-- The code contains a clear boundary for replacing MockBackend with a future ManifestBackend.
 
 ---
 
-## 44. Final Instruction to the Coding Agent
+## 45. Working on coco
 
-Implement this specification as an interactive UI prototype.
+This document describes a workbench that exists. Read it as the standing
+description of what coco is and why, not as a build order — §40 carries what is
+outstanding.
 
-Begin by creating the compiling native eframe application and domain model. Then implement the MockBackend and screens incrementally.
+Two things are worth knowing before changing anything.
 
-Prioritize:
+**The folder is the record.** coco keeps no database. An experiment folder holds
+its own manifest, its own runs, and its own reports (`design/CONVENTION.md`), and
+both implementations write them identically. A change that makes a folder less
+portable between them is a regression even when every test passes.
 
-```text
-Correct navigation
-Clear status presentation
-Run-history usability
-Bench dispatch-table readability
-Modal start workflow
-Full-page details
-Full-page report viewing
-macOS native operation
-Linux compatibility
-```
+**The boundaries in §41 are the design.** The domain in the main process, the
+renderer as a client, the backend as the only judge of change, one turn at a
+time on the engine, the page's vocabulary fixed at the preload — each of these
+was arrived at for a reason recorded somewhere in this document, and the
+security argument in §5.1 rests on the last of them.
 
-Do not spend time on real experiment execution, manifest parsing, production packaging, or unrelated architecture.
-
-When a minor detail is not specified, choose the simplest implementation that preserves the product principles in this document and document the decision in the README.
+Where a detail is not specified, choose the simplest implementation that
+preserves the product principles here, and record the decision — in the README
+if a user would meet it, in this document if a future change would otherwise
+re-argue it.

@@ -4,14 +4,22 @@ _Last updated: 2026-08-20._
 
 The classic Electron shape of coco: the renderer is a web client (Svelte 5 +
 TypeScript), the main process is the server holding the whole core logic — a
-TypeScript port of the Rust engine in `src/main/engine/`. The Rust/egui coco
-in the repository root is untouched and remains the reference implementation;
-both engines speak the same on-disk convention (`coco.toml`, `runs/*/run.json`,
-`report/`, `store.json`), so experiment folders are interchangeable.
+TypeScript port of the Rust engine in `src/main/engine/`.
+
+**This is now coco.** As of 2026-08-20 the Electron workbench is the only
+implementation under development; the Rust/egui one moved from the repository
+root to `coco-egui/` and is no longer developed, kept for its history and for
+the convention it worked out. The `coco-mcp-server` binary this app uses came
+*out* of it into its own crate, `coco-mcp/`, because that one stays in use —
+build it with `cargo build` there. `SPECIFICATION.md` §5.1 records why the
+framework decision was reversed. Both engines speak the same on-disk convention (`coco.toml`,
+`runs/*/run.json`, `report/`, `store.json`), so experiment folders remain
+interchangeable — and that compatibility is now a property to preserve
+deliberately rather than a consequence of both being maintained.
 
 ## Current state (all verified against `mock/`)
 
-- **Engine (TS port of `src/engine/`)**: manifests (TOML, full validation),
+- **Engine (TS port of `coco-egui/src/engine/`)**: manifests (TOML, full validation),
   template analyze/render (nunjucks, exact-match both directions, imports
   rejected), lexical command split, job lifecycle (start = spawned not
   awaited → harvest fills submission id), poll protocol incl. UNREACHABLE,
@@ -34,7 +42,7 @@ both engines speak the same on-disk convention (`coco.toml`, `runs/*/run.json`,
   operation; a start's events are sent before its invoke answer resolves.
 - **The agent interface is back** (2026-08-20): HTTP/1.1 over a unix socket in
   the main process (`src/main/agent.ts`), same paths and shapes as the Rust
-  `src/agent/`, so the bundled `coco-mcp-server` binary drives coco-electron
+  `coco-egui/src/agent/`, so the `coco-mcp-server` binary drives coco-electron
   unchanged. Reads answer from the sync layer's `model`; a start goes through
   the same `operations.ts` and the same `onEngine` queue a click does, stamped
   `agent`.
@@ -102,13 +110,13 @@ something a scenario can arrange afterwards.
 
 `npm run drive` launches the **built** app under Playwright, against a scratch
 copy of `mock/` in `.drive/` with a store of its own — never the real store, so
-it cannot race the Rust coco's run-id counter. Screenshots land in
+it cannot race the egui coco's run-id counter. Screenshots land in
 `.drive/shots/`; renderer console errors are reported at the end, including
 when the scenario fails. Scenarios live in `scripts/scenarios/` and are plain
 modules exporting `run({ page, app, shot, log, waitText })`. Rebuild before
 driving — it runs `out/`, not the dev server.
 
-**Do not run the Rust coco and coco-electron at the same time** — they share
+**Do not run the egui coco and coco-electron at the same time** — they share
 `~/.local/share/coco/store.json` (override: `COCO_STORE_PATH`) and would race
 the run-id counter.
 
@@ -167,13 +175,13 @@ the run-id counter.
   2026-08-19), where §11.5 also searches three levels beneath it. One pick =
   one experiment; a directory of experiments is added one at a time. The Rust
   implementation keeps its scan (`experiment_folders`, `SCAN_DEPTH` in
-  `src/adapter/engine.rs`) and the specification is unchanged — this is the
+  `coco-egui/src/adapter/engine.rs`) and the specification is unchanged — this is the
   Electron side diverging deliberately, not a spec revision. Knock-on: the
   `AddFolderReport` modal exists because one pick could refuse a whole batch
   (§11.5); with one folder per pick, a refusal is a single line and the status
   bar can carry it, so that modal is probably not worth porting.
 - **The automatic tick reports its failures**, where the Rust adapter's tick
-  swallows them (`let _ = self.coco.refresh()` in `src/adapter/engine.rs`) and
+  swallows them (`let _ = self.coco.refresh()` in `coco-egui/src/adapter/engine.rs`) and
   only an explicit Refresh reports. Rust's silence is a flood-control measure —
   a cluster that fails answers on every three-second tick — and it costs more
   than it saves: a poll script that will not run at all is invisible until
@@ -201,8 +209,8 @@ scripts into a temp directory and lets the engine spawn them.
 
 | File | Covers |
 |---|---|
-| `tests/engine.test.ts` | All 20 end-to-end scenarios of `tests/coco_engine.rs`, plus registration idempotence + unregister and two reconcile cases the Rust engine has no equivalent of (a hand-edited record, a deleted run folder). The corrupt-`run.json` scenario becomes a reconcile test here: disk is not this engine's truth, so the damage lands at the next tick rather than the next read. |
-| `tests/mock-library.test.ts` | The bundled `mock/` library end to end — port of `tests/coco_mock_library.rs`, but over a **copy** in a temp dir, so a test run leaves no `runs/`/`report/` in the repo. |
+| `tests/engine.test.ts` | All 20 end-to-end scenarios of `coco-egui/tests/coco_engine.rs`, plus registration idempotence + unregister and two reconcile cases the Rust engine has no equivalent of (a hand-edited record, a deleted run folder). The corrupt-`run.json` scenario becomes a reconcile test here: disk is not this engine's truth, so the damage lands at the next tick rather than the next read. |
+| `tests/mock-library.test.ts` | The bundled `mock/` library end to end — port of `coco-egui/tests/coco_mock_library.rs`, but over a **copy** in a temp dir, so a test run leaves no `runs/`/`report/` in the repo. |
 | `tests/world.test.ts` | `buildWorld`: entity shape, run shape, report state, UNREACHABLE display (last known status + unavailable query health), bench plan steps, bench-origin members, history ordering. |
 | `tests/agent.test.ts` | The agent interface (§43): every route as a function of a world and a start, then the same routes over a **real unix socket** with a real HTTP client — a start crossing the wire, an oversize body refused, a socket a live coco is answering on left alone, a stale one replaced, the file removed on stop, and every reply framed with a `Content-Length` (see below). |
 | `tests/uiState.test.ts` | What a relaunch restores: `sanitize` (a report never comes back, a Start page becomes its experiment, widths clamped, unknown routes dropped, a window position taken only as a pair) and the file round trip, including one that does not parse. |
@@ -340,7 +348,7 @@ open.
   leave the window where it opens. Every write reads it now, whatever prompted
   the write.
 
-### Known inconsistency, shared with the Rust reference
+### Known inconsistency, shared with the egui implementation
 
 A dispatched run's page shows `Call 1` and `Started by nightly-benchmark ·
 call 2` for the same run. They come from two places: `plan.steps[].index` is
@@ -398,8 +406,8 @@ not a coco-electron change.
    no-repeat rule: it dismisses the error, waits two ticks with the script
    still broken, and fails if it comes back.
 7. ~~Agent socket in main process~~ — done: `src/main/agent.ts`, same routes
-   and socket path as the Rust `src/agent/`. Verified by driving the real
-   `target/debug/coco-mcp-server` against the running app — including the
+   and socket path as the Rust `coco-egui/src/agent/`. Verified by driving the
+   real `coco-mcp/target/debug/coco-mcp-server` against the running app — including the
    packaged one (`scripts/scenarios/agent.mjs`).
 8. ~~Bench child-run context route + breadcrumbs~~ — done: the `benchChild`
    route, `RunFacts.svelte` shared with `jobRun` so the facts cannot drift, and
