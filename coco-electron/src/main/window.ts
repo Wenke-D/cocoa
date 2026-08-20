@@ -75,12 +75,10 @@ export function send(events: CocoEvent[]): void {
 }
 
 /**
- * What a menu item asks the window to do (`menu.ts`).
+ * Sends a menu item's command to the window (`menu.ts`).
  *
- * The window, not the focused one. There is exactly one, and it is this
- * module's — asking `getFocusedWindow()` was asking a question with a
- * different answer: a window that is not on screen is not focused, and the
- * command went nowhere at all.
+ * The window this module owns — not the focused one, which a hidden window
+ * is not.
  */
 export function send_command(command: string): void {
   window?.webContents.send('coco:command', command)

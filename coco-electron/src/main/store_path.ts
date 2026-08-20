@@ -35,16 +35,10 @@ export function resolve_store_path(user_data_dir: string, legacy = legacy_store_
 }
 
 /**
- * Copies rather than moves, and only into an empty place.
+ * Copies the old store to the new place, if there is one and nothing is there
+ * yet. Copies rather than moves, so `coco-egui/` keeps reading the old file.
  *
- * Copy, because the old file is the one coco-egui still reads: taking it would
- * empty that Explorer for a tree that is meant to keep working. And only when
- * nothing is at the destination, so this is a migration exactly once — after
- * that the new file is the truth and the old one is a fossil.
- *
- * A failure here is not worth stopping a launch for. The worst case is an
- * Explorer that has forgotten its folders, which the user can add back; the
- * experiment records were never in this file.
+ * A failure is logged and swallowed: it is not worth stopping a launch for.
  */
 function carry_over(legacy: string, target: string): void {
   try {

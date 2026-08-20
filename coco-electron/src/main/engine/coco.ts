@@ -167,25 +167,11 @@ export class Coco {
   }
 
   /**
-   * The next run id for one experiment: one past the highest it already has.
+   * The next run id for one experiment: one past the highest it already has,
+   * or `0` if it has none. Derived from the records, never stored.
    *
-   * Derived, never stored. A persisted counter is a second opinion about what
-   * the folder contains, and the two drift — a folder copied in from another
-   * machine arrives with runs a fresh counter knows nothing about, and the
-   * next start writes over one of them. Reading the records cannot disagree
-   * with the records.
-   *
-   * It also needs no crash handling. The old counter was written at
-   * allocation so a crash could not hand the same id out twice; here the run
-   * directory *is* the record, so a crash before it exists allocated nothing,
-   * and a crash after it exists is skipped by the next maximum.
-   *
-   * The first run of an experiment is `0`, as it always was — the change here
-   * is where the number comes from, not what it is.
-   *
-   * Ids are per experiment, so two experiments each have a run `0`. Nothing
-   * needs them globally unique: every address for a run — a route, a cancel,
-   * a report, an agent path — already names the experiment too.
+   * Ids are per experiment, so two experiments each have a run `0`.
+   * See `doc/convention.md` §5 for why there is no counter.
    */
   private next_run_id(records: Map<string, Map<number, unknown>>, folder: string): number {
     const mine = records.get(folder)

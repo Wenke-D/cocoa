@@ -523,11 +523,7 @@ async function handle(
  * Reads the body, refusing one that is too large — on the declared length
  * first, before a byte of it is read.
  *
- * A refusal *resolves* as the 413. It is an answer coco decided to give, not a
- * failure of the read, and carrying it as a rejection meant rejecting with
- * something that was not an Error — invisible to `instanceof`, to a stack
- * trace, and to any generic handler upstream. Only a genuine stream error
- * rejects, and it rejects with the Error the stream gave us.
+ * A refusal *resolves* as the 413; only a stream error rejects, with an Error.
  */
 function read(incoming: http.IncomingMessage): Promise<string | AgentResponse> {
   return new Promise((resolve, reject) => {
