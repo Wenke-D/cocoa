@@ -20,8 +20,6 @@ const api = {
 
   refresh_now: (): Promise<unknown> => ipcRenderer.invoke('coco:refresh'),
 
-  save_ui: (state: unknown): Promise<unknown> => ipcRenderer.invoke('coco:save_ui', state),
-
   /** What the application menu asked for; the window runs it the way a click
    *  would, so there is one path per operation and not two. */
   on_command: (callback: (command: string) => void): (() => void) => {

@@ -10,7 +10,7 @@
 -->
 <script lang="ts">
   import { bench_run, is_cancellable, job_run } from '@shared/world'
-  import type { Crumb } from '@shared/ui'
+  import type { Crumb } from '../ui_state'
   import { app, dispatched_owner, entity_of, navigate, request_cancel } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import RunFacts from '../lib/RunFacts.svelte'

@@ -17,7 +17,8 @@
 
 import type { CocoEvent } from '@shared/world'
 import type { RefreshReport } from './engine/coco'
-import type { Maybe } from './types'
+import type { Maybe } from '@shared/maybe'
+import { empty, some } from '@shared/maybe'
 
 /** Just the parts of a refresh report that can carry a failure. */
 type Errors = Pick<RefreshReport, 'launch_errors' | 'poll_errors' | 'report_errors'>
@@ -32,12 +33,12 @@ export function refresh_summary(report: Errors): Maybe<string> {
     (error) => error.message
   )
   if (errors.length === 0) {
-    return null
+    return empty()
   }
   if (errors.length === 1) {
-    return errors[0]
+    return some(errors[0])
   }
-  return `${errors[0]} (and ${errors.length - 1} more)`
+  return some(`${errors[0]} (and ${errors.length - 1} more)`)
 }
 
 function error(text: string): CocoEvent {
@@ -49,8 +50,8 @@ function error(text: string): CocoEvent {
  * is announced once.
  */
 export class NoticeGate {
-  /** The failure currently standing; `null` when the last pass was clean. */
-  private announced: Maybe<string> = null
+  /** The failure currently standing; empty when the last pass was clean. */
+  private announced: Maybe<string> = empty()
 
   /**
    * A refresh nobody asked for. It speaks only when the situation changes:
@@ -59,15 +60,15 @@ export class NoticeGate {
    * carrying real statuses.
    */
   automatic(summary: Maybe<string>): Maybe<CocoEvent> {
-    if (summary === null) {
-      this.announced = null
-      return null
+    if (summary.is_empty()) {
+      this.announced = empty()
+      return empty()
     }
-    if (summary === this.announced) {
-      return null
+    if (this.announced.contains(summary.value)) {
+      return empty()
     }
     this.announced = summary
-    return error(summary)
+    return some(error(summary.value))
   }
 
   /**
@@ -79,6 +80,8 @@ export class NoticeGate {
    */
   manual(summary: Maybe<string>): CocoEvent {
     this.announced = summary
-    return summary === null ? { kind: 'notice', level: 'info', text: 'Refreshed.' } : error(summary)
+    return summary.is_empty()
+      ? { kind: 'notice', level: 'info', text: 'Refreshed.' }
+      : error(summary.value)
   }
 }

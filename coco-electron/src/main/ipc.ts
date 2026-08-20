@@ -14,25 +14,20 @@ import type {
   ReportTarget,
   StartResult
 } from '@shared/world'
-import type { UiState } from '@shared/ui'
-import { ui_state, merge_from_renderer } from './ui_state'
+import { empty } from '@shared/maybe'
 import * as operations from './operations'
 import { current_model, mark_bootstrapped, publish_cycle } from './publish'
 import { refresh_and_publish } from './refresh'
 import { engine, on_engine } from './runtime'
 
 export function register_ipc(): void {
-  // The renderer pulls its starting state; a reload is its own resync. Events
+  // The renderer pulls its starting world; a reload is its own resync. Events
   // sent before the bootstrap answer are applied to the old page state and then
   // overwritten by the (newer) bootstrap — order-safe either way.
   ipcMain.handle('coco:bootstrap', (): BootstrapPayload => {
     const world = current_model()
     mark_bootstrapped()
-    return { world, ui: ui_state() }
-  })
-
-  ipcMain.handle('coco:save_ui', (_event, state: UiState): void => {
-    merge_from_renderer(state)
+    return { world }
   })
 
   // Events go out before the answer (publish-before-emit): by the time the
@@ -42,7 +37,7 @@ export function register_ipc(): void {
     async (_event, name: string, parameters: Record<string, string>): Promise<StartResult> =>
       on_engine(async () => {
         const result = await operations.start_run(engine, name, parameters)
-        publish_cycle(null)
+        publish_cycle(empty())
         return result
       })
   )
@@ -53,7 +48,7 @@ export function register_ipc(): void {
   ipcMain.handle('coco:cancel', async (_event, target: CancelTarget): Promise<CancelResult> =>
     on_engine(async () => {
       const result = await operations.cancel(engine, target)
-      publish_cycle(null)
+      publish_cycle(empty())
       return result
     })
   )
@@ -72,7 +67,7 @@ export function register_ipc(): void {
     }
     return on_engine(async () => {
       const result = operations.add_folder(engine, picked.filePaths[0])
-      publish_cycle(null)
+      publish_cycle(empty())
       return result
     })
   })
@@ -82,7 +77,7 @@ export function register_ipc(): void {
     async (_event, entity_id: string): Promise<RemoveFolderResult> =>
       on_engine(async () => {
         const result = operations.remove_folder(engine, entity_id)
-        publish_cycle(null)
+        publish_cycle(empty())
         return result
       })
   )

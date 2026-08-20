@@ -8,7 +8,7 @@
     trigger_label
   } from '@shared/world'
   import { bench_run, job_run } from '@shared/world'
-  import type { Crumb } from '@shared/ui'
+  import type { Crumb } from '../ui_state'
   import { app, entity_of, navigate, request_cancel } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import StatusPill from '../lib/StatusPill.svelte'

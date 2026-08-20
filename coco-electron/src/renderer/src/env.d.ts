@@ -1,7 +1,6 @@
 /// <reference types="svelte" />
 /// <reference types="vite/client" />
 
-import type { UiState } from '@shared/ui'
 import type {
   AddFolderResult,
   BootstrapPayload,
@@ -24,7 +23,6 @@ declare global {
       add_folder(): Promise<AddFolderResult>
       remove_folder(entity_id: string): Promise<RemoveFolderResult>
       refresh_now(): Promise<void>
-      save_ui(state: UiState): Promise<void>
       on_command(callback: (command: string) => void): () => void
       on_events(callback: (events: CocoEvent[]) => void): () => void
     }

@@ -19,9 +19,11 @@ const REPO_ROOT = path.resolve(APP_DIR, '..')
 const RUN_DIR = process.env.DRIVE_DIR ?? path.join(APP_DIR, '.drive')
 const SHOT_DIR = process.env.SCREENSHOT_DIR ?? path.join(RUN_DIR, 'shots')
 const STORE_PATH = process.env.COCO_STORE_PATH ?? path.join(RUN_DIR, 'store.json')
-// The window's arrangement (route, sidebar width, geometry) also gets a
-// scratch file: a drive run must not decide where the user's real app opens.
-const UI_STATE_PATH = process.env.COCO_UI_STATE_PATH ?? path.join(RUN_DIR, 'ui-state.json')
+// Everything the app keeps per-user — the window-state file, the renderer's
+// localStorage — also gets a scratch home: a drive run must not decide where
+// the user's real app opens, nor start on whatever page a real session left.
+const USER_DATA_DIR = process.env.COCO_USER_DATA_DIR ?? path.join(RUN_DIR, 'user-data')
+const WINDOW_STATE_PATH = path.join(USER_DATA_DIR, 'window-state.json')
 // Likewise the agent socket (§43): a drive run must not take the socket a real
 // coco is answering on, nor leave its own behind in the real place.
 const SOCKET_PATH = process.env.COCO_SOCKET_PATH ?? path.join(RUN_DIR, 'coco.sock')
@@ -65,9 +67,9 @@ function seed_library(seed) {
       ? []
       : folders
   fs.writeFileSync(STORE_PATH, JSON.stringify({ entities }, null, 2))
-  // Whatever page a previous drive was left on is not this run's starting
-  // point either.
-  fs.rmSync(UI_STATE_PATH, { force: true })
+  // Whatever a previous drive arranged — window state on disk, the page's
+  // own localStorage — is not this run's starting point either.
+  fs.rmSync(USER_DATA_DIR, { recursive: true, force: true })
   return entities
 }
 
@@ -118,7 +120,7 @@ if (process.env.COCO_STORE_PATH === undefined) {
 const env = {
   ...process.env,
   COCO_STORE_PATH: STORE_PATH,
-  COCO_UI_STATE_PATH: UI_STATE_PATH,
+  COCO_USER_DATA_DIR: USER_DATA_DIR,
   COCO_SOCKET_PATH: SOCKET_PATH,
   // `DRIVE_HEADLESS=1` runs the scenario without a window on screen — for
   // sweeping every scenario without eleven windows taking the focus in turn.
@@ -215,7 +217,7 @@ try {
     wait_text,
     relaunch,
     library: path.join(RUN_DIR, 'mock'),
-    ui_state_path: UI_STATE_PATH,
+    window_state_path: WINDOW_STATE_PATH,
     socket_path: SOCKET_PATH
   })
   console.log('\nscenario finished')

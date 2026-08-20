@@ -1,71 +1,46 @@
-// The one file the window's own arrangement lives in. The engine's `store.json`
-// is the *experiments'* memory (convention §5) and has no business holding
-// which page was open, so this is a second, smaller file next to it — in
+// The one file the window's geometry lives in. The engine's `store.json` is
+// the *experiments'* memory (convention §5) and has no business holding how
+// big a window was, so this is a second, smaller file next to it — in
 // Electron's `userData`, which is per-app and per-user.
 //
-// eframe does this for the Rust app without being asked; here it is explicit,
-// which at least makes it testable.
+// The write is plain, not atomic — §12 is the engine store's convention, for
+// files with readers other than this app. A crash mid-write can only leave
+// truncated JSON, which `parse_window_state` already turns into the
+// defaults, so the worst a torn file can cost is one session's geometry —
+// the same loss this record accepts everywhere else.
 
 import fs from 'node:fs'
 import path from 'node:path'
-import type { UiState } from '@shared/ui'
-import { default_ui_state, sanitize } from '@shared/ui'
-import { write_atomic } from './engine/store'
+import type { Maybe } from '@shared/maybe'
+import { empty, some } from '@shared/maybe'
+import type { WindowState } from './window_state'
+
+/** Where the window state lives: `window-state.json` under `userData`. */
+export function window_state_path(user_data_dir: string): string {
+  return path.join(user_data_dir, 'window-state.json')
+}
 
 /**
- * A file that fails to parse is not an error worth stopping for: the worst
- * case is a window that opens where it always opens. Everything that comes
- * back is put through `sanitize` — this is untrusted JSON, older or newer than
- * this build, and possibly edited by hand.
+ * The text in the window state file, or nothing when there is no file to
+ * read — missing and unreadable are the same answer: nothing to restore.
  */
-export function read_ui_state(file_path: string): UiState {
-  let text: string
+export function read_window_state_file(file_path: string): Maybe<string> {
   try {
-    text = fs.readFileSync(file_path, 'utf8')
+    return some(fs.readFileSync(file_path, 'utf8'))
   } catch {
-    return default_ui_state()
-  }
-  try {
-    return sanitize(JSON.parse(text) as Partial<UiState>)
-  } catch {
-    return default_ui_state()
+    return empty()
   }
 }
 
 /**
- * Written atomically, like every other file this app owns (§12): a relaunch
- * after a crash mid-write should find the previous arrangement, never half of
- * this one. A failure is swallowed — losing the sidebar width is not worth an
- * error in the user's face.
- *
- * What is written is what the session actually had, including a Start page or
- * a report — repair belongs to the restore, where the rule is about what a
- * relaunch should *land on*, not about what was true.
+ * Writes the state to its file as JSON, making the parent directory when it
+ * is missing. A failed write is logged and dropped.
  */
-export function write_ui_state(file_path: string, state: UiState): void {
+export function write_window_state(file_path: string, state: WindowState): void {
   try {
-    write_atomic(file_path, JSON.stringify(state, null, 2))
+    fs.mkdirSync(path.dirname(file_path), { recursive: true })
+    fs.writeFileSync(file_path, JSON.stringify(state, null, 2))
   } catch (error) {
-    console.error('ui state:', error)
+    console.error('window state:', error)
   }
-}
-
-/**
- * The path to the file storing the UI state from the last open.
- * This path can vary. In a normal run it is `ui-state.json` under
- * `user_data_dir` (the convention is defined elsewhere).
- *
- * `COCO_UI_STATE_PATH` overrides it entirely — the whole path, not just the
- * file name. For test purposes, for example.
- *
- * @param user_data_dir user data dir defined by the host application
- * @returns the UI state file's absolute path for this launch, used to recover
- *   the last open layout
- */
-export function ui_state_path(user_data_dir: string): string {
-  const override = process.env['COCO_UI_STATE_PATH']
-  if (override !== undefined && override !== '') {
-    return override
-  }
-  return path.join(user_data_dir, 'ui-state.json')
 }

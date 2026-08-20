@@ -1,5 +1,6 @@
 // The refresh loop: one tick, and what the user hears about it.
 
+import { some } from '@shared/maybe'
 import { engine, notices, on_engine } from './runtime'
 import { refresh_summary } from './notices'
 import { announce, message_of, publish_refreshed } from './publish'
@@ -33,15 +34,15 @@ export async function refresh_and_publish(manual = false): Promise<void> {
       ]) {
         console.error('refresh:', error.message)
       }
-      const notice = manual ? notices.manual(summary) : notices.automatic(summary)
+      const notice = manual ? some(notices.manual(summary)) : notices.automatic(summary)
       publish_refreshed(announce(notice))
     })
   } catch (error) {
     // The refresh itself came apart — no report, and so nothing to publish.
     // The gate still decides whether this is news.
     console.error('refresh failed:', error)
-    const message = message_of(error)
-    send(announce(manual ? notices.manual(message) : notices.automatic(message)))
+    const message = some(message_of(error))
+    send(announce(manual ? some(notices.manual(message)) : notices.automatic(message)))
   } finally {
     refreshing = false
   }

@@ -7,17 +7,15 @@
 import { join } from 'node:path'
 import { BrowserWindow } from 'electron'
 import type { CocoEvent } from '@shared/world'
-import type { WindowBounds } from '@shared/ui'
-import { WINDOW_DEFAULT, WINDOW_MIN } from '@shared/ui'
-import type { Maybe } from './types'
+import type { WindowState } from './window_state'
+import { WINDOW_MIN_SIZE } from './window_state'
+import type { Maybe } from '@shared/maybe'
+import { empty, some } from '@shared/maybe'
 
-let window: Maybe<BrowserWindow> = null
+let window: Maybe<BrowserWindow> = empty()
 
-/** What the window wants told when its geometry moves, and when it closes. */
-export interface WindowHooks {
-  on_geometry_changed: () => void
-  on_closing: () => void
-}
+/** The geometry taken at the last close, for the persist that follows it. */
+let last_bounds: Maybe<WindowState> = empty()
 
 /**
  * `COCO_HIDE_WINDOW` opens the window without showing it.
@@ -30,18 +28,18 @@ export interface WindowHooks {
  */
 const HIDDEN = process.env.COCO_HIDE_WINDOW === '1'
 
-export function create_window(remembered: Maybe<WindowBounds>, hooks: WindowHooks): void {
-  window = new BrowserWindow({
+export function create_window(old_win: WindowState, on_closing: () => void): void {
+  const size = old_win.size
+  // A remembered position is a pair or nothing (`window_state.ts`); nothing
+  // means no x/y keys at all, which leaves the platform to place the window.
+  const position = old_win.position.or({})
+  const opened = new BrowserWindow({
     show: !HIDDEN,
-    width: remembered?.width ?? WINDOW_DEFAULT.width,
-    height: remembered?.height ?? WINDOW_DEFAULT.height,
-    // A remembered position is restored only as a pair; half of one would put
-    // the window somewhere nobody left it.
-    ...(remembered?.x !== null && remembered?.x !== undefined && remembered.y !== null
-      ? { x: remembered.x, y: remembered.y }
-      : {}),
-    minWidth: WINDOW_MIN.width,
-    minHeight: WINDOW_MIN.height,
+    width: size.width,
+    height: size.height,
+    ...position,
+    minWidth: WINDOW_MIN_SIZE.width,
+    minHeight: WINDOW_MIN_SIZE.height,
     title: 'coco (electron)',
     backgroundColor: '#1f1f1f',
     webPreferences: {
@@ -49,28 +47,30 @@ export function create_window(remembered: Maybe<WindowBounds>, hooks: WindowHook
       sandbox: false
     }
   })
+  window = some(opened)
 
-  // Geometry is remembered as it changes rather than only on close: on macOS
-  // quitting with the window open never fires a close at all.
-  window.on('resize', hooks.on_geometry_changed)
-  window.on('move', hooks.on_geometry_changed)
-  window.on('close', hooks.on_closing)
+  // The last look at the geometry, taken while there is still a window to
+  // ask; will-quit, after the window is gone, keeps what this look took.
+  opened.on('close', () => {
+    last_bounds = some(bounds_of(opened))
+    on_closing()
+  })
 
-  window.on('closed', () => {
-    window = null
+  opened.on('closed', () => {
+    window = empty()
   })
 
   const dev_server_url = process.env['ELECTRON_RENDERER_URL']
   if (dev_server_url !== undefined && dev_server_url !== '') {
-    void window.loadURL(dev_server_url)
+    void opened.loadURL(dev_server_url)
   } else {
-    void window.loadFile(join(__dirname, '../renderer/index.html'))
+    void opened.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
 
 export function send(events: CocoEvent[]): void {
-  if (events.length > 0) {
-    window?.webContents.send('coco:events', events)
+  if (events.length > 0 && window.is_present()) {
+    window.value.webContents.send('coco:events', events)
   }
 }
 
@@ -81,24 +81,32 @@ export function send(events: CocoEvent[]): void {
  * is not.
  */
 export function send_command(command: string): void {
-  window?.webContents.send('coco:command', command)
+  if (window.is_present()) {
+    window.value.webContents.send('coco:command', command)
+  }
+}
+
+function bounds_of(win: BrowserWindow): WindowState {
+  // `getNormalBounds`, not `getBounds`: the latter reports the screen for a
+  // maximised or full-screen window, which would then open that way for ever
+  // after. This one answers with the restored rectangle in every state.
+  const bounds = win.getNormalBounds()
+  return {
+    size: { width: bounds.width, height: bounds.height },
+    position: some({ x: bounds.x, y: bounds.y })
+  }
 }
 
 /**
- * Where the window is, or `null` when there is nothing worth remembering.
- *
- * A maximised or full-screen window would otherwise be recorded as the size of
- * the screen, and open that way for ever after.
+ * Where the window would be if it were neither maximised, full-screen nor
+ * minimised — which is the only geometry worth reopening at: the window's,
+ * read now, or the look `close` took once there is no window left to ask.
  */
-export function window_bounds(): Maybe<WindowBounds> {
-  if (window === null || window.isDestroyed() || window.isMinimized()) {
-    return null
+export function window_bounds(): Maybe<WindowState> {
+  if (window.is_present() && !window.value.isDestroyed()) {
+    return some(bounds_of(window.value))
   }
-  if (window.isMaximized() || window.isFullScreen()) {
-    return null
-  }
-  const bounds = window.getBounds()
-  return { width: bounds.width, height: bounds.height, x: bounds.x, y: bounds.y }
+  return last_bounds
 }
 
 /** For the macOS `activate` convention: reopen only when none is left. */

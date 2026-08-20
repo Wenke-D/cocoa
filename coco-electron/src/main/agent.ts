@@ -19,7 +19,8 @@ import net from 'node:net'
 import path from 'node:path'
 import type { BenchRun, Entity, JobRun, ReportState, StartResult, World } from '@shared/world'
 import { bench_run, job_run } from '@shared/world'
-import type { Maybe } from './types'
+import type { Maybe } from '@shared/maybe'
+import { empty, some } from '@shared/maybe'
 
 /**
  * The most a request body may be. A start's parameters are a handful of short
@@ -233,9 +234,9 @@ function list_entities(world: World, kind: 'Job' | 'Bench'): AgentResponse {
 function report_location(folder: string, run_id: string, report: ReportState): Maybe<string> {
   if (typeof report === 'object' && 'Available' in report) {
     const extension = report.Available.format === 'Html' ? 'html' : 'txt'
-    return path.join(folder, 'report', `${run_id}.${extension}`)
+    return some(path.join(folder, 'report', `${run_id}.${extension}`))
   }
-  return null
+  return empty()
 }
 
 function find_entity(world: World, name: string, kind: 'Job' | 'Bench'): Entity | undefined {
@@ -275,7 +276,7 @@ function job_detail(world: World, name: string): AgentResponse {
         location: {
           run_dir: run_dir,
           record: path.join(run_dir, 'run.json'),
-          report: report_location(folder, run.id, run.report)
+          report: report_location(folder, run.id, run.report).or_null()
         }
       }
     })
@@ -327,7 +328,7 @@ function bench_detail(world: World, name: string): AgentResponse {
           run_dir: run_dir,
           record: path.join(run_dir, 'run.json'),
           members: path.join(run_dir, 'members.json'),
-          report: report_location(folder, run.id, run.report)
+          report: report_location(folder, run.id, run.report).or_null()
         }
       }
     })

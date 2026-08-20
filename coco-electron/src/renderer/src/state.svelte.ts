@@ -4,8 +4,8 @@
 // address pointing at something the world no longer contains is repaired,
 // with a message.
 
-import { default_ui_state } from '@shared/ui'
-import type { Route, ReportContext, UiState } from '@shared/ui'
+import { load_ui_state, store_ui_state } from './ui_state'
+import type { Route, ReportContext } from './ui_state'
 import { bench_run, empty_world, is_active, job_run } from '@shared/world'
 import type {
   AddFolderResult,
@@ -21,10 +21,9 @@ import type {
   World
 } from '@shared/world'
 
-// `Route` and `ReportContext` are shared with the main process, which persists
-// them; re-exported here because this module is where the renderer reaches for
+// Re-exported because this module is where the renderer reaches for
 // everything about where it is.
-export type { ReportContext, Route } from '@shared/ui'
+export type { ReportContext, Route } from './ui_state'
 
 /**
  * A modal is a temporary action, not a place (specification §9), so it is
@@ -66,22 +65,28 @@ export interface AppState {
   overlay: Overlay | null
   menu: ContextMenu | null
   notice: Notice | null
-  // Arrangement, not content: persisted across launches (see `persist_ui`).
+  // Arrangement, not content: persisted across launches (see `flush_ui`).
   sidebar_width: number
   report_wrap: boolean
   /** The one clock every duration on screen is computed from. */
   now_ms: number
 }
 
+// The arrangement from the last session, read synchronously — localStorage
+// is the renderer's own, so nothing about where the user was waits on the
+// bootstrap. Whether the route still points at anything is `recover()`'s
+// question, once the world has arrived.
+const arranged = load_ui_state()
+
 export const app: AppState = $state({
   connected: false,
   world: empty_world(),
-  route: { page: 'empty' },
+  route: arranged.route,
   overlay: null,
   menu: null,
   notice: null,
-  sidebar_width: default_ui_state().sidebar_width,
-  report_wrap: default_ui_state().report_wrap_lines,
+  sidebar_width: arranged.sidebar_width,
+  report_wrap: arranged.report_wrap_lines,
   now_ms: Date.now()
 })
 
@@ -266,52 +271,24 @@ export async function refresh_now(): Promise<void> {
 export async function bootstrap(): Promise<void> {
   const payload = await window.coco.bootstrap()
   app.world = payload.world
-  // The arrangement comes back already sanitized (`@shared/ui`), so what is
-  // left to repair is what only the world can answer: an address pointing at
-  // an experiment that has since been removed. `recover()` does that below.
-  app.route = payload.ui.route
-  app.sidebar_width = payload.ui.sidebar_width
-  app.report_wrap = payload.ui.report_wrap_lines
   app.connected = true
-  restored = true
+  // The route was restored before the world arrived (`load_ui_state`); what
+  // only the world can answer — an address pointing at an experiment that
+  // has since been removed — is repaired now.
   recover()
 }
 
 /**
- * Nothing is written until the restored state has been applied. Otherwise the
- * first effect of a launch — the default route, before the bootstrap answers —
- * would overwrite the file it is about to read.
+ * Writes the arrangement to localStorage. Called once, as the page unloads —
+ * while the page runs the arrangement lives in `app`, and nothing else
+ * needs it.
  */
-let restored = false
-
-/** Coalesces a drag's hundred widths into one write. */
-let persist_timer: ReturnType<typeof setTimeout> | null = null
-
-/**
- * Remembers the arrangement. Called from an effect, so it runs on every route
- * change including the ones `recover()` makes — being put back on the Explorer
- * because an experiment is gone is exactly the state worth remembering.
- */
-export function persist_ui(): void {
-  if (!restored) {
-    return
-  }
-  if (persist_timer !== null) {
-    clearTimeout(persist_timer)
-  }
-  // The state is read when the timer fires, not when it is set: a drag's
-  // hundred widths must collapse to the width it ended on.
-  persist_timer = setTimeout(() => {
-    persist_timer = null
-    const state: UiState = {
-      route: $state.snapshot(app.route),
-      sidebar_width: app.sidebar_width,
-      report_wrap_lines: app.report_wrap,
-      // The window is the main process's to know; it fills this in.
-      window: null
-    }
-    void window.coco.save_ui(state)
-  }, 300)
+export function flush_ui(): void {
+  store_ui_state({
+    route: $state.snapshot(app.route),
+    sidebar_width: app.sidebar_width,
+    report_wrap_lines: app.report_wrap
+  })
 }
 
 /**

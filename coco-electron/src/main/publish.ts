@@ -11,11 +11,12 @@ import { engine, notices } from './runtime'
 import { now_stamp } from './engine/record'
 import { build_world } from './engine/world'
 import { diff_worlds } from './sync'
-import type { Maybe } from './types'
+import type { Maybe } from '@shared/maybe'
+import { empty, some } from '@shared/maybe'
 import { send } from './window'
 
-let model: Maybe<World> = null
-let last_refresh: Maybe<string> = null
+let model: Maybe<World> = empty()
+let last_refresh: Maybe<string> = empty()
 
 /**
  * Whether the page has asked for its starting state yet. Events sent before
@@ -31,7 +32,7 @@ export function message_of(error: unknown): string {
 }
 
 export function announce(notice: Maybe<CocoEvent>): CocoEvent[] {
-  return notice === null ? [] : [notice]
+  return notice.is_empty() ? [] : [notice.value]
 }
 
 /** Says something that must survive the window not being ready to hear it. */
@@ -51,7 +52,12 @@ export function announce_when_heard(events: CocoEvent[]): void {
  * and the agent's reads, neither of which may wait on the engine.
  */
 export function current_model(): World {
-  return (model ??= build_world(engine, last_refresh))
+  if (model.is_present()) {
+    return model.value
+  }
+  const built = build_world(engine, last_refresh.or_null())
+  model = some(built)
+  return built
 }
 
 /**
@@ -76,19 +82,19 @@ export function mark_bootstrapped(): void {
 export function publish_cycle(refreshed_at: Maybe<string>, extra: CocoEvent[] = []): void {
   let next: World
   try {
-    next = build_world(engine, refreshed_at ?? last_refresh)
+    next = build_world(engine, refreshed_at.or(last_refresh.or_null()))
   } catch (error) {
     console.error('world build failed:', error)
     // Nothing can be said about the world, but something must still be said
     // about the failure: a build that throws leaves the page showing a world
     // that has quietly stopped being updated.
-    send([...extra, ...announce(notices.automatic(message_of(error)))])
+    send([...extra, ...announce(notices.automatic(some(message_of(error))))])
     return
   }
-  const events: CocoEvent[] = model === null ? [] : diff_worlds(model, next)
-  model = next
-  if (refreshed_at !== null) {
-    events.push({ kind: 'refreshed', at: refreshed_at })
+  const events: CocoEvent[] = model.is_empty() ? [] : diff_worlds(model.value, next)
+  model = some(next)
+  if (refreshed_at.is_present()) {
+    events.push({ kind: 'refreshed', at: refreshed_at.value })
   }
   // The notice rides in the same batch as the changes it is about: one batch
   // per logical operation, so the page never shows the message before the
@@ -103,6 +109,6 @@ export function publish_cycle(refreshed_at: Maybe<string>, extra: CocoEvent[] = 
  * wanted it was only going to hand it straight back.
  */
 export function publish_refreshed(extra: CocoEvent[] = []): void {
-  last_refresh = now_stamp()
+  last_refresh = some(now_stamp())
   publish_cycle(last_refresh, extra)
 }

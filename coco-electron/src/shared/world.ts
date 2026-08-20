@@ -2,8 +2,6 @@
 // Serde's externally-tagged enum convention: a unit variant is a bare string,
 // a struct variant is `{ VariantName: { ...fields } }`.
 
-import type { UiState } from './ui'
-
 export type EntityKind = 'Job' | 'Bench'
 
 export type ManifestState = 'Valid' | 'Missing' | { Invalid: { message: string } }
@@ -145,8 +143,6 @@ export function empty_world(): World {
 
 export interface BootstrapPayload {
   world: World
-  /** Where the user was when they last closed the window (`@shared/ui`). */
-  ui: UiState
 }
 
 /**

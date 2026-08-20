@@ -9,7 +9,7 @@
 -->
 <script lang="ts">
   import type { ReportFormat } from '@shared/world'
-  import type { Crumb } from '@shared/ui'
+  import type { Crumb } from '../ui_state'
   import { app, context_entity_id, entity_of, notify, report_owner_id } from '../state.svelte'
   import type { ReportContext } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'

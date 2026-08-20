@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { fade } from 'svelte/transition'
-  import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH } from '@shared/ui'
+  import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH } from './ui_state'
   import {
     add_folder,
     app,
     apply_events,
     bootstrap,
     dismiss_notice,
-    persist_ui,
+    flush_ui,
     refresh_now
   } from './state.svelte'
   import CancelModal from './lib/CancelModal.svelte'
@@ -25,17 +25,6 @@
   import ReportViewer from './pages/ReportViewer.svelte'
 
   let dragging = $state(false)
-
-  // The arrangement is written back whenever it moves. An effect rather than a
-  // call in `navigate()`, because the route also changes on its own — through
-  // `recover()`, through a start landing on its new run — and being put back
-  // on the Explorer is exactly the state worth remembering.
-  $effect(() => {
-    JSON.stringify(app.route)
-    void app.sidebar_width
-    void app.report_wrap
-    persist_ui()
-  })
 
   // One key per distinct page identity, so navigation re-runs the enter
   // transition but a world refresh on the same page does not.
@@ -55,6 +44,9 @@
       }
     })
     void bootstrap()
+    // The arrangement leaves the page exactly once, on its way out — a
+    // reload's unload included; the bootstrap that follows pulls it back.
+    window.addEventListener('pagehide', flush_ui)
     const clock = setInterval(() => {
       app.now_ms = Date.now()
     }, 1000)
@@ -62,6 +54,7 @@
       unsubscribe()
       unlisten()
       clearInterval(clock)
+      window.removeEventListener('pagehide', flush_ui)
     }
   })
 

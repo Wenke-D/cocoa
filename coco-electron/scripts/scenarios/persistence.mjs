@@ -1,11 +1,23 @@
-// What survives quitting. The arrangement is written by the renderer (route,
-// sidebar width, report wrap) and by the main process (window geometry) into
-// one file, and `sanitize` decides what a relaunch is allowed to restore —
-// the route back, but never a report page and never a half-filled Start form.
+// What survives quitting. The arrangement lives in two places now: the
+// renderer keeps route, sidebar width and report wrap in its own
+// localStorage, and the main process keeps the window's geometry in
+// `window-state.json`. `sanitize` decides what a relaunch is allowed to
+// restore — the route back, but never a report page and never a half-filled
+// Start form.
+//
+// localStorage is written once, as the page unloads, so every assertion
+// about the renderer's half is made after a relaunch, reading what the
+// closing page wrote.
 
 import fs from 'node:fs'
 
-export async function run({ page, shot, log, wait_text, relaunch, ui_state_path }) {
+/** The renderer's stored arrangement, as the page it runs in sees it. */
+async function stored_ui(page) {
+  const text = await page.evaluate(() => window.localStorage.getItem('ui-state'))
+  return text === null ? null : JSON.parse(text)
+}
+
+export async function run({ page, shot, log, wait_text, relaunch, window_state_path }) {
   await wait_text('solver-gpu', 20_000)
 
   // Somewhere worth coming back to, and a sidebar that is visibly not default.
@@ -20,7 +32,18 @@ export async function run({ page, shot, log, wait_text, relaunch, ui_state_path 
   await page.waitForTimeout(600)
   await shot('arranged')
 
-  const written = JSON.parse(fs.readFileSync(ui_state_path, 'utf8'))
+  // Arranging does not reach storage: what is stored now is still whatever
+  // was there before this session touched anything — nothing, on a fresh
+  // profile.
+  const mid_session = await stored_ui(page)
+  log('mid-session storage:', JSON.stringify(mid_session))
+  if (mid_session !== null && Math.abs(mid_session.sidebar_width - 330) < 4) {
+    throw new Error('the arrangement reached storage before the page unloaded')
+  }
+
+  ;({ page } = await relaunch())
+
+  const written = await stored_ui(page)
   log('persisted:', JSON.stringify(written.route), 'sidebar', written.sidebar_width)
   // An entity id is the folder it lives in, not its name.
   if (!String(written.route.entity_id).endsWith('nightly-benchmark')) {
@@ -29,11 +52,13 @@ export async function run({ page, shot, log, wait_text, relaunch, ui_state_path 
   if (Math.abs(written.sidebar_width - 330) > 4) {
     throw new Error(`the sidebar width was not remembered: ${written.sidebar_width}`)
   }
-  if (written.window === null) {
+
+  // The main process's half: the geometry file the closing window wrote.
+  const window_state = JSON.parse(fs.readFileSync(window_state_path, 'utf8'))
+  log('window state:', JSON.stringify(window_state))
+  if (typeof window_state.size?.width !== 'number') {
     throw new Error('the window geometry was not remembered')
   }
-
-  ;({ page } = await relaunch())
 
   // Back where we were: the same experiment selected, the same sidebar.
   await page.locator('button.start').waitFor({ timeout: 20_000 })
@@ -51,14 +76,15 @@ export async function run({ page, shot, log, wait_text, relaunch, ui_state_path 
   await page.locator('button.start').click()
   await page.locator('form').waitFor({ timeout: 10_000 })
   await page.waitForTimeout(600)
-  // The file records what was true — a Start route. `sanitize` turns it into
+  ;({ page } = await relaunch())
+
+  // Storage records what was true — a Start route. `sanitize` turns it into
   // the experiment on the way back in, not on the way out.
-  const on_start = JSON.parse(fs.readFileSync(ui_state_path, 'utf8')).route
+  const on_start = (await stored_ui(page)).route
   log('persisted while on start:', JSON.stringify(on_start))
   if (on_start.page !== 'start') {
-    throw new Error(`the file should record the Start page it was on: ${JSON.stringify(on_start)}`)
+    throw new Error(`storage should record the Start page it was on: ${JSON.stringify(on_start)}`)
   }
-  ;({ page } = await relaunch())
 
   await page.locator('button.start').waitFor({ timeout: 20_000 })
   if (await page.locator('form').isVisible()) {
