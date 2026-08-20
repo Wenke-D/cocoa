@@ -1,0 +1,38 @@
+# Packaging (step 9). Deliberately small: this is a prototype that has to be
+# runnable by someone who is not going to install a toolchain, not a signed
+# product. Nothing here is notarised or signed — `identity: null` says so out
+# loud rather than letting a half-configured signature fail the build.
+
+appId: dev.coco.electron
+productName: coco
+copyright: coco
+
+directories:
+  # electron-vite writes here; `build/` holds the icon electron-builder reads.
+  output: release
+  buildResources: build
+
+# The renderer, the preload and the main bundle, plus the two runtime
+# dependencies the engine actually loads (nunjucks renders templates,
+# smol-toml reads manifests). Everything else in node_modules is a build tool.
+files:
+  - out/**/*
+  - package.json
+
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  # Unsigned on purpose: a signature needs a certificate this prototype has no
+  # business carrying. Gatekeeper will ask; that is the honest state of it.
+  identity: null
+
+linux:
+  category: Development
+  target: [AppImage]
+
+win:
+  target: [nsis]

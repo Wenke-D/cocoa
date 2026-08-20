@@ -1,0 +1,20 @@
+kind        = "job"
+name        = "fixture-job"
+description = "Test fixture: a job whose scripts answer from state files"
+
+[render]
+template    = "job.sbatch.tmpl"
+params      = ["size"]
+
+[launch]
+command     = "./launch.sh"
+params      = ["gpu"]
+
+[poll]
+command     = "./poll.sh"
+
+[report]
+command     = "./report.sh"
+
+[cancel]
+command     = "./cancel.sh"
