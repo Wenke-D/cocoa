@@ -63,6 +63,27 @@ cd coco-mcp  && cargo build && cargo test   # the MCP server; serde_json only
 cd coco-egui && cargo test                  # the retired workbench, still green
 ```
 
+### Or through alors
+
+`tasks.alors` in the repository root wraps all of the above, so three trees with
+two build systems answer to one verb. It reads only the current directory's task
+file, so run it **from the root**:
+
+```bash
+alors                       # list the tasks
+alors dev                   # the workbench, with ELECTRON_RUN_AS_NODE unset for you
+alors gate                  # the workbench's gate
+alors gate all              # all three trees
+alors drive cancel          # build, then drive a scenario
+alors mcp                   # build, lint and test the MCP server
+alors egui gate             # keep the retired tree green
+alors egui shot dark out/start.png start-page
+```
+
+One task per invocation; tokens after it are arguments or a subcommand. It is a
+convenience over the commands above, never a second definition of them — the
+`gate` task shells out to `npm run gate` rather than restating its sequence.
+
 ---
 
 ## Driving the built app

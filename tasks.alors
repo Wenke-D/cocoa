@@ -1,0 +1,149 @@
+# coco tasks. `alors` with no arguments lists them.
+#
+# Run it from the repository root — alors reads the tasks.alors in the current
+# directory and never looks upward, so this file is the whole surface.
+#
+# Bare tasks act on `coco-electron/`, because that is coco (doc/coco.md). The
+# other two trees live under their own namespaces: `alors mcp ...` for the MCP
+# server, `alors egui ...` for the retired first implementation.
+#
+# The exit code is the verdict for every task here — read that, not the output.
+# A summary line like "13 passed; 1 failed" still contains the word "passed",
+# and a run that greps for it will call a red suite green.
+
+electron := coco-electron
+mcp := coco-mcp
+egui := coco-egui
+
+
+# --- the workbench -----------------------------------------------------------
+
+# Run it. `env -u` because VSCode terminals leak ELECTRON_RUN_AS_NODE, which
+# makes Electron start as a bare node and never open a window.
+dev:
+    cd {{electron}}
+    env -u ELECTRON_RUN_AS_NODE npm run dev
+
+# The gate before committing: format, lint, types, tests, cheapest failure
+# first. npm owns the sequence so there is one definition of it, not two.
+gate:
+    cd {{electron}}
+    npm run gate
+
+# Every tree, for a change that crosses more than one of them.
+gate::all: gate, mcp::gate, egui::gate
+    echo "all three trees are clean"
+
+test:
+    cd {{electron}}
+    npm test
+
+# Types only: svelte-check on the renderer, tsc on main and preload.
+check:
+    cd {{electron}}
+    npm run check
+
+lint:
+    cd {{electron}}
+    npm run lint
+
+fmt:
+    cd {{electron}}
+    npm run format
+
+build:
+    cd {{electron}}
+    npm run build
+
+# An installable coco.app in coco-electron/release/. Unsigned.
+package:
+    cd {{electron}}
+    npm run package
+
+# Drive the built app under Playwright and watch it work — the path a test
+# cannot take. Scenario is a name from coco-electron/scripts/scenarios/:
+#
+#     alors drive cancel
+#     alors drive bench-child
+#
+# Screenshots land in coco-electron/.drive/shots/.
+drive scenario:
+    cd {{electron}}
+    npm run build
+    env -u ELECTRON_RUN_AS_NODE npm run drive scripts/scenarios/{{scenario}}.mjs
+
+
+# --- the MCP server ----------------------------------------------------------
+
+# Build and test it. The binary an agent's MCP client launches; it speaks only
+# the §43.2 socket, so it drives the workbench unchanged (doc/agent.md).
+mcp: mcp::gate
+
+mcp::build:
+    cd {{mcp}}
+    cargo build
+
+mcp::test:
+    cd {{mcp}}
+    cargo test
+
+mcp::gate:
+    cd {{mcp}}
+    cargo fmt --all -- --check
+    cargo clippy --all-targets -- -D warnings
+    cargo test
+
+mcp::fmt:
+    cd {{mcp}}
+    cargo fmt --all
+
+
+# --- the retired egui workbench ----------------------------------------------
+#
+# Not developed (doc/architecture.md §5.1). Kept green so the comparison and
+# the shared convention stay honest.
+
+egui::run:
+    cd {{egui}}
+    cargo run
+
+# The whole world the UI renders from, as JSON. A symptom on screen becomes a
+# fact you can grep.
+egui::dump:
+    cd {{egui}}
+    cargo run -- --dump-state
+
+egui::test:
+    cd {{egui}}
+    cargo test
+
+egui::lint:
+    cd {{egui}}
+    cargo clippy --all-targets -- -D warnings
+
+egui::fmt:
+    cd {{egui}}
+    cargo fmt --all
+
+egui::gate:
+    cd {{egui}}
+    cargo fmt --all -- --check
+    cargo clippy --all-targets -- -D warnings
+    cargo test
+
+# One surface of the running egui app, captured to a PNG. Surfaces are listed
+# at the top of coco-egui/examples/screenshot.rs. The output path is relative
+# to the repository root, not to the crate:
+#
+#     alors egui shot dark out/start.png start-page
+egui::shot theme out surface:
+    case "{{out}}" in /*) dest="{{out}}" ;; *) dest="$(pwd)/{{out}}" ;; esac
+    cd {{egui}}
+    cargo run --example screenshot -- {{theme}} "$dest" {{surface}}
+
+# Reshoot the two reference images in doc/images/. They document the visual
+# system, so anything that changes how the workbench looks should end here.
+egui::refs:
+    cd {{egui}}
+    cargo run --example screenshot -- dark ../doc/images/workbench-dark.png job-active
+    cargo run --example screenshot -- light ../doc/images/workbench-light.png job-active

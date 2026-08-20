@@ -25,9 +25,20 @@ use coco::navigation::{Overlay, Route, SubmitState};
 /// Frames to render before capturing, so fonts and panel sizes have settled.
 const WARMUP_FRAMES: u32 = 8;
 
+/// Frames to wait for the worker thread to register the library before giving
+/// up. Generous: it is a folder scan, and the cost of being wrong is a hang.
+const REGISTER_FRAMES: u32 = 600;
+
 struct Harness {
     app: ExperimentApp,
     path: String,
+    surface: String,
+    /// Commands to the engine are fire-and-forget (§43.3), so the library is
+    /// not in the world on the frame it was asked for. Arranging waits.
+    arranged: bool,
+    /// Whether the run the surface needs has been asked for yet.
+    started: bool,
+    waited: u32,
     frame: u32,
     requested: bool,
 }
@@ -36,8 +47,26 @@ impl eframe::App for Harness {
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         self.app.ui(ui, frame);
 
-        self.frame += 1;
         let ctx = ui.ctx().clone();
+
+        // Nothing to photograph until the world has the experiment in it. The
+        // app must keep rendering meanwhile — that is what drains the worker's
+        // events — so this waits by returning, not by blocking.
+        if !self.arranged {
+            if arrange(&mut self.app, &self.surface, &mut self.started) {
+                self.arranged = true;
+            } else {
+                self.waited += 1;
+                assert!(
+                    self.waited < REGISTER_FRAMES,
+                    "the bundled mock library did not register"
+                );
+                ctx.request_repaint();
+                return;
+            }
+        }
+
+        self.frame += 1;
 
         if self.frame == WARMUP_FRAMES && !self.requested {
             self.requested = true;
@@ -85,7 +114,12 @@ fn write_png(path: &str, image: &egui::ColorImage) {
 
 /// Points the app at one surface. Entity ids are folder paths, so they are
 /// looked up by manifest name rather than spelled out.
-fn arrange(app: &mut ExperimentApp, surface: &str) {
+///
+/// Answers `false` while the wanted experiment is not in the world yet. The
+/// worker owns the engine on its own thread and registration is a command
+/// rather than a call (§43.3), so the first frames render an empty Explorer;
+/// the caller retries.
+fn arrange(app: &mut ExperimentApp, surface: &str, started: &mut bool) -> bool {
     let snapshot = app.snapshot();
     let wanted = if surface.starts_with("bench") {
         "nightly-benchmark"
@@ -93,28 +127,43 @@ fn arrange(app: &mut ExperimentApp, surface: &str) {
         "solver-gpu"
     };
     let Some(job) = snapshot.entities.iter().find(|e| e.name == wanted) else {
-        panic!("the bundled mock library did not register");
-    };
-
-    app.ui.route = Route::EntityOverview {
-        entity_id: job.id.clone(),
+        return false;
     };
 
     // Surfaces that need something to have run: a modal only offers its
     // history action afterwards, and the overview only shows its active-run
     // card, side bar badge, and status bar count while one is in flight.
-    if matches!(surface, "start-page-last" | "run-detail" | "job-active") {
-        let parameters = job
-            .parameter_names
-            .iter()
-            .map(|name| (name.clone(), "1".to_owned()))
-            .collect();
-        app.execute(AppCommand::SubmitStart {
-            entity_id: job.id.clone(),
-            parameters,
-        });
+    //
+    // The start is asked for on one frame and answered on a later one, and its
+    // answer navigates to the new run's page (§15.4). So this returns without
+    // arranging anything until the run exists — otherwise the route set below
+    // is overwritten by the event, and every surface photographs run-detail.
+    if matches!(
+        surface,
+        "start-page-last" | "run-detail" | "job-active" | "cancel-modal"
+    ) {
+        if !*started {
+            let parameters = job
+                .parameter_names
+                .iter()
+                .map(|name| (name.clone(), "1".to_owned()))
+                .collect();
+            app.execute(AppCommand::SubmitStart {
+                entity_id: job.id.clone(),
+                parameters,
+            });
+            *started = true;
+            return false;
+        }
         app.apply_pending();
+        if app.snapshot().job_runs.is_empty() {
+            return false;
+        }
     }
+
+    app.ui.route = Route::EntityOverview {
+        entity_id: job.id.clone(),
+    };
 
     match surface {
         "start-page" | "start-page-last" | "bench-start" => {
@@ -201,6 +250,8 @@ fn arrange(app: &mut ExperimentApp, surface: &str) {
         }
         _ => {}
     }
+
+    true
 }
 
 fn main() -> eframe::Result {
@@ -234,11 +285,14 @@ fn main() -> eframe::Result {
             app.ui.theme.apply(&cc.egui_ctx);
             app.ui.sidebar_open = true;
             app.add_folder(std::path::Path::new("../mock"));
-            arrange(&mut app, &surface);
 
             Ok(Box::new(Harness {
                 app,
                 path,
+                surface,
+                arranged: false,
+                started: false,
+                waited: 0,
                 frame: 0,
                 requested: false,
             }))
