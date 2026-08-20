@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { formatRelative } from '@shared/world'
-  import { activeRunCount, app, refreshNow } from '../state.svelte'
+  import { format_relative } from '@shared/world'
+  import { active_run_count, app, refresh_now } from '../state.svelte'
 
-  const active = $derived(activeRunCount())
+  const active = $derived(active_run_count())
 
   // A refresh the user asks for is never the tick that gets dropped, and it
   // always answers — the backend sends a notice either way, so the button
@@ -13,7 +13,7 @@
     if (asking) return
     asking = true
     try {
-      await refreshNow()
+      await refresh_now()
     } finally {
       asking = false
     }
@@ -28,7 +28,7 @@
     <span>{active} active {active === 1 ? 'run' : 'runs'}</span>
     {#if app.world.last_refresh !== null}
       <span class="sep">·</span>
-      <span>refreshed {formatRelative(app.world.last_refresh, app.nowMs)}</span>
+      <span>refreshed {format_relative(app.world.last_refresh, app.now_ms)}</span>
     {/if}
     <button
       class="refresh"

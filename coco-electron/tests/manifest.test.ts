@@ -4,10 +4,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { loadManifest } from '../src/main/engine/manifest'
-import { cleanupTempDirs, tempDir, write } from './support'
+import { load_manifest } from '../src/main/engine/manifest'
+import { cleanup_temp_dirs, temp_dir, write } from './support'
 
-afterEach(cleanupTempDirs)
+afterEach(cleanup_temp_dirs)
 
 const VALID_JOB = `
 kind        = "job"
@@ -35,20 +35,20 @@ command     = "./cancel.sh"
 /** The message of a refused load; fails loudly if the manifest loads. */
 function refused(folder: string): string {
   try {
-    loadManifest(folder)
+    load_manifest(folder)
   } catch (error) {
     return (error as Error).message
   }
   throw new Error('expected the manifest to be refused')
 }
 
-describe('loadManifest', () => {
+describe('load_manifest', () => {
   it('loads a valid job', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(dir, 'coco.toml', VALID_JOB)
     write(dir, 'job.sbatch.tmpl', '#SBATCH --nodes={{ size }}\n./solver --backend {{ backend }}\n')
 
-    const manifest = loadManifest(dir)
+    const manifest = load_manifest(dir)
     expect(manifest.kind).toBe('job')
     if (manifest.kind !== 'job') return
     expect(manifest.name).toBe('solver-gpu')
@@ -59,7 +59,7 @@ describe('loadManifest', () => {
   })
 
   it('loads a valid bench', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(
       dir,
       'coco.toml',
@@ -75,7 +75,7 @@ params      = ["mesh"]
 command     = "./report.py"
 `
     )
-    const manifest = loadManifest(dir)
+    const manifest = load_manifest(dir)
     expect(manifest.kind).toBe('bench')
     if (manifest.kind !== 'bench') return
     expect(manifest.name).toBe('nightly-benchmark')
@@ -83,18 +83,18 @@ command     = "./report.py"
   })
 
   it('accepts empty params lists', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(
       dir,
       'coco.toml',
       VALID_JOB.replace('params      = ["size", "backend"]', 'params      = []')
     )
     write(dir, 'job.sbatch.tmpl', '#SBATCH --nodes=4\n')
-    expect(() => loadManifest(dir)).not.toThrow()
+    expect(() => load_manifest(dir)).not.toThrow()
   })
 
   it('rejects a missing or unknown kind', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(dir, 'coco.toml', 'name = "x"\n')
     expect(refused(dir)).toContain('kind')
 
@@ -105,7 +105,7 @@ command     = "./report.py"
   })
 
   it('rejects a missing or empty name', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(dir, 'coco.toml', 'kind = "job"\n')
     expect(refused(dir)).toContain('name')
 
@@ -114,7 +114,7 @@ command     = "./report.py"
   })
 
   it('rejects unknown keys at every level', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(
       dir,
       'coco.toml',
@@ -135,7 +135,7 @@ params = []
   })
 
   it('rejects a bench carrying job tables', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(
       dir,
       'coco.toml',
@@ -154,7 +154,7 @@ params = []
   })
 
   it('rejects missing required tables and commands', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(dir, 'coco.toml', 'kind = "job"\nname = "x"\n')
     expect(refused(dir)).toContain('[render]')
 
@@ -170,7 +170,7 @@ params = []
   })
 
   it('rejects a command that does not split into words', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(
       dir,
       'coco.toml',
@@ -181,7 +181,7 @@ params = []
   })
 
   it('rejects a parameter declared in both render and launch', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(
       dir,
       'coco.toml',
@@ -192,7 +192,7 @@ params = []
   })
 
   it('rejects a duplicated parameter name', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(
       dir,
       'coco.toml',
@@ -203,31 +203,31 @@ params = []
   })
 
   it('rejects a template that is not a file in the folder', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(dir, 'coco.toml', VALID_JOB)
     expect(refused(dir)).toContain('template')
   })
 
   it('rejects a template that disagrees with [render].params', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(dir, 'coco.toml', VALID_JOB)
     write(dir, 'job.sbatch.tmpl', '#SBATCH --nodes={{ size }}\n')
     expect(refused(dir)).toContain('never used: backend')
   })
 
   it('rejects a folder with no manifest', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     expect(refused(dir)).toContain('coco.toml')
   })
 
   it('rejects a manifest that does not parse', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     write(dir, 'coco.toml', 'kind = "job"\nname = \n')
     expect(refused(dir)).toContain('does not parse')
   })
 
   it('rejects a template reached by escaping the folder', () => {
-    const dir = tempDir()
+    const dir = temp_dir()
     const folder = path.join(dir, 'exp')
     fs.mkdirSync(folder)
     write(dir, 'outside.tmpl', 'plain\n')

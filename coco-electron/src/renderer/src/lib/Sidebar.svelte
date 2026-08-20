@@ -1,20 +1,20 @@
 <script lang="ts">
   import {
-    addFolder,
+    add_folder,
     app,
-    hasActiveRun,
+    has_active_run,
     navigate,
-    openMenu,
-    selectedEntityId
+    open_menu,
+    selected_entity_id
   } from '../state.svelte'
   import type { Entity } from '@shared/world'
 
   const jobs = $derived(app.world.entities.filter((entity) => entity.kind === 'Job'))
   const benches = $derived(app.world.entities.filter((entity) => entity.kind === 'Bench'))
-  const selected = $derived(selectedEntityId())
+  const selected = $derived(selected_entity_id())
 
   function open(entity: Entity): void {
-    navigate({ page: 'entity', entityId: entity.id })
+    navigate({ page: 'entity', entity_id: entity.id })
   }
 </script>
 
@@ -27,11 +27,11 @@
       onclick={() => open(entity)}
       oncontextmenu={(event) => {
         event.preventDefault()
-        openMenu(entity.id, event.clientX, event.clientY)
+        open_menu(entity.id, event.clientX, event.clientY)
       }}
     >
       <span class="name">{entity.name}</span>
-      {#if hasActiveRun(entity)}
+      {#if has_active_run(entity)}
         <span class="active-dot" title="has an active run"></span>
       {/if}
       {#if entity.manifest !== 'Valid'}
@@ -46,7 +46,7 @@
 <div class="sidebar">
   <div class="title">
     <span>EXPLORER</span>
-    <button class="add" title="Add folder" aria-label="Add folder" onclick={addFolder}>+</button>
+    <button class="add" title="Add folder" aria-label="Add folder" onclick={add_folder}>+</button>
   </div>
   {@render section('JOBS', jobs)}
   {@render section('BENCHES', benches)}

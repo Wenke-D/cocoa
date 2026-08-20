@@ -1,19 +1,19 @@
 <script lang="ts">
-  import { isCancellable, jobRun } from '@shared/world'
+  import { is_cancellable, job_run } from '@shared/world'
   import type { Crumb } from '@shared/ui'
-  import { app, entityOf, requestCancel } from '../state.svelte'
+  import { app, entity_of, request_cancel } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import RunFacts from '../lib/RunFacts.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
 
-  let { jobId, runId }: { jobId: string; runId: string } = $props()
+  let { job_id, run_id }: { job_id: string; run_id: string } = $props()
 
-  const run = $derived(jobRun(app.world, jobId, runId))
-  const job = $derived(entityOf(jobId))
+  const run = $derived(job_run(app.world, job_id, run_id))
+  const job = $derived(entity_of(job_id))
 
   const crumbs = $derived<Crumb[]>([
-    { label: job?.name ?? '(removed)', route: { page: 'entity', entityId: jobId } },
-    { label: runId, route: null, mono: true }
+    { label: job?.name ?? '(removed)', route: { page: 'entity', entity_id: job_id } },
+    { label: run_id, route: null, mono: true }
   ])
 </script>
 
@@ -23,17 +23,17 @@
   <header>
     <h1 class="mono">{run.id}</h1>
     <StatusPill status={run.status} health={run.query_health} />
-    {#if isCancellable(run.status)}
+    {#if is_cancellable(run.status)}
       <button
         class="cancel secondary"
-        onclick={() => requestCancel({ kind: 'jobRun', jobId, runId: run.id })}
+        onclick={() => request_cancel({ kind: 'job_run', job_id, run_id: run.id })}
       >
         Cancel Run
       </button>
     {/if}
   </header>
 
-  <RunFacts {run} reportContext={{ kind: 'jobRun', jobId }} />
+  <RunFacts {run} report_context={{ kind: 'job_run', job_id }} />
 {/if}
 
 <style>

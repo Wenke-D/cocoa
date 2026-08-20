@@ -9,7 +9,7 @@
 
 import path from 'node:path'
 
-async function clickMenu(app, id) {
+async function click_menu(app, id) {
   await app.evaluate(async ({ Menu }, wanted) => {
     const find = (items) => {
       for (const item of items) {
@@ -25,8 +25,8 @@ async function clickMenu(app, id) {
   }, id)
 }
 
-export async function run({ app, page, shot, log, waitText, library }) {
-  await waitText('solver-gpu', 20_000)
+export async function run({ app, page, shot, log, wait_text, library }) {
+  await wait_text('solver-gpu', 20_000)
 
   const labels = await app.evaluate(async ({ Menu }) =>
     Menu.getApplicationMenu().items.map((item) => item.label || item.role)
@@ -38,8 +38,8 @@ export async function run({ app, page, shot, log, waitText, library }) {
 
   // Refresh Now: the same manual refresh the status bar's button asks for,
   // which always answers.
-  await clickMenu(app, 'refresh-now')
-  await waitText('Refreshed.', 10_000)
+  await click_menu(app, 'refresh-now')
+  await wait_text('Refreshed.', 10_000)
   log('View → Refresh Now said:', (await page.locator('.notice').innerText()).trim())
   await shot('refreshed-from-the-menu')
 
@@ -51,7 +51,7 @@ export async function run({ app, page, shot, log, waitText, library }) {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [chosen] })
   }, folder)
 
-  await clickMenu(app, 'add-folder')
+  await click_menu(app, 'add-folder')
   await page.locator('button.start').waitFor({ timeout: 10_000 })
   const selected = await page.locator('aside .selected').first().innerText()
   log('after File → Add Experiment Folder…:', selected.trim())

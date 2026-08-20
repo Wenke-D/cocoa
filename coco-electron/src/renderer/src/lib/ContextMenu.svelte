@@ -4,11 +4,11 @@
   reachable by the things that verify this app.
 -->
 <script lang="ts">
-  import { app, closeMenu, entityOf, requestRemove } from '../state.svelte'
+  import { app, close_menu, entity_of, request_remove } from '../state.svelte'
 
   let { menu }: { menu: NonNullable<typeof app.menu> } = $props()
 
-  const entity = $derived(entityOf(menu.entityId))
+  const entity = $derived(entity_of(menu.entity_id))
 
   let element = $state<HTMLDivElement | null>(null)
 
@@ -23,21 +23,21 @@
     }
   })
 
-  function onKey(event: KeyboardEvent): void {
-    if (event.key === 'Escape') closeMenu()
+  function on_key(event: KeyboardEvent): void {
+    if (event.key === 'Escape') close_menu()
   }
 </script>
 
-<svelte:window onkeydown={onKey} />
+<svelte:window onkeydown={on_key} />
 
 <!-- A click anywhere else closes the menu, which is what the backdrop is for. -->
 <div
   class="backdrop"
   role="presentation"
-  onclick={closeMenu}
+  onclick={close_menu}
   oncontextmenu={(event) => {
     event.preventDefault()
-    closeMenu()
+    close_menu()
   }}
 ></div>
 
@@ -49,7 +49,7 @@
     tabindex="-1"
     style="left: {position.left}px; top: {position.top}px"
   >
-    <button role="menuitem" onclick={() => requestRemove(entity.id)}>Remove from Explorer</button>
+    <button role="menuitem" onclick={() => request_remove(entity.id)}>Remove from Explorer</button>
   </div>
 {/if}
 

@@ -6,25 +6,25 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   bootstrap: (): Promise<unknown> => ipcRenderer.invoke('coco:bootstrap'),
 
-  startRun: (name: string, parameters: Record<string, string>): Promise<unknown> =>
+  start_run: (name: string, parameters: Record<string, string>): Promise<unknown> =>
     ipcRenderer.invoke('coco:start', name, parameters),
 
   cancel: (target: unknown): Promise<unknown> => ipcRenderer.invoke('coco:cancel', target),
 
-  addFolder: (): Promise<unknown> => ipcRenderer.invoke('coco:addFolder'),
+  add_folder: (): Promise<unknown> => ipcRenderer.invoke('coco:add_folder'),
 
-  removeFolder: (entityId: string): Promise<unknown> =>
-    ipcRenderer.invoke('coco:removeFolder', entityId),
+  remove_folder: (entity_id: string): Promise<unknown> =>
+    ipcRenderer.invoke('coco:remove_folder', entity_id),
 
   report: (target: unknown): Promise<unknown> => ipcRenderer.invoke('coco:report', target),
 
-  refreshNow: (): Promise<unknown> => ipcRenderer.invoke('coco:refresh'),
+  refresh_now: (): Promise<unknown> => ipcRenderer.invoke('coco:refresh'),
 
-  saveUi: (state: unknown): Promise<unknown> => ipcRenderer.invoke('coco:saveUi', state),
+  save_ui: (state: unknown): Promise<unknown> => ipcRenderer.invoke('coco:save_ui', state),
 
   /** What the application menu asked for; the window runs it the way a click
    *  would, so there is one path per operation and not two. */
-  onCommand: (callback: (command: string) => void): (() => void) => {
+  on_command: (callback: (command: string) => void): (() => void) => {
     const listener = (_event: unknown, command: string): void => callback(command)
     ipcRenderer.on('coco:command', listener)
     return () => {
@@ -32,7 +32,7 @@ const api = {
     }
   },
 
-  onEvents: (callback: (events: unknown) => void): (() => void) => {
+  on_events: (callback: (events: unknown) => void): (() => void) => {
     const listener = (_event: unknown, events: unknown): void => callback(events)
     ipcRenderer.on('coco:events', listener)
     return () => {

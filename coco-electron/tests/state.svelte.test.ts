@@ -10,17 +10,17 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { BenchPlanStep, BenchRun, CocoEvent, Entity, JobRun } from '@shared/world'
-import { emptyWorld } from '@shared/world'
+import { empty_world } from '@shared/world'
 import {
   app,
-  applyEvents,
-  dismissNotice,
-  hasActiveRun,
+  apply_events,
+  dismiss_notice,
+  has_active_run,
   navigate,
   notify,
   recover,
-  reportOwnerId,
-  selectedEntityId
+  report_owner_id,
+  selected_entity_id
 } from '../src/renderer/src/state.svelte'
 
 function entity(id: string, kind: 'Job' | 'Bench' = 'Job'): Entity {
@@ -34,10 +34,10 @@ function entity(id: string, kind: 'Job' | 'Bench' = 'Job'): Entity {
   }
 }
 
-function jobRun(id: string, jobId: string, extra: Partial<JobRun> = {}): JobRun {
+function job_run(id: string, job_id: string, extra: Partial<JobRun> = {}): JobRun {
   return {
     id,
-    job_id: jobId,
+    job_id: job_id,
     origin: 'Human',
     started_at: `2026-08-19T10:0${id}:00.000+02:00`,
     ended_at: null,
@@ -56,10 +56,10 @@ function jobRun(id: string, jobId: string, extra: Partial<JobRun> = {}): JobRun 
  * only link from a dispatched run back to the job that ran it (§2.3.1), now
  * that a run id means nothing without its experiment.
  */
-function benchRun(id: string, benchId: string, steps: BenchPlanStep[] = []): BenchRun {
+function bench_run(id: string, bench_id: string, steps: BenchPlanStep[] = []): BenchRun {
   return {
     id,
-    bench_id: benchId,
+    bench_id: bench_id,
     by: 'Human',
     started_at: '2026-08-19T10:00:00.000+02:00',
     ended_at: null,
@@ -74,7 +74,7 @@ function benchRun(id: string, benchId: string, steps: BenchPlanStep[] = []): Ben
 }
 
 function reset(): void {
-  app.world = emptyWorld()
+  app.world = empty_world()
   app.route = { page: 'empty' }
   app.overlay = null
   app.menu = null
@@ -84,38 +84,38 @@ function reset(): void {
 afterEach(reset)
 
 function send(...events: CocoEvent[]): void {
-  applyEvents(events)
+  apply_events(events)
 }
 
-describe('applyEvents', () => {
+describe('apply_events', () => {
   it('indexes the very first run of an entity', () => {
     send({ kind: 'entity-upserted', entity: entity('solver') })
-    send({ kind: 'job-run-upserted', run: jobRun('0', 'solver') })
+    send({ kind: 'job-run-upserted', run: job_run('0', 'solver') })
 
     expect(app.world.runs_by_job['solver']).toEqual(['0'])
-    expect(hasActiveRun(app.world.entities[0])).toBe(true)
+    expect(has_active_run(app.world.entities[0])).toBe(true)
   })
 
   it('keeps a history oldest first, however the runs arrive', () => {
     send({ kind: 'entity-upserted', entity: entity('solver') })
-    send({ kind: 'job-run-upserted', run: jobRun('2', 'solver') })
-    send({ kind: 'job-run-upserted', run: jobRun('0', 'solver') })
-    send({ kind: 'job-run-upserted', run: jobRun('1', 'solver') })
+    send({ kind: 'job-run-upserted', run: job_run('2', 'solver') })
+    send({ kind: 'job-run-upserted', run: job_run('0', 'solver') })
+    send({ kind: 'job-run-upserted', run: job_run('1', 'solver') })
 
     expect(app.world.runs_by_job['solver']).toEqual(['0', '1', '2'])
   })
 
   it('upserts a run in place rather than listing it twice', () => {
-    send({ kind: 'job-run-upserted', run: jobRun('0', 'solver') })
-    send({ kind: 'job-run-upserted', run: jobRun('0', 'solver', { status: 'Succeeded' }) })
+    send({ kind: 'job-run-upserted', run: job_run('0', 'solver') })
+    send({ kind: 'job-run-upserted', run: job_run('0', 'solver', { status: 'Succeeded' }) })
 
     expect(app.world.runs_by_job['solver']).toEqual(['0'])
     expect(app.world.job_runs['solver']['0'].status).toBe('Succeeded')
   })
 
   it('drops a removed run from the index as well as the map', () => {
-    send({ kind: 'job-run-upserted', run: jobRun('0', 'solver') })
-    send({ kind: 'job-run-removed', jobId: 'solver', id: '0' })
+    send({ kind: 'job-run-upserted', run: job_run('0', 'solver') })
+    send({ kind: 'job-run-removed', job_id: 'solver', id: '0' })
 
     expect(app.world.job_runs['solver']['0']).toBeUndefined()
     expect(app.world.runs_by_job['solver']).toEqual([])
@@ -123,36 +123,36 @@ describe('applyEvents', () => {
 
   it('tracks bench runs the same way', () => {
     send({ kind: 'entity-upserted', entity: entity('nightly', 'Bench') })
-    send({ kind: 'bench-run-upserted', run: benchRun('7', 'nightly') })
+    send({ kind: 'bench-run-upserted', run: bench_run('7', 'nightly') })
 
     expect(app.world.runs_by_bench['nightly']).toEqual(['7'])
-    expect(hasActiveRun(app.world.entities[0])).toBe(true)
+    expect(has_active_run(app.world.entities[0])).toBe(true)
   })
 })
 
 describe('recover', () => {
   it('leaves the route alone while the world still answers for it', () => {
     send({ kind: 'entity-upserted', entity: entity('solver') })
-    send({ kind: 'job-run-upserted', run: jobRun('0', 'solver') })
-    navigate({ page: 'jobRun', jobId: 'solver', runId: '0' })
+    send({ kind: 'job-run-upserted', run: job_run('0', 'solver') })
+    navigate({ page: 'job_run', job_id: 'solver', run_id: '0' })
 
     recover()
-    expect(app.route).toEqual({ page: 'jobRun', jobId: 'solver', runId: '0' })
+    expect(app.route).toEqual({ page: 'job_run', job_id: 'solver', run_id: '0' })
   })
 
   it('falls back to the entity when its run is gone', () => {
     send({ kind: 'entity-upserted', entity: entity('solver') })
-    send({ kind: 'job-run-upserted', run: jobRun('0', 'solver') })
-    navigate({ page: 'jobRun', jobId: 'solver', runId: '0' })
+    send({ kind: 'job-run-upserted', run: job_run('0', 'solver') })
+    navigate({ page: 'job_run', job_id: 'solver', run_id: '0' })
 
-    send({ kind: 'job-run-removed', jobId: 'solver', id: '0' })
-    expect(app.route).toEqual({ page: 'entity', entityId: 'solver' })
+    send({ kind: 'job-run-removed', job_id: 'solver', id: '0' })
+    expect(app.route).toEqual({ page: 'entity', entity_id: 'solver' })
     expect(app.notice?.text).toContain('no longer listed')
   })
 
   it('falls back to empty when the entity itself is gone', () => {
     send({ kind: 'entity-upserted', entity: entity('solver') })
-    navigate({ page: 'entity', entityId: 'solver' })
+    navigate({ page: 'entity', entity_id: 'solver' })
 
     send({ kind: 'entity-removed', id: 'solver' })
     expect(app.route).toEqual({ page: 'empty' })
@@ -160,18 +160,18 @@ describe('recover', () => {
 
   it('recovers a report route through its context', () => {
     send({ kind: 'entity-upserted', entity: entity('solver') })
-    send({ kind: 'job-run-upserted', run: jobRun('0', 'solver') })
-    navigate({ page: 'report', context: { kind: 'jobRun', jobId: 'solver' }, runId: '0' })
+    send({ kind: 'job-run-upserted', run: job_run('0', 'solver') })
+    navigate({ page: 'report', context: { kind: 'job_run', job_id: 'solver' }, run_id: '0' })
 
-    send({ kind: 'job-run-removed', jobId: 'solver', id: '0' })
-    expect(app.route).toEqual({ page: 'entity', entityId: 'solver' })
+    send({ kind: 'job-run-removed', job_id: 'solver', id: '0' })
+    expect(app.route).toEqual({ page: 'entity', entity_id: 'solver' })
   })
 
   // An overlay mid-operation answers for itself; closing it here would throw
   // that answer away — including the confirmation of a removal that worked.
   it('leaves a busy overlay open even when its subject disappears', () => {
     send({ kind: 'entity-upserted', entity: entity('solver') })
-    app.overlay = { kind: 'confirmRemove', entityId: 'solver', error: null, busy: true }
+    app.overlay = { kind: 'confirm_remove', entity_id: 'solver', error: null, busy: true }
 
     send({ kind: 'entity-removed', id: 'solver' })
     expect(app.overlay).not.toBeNull()
@@ -183,7 +183,7 @@ describe('recover', () => {
 
   it('closes a context menu whose row is gone', () => {
     send({ kind: 'entity-upserted', entity: entity('solver') })
-    app.menu = { entityId: 'solver', x: 10, y: 10 }
+    app.menu = { entity_id: 'solver', x: 10, y: 10 }
 
     send({ kind: 'entity-removed', id: 'solver' })
     expect(app.menu).toBeNull()
@@ -216,7 +216,7 @@ describe('notices', () => {
     vi.advanceTimersByTime(60_000)
     expect(app.notice?.text).toBe('poll script failed')
 
-    dismissNotice()
+    dismiss_notice()
     expect(app.notice).toBeNull()
   })
 
@@ -249,53 +249,53 @@ describe('a dispatched run seen through its bench', () => {
     send({ kind: 'entity-upserted', entity: entity('solver') })
     send({
       kind: 'bench-run-upserted',
-      run: benchRun('7', 'nightly', [{ index: 0, job_id: 'solver', parameters: '', run_id: '8' }])
+      run: bench_run('7', 'nightly', [{ index: 0, job_id: 'solver', parameters: '', run_id: '8' }])
     })
-    send({ kind: 'job-run-upserted', run: jobRun('8', 'solver') })
+    send({ kind: 'job-run-upserted', run: job_run('8', 'solver') })
   }
 
   // Arriving through the bench must not move the Explorer onto the job, even
   // though the job is right there in the Explorer too (§19).
   it('keeps the bench selected', () => {
     dispatched()
-    navigate({ page: 'benchChild', benchId: 'nightly', benchRunId: '7', runId: '8' })
-    expect(selectedEntityId()).toBe('nightly')
+    navigate({ page: 'bench_child', bench_id: 'nightly', bench_run_id: '7', run_id: '8' })
+    expect(selected_entity_id()).toBe('nightly')
   })
 
   it('falls back to the bench run when the dispatched run goes', () => {
     dispatched()
-    navigate({ page: 'benchChild', benchId: 'nightly', benchRunId: '7', runId: '8' })
+    navigate({ page: 'bench_child', bench_id: 'nightly', bench_run_id: '7', run_id: '8' })
 
-    send({ kind: 'job-run-removed', jobId: 'solver', id: '8' })
-    expect(app.route).toEqual({ page: 'benchRun', benchId: 'nightly', runId: '7' })
+    send({ kind: 'job-run-removed', job_id: 'solver', id: '8' })
+    expect(app.route).toEqual({ page: 'bench_run', bench_id: 'nightly', run_id: '7' })
     expect(app.notice?.text).toContain('dispatched run')
   })
 
   it('falls back past the bench run when that goes too', () => {
     dispatched()
-    navigate({ page: 'benchChild', benchId: 'nightly', benchRunId: '7', runId: '8' })
+    navigate({ page: 'bench_child', bench_id: 'nightly', bench_run_id: '7', run_id: '8' })
 
-    send({ kind: 'bench-run-removed', benchId: 'nightly', id: '7' })
-    expect(app.route).toEqual({ page: 'entity', entityId: 'nightly' })
+    send({ kind: 'bench-run-removed', bench_id: 'nightly', id: '7' })
+    expect(app.route).toEqual({ page: 'entity', entity_id: 'nightly' })
   })
 
   // The report file lives where the run happened — in the job's folder — even
   // though the reader arrived through the bench.
   it('reads its report from the job that ran it', () => {
     dispatched()
-    const context = { kind: 'benchChild', benchId: 'nightly', benchRunId: '7' } as const
-    expect(reportOwnerId(context, '8')).toBe('solver')
+    const context = { kind: 'bench_child', bench_id: 'nightly', bench_run_id: '7' } as const
+    expect(report_owner_id(context, '8')).toBe('solver')
   })
 
   it('recovers a report opened in the bench context', () => {
     dispatched()
     navigate({
       page: 'report',
-      context: { kind: 'benchChild', benchId: 'nightly', benchRunId: '7' },
-      runId: '8'
+      context: { kind: 'bench_child', bench_id: 'nightly', bench_run_id: '7' },
+      run_id: '8'
     })
 
-    send({ kind: 'job-run-removed', jobId: 'solver', id: '8' })
-    expect(app.route).toEqual({ page: 'entity', entityId: 'nightly' })
+    send({ kind: 'job-run-removed', job_id: 'solver', id: '8' })
+    expect(app.route).toEqual({ page: 'entity', entity_id: 'nightly' })
   })
 })

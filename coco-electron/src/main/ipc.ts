@@ -15,24 +15,24 @@ import type {
   StartResult
 } from '@shared/world'
 import type { UiState } from '@shared/ui'
-import { arrangement, mergeFromRenderer } from './arrangement'
+import { ui_state, merge_from_renderer } from './ui_state'
 import * as operations from './operations'
-import { currentModel, markBootstrapped, publishCycle } from './publish'
-import { refreshAndPublish } from './refresh'
-import { engine, onEngine } from './runtime'
+import { current_model, mark_bootstrapped, publish_cycle } from './publish'
+import { refresh_and_publish } from './refresh'
+import { engine, on_engine } from './runtime'
 
-export function registerIpc(): void {
+export function register_ipc(): void {
   // The renderer pulls its starting state; a reload is its own resync. Events
   // sent before the bootstrap answer are applied to the old page state and then
   // overwritten by the (newer) bootstrap — order-safe either way.
   ipcMain.handle('coco:bootstrap', (): BootstrapPayload => {
-    const world = currentModel()
-    markBootstrapped()
-    return { world, ui: arrangement() }
+    const world = current_model()
+    mark_bootstrapped()
+    return { world, ui: ui_state() }
   })
 
-  ipcMain.handle('coco:saveUi', (_event, state: UiState): void => {
-    mergeFromRenderer(state)
+  ipcMain.handle('coco:save_ui', (_event, state: UiState): void => {
+    merge_from_renderer(state)
   })
 
   // Events go out before the answer (publish-before-emit): by the time the
@@ -40,9 +40,9 @@ export function registerIpc(): void {
   ipcMain.handle(
     'coco:start',
     async (_event, name: string, parameters: Record<string, string>): Promise<StartResult> =>
-      onEngine(async () => {
-        const result = await operations.startRun(engine, name, parameters)
-        publishCycle(null)
+      on_engine(async () => {
+        const result = await operations.start_run(engine, name, parameters)
+        publish_cycle(null)
         return result
       })
   )
@@ -51,9 +51,9 @@ export function registerIpc(): void {
   // the modal closes on the answer — so the events must precede it here too, or
   // the page behind the modal would still read `RUNNING`.
   ipcMain.handle('coco:cancel', async (_event, target: CancelTarget): Promise<CancelResult> =>
-    onEngine(async () => {
+    on_engine(async () => {
       const result = await operations.cancel(engine, target)
-      publishCycle(null)
+      publish_cycle(null)
       return result
     })
   )
@@ -62,7 +62,7 @@ export function registerIpc(): void {
   // by hand (§11.5). The picker itself is deliberately *outside* the engine
   // queue — a dialog can stay open for minutes, and the refresh tick must not
   // wait on the user's file browsing. Only the registration takes a turn.
-  ipcMain.handle('coco:addFolder', async (): Promise<AddFolderResult> => {
+  ipcMain.handle('coco:add_folder', async (): Promise<AddFolderResult> => {
     const picked = await dialog.showOpenDialog({
       title: 'Add experiment folder',
       properties: ['openDirectory']
@@ -70,19 +70,19 @@ export function registerIpc(): void {
     if (picked.canceled || picked.filePaths.length === 0) {
       return { ok: false, cancelled: true, message: '' }
     }
-    return onEngine(async () => {
-      const result = operations.addFolder(engine, picked.filePaths[0])
-      publishCycle(null)
+    return on_engine(async () => {
+      const result = operations.add_folder(engine, picked.filePaths[0])
+      publish_cycle(null)
       return result
     })
   })
 
   ipcMain.handle(
-    'coco:removeFolder',
-    async (_event, entityId: string): Promise<RemoveFolderResult> =>
-      onEngine(async () => {
-        const result = operations.removeFolder(engine, entityId)
-        publishCycle(null)
+    'coco:remove_folder',
+    async (_event, entity_id: string): Promise<RemoveFolderResult> =>
+      on_engine(async () => {
+        const result = operations.remove_folder(engine, entity_id)
+        publish_cycle(null)
         return result
       })
   )
@@ -90,12 +90,12 @@ export function registerIpc(): void {
   // Reading a report neither changes engine state nor runs a script, so it
   // does not take a turn: it must not queue behind a slow poll.
   ipcMain.handle('coco:report', (_event, target: ReportTarget): ReportResult =>
-    operations.readReport(engine, target)
+    operations.read_report(engine, target)
   )
 
   // The status bar's refresh: it takes its turn like everything else, but it is
   // never the tick that gets dropped, and it says how it went.
   ipcMain.handle('coco:refresh', async (): Promise<void> => {
-    await refreshAndPublish(true)
+    await refresh_and_publish(true)
   })
 }

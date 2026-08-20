@@ -4,8 +4,8 @@
 // folder — under the bench's breadcrumbs (§19, §20.1). Asking for the job by
 // name is the one move that hands the Explorer over.
 
-export async function run({ page, shot, log, waitText }) {
-  await waitText('nightly-benchmark', 20_000)
+export async function run({ page, shot, log, wait_text }) {
+  await wait_text('nightly-benchmark', 20_000)
   await page.locator('aside').getByText('nightly-benchmark').click()
   await page.locator('button.start').click()
   await page.locator('form').waitFor({ timeout: 10_000 })
@@ -14,10 +14,10 @@ export async function run({ page, shot, log, waitText }) {
 
   // The bench run detail lists what it dispatched.
   await page.locator('table tbody tr').first().waitFor({ timeout: 20_000 })
-  const benchRunId = (await page.locator('header h1').innerText()).trim()
+  const bench_run_id = (await page.locator('header h1').innerText()).trim()
   log(
     'bench run:',
-    benchRunId,
+    bench_run_id,
     '·',
     (await page.locator('table').innerText()).replace(/\n/g, ' | ')
   )
@@ -28,7 +28,7 @@ export async function run({ page, shot, log, waitText }) {
 
   const trail = (await page.locator('nav').innerText()).replace(/\n/g, ' ')
   log('breadcrumbs:', trail)
-  if (!trail.includes(benchRunId)) {
+  if (!trail.includes(bench_run_id)) {
     throw new Error(`the trail does not lead back to the bench run: ${trail}`)
   }
   if (!/call \d/.test(trail)) {
@@ -49,17 +49,17 @@ export async function run({ page, shot, log, waitText }) {
 
   // Wait for this call to finish, then read its report from here: the file is
   // in the job's folder, the breadcrumbs are the bench's.
-  await waitText('View report', 60_000)
-  await page.locator('button.link', { hasText: 'View report' }).click()
+  await wait_text('View report', 60_000)
+  await page.locator('button.link', { has_text: 'View report' }).click()
   await page.locator('.body, iframe').first().waitFor({ timeout: 15_000 })
-  const reportTrail = (await page.locator('nav').innerText()).replace(/\n/g, ' ')
-  log('report breadcrumbs:', reportTrail)
-  if (!reportTrail.includes(benchRunId)) {
-    throw new Error(`the report lost the bench context: ${reportTrail}`)
+  const report_trail = (await page.locator('nav').innerText()).replace(/\n/g, ' ')
+  log('report breadcrumbs:', report_trail)
+  if (!report_trail.includes(bench_run_id)) {
+    throw new Error(`the report lost the bench context: ${report_trail}`)
   }
-  const reportSelection = await page.locator('aside .selected').first().innerText()
-  if (!reportSelection.includes('nightly-benchmark')) {
-    throw new Error(`the report moved the Explorer to ${reportSelection.trim()}`)
+  const report_selection = await page.locator('aside .selected').first().innerText()
+  if (!report_selection.includes('nightly-benchmark')) {
+    throw new Error(`the report moved the Explorer to ${report_selection.trim()}`)
   }
   await shot('report-in-bench-context')
 
@@ -69,9 +69,9 @@ export async function run({ page, shot, log, waitText }) {
   await page.locator('dl').waitFor({ timeout: 10_000 })
   await page.locator('button.job-link').click()
   await page.locator('button.start').waitFor({ timeout: 10_000 })
-  const afterJob = await page.locator('aside .selected').first().innerText()
-  log('after following the job:', afterJob.trim())
-  if (afterJob.includes('nightly-benchmark')) {
+  const after_job = await page.locator('aside .selected').first().innerText()
+  log('after following the job:', after_job.trim())
+  if (after_job.includes('nightly-benchmark')) {
     throw new Error('following the job name did not move the Explorer')
   }
   await shot('followed-the-job')

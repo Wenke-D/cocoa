@@ -1,7 +1,7 @@
 // Script invocation. Port of engine/invoke.rs, with one structural change:
 // the Rust engine blocks its worker thread; the Electron main process must
 // not block, so `run` is async. `Running` keeps the non-blocking harvest
-// shape — `tryFinish()` answers without waiting, exactly like the Rust
+// shape — `try_finish()` answers without waiting, exactly like the Rust
 // `try_finish`.
 
 import { spawn as spawnProcess } from 'node:child_process'
@@ -9,18 +9,18 @@ import type { ChildProcess } from 'node:child_process'
 
 export interface Invocation {
   exit: number | null
-  timedOut: boolean
+  timed_out: boolean
   stdout: string
   stderr: string
 }
 
 /** Whether the script "did its job": exited 0 before the timeout. */
-export function invocationOk(invocation: Invocation): boolean {
-  return !invocation.timedOut && invocation.exit === 0
+export function invocation_ok(invocation: Invocation): boolean {
+  return !invocation.timed_out && invocation.exit === 0
 }
 
 /** Captured stdout and stderr combined, for operation errors. */
-export function invocationOutput(invocation: Invocation): string {
+export function invocation_output(invocation: Invocation): string {
   const out = invocation.stdout.trimEnd()
   const err = invocation.stderr.trimEnd()
   if (out === '' && err === '') return ''
@@ -45,16 +45,16 @@ export class Running {
   private stdout = ''
   private stderr = ''
   private finished: Invocation | null = null
-  private timedOut = false
+  private timed_out = false
   private readonly timer: NodeJS.Timeout
-  private drainTimer: NodeJS.Timeout | null = null
+  private drain_timer: NodeJS.Timeout | null = null
   private settle!: () => void
   private readonly closed: Promise<void>
   /** The spawn handshake: resolves once the OS has started the process,
    * rejects if it could not be started at all. */
   readonly started: Promise<void>
 
-  constructor(cwd: string, argv: string[], timeoutMs: number) {
+  constructor(cwd: string, argv: string[], timeout_ms: number) {
     if (argv.length === 0) throw new Error('argv must name the script or interpreter')
     this.closed = new Promise((resolve) => {
       this.settle = resolve
@@ -77,16 +77,16 @@ export class Running {
       this.stderr += chunk.toString('utf8')
     })
     this.timer = setTimeout(() => {
-      this.timedOut = true
+      this.timed_out = true
       this.child.kill('SIGKILL')
-    }, timeoutMs)
+    }, timeout_ms)
 
     // `exit` says the script is gone; `close` says its pipes are too. Answer
     // on `close` when it comes, but never wait on it longer than the drain
     // window: a grandchild holding stdout would otherwise keep an invocation
     // — and with it the refresh tick — open forever.
     this.child.on('exit', (code) => {
-      this.drainTimer = setTimeout(() => this.finish(code), DRAIN_MS)
+      this.drain_timer = setTimeout(() => this.finish(code), DRAIN_MS)
     })
     this.child.on('close', (code) => this.finish(code))
     this.child.on('error', (error) => {
@@ -100,10 +100,10 @@ export class Running {
   private finish(code: number | null): void {
     if (this.finished !== null) return
     clearTimeout(this.timer)
-    if (this.drainTimer !== null) clearTimeout(this.drainTimer)
+    if (this.drain_timer !== null) clearTimeout(this.drain_timer)
     this.finished = {
-      exit: this.timedOut ? null : code,
-      timedOut: this.timedOut,
+      exit: this.timed_out ? null : code,
+      timed_out: this.timed_out,
       stdout: this.stdout,
       stderr: this.stderr
     }
@@ -111,7 +111,7 @@ export class Running {
   }
 
   /** Collects the script if it has finished, without waiting for it. */
-  tryFinish(): Invocation | null {
+  try_finish(): Invocation | null {
     return this.finished
   }
 
@@ -133,15 +133,15 @@ export class Running {
  * the process cannot be started at all (missing interpreter, bad cwd) — the
  * same distinction the Rust engine draws for a start refusal.
  */
-export async function spawn(cwd: string, argv: string[], timeoutMs: number): Promise<Running> {
-  const running = new Running(cwd, argv, timeoutMs)
+export async function spawn(cwd: string, argv: string[], timeout_ms: number): Promise<Running> {
+  const running = new Running(cwd, argv, timeout_ms)
   await running.started
   return running
 }
 
 /** Runs `argv` to completion. */
-export async function run(cwd: string, argv: string[], timeoutMs: number): Promise<Invocation> {
-  const running = await spawn(cwd, argv, timeoutMs)
+export async function run(cwd: string, argv: string[], timeout_ms: number): Promise<Invocation> {
+  const running = await spawn(cwd, argv, timeout_ms)
   return running.wait()
 }
 
@@ -149,7 +149,7 @@ export async function run(cwd: string, argv: string[], timeoutMs: number): Promi
  * Every stdout line beginning with `COCO_RETURN: `, prefix and surrounding
  * whitespace removed. All other output is ignored, so scripts may log freely.
  */
-export function cocoReturnLines(stdout: string): string[] {
+export function coco_return_lines(stdout: string): string[] {
   const lines: string[] = []
   for (const line of stdout.split('\n')) {
     if (line.startsWith('COCO_RETURN: ')) {

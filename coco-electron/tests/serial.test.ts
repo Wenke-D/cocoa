@@ -4,10 +4,18 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 import { serialize } from '../src/main/serial'
-import { cleanupTempDirs, engine, jobFolder, settle, tempDir, write, writeScript } from './support'
+import {
+  cleanup_temp_dirs,
+  engine,
+  job_folder,
+  settle,
+  temp_dir,
+  write,
+  write_script
+} from './support'
 import { cancel } from '../src/main/operations'
 
-afterEach(cleanupTempDirs)
+afterEach(cleanup_temp_dirs)
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   let resolve!: (value: T) => void
@@ -19,16 +27,16 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
 
 describe('serialize', () => {
   it('never lets two turns overlap', async () => {
-    const onEngine = serialize()
+    const on_engine = serialize()
     const log: string[] = []
     const gate = deferred<void>()
 
-    const first = onEngine(async () => {
+    const first = on_engine(async () => {
       log.push('first in')
       await gate.promise
       log.push('first out')
     })
-    const second = onEngine(async () => {
+    const second = on_engine(async () => {
       log.push('second in')
     })
 
@@ -42,11 +50,11 @@ describe('serialize', () => {
   })
 
   it('keeps the order it was asked in', async () => {
-    const onEngine = serialize()
+    const on_engine = serialize()
     const done: number[] = []
     await Promise.all(
       [30, 20, 10, 0].map((delay, index) =>
-        onEngine(async () => {
+        on_engine(async () => {
           await new Promise((resolve) => setTimeout(resolve, delay))
           done.push(index)
         })
@@ -56,11 +64,11 @@ describe('serialize', () => {
   })
 
   it('carries a failure to its own caller and keeps the queue running', async () => {
-    const onEngine = serialize()
-    const failing = onEngine(async () => {
+    const on_engine = serialize()
+    const failing = on_engine(async () => {
       throw new Error('script exploded')
     })
-    const after = onEngine(async () => 'still here')
+    const after = on_engine(async () => 'still here')
 
     await expect(failing).rejects.toThrow('script exploded')
     expect(await after).toBe('still here')
@@ -76,24 +84,24 @@ describe('serialize', () => {
 // again and the user's cancel had visibly done nothing.
 describe('a cancel during a refresh', () => {
   it('survives the poll that was already in flight', async () => {
-    const dir = tempDir()
-    const job = jobFolder(dir, 'racy')
+    const dir = temp_dir()
+    const job = job_folder(dir, 'racy')
     const coco = engine(dir)
     coco.register(job)
-    const runId = await coco.startJob(job, { size: '1' }, { gpu: '0' }, 'human')
+    const run_id = await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
     await settle(coco)
     write(job, 'poll-state', 'RUNNING')
-    await coco.pollJob(job)
+    await coco.poll_job(job)
     // A poll that takes as long as a real one does.
-    writeScript(job, 'poll.sh', `sleep 0.5\necho "COCO_RETURN: sub-${runId} RUNNING"\n`)
+    write_script(job, 'poll.sh', `sleep 0.5\necho "COCO_RETURN: sub-${run_id} RUNNING"\n`)
 
-    const onEngine = serialize()
+    const on_engine = serialize()
     const [, result] = await Promise.all([
-      onEngine(() => coco.refresh()),
-      onEngine(() => cancel(coco, { kind: 'jobRun', jobId: job, runId: String(runId) }))
+      on_engine(() => coco.refresh()),
+      on_engine(() => cancel(coco, { kind: 'job_run', job_id: job, run_id: String(run_id) }))
     ])
 
     expect(result).toEqual({ ok: true })
-    expect(coco.runRecord(job, runId).status).toBe('CANCELLING')
+    expect(coco.run_record(job, run_id).status).toBe('CANCELLING')
   })
 })

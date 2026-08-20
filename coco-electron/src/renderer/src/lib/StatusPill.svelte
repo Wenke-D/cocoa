@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { displayStatus, isActive } from '@shared/world'
+  import { display_status, is_active } from '@shared/world'
   import type { QueryHealth, RunStatus } from '@shared/world'
 
   let { status, health = 'Healthy' }: { status: RunStatus; health?: QueryHealth } = $props()
 
-  const label = $derived(displayStatus(status, health))
+  const label = $derived(display_status(status, health))
 
   const color = $derived.by(() => {
     if (label === 'Unknown') return 'var(--chart-yellow)'
@@ -18,7 +18,7 @@
 <span class="pill">
   <span
     class="dot"
-    class:pulsing={isActive(status) && label !== 'Unknown'}
+    class:pulsing={is_active(status) && label !== 'Unknown'}
     style="background: {color}"
   ></span>
   {label}

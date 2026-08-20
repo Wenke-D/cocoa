@@ -5,8 +5,8 @@
 
 import fs from 'node:fs'
 
-export async function run({ page, shot, log, waitText, relaunch, uiStatePath }) {
-  await waitText('solver-gpu', 20_000)
+export async function run({ page, shot, log, wait_text, relaunch, ui_state_path }) {
+  await wait_text('solver-gpu', 20_000)
 
   // Somewhere worth coming back to, and a sidebar that is visibly not default.
   await page.locator('aside').getByText('nightly-benchmark').click()
@@ -20,14 +20,14 @@ export async function run({ page, shot, log, waitText, relaunch, uiStatePath }) 
   await page.waitForTimeout(600)
   await shot('arranged')
 
-  const written = JSON.parse(fs.readFileSync(uiStatePath, 'utf8'))
-  log('persisted:', JSON.stringify(written.route), 'sidebar', written.sidebarWidth)
+  const written = JSON.parse(fs.readFileSync(ui_state_path, 'utf8'))
+  log('persisted:', JSON.stringify(written.route), 'sidebar', written.sidebar_width)
   // An entity id is the folder it lives in, not its name.
-  if (!String(written.route.entityId).endsWith('nightly-benchmark')) {
+  if (!String(written.route.entity_id).endsWith('nightly-benchmark')) {
     throw new Error(`the route was not remembered: ${JSON.stringify(written.route)}`)
   }
-  if (Math.abs(written.sidebarWidth - 330) > 4) {
-    throw new Error(`the sidebar width was not remembered: ${written.sidebarWidth}`)
+  if (Math.abs(written.sidebar_width - 330) > 4) {
+    throw new Error(`the sidebar width was not remembered: ${written.sidebar_width}`)
   }
   if (written.window === null) {
     throw new Error('the window geometry was not remembered')
@@ -53,10 +53,10 @@ export async function run({ page, shot, log, waitText, relaunch, uiStatePath }) 
   await page.waitForTimeout(600)
   // The file records what was true — a Start route. `sanitize` turns it into
   // the experiment on the way back in, not on the way out.
-  const onStart = JSON.parse(fs.readFileSync(uiStatePath, 'utf8')).route
-  log('persisted while on start:', JSON.stringify(onStart))
-  if (onStart.page !== 'start') {
-    throw new Error(`the file should record the Start page it was on: ${JSON.stringify(onStart)}`)
+  const on_start = JSON.parse(fs.readFileSync(ui_state_path, 'utf8')).route
+  log('persisted while on start:', JSON.stringify(on_start))
+  if (on_start.page !== 'start') {
+    throw new Error(`the file should record the Start page it was on: ${JSON.stringify(on_start)}`)
   }
   ;({ page } = await relaunch())
 

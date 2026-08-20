@@ -3,9 +3,9 @@
 // exercise — silence when nothing a person can see has moved.
 
 import { describe, expect, it } from 'vitest'
-import { emptyWorld } from '@shared/world'
+import { empty_world } from '@shared/world'
 import type { BenchRun, Entity, JobRun, RunsByEntity, World } from '@shared/world'
-import { diffWorlds } from '../src/main/sync'
+import { diff_worlds } from '../src/main/sync'
 
 function entity(id: string, extra: Partial<Entity> = {}): Entity {
   return {
@@ -19,7 +19,7 @@ function entity(id: string, extra: Partial<Entity> = {}): Entity {
   }
 }
 
-function jobRun(id: string, extra: Partial<JobRun> = {}): JobRun {
+function job_run(id: string, extra: Partial<JobRun> = {}): JobRun {
   return {
     id,
     job_id: 'solver',
@@ -36,7 +36,7 @@ function jobRun(id: string, extra: Partial<JobRun> = {}): JobRun {
   }
 }
 
-function benchRun(id: string, extra: Partial<BenchRun> = {}): BenchRun {
+function bench_run(id: string, extra: Partial<BenchRun> = {}): BenchRun {
   return {
     id,
     bench_id: 'nightly',
@@ -59,77 +59,77 @@ function benchRun(id: string, extra: Partial<BenchRun> = {}): BenchRun {
  * then by id. Grouping by the run's own owner field rather than a fixed one,
  * so a test can mix owners and see them land apart.
  */
-function jobRuns(...runs: JobRun[]): RunsByEntity<JobRun> {
+function job_runs(...runs: JobRun[]): RunsByEntity<JobRun> {
   const out: RunsByEntity<JobRun> = {}
   for (const run of runs) (out[run.job_id] ??= {})[run.id] = run
   return out
 }
 
-function benchRuns(...runs: BenchRun[]): RunsByEntity<BenchRun> {
+function bench_runs(...runs: BenchRun[]): RunsByEntity<BenchRun> {
   const out: RunsByEntity<BenchRun> = {}
   for (const run of runs) (out[run.bench_id] ??= {})[run.id] = run
   return out
 }
 
-function worldOf(parts: Partial<World>): World {
-  return { ...emptyWorld(), ...parts }
+function world_of(parts: Partial<World>): World {
+  return { ...empty_world(), ...parts }
 }
 
-describe('diffWorlds', () => {
+describe('diff_worlds', () => {
   it('says nothing when nothing changed', () => {
-    const world = worldOf({
+    const world = world_of({
       entities: [entity('solver')],
-      job_runs: jobRuns(jobRun('0')),
-      bench_runs: benchRuns(benchRun('1'))
+      job_runs: job_runs(job_run('0')),
+      bench_runs: bench_runs(bench_run('1'))
     })
-    expect(diffWorlds(world, structuredClone(world))).toEqual([])
+    expect(diff_worlds(world, structuredClone(world))).toEqual([])
   })
 
   // The trap this protocol exists to avoid: a stamp that moves on every
   // rebuild would make every run "changed" three times a second.
   it('ignores a moved last_successful_query stamp on its own', () => {
-    const before = worldOf({
-      job_runs: jobRuns(jobRun('0')),
-      bench_runs: benchRuns(benchRun('1'))
+    const before = world_of({
+      job_runs: job_runs(job_run('0')),
+      bench_runs: bench_runs(bench_run('1'))
     })
-    const after = worldOf({
-      job_runs: jobRuns(jobRun('0', { last_successful_query: '2026-08-19T10:00:06.000+02:00' })),
-      bench_runs: benchRuns(
-        benchRun('1', { last_successful_query: '2026-08-19T10:00:06.000+02:00' })
+    const after = world_of({
+      job_runs: job_runs(job_run('0', { last_successful_query: '2026-08-19T10:00:06.000+02:00' })),
+      bench_runs: bench_runs(
+        bench_run('1', { last_successful_query: '2026-08-19T10:00:06.000+02:00' })
       )
     })
-    expect(diffWorlds(before, after)).toEqual([])
+    expect(diff_worlds(before, after)).toEqual([])
   })
 
   it('upserts a new run and carries the whole entry', () => {
-    const before = worldOf({})
-    const run = jobRun('0')
-    const events = diffWorlds(before, worldOf({ job_runs: jobRuns(run) }))
+    const before = world_of({})
+    const run = job_run('0')
+    const events = diff_worlds(before, world_of({ job_runs: job_runs(run) }))
     expect(events).toEqual([{ kind: 'job-run-upserted', run }])
   })
 
   it('upserts a run whose status moved', () => {
-    const before = worldOf({ job_runs: jobRuns(jobRun('0')) })
-    const after = worldOf({ job_runs: jobRuns(jobRun('0', { status: 'Succeeded' })) })
-    const events = diffWorlds(before, after)
+    const before = world_of({ job_runs: job_runs(job_run('0')) })
+    const after = world_of({ job_runs: job_runs(job_run('0', { status: 'Succeeded' })) })
+    const events = diff_worlds(before, after)
     expect(events).toHaveLength(1)
     expect(events[0]).toMatchObject({ kind: 'job-run-upserted' })
     expect((events[0] as { run: JobRun }).run.status).toBe('Succeeded')
   })
 
   it('removes a run that is gone', () => {
-    const before = worldOf({ job_runs: jobRuns(jobRun('0'), jobRun('1')) })
-    const after = worldOf({ job_runs: jobRuns(jobRun('1')) })
-    expect(diffWorlds(before, after)).toEqual([
-      { kind: 'job-run-removed', jobId: 'solver', id: '0' }
+    const before = world_of({ job_runs: job_runs(job_run('0'), job_run('1')) })
+    const after = world_of({ job_runs: job_runs(job_run('1')) })
+    expect(diff_worlds(before, after)).toEqual([
+      { kind: 'job-run-removed', job_id: 'solver', id: '0' }
     ])
   })
 
   it('upserts and removes entities', () => {
-    const before = worldOf({ entities: [entity('solver'), entity('mesher')] })
+    const before = world_of({ entities: [entity('solver'), entity('mesher')] })
     const changed = entity('solver', { parameter_names: ['size', 'mesh'] })
     const added = entity('bench-1', { kind: 'Bench' })
-    const events = diffWorlds(before, worldOf({ entities: [changed, added] }))
+    const events = diff_worlds(before, world_of({ entities: [changed, added] }))
     expect(events).toEqual([
       { kind: 'entity-upserted', entity: changed },
       { kind: 'entity-upserted', entity: added },
@@ -138,38 +138,38 @@ describe('diffWorlds', () => {
   })
 
   it('judges a manifest that went invalid as a change', () => {
-    const before = worldOf({ entities: [entity('solver')] })
+    const before = world_of({ entities: [entity('solver')] })
     const broken = entity('solver', { manifest: { Invalid: { message: 'unknown field `x`' } } })
-    expect(diffWorlds(before, worldOf({ entities: [broken] }))).toEqual([
+    expect(diff_worlds(before, world_of({ entities: [broken] }))).toEqual([
       { kind: 'entity-upserted', entity: broken }
     ])
   })
 
   it('tracks bench runs and their plans', () => {
-    const before = worldOf({ bench_runs: benchRuns(benchRun('1')) })
-    const replanned = benchRun('1', {
+    const before = world_of({ bench_runs: bench_runs(bench_run('1')) })
+    const replanned = bench_run('1', {
       plan: { steps: [{ index: 0, job_id: 'solver', parameters: '--size 256', run_id: '2' }] }
     })
-    expect(diffWorlds(before, worldOf({ bench_runs: benchRuns(replanned) }))).toEqual([
+    expect(diff_worlds(before, world_of({ bench_runs: bench_runs(replanned) }))).toEqual([
       { kind: 'bench-run-upserted', run: replanned }
     ])
-    expect(diffWorlds(before, worldOf({}))).toEqual([
-      { kind: 'bench-run-removed', benchId: 'nightly', id: '1' }
+    expect(diff_worlds(before, world_of({}))).toEqual([
+      { kind: 'bench-run-removed', bench_id: 'nightly', id: '1' }
     ])
   })
 
   // A bench member succeeding moves the member and the bench together; both
   // land in one batch, so the renderer never draws a torn world.
   it('reports a member and its bench in one batch', () => {
-    const before = worldOf({
-      job_runs: jobRuns(jobRun('2')),
-      bench_runs: benchRuns(benchRun('1'))
+    const before = world_of({
+      job_runs: job_runs(job_run('2')),
+      bench_runs: bench_runs(bench_run('1'))
     })
-    const after = worldOf({
-      job_runs: jobRuns(jobRun('2', { status: 'Succeeded' })),
-      bench_runs: benchRuns(benchRun('1', { status: 'Analyzing' }))
+    const after = world_of({
+      job_runs: job_runs(job_run('2', { status: 'Succeeded' })),
+      bench_runs: bench_runs(bench_run('1', { status: 'Analyzing' }))
     })
-    const events = diffWorlds(before, after)
+    const events = diff_worlds(before, after)
     expect(events.map((event) => event.kind)).toEqual(['job-run-upserted', 'bench-run-upserted'])
   })
 })

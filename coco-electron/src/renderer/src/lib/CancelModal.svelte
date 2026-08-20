@@ -5,46 +5,46 @@
 -->
 <script lang="ts">
   import {
-    benchRun,
-    formatClock,
-    formatDuration,
-    isActive,
-    isTerminal,
-    jobRun
+    bench_run,
+    format_clock,
+    format_duration,
+    is_active,
+    is_terminal,
+    job_run
   } from '@shared/world'
-  import { app, closeOverlay, confirmCancel, entityOf } from '../state.svelte'
+  import { app, close_overlay, confirm_cancel, entity_of } from '../state.svelte'
   import type { Overlay } from '../state.svelte'
   import ModalFrame from './ModalFrame.svelte'
 
-  let { overlay }: { overlay: Overlay & { kind: 'confirmCancel' } } = $props()
+  let { overlay }: { overlay: Overlay & { kind: 'confirm_cancel' } } = $props()
 
   const copy = $derived.by(() => {
     const target = overlay.target
-    if (target.kind === 'jobRun') {
-      const run = jobRun(app.world, target.jobId, target.runId)
+    if (target.kind === 'job_run') {
+      const run = job_run(app.world, target.job_id, target.run_id)
       if (run === undefined) return null
       return {
         title: 'Cancel this Job run?',
-        subject: entityOf(target.jobId)?.name ?? '(removed)',
+        subject: entity_of(target.job_id)?.name ?? '(removed)',
         lines: [
-          `Started at ${formatClock(run.started_at)}`,
-          `Running for ${formatDuration(run.started_at, run.ended_at, app.nowMs)}.`,
+          `Started at ${format_clock(run.started_at)}`,
+          `Running for ${format_duration(run.started_at, run.ended_at, app.now_ms)}.`,
           '',
           'The cancellation operation defined by the manifest will be requested.'
         ],
         confirm: 'Cancel Run'
       }
     }
-    const run = benchRun(app.world, target.benchId, target.runId)
+    const run = bench_run(app.world, target.bench_id, target.run_id)
     if (run === undefined) return null
     const children = run.plan.steps
-      .map((step) => jobRun(app.world, step.job_id, step.run_id))
+      .map((step) => job_run(app.world, step.job_id, step.run_id))
       .filter((child) => child !== undefined)
-    const active = children.filter((child) => isActive(child.status)).length
-    const finished = children.filter((child) => isTerminal(child.status)).length
+    const active = children.filter((child) => is_active(child.status)).length
+    const finished = children.filter((child) => is_terminal(child.status)).length
     return {
       title: 'Cancel this Bench run?',
-      subject: entityOf(target.benchId)?.name ?? '(removed)',
+      subject: entity_of(target.bench_id)?.name ?? '(removed)',
       lines: [
         `All ${active} runs still active will be cancelled.`,
         `${finished} runs have already finished and keep their results.`,
@@ -57,7 +57,7 @@
 </script>
 
 {#if copy !== null}
-  <ModalFrame title={copy.title} error={overlay.error} busy={overlay.busy} onclose={closeOverlay}>
+  <ModalFrame title={copy.title} error={overlay.error} busy={overlay.busy} onclose={close_overlay}>
     {#snippet body()}
       <p class="subject">{copy.subject}</p>
       {#each copy.lines as line, index (index)}
@@ -69,10 +69,10 @@
       {/each}
     {/snippet}
     {#snippet actions()}
-      <button class="secondary" onclick={closeOverlay} disabled={overlay.busy}>
+      <button class="secondary" onclick={close_overlay} disabled={overlay.busy}>
         Keep Running
       </button>
-      <button class="primary" onclick={confirmCancel} disabled={overlay.busy}>
+      <button class="primary" onclick={confirm_cancel} disabled={overlay.busy}>
         {overlay.busy ? 'Cancelling…' : copy.confirm}
       </button>
     {/snippet}

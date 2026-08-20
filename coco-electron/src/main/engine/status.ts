@@ -17,15 +17,15 @@ export type Status =
 
 const TERMINAL: readonly Status[] = ['SUCCEEDED', 'FAILED', 'CANCELLED', 'ERROR']
 
-export function isTerminal(status: Status): boolean {
+export function is_terminal(status: Status): boolean {
   return TERMINAL.includes(status)
 }
 
-export function isActive(status: Status): boolean {
-  return !isTerminal(status)
+export function is_active(status: Status): boolean {
+  return !is_terminal(status)
 }
 
-export function isCancellable(status: Status): boolean {
+export function is_cancellable(status: Status): boolean {
   return (
     status === 'STARTING' ||
     status === 'PENDING' ||
@@ -35,7 +35,7 @@ export function isCancellable(status: Status): boolean {
 }
 
 /** The cluster's words come from `poll` and nowhere else (§9). */
-export function fromPollWord(word: string): Status | null {
+export function from_poll_word(word: string): Status | null {
   switch (word) {
     case 'PENDING':
     case 'RUNNING':

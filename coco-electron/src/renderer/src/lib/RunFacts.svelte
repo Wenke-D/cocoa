@@ -10,12 +10,12 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import {
-    formatDuration,
-    formatRelative,
-    formatStartedAt,
-    originLabel,
-    queryAvailable,
-    reportSummary
+    format_duration,
+    format_relative,
+    format_started_at,
+    origin_label,
+    query_available,
+    report_summary
   } from '@shared/world'
   import type { JobRun } from '@shared/world'
   import type { ReportContext } from '@shared/ui'
@@ -23,39 +23,39 @@
 
   let {
     run,
-    reportContext,
+    report_context,
     leading
-  }: { run: JobRun; reportContext: ReportContext; leading?: Snippet } = $props()
+  }: { run: JobRun; report_context: ReportContext; leading?: Snippet } = $props()
 </script>
 
 <dl>
   {@render leading?.()}
   <dt>Started by</dt>
-  <dd>{originLabel(run.origin)}</dd>
+  <dd>{origin_label(run.origin)}</dd>
   <dt>Started at</dt>
-  <dd>{formatStartedAt(run.started_at)}</dd>
+  <dd>{format_started_at(run.started_at)}</dd>
   <dt>Duration</dt>
-  <dd class="mono">{formatDuration(run.started_at, run.ended_at, app.nowMs)}</dd>
+  <dd class="mono">{format_duration(run.started_at, run.ended_at, app.now_ms)}</dd>
   <dt>Parameters</dt>
   <dd class="mono params">{run.parameters === '' ? '(none)' : run.parameters}</dd>
   <dt>Report</dt>
   <dd>
-    {reportSummary(run.report)}
+    {report_summary(run.report)}
     {#if typeof run.report === 'object' && 'Available' in run.report}
       <button
         class="link"
-        onclick={() => navigate({ page: 'report', context: reportContext, runId: run.id })}
+        onclick={() => navigate({ page: 'report', context: report_context, run_id: run.id })}
       >
         View report
       </button>
     {/if}
   </dd>
-  {#if !queryAvailable(run.query_health)}
+  {#if !query_available(run.query_health)}
     <dt>Query</dt>
     <dd class="warning">
-      Status is unknown — last successful query {formatRelative(
+      Status is unknown — last successful query {format_relative(
         run.last_successful_query,
-        app.nowMs
+        app.now_ms
       )}. Last known status: {run.status}.
     </dd>
   {/if}

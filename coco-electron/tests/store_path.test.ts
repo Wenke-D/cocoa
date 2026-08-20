@@ -5,10 +5,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { resolveStorePath } from '../src/main/storePath'
-import { cleanupTempDirs, tempDir } from './support'
+import { resolve_store_path } from '../src/main/store_path'
+import { cleanup_temp_dirs, temp_dir } from './support'
 
-afterEach(cleanupTempDirs)
+afterEach(cleanup_temp_dirs)
 
 const saved = process.env.COCO_STORE_PATH
 beforeEach(() => {
@@ -19,51 +19,51 @@ afterEach(() => {
   else process.env.COCO_STORE_PATH = saved
 })
 
-function legacyWith(entities: string[]): string {
-  const file = path.join(tempDir(), 'legacy', 'store.json')
+function legacy_with(entities: string[]): string {
+  const file = path.join(temp_dir(), 'legacy', 'store.json')
   fs.mkdirSync(path.dirname(file), { recursive: true })
   fs.writeFileSync(file, JSON.stringify({ entities }))
   return file
 }
 
-describe('resolveStorePath', () => {
+describe('resolve_store_path', () => {
   it('carries the old store over the first time, and leaves it behind', () => {
-    const userData = tempDir()
-    const legacy = legacyWith(['/exp/solver'])
+    const user_data = temp_dir()
+    const legacy = legacy_with(['/exp/solver'])
 
-    const resolved = resolveStorePath(userData, legacy)
+    const resolved = resolve_store_path(user_data, legacy)
 
-    expect(resolved).toBe(path.join(userData, 'store.json'))
+    expect(resolved).toBe(path.join(user_data, 'store.json'))
     expect(JSON.parse(fs.readFileSync(resolved, 'utf8'))).toEqual({ entities: ['/exp/solver'] })
     // Copied, not moved: coco-egui still reads the old one.
     expect(fs.existsSync(legacy)).toBe(true)
   })
 
   it('never overwrites a store that is already there', () => {
-    const userData = tempDir()
-    const legacy = legacyWith(['/exp/from-the-past'])
-    const target = path.join(userData, 'store.json')
+    const user_data = temp_dir()
+    const legacy = legacy_with(['/exp/from-the-past'])
+    const target = path.join(user_data, 'store.json')
     fs.writeFileSync(target, JSON.stringify({ entities: ['/exp/current'] }))
 
-    resolveStorePath(userData, legacy)
+    resolve_store_path(user_data, legacy)
 
     expect(JSON.parse(fs.readFileSync(target, 'utf8'))).toEqual({ entities: ['/exp/current'] })
   })
 
   it('writes nothing when there is no old store', () => {
-    const userData = tempDir()
-    const resolved = resolveStorePath(userData, path.join(tempDir(), 'absent.json'))
-    expect(resolved).toBe(path.join(userData, 'store.json'))
+    const user_data = temp_dir()
+    const resolved = resolve_store_path(user_data, path.join(temp_dir(), 'absent.json'))
+    expect(resolved).toBe(path.join(user_data, 'store.json'))
     expect(fs.existsSync(resolved)).toBe(false)
   })
 
   // A drive run points at a scratch store; it must not carry anything anywhere.
   it('takes COCO_STORE_PATH as final, and carries nothing over', () => {
-    const userData = tempDir()
-    const legacy = legacyWith(['/exp/solver'])
+    const user_data = temp_dir()
+    const legacy = legacy_with(['/exp/solver'])
     process.env.COCO_STORE_PATH = '/tmp/scratch/store.json'
 
-    expect(resolveStorePath(userData, legacy)).toBe('/tmp/scratch/store.json')
-    expect(fs.existsSync(path.join(userData, 'store.json'))).toBe(false)
+    expect(resolve_store_path(user_data, legacy)).toBe('/tmp/scratch/store.json')
+    expect(fs.existsSync(path.join(user_data, 'store.json'))).toBe(false)
   })
 })

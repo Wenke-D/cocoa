@@ -15,8 +15,8 @@ fs.rmSync(SOCKET, { force: true })
 const squatter = net.createServer(() => {})
 squatter.listen(SOCKET)
 
-export async function run({ page, shot, log, waitText }) {
-  await waitText('solver-gpu', 20_000)
+export async function run({ page, shot, log, wait_text }) {
+  await wait_text('solver-gpu', 20_000)
 
   // The refusal is a notice, not a crash — and it is not lost to a window that
   // was still loading when the socket was refused.

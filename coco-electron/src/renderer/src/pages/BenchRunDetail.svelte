@@ -1,33 +1,33 @@
 <script lang="ts">
   import {
-    formatDuration,
-    formatStartedAt,
-    isCancellable,
-    isTerminal,
-    reportSummary,
-    triggerLabel
+    format_duration,
+    format_started_at,
+    is_cancellable,
+    is_terminal,
+    report_summary,
+    trigger_label
   } from '@shared/world'
-  import { benchRun, jobRun } from '@shared/world'
+  import { bench_run, job_run } from '@shared/world'
   import type { Crumb } from '@shared/ui'
-  import { app, entityOf, navigate, requestCancel } from '../state.svelte'
+  import { app, entity_of, navigate, request_cancel } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
 
-  let { benchId, runId }: { benchId: string; runId: string } = $props()
+  let { bench_id, run_id }: { bench_id: string; run_id: string } = $props()
 
-  const run = $derived(benchRun(app.world, benchId, runId))
-  const bench = $derived(entityOf(benchId))
+  const run = $derived(bench_run(app.world, bench_id, run_id))
+  const bench = $derived(entity_of(bench_id))
 
   const crumbs = $derived<Crumb[]>([
-    { label: bench?.name ?? '(removed)', route: { page: 'entity', entityId: benchId } },
-    { label: runId, route: null, mono: true }
+    { label: bench?.name ?? '(removed)', route: { page: 'entity', entity_id: bench_id } },
+    { label: run_id, route: null, mono: true }
   ])
 
   const finished = $derived.by(() => {
     if (run === undefined) return 0
     return run.plan.steps.filter((step) => {
-      const child = jobRun(app.world, step.job_id, step.run_id)
-      return child !== undefined && isTerminal(child.status)
+      const child = job_run(app.world, step.job_id, step.run_id)
+      return child !== undefined && is_terminal(child.status)
     }).length
   })
 </script>
@@ -39,10 +39,10 @@
     <h1 class="mono">{run.id}</h1>
     <StatusPill status={run.status} health={run.query_health} />
     <span class="progress">{finished} / {run.plan.steps.length} finished</span>
-    {#if isCancellable(run.status)}
+    {#if is_cancellable(run.status)}
       <button
         class="cancel secondary"
-        onclick={() => requestCancel({ kind: 'benchRun', benchId, runId: run.id })}
+        onclick={() => request_cancel({ kind: 'bench_run', bench_id, run_id: run.id })}
       >
         Cancel Bench
       </button>
@@ -51,21 +51,21 @@
 
   <dl>
     <dt>Started by</dt>
-    <dd>{triggerLabel(run.by)}</dd>
+    <dd>{trigger_label(run.by)}</dd>
     <dt>Started at</dt>
-    <dd>{formatStartedAt(run.started_at)}</dd>
+    <dd>{format_started_at(run.started_at)}</dd>
     <dt>Duration</dt>
-    <dd class="mono">{formatDuration(run.started_at, run.ended_at, app.nowMs)}</dd>
+    <dd class="mono">{format_duration(run.started_at, run.ended_at, app.now_ms)}</dd>
     <dt>Input</dt>
     <dd class="mono params">{run.parameters === '' ? '(none)' : run.parameters}</dd>
     <dt>Report</dt>
     <dd>
-      {reportSummary(run.report)}
+      {report_summary(run.report)}
       {#if typeof run.report === 'object' && 'Available' in run.report}
         <button
           class="link"
           onclick={() =>
-            navigate({ page: 'report', context: { kind: 'benchRun', benchId }, runId: run.id })}
+            navigate({ page: 'report', context: { kind: 'bench_run', bench_id }, run_id: run.id })}
         >
           View report
         </button>
@@ -93,21 +93,21 @@
     </thead>
     <tbody>
       {#each run.plan.steps as step (step.index)}
-        {@const child = jobRun(app.world, step.job_id, step.run_id)}
-        {@const jobName = entityOf(step.job_id)?.name ?? '(removed)'}
+        {@const child = job_run(app.world, step.job_id, step.run_id)}
+        {@const job_name = entity_of(step.job_id)?.name ?? '(removed)'}
         <!-- The bench's context, not the job's: same run, other address
              (§2.3.1), and the Explorer stays on the bench (§19). -->
         <tr
           onclick={() =>
             navigate({
-              page: 'benchChild',
-              benchId,
-              benchRunId: run.id,
-              runId: step.run_id
+              page: 'bench_child',
+              bench_id,
+              bench_run_id: run.id,
+              run_id: step.run_id
             })}
         >
           <td>{step.index}</td>
-          <td title={jobName}>{jobName}</td>
+          <td title={job_name}>{job_name}</td>
           <td>
             {#if child !== undefined}
               <StatusPill status={child.status} health={child.query_health} />

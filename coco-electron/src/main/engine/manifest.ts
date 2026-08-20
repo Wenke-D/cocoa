@@ -7,7 +7,7 @@ import path from 'node:path'
 import { parse as parseToml } from 'smol-toml'
 import { EngineError } from './errors'
 import * as template from './template'
-import { splitCommand } from './words'
+import { split_command } from './words'
 
 export type Kind = 'job' | 'bench'
 
@@ -43,65 +43,65 @@ export interface BenchManifest {
 
 export type Manifest = JobManifest | BenchManifest
 
-function parseCommand(raw: string, manifestPath: string, key: string): Command {
+function parse_command(raw: string, manifest_path: string, key: string): Command {
   let words: string[]
   try {
-    words = splitCommand(raw)
+    words = split_command(raw)
   } catch (cause) {
-    throw EngineError.manifest(manifestPath, `${key} ${(cause as Error).message}`)
+    throw EngineError.manifest(manifest_path, `${key} ${(cause as Error).message}`)
   }
   if (words.length === 0) {
-    throw EngineError.manifest(manifestPath, `${key} command is empty`)
+    throw EngineError.manifest(manifest_path, `${key} command is empty`)
   }
   return { words, display: raw }
 }
 
 type TomlTable = Record<string, unknown>
 
-function asTable(value: unknown): TomlTable | null {
+function as_table(value: unknown): TomlTable | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as TomlTable)
     : null
 }
 
-function rejectUnknownKeys(table: TomlTable, allowed: string[], manifestPath: string): void {
+function reject_unknown_keys(table: TomlTable, allowed: string[], manifest_path: string): void {
   for (const key of Object.keys(table)) {
     if (!allowed.includes(key)) {
-      throw EngineError.manifest(manifestPath, `invalid manifest: unknown field \`${key}\``)
+      throw EngineError.manifest(manifest_path, `invalid manifest: unknown field \`${key}\``)
     }
   }
 }
 
-function requireName(value: unknown, manifestPath: string): string {
+function require_name(value: unknown, manifest_path: string): string {
   if (value === undefined) {
-    throw EngineError.manifest(manifestPath, 'missing required key `name`')
+    throw EngineError.manifest(manifest_path, 'missing required key `name`')
   }
   if (typeof value !== 'string' || value === '') {
-    throw EngineError.manifest(manifestPath, '`name` must be a non-empty string')
+    throw EngineError.manifest(manifest_path, '`name` must be a non-empty string')
   }
   return value
 }
 
-function requireString(value: unknown, manifestPath: string, key: string): string {
+function require_string(value: unknown, manifest_path: string, key: string): string {
   if (typeof value !== 'string') {
-    throw EngineError.manifest(manifestPath, `missing required key \`${key}\``)
+    throw EngineError.manifest(manifest_path, `missing required key \`${key}\``)
   }
   return value
 }
 
-function requireParams(value: unknown, manifestPath: string, key: string): string[] {
+function require_params(value: unknown, manifest_path: string, key: string): string[] {
   if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
-    throw EngineError.manifest(manifestPath, `missing required key \`${key}\``)
+    throw EngineError.manifest(manifest_path, `missing required key \`${key}\``)
   }
   const params = value as string[]
   const seen = new Set<string>()
   for (const name of params) {
     if (name === '') {
-      throw EngineError.manifest(manifestPath, `\`${key}\` contains an empty parameter name`)
+      throw EngineError.manifest(manifest_path, `\`${key}\` contains an empty parameter name`)
     }
     if (seen.has(name)) {
       throw EngineError.manifest(
-        manifestPath,
+        manifest_path,
         `\`${key}\` declares duplicate parameter \`${name}\``
       )
     }
@@ -110,40 +110,40 @@ function requireParams(value: unknown, manifestPath: string, key: string): strin
   return params
 }
 
-function requireTable(value: unknown, manifestPath: string, name: string): TomlTable {
-  const table = asTable(value)
+function require_table(value: unknown, manifest_path: string, name: string): TomlTable {
+  const table = as_table(value)
   if (table === null) {
-    throw EngineError.manifest(manifestPath, `missing required table \`[${name}]\``)
+    throw EngineError.manifest(manifest_path, `missing required table \`[${name}]\``)
   }
   return table
 }
 
-function requireFileInFolder(folder: string, manifestPath: string, rel: string): string {
+function require_file_in_folder(folder: string, manifest_path: string, rel: string): string {
   const joined = path.join(folder, rel)
   let canonical: string
   try {
     canonical = fs.realpathSync(joined)
   } catch {
     throw EngineError.manifest(
-      manifestPath,
+      manifest_path,
       `\`[render].template\` \`${rel}\` is not a file in the folder`
     )
   }
   if (!fs.statSync(canonical).isFile()) {
     throw EngineError.manifest(
-      manifestPath,
+      manifest_path,
       `\`[render].template\` \`${rel}\` is not a file in the folder`
     )
   }
-  let folderCanonical: string
+  let folder_canonical: string
   try {
-    folderCanonical = fs.realpathSync(folder)
+    folder_canonical = fs.realpathSync(folder)
   } catch (cause) {
     throw EngineError.io(folder, cause)
   }
-  if (!canonical.startsWith(folderCanonical + path.sep)) {
+  if (!canonical.startsWith(folder_canonical + path.sep)) {
     throw EngineError.manifest(
-      manifestPath,
+      manifest_path,
       `\`[render].template\` \`${rel}\` must be inside the folder`
     )
   }
@@ -151,11 +151,11 @@ function requireFileInFolder(folder: string, manifestPath: string, rel: string):
 }
 
 /** Loads and validates `folder/coco.toml` (convention §4). */
-export function loadManifest(folder: string): Manifest {
-  const manifestPath = path.join(folder, 'coco.toml')
+export function load_manifest(folder: string): Manifest {
+  const manifest_path = path.join(folder, 'coco.toml')
   let stat: fs.Stats
   try {
-    stat = fs.statSync(manifestPath)
+    stat = fs.statSync(manifest_path)
   } catch {
     throw EngineError.manifest(folder, 'no coco.toml in this folder')
   }
@@ -164,75 +164,75 @@ export function loadManifest(folder: string): Manifest {
   }
   let text: string
   try {
-    text = fs.readFileSync(manifestPath, 'utf8')
+    text = fs.readFileSync(manifest_path, 'utf8')
   } catch (cause) {
-    throw EngineError.io(manifestPath, cause)
+    throw EngineError.io(manifest_path, cause)
   }
   let value: TomlTable
   try {
     value = parseToml(text)
   } catch (cause) {
     throw EngineError.manifest(
-      manifestPath,
+      manifest_path,
       `coco.toml does not parse: ${(cause as Error).message}`
     )
   }
 
   const kind = typeof value.kind === 'string' ? value.kind : ''
-  if (kind === 'job') return loadJob(folder, manifestPath, value)
-  if (kind === 'bench') return loadBench(manifestPath, value)
+  if (kind === 'job') return load_job(folder, manifest_path, value)
+  if (kind === 'bench') return load_bench(manifest_path, value)
   if (kind === '') {
-    throw EngineError.manifest(manifestPath, 'missing required key `kind`')
+    throw EngineError.manifest(manifest_path, 'missing required key `kind`')
   }
   throw EngineError.manifest(
-    manifestPath,
+    manifest_path,
     `\`kind\` must be \`job\` or \`bench\`, found \`${kind}\``
   )
 }
 
-function loadJob(folder: string, manifestPath: string, raw: TomlTable): JobManifest {
-  rejectUnknownKeys(
+function load_job(folder: string, manifest_path: string, raw: TomlTable): JobManifest {
+  reject_unknown_keys(
     raw,
     ['kind', 'name', 'description', 'render', 'launch', 'poll', 'report', 'cancel'],
-    manifestPath
+    manifest_path
   )
 
-  const name = requireName(raw.name, manifestPath)
-  const render = requireTable(raw.render, manifestPath, 'render')
-  rejectUnknownKeys(render, ['template', 'params'], manifestPath)
-  const launch = requireTable(raw.launch, manifestPath, 'launch')
-  rejectUnknownKeys(launch, ['command', 'params'], manifestPath)
-  const poll = requireTable(raw.poll, manifestPath, 'poll')
-  rejectUnknownKeys(poll, ['command'], manifestPath)
-  const report = requireTable(raw.report, manifestPath, 'report')
-  rejectUnknownKeys(report, ['command'], manifestPath)
-  const cancel = requireTable(raw.cancel, manifestPath, 'cancel')
-  rejectUnknownKeys(cancel, ['command'], manifestPath)
+  const name = require_name(raw.name, manifest_path)
+  const render = require_table(raw.render, manifest_path, 'render')
+  reject_unknown_keys(render, ['template', 'params'], manifest_path)
+  const launch = require_table(raw.launch, manifest_path, 'launch')
+  reject_unknown_keys(launch, ['command', 'params'], manifest_path)
+  const poll = require_table(raw.poll, manifest_path, 'poll')
+  reject_unknown_keys(poll, ['command'], manifest_path)
+  const report = require_table(raw.report, manifest_path, 'report')
+  reject_unknown_keys(report, ['command'], manifest_path)
+  const cancel = require_table(raw.cancel, manifest_path, 'cancel')
+  reject_unknown_keys(cancel, ['command'], manifest_path)
 
-  const templateName = requireString(render.template, manifestPath, '[render].template')
-  const renderParams = requireParams(render.params, manifestPath, '[render].params')
-  const launchParams = requireParams(launch.params, manifestPath, '[launch].params')
+  const template_name = require_string(render.template, manifest_path, '[render].template')
+  const render_params = require_params(render.params, manifest_path, '[render].params')
+  const launch_params = require_params(launch.params, manifest_path, '[launch].params')
 
-  const overlap = renderParams.filter((param) => launchParams.includes(param))
+  const overlap = render_params.filter((param) => launch_params.includes(param))
   if (overlap.length > 0) {
     throw EngineError.manifest(
-      manifestPath,
+      manifest_path,
       `parameter \`${overlap[0]}\` appears in both \`[render].params\` and \`[launch].params\``
     )
   }
 
-  const templateAbs = requireFileInFolder(folder, manifestPath, templateName)
+  const template_abs = require_file_in_folder(folder, manifest_path, template_name)
   let source: string
   try {
-    source = fs.readFileSync(templateAbs, 'utf8')
+    source = fs.readFileSync(template_abs, 'utf8')
   } catch (cause) {
-    throw EngineError.io(templateAbs, cause)
+    throw EngineError.io(template_abs, cause)
   }
   try {
-    template.analyze(source, renderParams)
+    template.analyze(source, render_params)
   } catch (cause) {
     throw EngineError.manifest(
-      templateAbs,
+      template_abs,
       `template does not match \`[render].params\`: ${(cause as Error).message}`
     )
   }
@@ -241,54 +241,54 @@ function loadJob(folder: string, manifestPath: string, raw: TomlTable): JobManif
     kind: 'job',
     name,
     description: typeof raw.description === 'string' ? raw.description : undefined,
-    template: templateName,
-    render_params: renderParams,
-    launch: parseCommand(
-      requireString(launch.command, manifestPath, '[launch].command'),
-      manifestPath,
+    template: template_name,
+    render_params: render_params,
+    launch: parse_command(
+      require_string(launch.command, manifest_path, '[launch].command'),
+      manifest_path,
       '[launch].command'
     ),
-    launch_params: launchParams,
-    poll: parseCommand(
-      requireString(poll.command, manifestPath, '[poll].command'),
-      manifestPath,
+    launch_params: launch_params,
+    poll: parse_command(
+      require_string(poll.command, manifest_path, '[poll].command'),
+      manifest_path,
       '[poll].command'
     ),
-    report: parseCommand(
-      requireString(report.command, manifestPath, '[report].command'),
-      manifestPath,
+    report: parse_command(
+      require_string(report.command, manifest_path, '[report].command'),
+      manifest_path,
       '[report].command'
     ),
-    cancel: parseCommand(
-      requireString(cancel.command, manifestPath, '[cancel].command'),
-      manifestPath,
+    cancel: parse_command(
+      require_string(cancel.command, manifest_path, '[cancel].command'),
+      manifest_path,
       '[cancel].command'
     )
   }
 }
 
-function loadBench(manifestPath: string, raw: TomlTable): BenchManifest {
-  rejectUnknownKeys(raw, ['kind', 'name', 'description', 'plan', 'report'], manifestPath)
+function load_bench(manifest_path: string, raw: TomlTable): BenchManifest {
+  reject_unknown_keys(raw, ['kind', 'name', 'description', 'plan', 'report'], manifest_path)
 
-  const name = requireName(raw.name, manifestPath)
-  const plan = requireTable(raw.plan, manifestPath, 'plan')
-  rejectUnknownKeys(plan, ['command', 'params'], manifestPath)
-  const report = requireTable(raw.report, manifestPath, 'report')
-  rejectUnknownKeys(report, ['command'], manifestPath)
+  const name = require_name(raw.name, manifest_path)
+  const plan = require_table(raw.plan, manifest_path, 'plan')
+  reject_unknown_keys(plan, ['command', 'params'], manifest_path)
+  const report = require_table(raw.report, manifest_path, 'report')
+  reject_unknown_keys(report, ['command'], manifest_path)
 
   return {
     kind: 'bench',
     name,
     description: typeof raw.description === 'string' ? raw.description : undefined,
-    plan: parseCommand(
-      requireString(plan.command, manifestPath, '[plan].command'),
-      manifestPath,
+    plan: parse_command(
+      require_string(plan.command, manifest_path, '[plan].command'),
+      manifest_path,
       '[plan].command'
     ),
-    plan_params: requireParams(plan.params, manifestPath, '[plan].params'),
-    report: parseCommand(
-      requireString(report.command, manifestPath, '[report].command'),
-      manifestPath,
+    plan_params: require_params(plan.params, manifest_path, '[plan].params'),
+    report: parse_command(
+      require_string(report.command, manifest_path, '[report].command'),
+      manifest_path,
       '[report].command'
     )
   }

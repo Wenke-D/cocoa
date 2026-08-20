@@ -28,7 +28,7 @@ const MAX_REPORT_BYTES = 16 * 1024 * 1024
  * (§43): same lookup, same validation, same queue — one word on the record,
  * which is what the history table reads back as "you" or "agent".
  */
-export async function startRun(
+export async function start_run(
   engine: Coco,
   name: string,
   parameters: Record<string, string>,
@@ -41,7 +41,7 @@ export async function startRun(
     if (view === undefined || view.manifest === null) {
       return { ok: false, message: `no experiment named \`${name}\` is registered` }
     }
-    let runId: number
+    let run_id: number
     if (view.manifest.kind === 'job') {
       const render: Record<string, string> = {}
       const launch: Record<string, string> = {}
@@ -49,12 +49,12 @@ export async function startRun(
         if (view.manifest.render_params.includes(key)) render[key] = value
         else launch[key] = value
       }
-      runId = await engine.startJob(view.path, render, launch, trigger)
+      run_id = await engine.start_job(view.path, render, launch, trigger)
     } else {
-      const start = await engine.startBench(view.path, parameters, trigger)
-      runId = start.runId
+      const start = await engine.start_bench(view.path, parameters, trigger)
+      run_id = start.run_id
     }
-    return { ok: true, runId: String(runId) }
+    return { ok: true, run_id: String(run_id) }
   } catch (error) {
     return { ok: false, message: (error as Error).message }
   }
@@ -71,18 +71,18 @@ export async function startRun(
  */
 export async function cancel(engine: Coco, target: CancelTarget): Promise<CancelResult> {
   try {
-    if (target.kind === 'jobRun') {
-      await engine.cancelRun(target.jobId, Number(target.runId))
+    if (target.kind === 'job_run') {
+      await engine.cancel_run(target.job_id, Number(target.run_id))
       return { ok: true }
     }
-    const results = await engine.cancelBench(target.benchId, Number(target.runId))
+    const results = await engine.cancel_bench(target.bench_id, Number(target.run_id))
     const failures = results.filter((result) => !result.ok)
     if (failures.length === 0) return { ok: true }
     const first = failures[0]
     const rest = failures.length > 1 ? ` (and ${failures.length - 1} more member(s) refused)` : ''
     return {
       ok: false,
-      message: `run ${first.runId} of \`${first.job}\` was not cancelled: ${first.error}${rest}`
+      message: `run ${first.run_id} of \`${first.job}\` was not cancelled: ${first.error}${rest}`
     }
   } catch (error) {
     return { ok: false, message: (error as Error).message }
@@ -93,23 +93,23 @@ export async function cancel(engine: Coco, target: CancelTarget): Promise<Cancel
  * Reads one run's report off disk (§20). The world already says whether a
  * report exists and in which format; this is the content behind that.
  *
- * Plain text wins over HTML when a run wrote both, matching `reportStateOf`
+ * Plain text wins over HTML when a run wrote both, matching `report_state_of`
  * in the world builder — the two must agree, or the viewer would offer a
  * format the page did not announce.
  */
-export function readReport(engine: Coco, target: ReportTarget): ReportResult {
-  const registered = engine.entities().some((entity) => entity.path === target.entityId)
+export function read_report(engine: Coco, target: ReportTarget): ReportResult {
+  const registered = engine.entities().some((entity) => entity.path === target.entity_id)
   if (!registered) {
-    return { ok: false, message: `no experiment is registered at ${target.entityId}` }
+    return { ok: false, message: `no experiment is registered at ${target.entity_id}` }
   }
-  if (!/^\d+$/.test(target.runId)) {
-    return { ok: false, message: `\`${target.runId}\` is not a run id` }
+  if (!/^\d+$/.test(target.run_id)) {
+    return { ok: false, message: `\`${target.run_id}\` is not a run id` }
   }
 
-  const dir = path.join(target.entityId, 'report')
+  const dir = path.join(target.entity_id, 'report')
   for (const [format, file] of [
-    ['PlainText', path.join(dir, `${target.runId}.txt`)],
-    ['Html', path.join(dir, `${target.runId}.html`)]
+    ['PlainText', path.join(dir, `${target.run_id}.txt`)],
+    ['Html', path.join(dir, `${target.run_id}.html`)]
   ] as const) {
     let stat: fs.Stats
     try {
@@ -130,7 +130,7 @@ export function readReport(engine: Coco, target: ReportTarget): ReportResult {
       return { ok: false, message: `report could not be read: ${(error as Error).message}` }
     }
   }
-  return { ok: false, message: `run ${target.runId} has no report` }
+  return { ok: false, message: `run ${target.run_id} has no report` }
 }
 
 /**
@@ -142,7 +142,7 @@ export function readReport(engine: Coco, target: ReportTarget): ReportResult {
  * Explorer is a no-op, and says so rather than reporting a registration that
  * did not happen.
  */
-export function addFolder(engine: Coco, folder: string): AddFolderResult {
+export function add_folder(engine: Coco, folder: string): AddFolderResult {
   const before = new Set(engine.entities().map((entity) => entity.path))
   try {
     engine.register(folder)
@@ -150,7 +150,7 @@ export function addFolder(engine: Coco, folder: string): AddFolderResult {
     return { ok: false, cancelled: false, message: (error as Error).message }
   }
   const added = engine.entities().find((entity) => !before.has(entity.path))
-  if (added !== undefined) return { ok: true, entityId: added.path, already: false }
+  if (added !== undefined) return { ok: true, entity_id: added.path, already: false }
 
   // `register` returns silently for a folder already in the store. Which one
   // it was is answered in the store's own terms — canonical paths, since that
@@ -162,7 +162,7 @@ export function addFolder(engine: Coco, folder: string): AddFolderResult {
     // Unreadable now; `register` would have refused it above, so this is a
     // path that resolved a moment ago. Compare with what we were given.
   }
-  return { ok: true, entityId: canonical, already: true }
+  return { ok: true, entity_id: canonical, already: true }
 }
 
 /**
@@ -171,9 +171,9 @@ export function addFolder(engine: Coco, folder: string): AddFolderResult {
  * the reports stay exactly where they are, so adding the folder again brings
  * its whole history back.
  */
-export function removeFolder(engine: Coco, entityId: string): RemoveFolderResult {
+export function remove_folder(engine: Coco, entity_id: string): RemoveFolderResult {
   try {
-    engine.unregister(entityId)
+    engine.unregister(entity_id)
     return { ok: true }
   } catch (error) {
     return { ok: false, message: (error as Error).message }

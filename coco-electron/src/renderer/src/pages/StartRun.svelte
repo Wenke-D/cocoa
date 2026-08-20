@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { manifestBlockingReason } from '@shared/world'
-  import { entityOf, navigate, notify } from '../state.svelte'
+  import { manifest_blocking_reason } from '@shared/world'
+  import { entity_of, navigate, notify } from '../state.svelte'
 
-  let { entityId }: { entityId: string } = $props()
+  let { entity_id }: { entity_id: string } = $props()
 
-  const entity = $derived(entityOf(entityId))
+  const entity = $derived(entity_of(entity_id))
 
   // The draft lives here, not in the route — a route stays an address.
   let values = $state<Record<string, string>>({})
@@ -24,14 +24,14 @@
     if (entity === undefined || submitting) return
     submitting = true
     error = null
-    const result = await window.coco.startRun(entity.name, $state.snapshot(values))
+    const result = await window.coco.start_run(entity.name, $state.snapshot(values))
     submitting = false
     if (result.ok) {
-      notify(`Run ${result.runId} started.`)
+      notify(`Run ${result.run_id} started.`)
       navigate(
         entity.kind === 'Job'
-          ? { page: 'jobRun', jobId: entityId, runId: result.runId }
-          : { page: 'benchRun', benchId: entityId, runId: result.runId }
+          ? { page: 'job_run', job_id: entity_id, run_id: result.run_id }
+          : { page: 'bench_run', bench_id: entity_id, run_id: result.run_id }
       )
     } else {
       // The draft is preserved on refusal, as in coco (§31).
@@ -42,7 +42,7 @@
 
 {#if entity !== undefined}
   <nav>
-    <button class="crumb" onclick={() => navigate({ page: 'entity', entityId })}>
+    <button class="crumb" onclick={() => navigate({ page: 'entity', entity_id })}>
       {entity.name}
     </button>
     <span class="crumb-sep">›</span>
@@ -51,8 +51,8 @@
 
   <h1>{entity.kind === 'Job' ? 'Start Job' : 'Start Bench'}</h1>
 
-  {#if manifestBlockingReason(entity.manifest) !== null}
-    <p class="blocking">{manifestBlockingReason(entity.manifest)}</p>
+  {#if manifest_blocking_reason(entity.manifest) !== null}
+    <p class="blocking">{manifest_blocking_reason(entity.manifest)}</p>
   {:else}
     <form onsubmit={submit}>
       {#each entity.parameter_names as name (name)}

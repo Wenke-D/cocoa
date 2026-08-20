@@ -9,23 +9,26 @@
   to that job.
 -->
 <script lang="ts">
-  import { benchRun, isCancellable, jobRun } from '@shared/world'
+  import { bench_run, is_cancellable, job_run } from '@shared/world'
   import type { Crumb } from '@shared/ui'
-  import { app, dispatchedOwner, entityOf, navigate, requestCancel } from '../state.svelte'
+  import { app, dispatched_owner, entity_of, navigate, request_cancel } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import RunFacts from '../lib/RunFacts.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
 
-  let { benchId, benchRunId, runId }: { benchId: string; benchRunId: string; runId: string } =
-    $props()
+  let {
+    bench_id,
+    bench_run_id,
+    run_id
+  }: { bench_id: string; bench_run_id: string; run_id: string } = $props()
 
   /** The bench *entity*, for its name; and the bench *run* this was one call of. */
-  const bench = $derived(entityOf(benchId))
-  const parentRun = $derived(benchRun(app.world, benchId, benchRunId))
-  const jobId = $derived(dispatchedOwner(benchId, benchRunId, runId))
-  const run = $derived(jobId === undefined ? undefined : jobRun(app.world, jobId, runId))
-  const step = $derived(parentRun?.plan.steps.find((candidate) => candidate.run_id === runId))
-  const job = $derived(step === undefined ? undefined : entityOf(step.job_id))
+  const bench = $derived(entity_of(bench_id))
+  const parent_run = $derived(bench_run(app.world, bench_id, bench_run_id))
+  const job_id = $derived(dispatched_owner(bench_id, bench_run_id, run_id))
+  const run = $derived(job_id === undefined ? undefined : job_run(app.world, job_id, run_id))
+  const step = $derived(parent_run?.plan.steps.find((candidate) => candidate.run_id === run_id))
+  const job = $derived(step === undefined ? undefined : entity_of(step.job_id))
 
   /**
    * The leaf must say which call this is: a plan may dispatch the same job
@@ -41,8 +44,12 @@
   })
 
   const crumbs = $derived<Crumb[]>([
-    { label: bench?.name ?? '(removed)', route: { page: 'entity', entityId: benchId } },
-    { label: benchRunId, route: { page: 'benchRun', benchId, runId: benchRunId }, mono: true },
+    { label: bench?.name ?? '(removed)', route: { page: 'entity', entity_id: bench_id } },
+    {
+      label: bench_run_id,
+      route: { page: 'bench_run', bench_id, run_id: bench_run_id },
+      mono: true
+    },
     { label: leaf, route: null }
   ])
 </script>
@@ -58,17 +65,17 @@
       does not touch the siblings (§19, §2.3.3) — which is why the target is
       the job run, exactly as it is on the job's own page.
     -->
-    {#if isCancellable(run.status) && step !== undefined}
+    {#if is_cancellable(run.status) && step !== undefined}
       <button
         class="cancel secondary"
-        onclick={() => requestCancel({ kind: 'jobRun', jobId: step.job_id, runId: run.id })}
+        onclick={() => request_cancel({ kind: 'job_run', job_id: step.job_id, run_id: run.id })}
       >
         Cancel Run
       </button>
     {/if}
   </header>
 
-  <RunFacts {run} reportContext={{ kind: 'benchChild', benchId, benchRunId }}>
+  <RunFacts {run} report_context={{ kind: 'bench_child', bench_id, bench_run_id }}>
     {#snippet leading()}
       <dt>Job</dt>
       <dd>
@@ -77,7 +84,7 @@
                Explorer selection, but asking for the job by name may (§19). -->
           <button
             class="job-link"
-            onclick={() => navigate({ page: 'entity', entityId: step.job_id })}
+            onclick={() => navigate({ page: 'entity', entity_id: step.job_id })}
           >
             {job?.name ?? '(removed)'}
           </button>

@@ -3,13 +3,13 @@
   import { fade } from 'svelte/transition'
   import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH } from '@shared/ui'
   import {
-    addFolder,
+    add_folder,
     app,
-    applyEvents,
+    apply_events,
     bootstrap,
-    dismissNotice,
-    persistUi,
-    refreshNow
+    dismiss_notice,
+    persist_ui,
+    refresh_now
   } from './state.svelte'
   import CancelModal from './lib/CancelModal.svelte'
   import ContextMenu from './lib/ContextMenu.svelte'
@@ -32,28 +32,28 @@
   // on the Explorer is exactly the state worth remembering.
   $effect(() => {
     JSON.stringify(app.route)
-    void app.sidebarWidth
-    void app.reportWrap
-    persistUi()
+    void app.sidebar_width
+    void app.report_wrap
+    persist_ui()
   })
 
   // One key per distinct page identity, so navigation re-runs the enter
   // transition but a world refresh on the same page does not.
-  const pageKey = $derived(JSON.stringify(app.route))
+  const page_key = $derived(JSON.stringify(app.route))
 
   onMount(() => {
     // Subscribe first, then pull the starting state: an event batch landing
     // in between is applied to the empty world and then superseded by the
     // (newer) bootstrap. Order-safe in both interleavings.
-    const unsubscribe = window.coco.onEvents(applyEvents)
+    const unsubscribe = window.coco.on_events(apply_events)
     // A menu item runs exactly what the button runs.
-    const unlisten = window.coco.onCommand((command) => {
-      if (command === 'addFolder') void addFolder()
-      else if (command === 'refresh') void refreshNow()
+    const unlisten = window.coco.on_command((command) => {
+      if (command === 'add_folder') void add_folder()
+      else if (command === 'refresh') void refresh_now()
     })
     void bootstrap()
     const clock = setInterval(() => {
-      app.nowMs = Date.now()
+      app.now_ms = Date.now()
     }, 1000)
     return () => {
       unsubscribe()
@@ -68,30 +68,30 @@
   // for any of the reasons a browser may drop it — the pointer is over the
   // page instead and the drag stops halfway, at whatever width the last event
   // it saw happened to name.
-  function startDrag(event: PointerEvent): void {
+  function start_drag(event: PointerEvent): void {
     event.preventDefault()
     dragging = true
     window.addEventListener('pointermove', drag)
-    window.addEventListener('pointerup', endDrag)
-    window.addEventListener('pointercancel', endDrag)
+    window.addEventListener('pointerup', end_drag)
+    window.addEventListener('pointercancel', end_drag)
   }
 
   function drag(event: PointerEvent): void {
     if (!dragging) return
-    app.sidebarWidth = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, event.clientX))
+    app.sidebar_width = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, event.clientX))
   }
 
-  function endDrag(): void {
+  function end_drag(): void {
     dragging = false
     window.removeEventListener('pointermove', drag)
-    window.removeEventListener('pointerup', endDrag)
-    window.removeEventListener('pointercancel', endDrag)
+    window.removeEventListener('pointerup', end_drag)
+    window.removeEventListener('pointercancel', end_drag)
   }
 </script>
 
 <div class="shell">
   <div class="content">
-    <aside style="width: {app.sidebarWidth}px">
+    <aside style="width: {app.sidebar_width}px">
       <Sidebar />
     </aside>
     <div
@@ -99,29 +99,29 @@
       class:dragging
       role="separator"
       aria-orientation="vertical"
-      onpointerdown={startDrag}
+      onpointerdown={start_drag}
     ></div>
     <main>
-      {#key pageKey}
+      {#key page_key}
         <div class="page" in:fade={{ duration: 120 }}>
           {#if app.route.page === 'empty'}
             <Empty />
           {:else if app.route.page === 'entity'}
-            <EntityOverview entityId={app.route.entityId} />
+            <EntityOverview entity_id={app.route.entity_id} />
           {:else if app.route.page === 'start'}
-            <StartRun entityId={app.route.entityId} />
-          {:else if app.route.page === 'jobRun'}
-            <JobRunDetail jobId={app.route.jobId} runId={app.route.runId} />
-          {:else if app.route.page === 'benchRun'}
-            <BenchRunDetail benchId={app.route.benchId} runId={app.route.runId} />
-          {:else if app.route.page === 'benchChild'}
+            <StartRun entity_id={app.route.entity_id} />
+          {:else if app.route.page === 'job_run'}
+            <JobRunDetail job_id={app.route.job_id} run_id={app.route.run_id} />
+          {:else if app.route.page === 'bench_run'}
+            <BenchRunDetail bench_id={app.route.bench_id} run_id={app.route.run_id} />
+          {:else if app.route.page === 'bench_child'}
             <BenchChildRunDetail
-              benchId={app.route.benchId}
-              benchRunId={app.route.benchRunId}
-              runId={app.route.runId}
+              bench_id={app.route.bench_id}
+              bench_run_id={app.route.bench_run_id}
+              run_id={app.route.run_id}
             />
           {:else if app.route.page === 'report'}
-            <ReportViewer context={app.route.context} runId={app.route.runId} />
+            <ReportViewer context={app.route.context} run_id={app.route.run_id} />
           {/if}
         </div>
       {/key}
@@ -133,9 +133,9 @@
     <ContextMenu menu={app.menu} />
   {/if}
 
-  {#if app.overlay?.kind === 'confirmCancel'}
+  {#if app.overlay?.kind === 'confirm_cancel'}
     <CancelModal overlay={app.overlay} />
-  {:else if app.overlay?.kind === 'confirmRemove'}
+  {:else if app.overlay?.kind === 'confirm_remove'}
     <RemoveModal overlay={app.overlay} />
   {/if}
 
@@ -149,7 +149,7 @@
       <span>{app.notice.text}</span>
       <!-- A failure does not fade, so it needs a way out (§8.5's Dismiss). -->
       {#if app.notice.level === 'error'}
-        <button class="dismiss" onclick={dismissNotice}>Dismiss</button>
+        <button class="dismiss" onclick={dismiss_notice}>Dismiss</button>
       {/if}
     </div>
   {/if}

@@ -10,15 +10,15 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { World } from '@shared/world'
-import { emptyWorld } from '@shared/world'
+import { empty_world } from '@shared/world'
 import type { AgentDeps, AgentServer } from '../src/main/agent'
-import { route, segments, serve, socketPath } from '../src/main/agent'
+import { route, segments, serve, socket_path } from '../src/main/agent'
 
 const FOLDER = '/exp/solver-gpu'
 const BENCH_FOLDER = '/exp/nightly'
 
 function world(): World {
-  const base = emptyWorld()
+  const base = empty_world()
   base.entities = [
     {
       id: FOLDER,
@@ -93,7 +93,7 @@ function world(): World {
 function deps(start?: AgentDeps['start']): AgentDeps {
   return {
     world,
-    start: start ?? (async () => ({ ok: true, runId: '7' }))
+    start: start ?? (async () => ({ ok: true, run_id: '7' }))
   }
 }
 
@@ -116,9 +116,9 @@ describe('paths', () => {
   it('puts the socket where the Rust coco puts it', () => {
     const previous = process.env['COCO_SOCKET_PATH']
     delete process.env['COCO_SOCKET_PATH']
-    expect(socketPath()).toBe(path.join(process.env['HOME'] ?? '', '.local/share/coco/coco.sock'))
+    expect(socket_path()).toBe(path.join(process.env['HOME'] ?? '', '.local/share/coco/coco.sock'))
     process.env['COCO_SOCKET_PATH'] = '/tmp/elsewhere.sock'
-    expect(socketPath()).toBe('/tmp/elsewhere.sock')
+    expect(socket_path()).toBe('/tmp/elsewhere.sock')
     if (previous === undefined) delete process.env['COCO_SOCKET_PATH']
     else process.env['COCO_SOCKET_PATH'] = previous
   })
@@ -221,7 +221,7 @@ describe('starting a run', () => {
       JSON.stringify({ parameters: { nodes: '4', gpu: '1' } }),
       async (name, parameters) => {
         asked = [name, parameters]
-        return { ok: true, runId: '7' }
+        return { ok: true, run_id: '7' }
       }
     )
     expect(status).toBe(201)
@@ -269,7 +269,7 @@ describe('the socket', () => {
     for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true })
   })
 
-  function socketFile(): string {
+  function socket_file(): string {
     const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'coco-sock-')))
     dirs.push(dir)
     return path.join(dir, 'coco.sock')
@@ -278,7 +278,7 @@ describe('the socket', () => {
   function request(
     socket: string,
     method: string,
-    routePath: string,
+    route_path: string,
     body?: string
   ): Promise<{
     status: number
@@ -291,7 +291,7 @@ describe('the socket', () => {
       const call = http.request(
         {
           socketPath: socket,
-          path: routePath,
+          path: route_path,
           method,
           headers: { 'Content-Type': 'application/json' }
         },
@@ -317,7 +317,7 @@ describe('the socket', () => {
   }
 
   it('answers HTTP over a unix socket', async () => {
-    const file = socketFile()
+    const file = socket_file()
     open.push(await serve(file, deps()))
 
     const answer = await request(file, 'GET', '/jobs')
@@ -328,14 +328,14 @@ describe('the socket', () => {
   })
 
   it('starts a run over the wire', async () => {
-    const file = socketFile()
+    const file = socket_file()
     let started = false
     open.push(
       await serve(file, {
         world,
         start: async () => {
           started = true
-          return { ok: true, runId: '9' }
+          return { ok: true, run_id: '9' }
         }
       })
     )
@@ -352,7 +352,7 @@ describe('the socket', () => {
   })
 
   it('refuses a body far too large to be a start', async () => {
-    const file = socketFile()
+    const file = socket_file()
     open.push(await serve(file, deps()))
 
     const answer = await request(
@@ -367,14 +367,14 @@ describe('the socket', () => {
   // Two owners of one store is the situation the whole design exists to
   // avoid: a second coco must not take the first one's socket.
   it('will not steal a socket a live coco is answering on', async () => {
-    const file = socketFile()
+    const file = socket_file()
     open.push(await serve(file, deps()))
     await expect(serve(file, deps())).rejects.toThrow('already answering')
   })
 
   // A crash leaves the file behind with nothing listening; that one is free.
   it('replaces a socket file nothing is listening on', async () => {
-    const file = socketFile()
+    const file = socket_file()
     fs.writeFileSync(file, '')
     open.push(await serve(file, deps()))
     expect((await request(file, 'GET', '/help')).status).toBe(200)
@@ -384,7 +384,7 @@ describe('the socket', () => {
   // line — it does not decode chunked framing — so a chunked body reaches it
   // with the frame sizes still in it. Found by driving the real binary.
   it('frames every reply with a Content-Length, never chunked', async () => {
-    const file = socketFile()
+    const file = socket_file()
     open.push(await serve(file, deps()))
 
     const answer = await request(file, 'GET', '/jobs')
@@ -393,7 +393,7 @@ describe('the socket', () => {
   })
 
   it('removes the socket file when it stops', async () => {
-    const file = socketFile()
+    const file = socket_file()
     const server = await serve(file, deps())
     expect(fs.existsSync(file)).toBe(true)
     await server.close()

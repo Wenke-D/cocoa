@@ -3,7 +3,7 @@
 // interchangeable between the Rust and TS engines.
 
 import type { Status } from './status'
-import { isTerminal } from './status'
+import { is_terminal } from './status'
 
 export interface StatusChange {
   status: Status
@@ -76,11 +76,11 @@ export interface BenchMembersFile {
  * `2026-08-19T17:20:01.123+02:00` — the shape chrono's `DateTime<Local>`
  * writes (at nanosecond precision) and the mock scripts already parse.
  */
-export function nowStamp(date = new Date()): string {
+export function now_stamp(date = new Date()): string {
   const pad = (n: number, width = 2): string => String(n).padStart(width, '0')
-  const offsetMinutes = -date.getTimezoneOffset()
-  const sign = offsetMinutes >= 0 ? '+' : '-'
-  const absolute = Math.abs(offsetMinutes)
+  const offset_minutes = -date.getTimezoneOffset()
+  const sign = offset_minutes >= 0 ? '+' : '-'
+  const absolute = Math.abs(offset_minutes)
   return (
     `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
     `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}` +
@@ -89,17 +89,17 @@ export function nowStamp(date = new Date()): string {
   )
 }
 
-export function newRunRecord(
-  runId: number,
-  submissionId: string,
+export function new_run_record(
+  run_id: number,
+  submission_id: string,
   render: Record<string, string>,
   launch: Record<string, string>,
   origin: RunOrigin,
   at: string
 ): RunRecord {
   return {
-    run_id: runId,
-    submission_id: submissionId,
+    run_id: run_id,
+    submission_id: submission_id,
     render,
     launch,
     status: 'STARTING',
@@ -108,13 +108,13 @@ export function newRunRecord(
   }
 }
 
-export function startedAt(record: RunRecord): string {
+export function started_at(record: RunRecord): string {
   return record.history[0]?.at ?? record.history[record.history.length - 1]?.at ?? ''
 }
 
 /** The first terminal change's time, if the run has ended (§9). */
-export function endedAt(record: RunRecord): string | null {
-  const change = record.history.find((entry) => isTerminal(entry.status))
+export function ended_at(record: RunRecord): string | null {
+  const change = record.history.find((entry) => is_terminal(entry.status))
   return change?.at ?? null
 }
 
@@ -122,7 +122,7 @@ export function endedAt(record: RunRecord): string | null {
  * Appends a history entry and switches status, carrying the reason only for
  * statuses that display one.
  */
-export function applyStatus(record: RunRecord, status: Status, at: string, reason?: string): void {
+export function apply_status(record: RunRecord, status: Status, at: string, reason?: string): void {
   record.history.push({ status, at })
   record.status = status
   if ((status === 'FAILED' || status === 'UNREACHABLE') && reason !== undefined && reason !== '') {
@@ -133,6 +133,6 @@ export function applyStatus(record: RunRecord, status: Status, at: string, reaso
 }
 
 /** Combined render + launch params; unambiguous because names never overlap. */
-export function allParams(record: RunRecord): Record<string, string> {
+export function all_params(record: RunRecord): Record<string, string> {
   return { ...record.render, ...record.launch }
 }

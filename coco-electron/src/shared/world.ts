@@ -99,7 +99,7 @@ export interface BenchRun {
  * would be claiming a global uniqueness nothing guarantees.
  *
  * This is also the shape the engine already holds internally
- * (`jobRecords: Map<folder, Map<runId, ...>>`); the flat view was the odd one
+ * (`jobRecords: Map<folder, Map<run_id, ...>>`); the flat view was the odd one
  * out.
  */
 export type RunsByEntity<T> = Record<string, Record<string, T>>
@@ -115,15 +115,15 @@ export interface World {
 }
 
 /** One job run, or `undefined`. The pair is the address; neither half alone. */
-export function jobRun(world: World, jobId: string, runId: string): JobRun | undefined {
-  return world.job_runs[jobId]?.[runId]
+export function job_run(world: World, job_id: string, run_id: string): JobRun | undefined {
+  return world.job_runs[job_id]?.[run_id]
 }
 
-export function benchRun(world: World, benchId: string, runId: string): BenchRun | undefined {
-  return world.bench_runs[benchId]?.[runId]
+export function bench_run(world: World, bench_id: string, run_id: string): BenchRun | undefined {
+  return world.bench_runs[bench_id]?.[run_id]
 }
 
-export function emptyWorld(): World {
+export function empty_world(): World {
   return {
     entities: [],
     job_runs: {},
@@ -163,9 +163,9 @@ export type CocoEvent =
   /** The run carries its own `job_id`, so an upsert needs nothing else. */
   | { kind: 'job-run-upserted'; run: JobRun }
   /** A removal has no run to carry the pair, so it names both halves. */
-  | { kind: 'job-run-removed'; jobId: string; id: string }
+  | { kind: 'job-run-removed'; job_id: string; id: string }
   | { kind: 'bench-run-upserted'; run: BenchRun }
-  | { kind: 'bench-run-removed'; benchId: string; id: string }
+  | { kind: 'bench-run-removed'; bench_id: string; id: string }
   /** Heartbeat: the engine completed a refresh pass. Content-free. */
   | { kind: 'refreshed'; at: string }
   /**
@@ -176,28 +176,28 @@ export type CocoEvent =
    */
   | { kind: 'notice'; level: NoticeLevel; text: string }
 
-export type StartResult = { ok: true; runId: string } | { ok: false; message: string }
+export type StartResult = { ok: true; run_id: string } | { ok: false; message: string }
 
 /**
  * What a cancel is aimed at. A modal is a temporary action, not a place, so
  * this is never part of a route (specification §9).
  */
 export type CancelTarget =
-  | { kind: 'jobRun'; jobId: string; runId: string }
-  | { kind: 'benchRun'; benchId: string; runId: string }
+  | { kind: 'job_run'; job_id: string; run_id: string }
+  | { kind: 'bench_run'; bench_id: string; run_id: string }
 
 export type CancelResult = { ok: true } | { ok: false; message: string }
 
 /** Which run's report to read. The entity id is the folder it lives in. */
 export interface ReportTarget {
-  entityId: string
-  runId: string
+  entity_id: string
+  run_id: string
 }
 
 export type AddFolderResult =
   /** `already` distinguishes "registered it" from "it was already there" —
    * a folder already in the Explorer is a no-op, never a duplicate (§11.5). */
-  | { ok: true; entityId: string; already: boolean }
+  | { ok: true; entity_id: string; already: boolean }
   /** `cancelled` is not a failure: cancelling the picker does nothing at all. */
   | { ok: false; cancelled: boolean; message: string }
 
@@ -211,12 +211,12 @@ export type ReportResult =
 
 const TERMINAL: readonly RunStatus[] = ['Succeeded', 'Failed', 'Cancelled', 'Error']
 
-export function isTerminal(status: RunStatus): boolean {
+export function is_terminal(status: RunStatus): boolean {
   return TERMINAL.includes(status)
 }
 
-export function isActive(status: RunStatus): boolean {
-  return !isTerminal(status)
+export function is_active(status: RunStatus): boolean {
+  return !is_terminal(status)
 }
 
 const CANCELLABLE: readonly RunStatus[] = ['Starting', 'Pending', 'Running']
@@ -227,37 +227,37 @@ const CANCELLABLE: readonly RunStatus[] = ['Starting', 'Pending', 'Running']
  * unreachable run displays as `Running`, and is cancellable — not knowing its
  * status is no reason to be unable to stop it.
  */
-export function isCancellable(status: RunStatus): boolean {
+export function is_cancellable(status: RunStatus): boolean {
   return CANCELLABLE.includes(status)
 }
 
-export function queryAvailable(health: QueryHealth): boolean {
+export function query_available(health: QueryHealth): boolean {
   return typeof health === 'string' || !('Unavailable' in health)
 }
 
 /** Mirrors `JobRun::display_status`: unavailable query shows Unknown. */
-export function displayStatus(status: RunStatus, health: QueryHealth): string {
-  return queryAvailable(health) ? status : 'Unknown'
+export function display_status(status: RunStatus, health: QueryHealth): string {
+  return query_available(health) ? status : 'Unknown'
 }
 
-export function manifestBlockingReason(state: ManifestState): string | null {
+export function manifest_blocking_reason(state: ManifestState): string | null {
   if (state === 'Valid') return null
   if (state === 'Missing') return 'No manifest was found in this folder.'
   return `Manifest is invalid: ${state.Invalid.message}`
 }
 
 /** Mirrors `RunOrigin`'s history-row label: `you`, `agent`, or the Bench. */
-export function originLabel(origin: RunOrigin): string {
+export function origin_label(origin: RunOrigin): string {
   if (origin === 'Human') return 'you'
   if (origin === 'Agent') return 'agent'
   return `${origin.Bench.name} · call ${origin.Bench.call}`
 }
 
-export function triggerLabel(by: Trigger): string {
+export function trigger_label(by: Trigger): string {
   return by === 'Human' ? 'you' : 'agent'
 }
 
-export function reportSummary(report: ReportState): string {
+export function report_summary(report: ReportState): string {
   if (report === 'Unavailable') return 'Report is not yet available.'
   if (report === 'Generating') return 'Report is being generated.'
   if (report === 'Missing') return 'Report is missing.'
@@ -269,9 +269,13 @@ export function reportSummary(report: ReportState): string {
 }
 
 /** `HH:MM:SS`, mirrors `format_duration`. */
-export function formatDuration(startedAt: string, endedAt: string | null, nowMs: number): string {
-  const start = Date.parse(startedAt)
-  const end = endedAt !== null ? Date.parse(endedAt) : nowMs
+export function format_duration(
+  started_at: string,
+  ended_at: string | null,
+  now_ms: number
+): string {
+  const start = Date.parse(started_at)
+  const end = ended_at !== null ? Date.parse(ended_at) : now_ms
   const total = Math.max(0, Math.floor((end - start) / 1000))
   const h = Math.floor(total / 3600)
   const m = Math.floor((total % 3600) / 60)
@@ -281,8 +285,8 @@ export function formatDuration(startedAt: string, endedAt: string | null, nowMs:
 }
 
 /** "38 seconds ago", mirrors `format_relative`. */
-export function formatRelative(then: string, nowMs: number): string {
-  const seconds = Math.max(0, Math.floor((nowMs - Date.parse(then)) / 1000))
+export function format_relative(then: string, now_ms: number): string {
+  const seconds = Math.max(0, Math.floor((now_ms - Date.parse(then)) / 1000))
   if (seconds === 0) return 'just now'
   if (seconds === 1) return '1 second ago'
   if (seconds < 60) return `${seconds} seconds ago`
@@ -293,15 +297,15 @@ export function formatRelative(then: string, nowMs: number): string {
 }
 
 /** `HH:MM:SS` in local time, as the cancel modal states a start (§16.1). */
-export function formatClock(iso: string): string {
+export function format_clock(iso: string): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return iso
   const pad = (n: number): string => String(n).padStart(2, '0')
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
-export function formatStartedAt(startedAt: string): string {
-  const date = new Date(startedAt)
-  if (Number.isNaN(date.getTime())) return startedAt
+export function format_started_at(started_at: string): string {
+  const date = new Date(started_at)
+  if (Number.isNaN(date.getTime())) return started_at
   return date.toLocaleString()
 }

@@ -20,15 +20,15 @@ import type { RefreshReport } from './engine/coco'
 import type { Maybe } from './types'
 
 /** Just the parts of a refresh report that can carry a failure. */
-type Errors = Pick<RefreshReport, 'launchErrors' | 'pollErrors' | 'reportErrors'>
+type Errors = Pick<RefreshReport, 'launch_errors' | 'poll_errors' | 'report_errors'>
 
 /**
  * The one sentence a failed refresh gets: the first error in full, the rest
  * as a count. Mirrors the Rust adapter's `refresh()` — a status bar has room
  * for a sentence, and the run rows carry the detail.
  */
-export function refreshSummary(report: Errors): Maybe<string> {
-  const errors = [...report.launchErrors, ...report.pollErrors, ...report.reportErrors].map(
+export function refresh_summary(report: Errors): Maybe<string> {
+  const errors = [...report.launch_errors, ...report.poll_errors, ...report.report_errors].map(
     (error) => error.message
   )
   if (errors.length === 0) return null

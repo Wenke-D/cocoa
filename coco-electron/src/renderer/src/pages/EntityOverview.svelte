@@ -1,30 +1,30 @@
 <script lang="ts">
   import {
-    formatDuration,
-    formatStartedAt,
-    manifestBlockingReason,
-    originLabel,
-    triggerLabel
+    format_duration,
+    format_started_at,
+    manifest_blocking_reason,
+    origin_label,
+    trigger_label
   } from '@shared/world'
-  import { benchRun, jobRun } from '@shared/world'
-  import { app, entityOf, navigate } from '../state.svelte'
+  import { bench_run, job_run } from '@shared/world'
+  import { app, entity_of, navigate } from '../state.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
 
-  let { entityId }: { entityId: string } = $props()
+  let { entity_id }: { entity_id: string } = $props()
 
-  const entity = $derived(entityOf(entityId))
-  const blocking = $derived(entity === undefined ? null : manifestBlockingReason(entity.manifest))
+  const entity = $derived(entity_of(entity_id))
+  const blocking = $derived(entity === undefined ? null : manifest_blocking_reason(entity.manifest))
 
-  const jobRuns = $derived(
-    (app.world.runs_by_job[entityId] ?? [])
-      .map((id) => jobRun(app.world, entityId, id))
+  const job_runs = $derived(
+    (app.world.runs_by_job[entity_id] ?? [])
+      .map((id) => job_run(app.world, entity_id, id))
       .filter((run) => run !== undefined)
       .reverse()
   )
 
-  const benchRuns = $derived(
-    (app.world.runs_by_bench[entityId] ?? [])
-      .map((id) => benchRun(app.world, entityId, id))
+  const bench_runs = $derived(
+    (app.world.runs_by_bench[entity_id] ?? [])
+      .map((id) => bench_run(app.world, entity_id, id))
       .filter((run) => run !== undefined)
       .reverse()
   )
@@ -38,7 +38,7 @@
       class="start"
       disabled={blocking !== null}
       title={blocking ?? ''}
-      onclick={() => navigate({ page: 'start', entityId })}
+      onclick={() => navigate({ page: 'start', entity_id })}
     >
       {entity.kind === 'Job' ? 'Start Job' : 'Start Bench'}
     </button>
@@ -50,7 +50,7 @@
 
   <h2>History</h2>
   {#if entity.kind === 'Job'}
-    {#if jobRuns.length === 0}
+    {#if job_runs.length === 0}
       <p class="none">No runs yet.</p>
     {:else}
       <table class="runs">
@@ -70,19 +70,19 @@
           <tr><th>Run</th><th>Status</th><th>By</th><th>Started</th><th>Duration</th></tr>
         </thead>
         <tbody>
-          {#each jobRuns as run (run.id)}
-            <tr onclick={() => navigate({ page: 'jobRun', jobId: entityId, runId: run.id })}>
+          {#each job_runs as run (run.id)}
+            <tr onclick={() => navigate({ page: 'job_run', job_id: entity_id, run_id: run.id })}>
               <td class="mono">{run.id}</td>
               <td><StatusPill status={run.status} health={run.query_health} /></td>
-              <td title={originLabel(run.origin)}>{originLabel(run.origin)}</td>
-              <td title={formatStartedAt(run.started_at)}>{formatStartedAt(run.started_at)}</td>
-              <td class="mono">{formatDuration(run.started_at, run.ended_at, app.nowMs)}</td>
+              <td title={origin_label(run.origin)}>{origin_label(run.origin)}</td>
+              <td title={format_started_at(run.started_at)}>{format_started_at(run.started_at)}</td>
+              <td class="mono">{format_duration(run.started_at, run.ended_at, app.now_ms)}</td>
             </tr>
           {/each}
         </tbody>
       </table>
     {/if}
-  {:else if benchRuns.length === 0}
+  {:else if bench_runs.length === 0}
     <p class="none">No runs yet.</p>
   {:else}
     <table class="runs">
@@ -100,14 +100,14 @@
         >
       </thead>
       <tbody>
-        {#each benchRuns as run (run.id)}
-          <tr onclick={() => navigate({ page: 'benchRun', benchId: entityId, runId: run.id })}>
+        {#each bench_runs as run (run.id)}
+          <tr onclick={() => navigate({ page: 'bench_run', bench_id: entity_id, run_id: run.id })}>
             <td class="mono">{run.id}</td>
             <td><StatusPill status={run.status} health={run.query_health} /></td>
-            <td title={triggerLabel(run.by)}>{triggerLabel(run.by)}</td>
+            <td title={trigger_label(run.by)}>{trigger_label(run.by)}</td>
             <td>{run.plan.steps.length}</td>
-            <td title={formatStartedAt(run.started_at)}>{formatStartedAt(run.started_at)}</td>
-            <td class="mono">{formatDuration(run.started_at, run.ended_at, app.nowMs)}</td>
+            <td title={format_started_at(run.started_at)}>{format_started_at(run.started_at)}</td>
+            <td class="mono">{format_duration(run.started_at, run.ended_at, app.now_ms)}</td>
           </tr>
         {/each}
       </tbody>

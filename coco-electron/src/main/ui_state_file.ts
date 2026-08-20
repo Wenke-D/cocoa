@@ -9,8 +9,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { UiState } from '@shared/ui'
-import { defaultUiState, sanitize } from '@shared/ui'
-import { writeAtomic } from './engine/store'
+import { default_ui_state, sanitize } from '@shared/ui'
+import { write_atomic } from './engine/store'
 
 /**
  * A file that fails to parse is not an error worth stopping for: the worst
@@ -18,17 +18,17 @@ import { writeAtomic } from './engine/store'
  * back is put through `sanitize` — this is untrusted JSON, older or newer than
  * this build, and possibly edited by hand.
  */
-export function loadUiState(filePath: string): UiState {
+export function read_ui_state(file_path: string): UiState {
   let text: string
   try {
-    text = fs.readFileSync(filePath, 'utf8')
+    text = fs.readFileSync(file_path, 'utf8')
   } catch {
-    return defaultUiState()
+    return default_ui_state()
   }
   try {
     return sanitize(JSON.parse(text) as Partial<UiState>)
   } catch {
-    return defaultUiState()
+    return default_ui_state()
   }
 }
 
@@ -42,17 +42,17 @@ export function loadUiState(filePath: string): UiState {
  * a report — repair belongs to the restore, where the rule is about what a
  * relaunch should *land on*, not about what was true.
  */
-export function saveUiState(filePath: string, state: UiState): void {
+export function write_ui_state(file_path: string, state: UiState): void {
   try {
-    writeAtomic(filePath, JSON.stringify(state, null, 2))
+    write_atomic(file_path, JSON.stringify(state, null, 2))
   } catch (error) {
     console.error('ui state:', error)
   }
 }
 
 /** `COCO_UI_STATE_PATH` exists so a drive run cannot touch the real one. */
-export function defaultUiStatePath(userDataDir: string): string {
+export function ui_state_path(user_data_dir: string): string {
   const override = process.env['COCO_UI_STATE_PATH']
   if (override !== undefined && override !== '') return override
-  return path.join(userDataDir, 'ui-state.json')
+  return path.join(user_data_dir, 'ui-state.json')
 }

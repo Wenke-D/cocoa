@@ -18,7 +18,7 @@ import http from 'node:http'
 import net from 'node:net'
 import path from 'node:path'
 import type { BenchRun, Entity, JobRun, ReportState, StartResult, World } from '@shared/world'
-import { benchRun, jobRun } from '@shared/world'
+import { bench_run, job_run } from '@shared/world'
 import type { Maybe } from './types'
 
 /**
@@ -69,20 +69,20 @@ function failure(status: number, message: string): AgentResponse {
  * resolved. Experiment names are folder names, and a folder name may hold a
  * space.
  */
-export function pathOf(target: string): string {
-  const withoutQuery = target.split(/[?#]/)[0] ?? target
+export function path_of(target: string): string {
+  const without_query = target.split(/[?#]/)[0] ?? target
   try {
-    return decodeURIComponent(withoutQuery)
+    return decodeURIComponent(without_query)
   } catch {
     // A malformed escape is not a reason to drop the request; it simply is
     // not a path that names anything.
-    return withoutQuery
+    return without_query
   }
 }
 
 /** The path split on `/`, empty segments dropped. */
 export function segments(target: string): string[] {
-  return pathOf(target)
+  return path_of(target)
     .split('/')
     .filter((part) => part !== '')
 }
@@ -93,7 +93,7 @@ export function segments(target: string): string[] {
  * parallel set of codes. Anything unrecognised is a `400`: the request was
  * refused, and the caller is the one who can act.
  */
-function statusFor(message: string): number {
+function status_for(message: string): number {
   if (message.startsWith('No such entity')) return 404
   if (message.includes('did not answer in time')) return 503
   return 400
@@ -110,16 +110,16 @@ export async function route(request: AgentRequest, deps: AgentDeps): Promise<Age
     // The same JSON `--dump-state` prints, and for the same reason: a symptom
     // becomes a fact you can grep.
     if (match(parts, ['world'])) return json(200, deps.world())
-    if (match(parts, ['jobs'])) return listEntities(deps.world(), 'Job')
-    if (match(parts, ['benches'])) return listEntities(deps.world(), 'Bench')
-    if (parts.length === 2 && parts[0] === 'jobs') return jobDetail(deps.world(), parts[1])
-    if (parts.length === 2 && parts[0] === 'benches') return benchDetail(deps.world(), parts[1])
+    if (match(parts, ['jobs'])) return list_entities(deps.world(), 'Job')
+    if (match(parts, ['benches'])) return list_entities(deps.world(), 'Bench')
+    if (parts.length === 2 && parts[0] === 'jobs') return job_detail(deps.world(), parts[1])
+    if (parts.length === 2 && parts[0] === 'benches') return bench_detail(deps.world(), parts[1])
     return failure(404, 'no such endpoint')
   }
 
   if (method === 'POST') {
     if (parts.length === 3 && parts[0] === 'experiments' && parts[2] === 'runs') {
-      return startRun(parts[1], request.body, deps)
+      return start_run(parts[1], request.body, deps)
     }
     return failure(404, 'no such endpoint')
   }
@@ -131,7 +131,7 @@ function match(parts: string[], expected: string[]): boolean {
   return parts.length === expected.length && parts.every((part, at) => part === expected[at])
 }
 
-async function startRun(name: string, body: string, deps: AgentDeps): Promise<AgentResponse> {
+async function start_run(name: string, body: string, deps: AgentDeps): Promise<AgentResponse> {
   let parameters: Record<string, string> = {}
   if (body.trim() !== '') {
     try {
@@ -147,18 +147,18 @@ async function startRun(name: string, body: string, deps: AgentDeps): Promise<Ag
   const known = deps.world().entities.some((entity) => entity.name === name)
   if (!known) return failure(404, `No such entity: ${name}`)
 
-  const result = await withTimeout(deps.start(name, parameters))
+  const result = await with_timeout(deps.start(name, parameters))
   // The workbench's own failure text, unchanged: an agent reading it should
   // see what a person would have been shown.
-  if (!result.ok) return failure(statusFor(result.message), result.message)
-  return json(201, { run_id: result.runId })
+  if (!result.ok) return failure(status_for(result.message), result.message)
+  return json(201, { run_id: result.run_id })
 }
 
 /**
  * What keeps a caller from hanging forever if the engine is wedged. In the
  * normal case a start is one queue turn away.
  */
-async function withTimeout(work: Promise<StartResult>): Promise<StartResult> {
+async function with_timeout(work: Promise<StartResult>): Promise<StartResult> {
   let timer: NodeJS.Timeout | undefined
   const expiry = new Promise<StartResult>((resolve) => {
     timer = setTimeout(
@@ -177,23 +177,23 @@ async function withTimeout(work: Promise<StartResult>): Promise<StartResult> {
 // The read routes. Every caller is on this machine, so detail responses carry
 // file *locations* rather than file contents.
 
-function runIdsOf(world: World, entity: Entity): string[] {
+function run_ids_of(world: World, entity: Entity): string[] {
   const index = entity.kind === 'Job' ? world.runs_by_job : world.runs_by_bench
   return index[entity.id] ?? []
 }
 
-function isActiveStatus(status: string): boolean {
+function is_active_status(status: string): boolean {
   return !['Succeeded', 'Failed', 'Cancelled', 'Error'].includes(status)
 }
 
-function listEntities(world: World, kind: 'Job' | 'Bench'): AgentResponse {
+function list_entities(world: World, kind: 'Job' | 'Bench'): AgentResponse {
   const items = world.entities
     .filter((entity) => entity.kind === kind)
     .map((entity) => {
-      const ids = runIdsOf(world, entity)
+      const ids = run_ids_of(world, entity)
       const active = ids.filter((id) => {
-        const run = kind === 'Job' ? jobRun(world, entity.id, id) : benchRun(world, entity.id, id)
-        return run !== undefined && isActiveStatus(run.status)
+        const run = kind === 'Job' ? job_run(world, entity.id, id) : bench_run(world, entity.id, id)
+        return run !== undefined && is_active_status(run.status)
       }).length
       return {
         name: entity.name,
@@ -208,20 +208,20 @@ function listEntities(world: World, kind: 'Job' | 'Bench'): AgentResponse {
 }
 
 /** Where the report file is, when there is one to read. */
-function reportLocation(folder: string, runId: string, report: ReportState): Maybe<string> {
+function report_location(folder: string, run_id: string, report: ReportState): Maybe<string> {
   if (typeof report === 'object' && 'Available' in report) {
     const extension = report.Available.format === 'Html' ? 'html' : 'txt'
-    return path.join(folder, 'report', `${runId}.${extension}`)
+    return path.join(folder, 'report', `${run_id}.${extension}`)
   }
   return null
 }
 
-function findEntity(world: World, name: string, kind: 'Job' | 'Bench'): Entity | undefined {
+function find_entity(world: World, name: string, kind: 'Job' | 'Bench'): Entity | undefined {
   return world.entities.find((entity) => entity.name === name && entity.kind === kind)
 }
 
 /** A name that exists as the other kind deserves a pointer, not a flat no. */
-function noSuchEntity(world: World, name: string, asked: 'Job' | 'Bench'): AgentResponse {
+function no_such_entity(world: World, name: string, asked: 'Job' | 'Bench'): AgentResponse {
   const [this_, other] = asked === 'Job' ? ['job', 'benches'] : ['bench', 'jobs']
   if (world.entities.some((entity) => entity.name === name)) {
     return failure(404, `${name} is not a ${this_}; ask /${other}/${name}`)
@@ -229,16 +229,16 @@ function noSuchEntity(world: World, name: string, asked: 'Job' | 'Bench'): Agent
   return failure(404, `No such ${this_}: ${name}`)
 }
 
-function jobDetail(world: World, name: string): AgentResponse {
-  const entity = findEntity(world, name, 'Job')
-  if (entity === undefined) return noSuchEntity(world, name, 'Job')
+function job_detail(world: World, name: string): AgentResponse {
+  const entity = find_entity(world, name, 'Job')
+  if (entity === undefined) return no_such_entity(world, name, 'Job')
   const folder = entity.id
 
-  const runs = runIdsOf(world, entity)
-    .map((id) => jobRun(world, folder, id))
+  const runs = run_ids_of(world, entity)
+    .map((id) => job_run(world, folder, id))
     .filter((run): run is JobRun => run !== undefined)
     .map((run) => {
-      const runDir = path.join(folder, 'runs', run.id)
+      const run_dir = path.join(folder, 'runs', run.id)
       return {
         id: run.id,
         status: run.status,
@@ -249,9 +249,9 @@ function jobDetail(world: World, name: string): AgentResponse {
         query_health: run.query_health,
         error: run.error,
         location: {
-          run_dir: runDir,
-          record: path.join(runDir, 'run.json'),
-          report: reportLocation(folder, run.id, run.report)
+          run_dir: run_dir,
+          record: path.join(run_dir, 'run.json'),
+          report: report_location(folder, run.id, run.report)
         }
       }
     })
@@ -266,19 +266,19 @@ function jobDetail(world: World, name: string): AgentResponse {
   })
 }
 
-function benchDetail(world: World, name: string): AgentResponse {
-  const entity = findEntity(world, name, 'Bench')
-  if (entity === undefined) return noSuchEntity(world, name, 'Bench')
+function bench_detail(world: World, name: string): AgentResponse {
+  const entity = find_entity(world, name, 'Bench')
+  if (entity === undefined) return no_such_entity(world, name, 'Bench')
   const folder = entity.id
 
-  const nameOf = (entityId: string): string =>
-    world.entities.find((candidate) => candidate.id === entityId)?.name ?? entityId
+  const name_of = (entity_id: string): string =>
+    world.entities.find((candidate) => candidate.id === entity_id)?.name ?? entity_id
 
-  const runs = runIdsOf(world, entity)
-    .map((id) => benchRun(world, folder, id))
+  const runs = run_ids_of(world, entity)
+    .map((id) => bench_run(world, folder, id))
     .filter((run): run is BenchRun => run !== undefined)
     .map((run) => {
-      const runDir = path.join(folder, 'runs', run.id)
+      const run_dir = path.join(folder, 'runs', run.id)
       return {
         id: run.id,
         status: run.status,
@@ -290,7 +290,7 @@ function benchDetail(world: World, name: string): AgentResponse {
         error: run.error,
         calls: run.plan.steps.map((step) => ({
           call: step.index,
-          job: nameOf(step.job_id),
+          job: name_of(step.job_id),
           parameters: step.parameters,
           // Follow it under /jobs/{job}: the member is an ordinary job run,
           // and its id only means anything beside that job's name — ids are
@@ -298,10 +298,10 @@ function benchDetail(world: World, name: string): AgentResponse {
           run_id: step.run_id
         })),
         location: {
-          run_dir: runDir,
-          record: path.join(runDir, 'run.json'),
-          members: path.join(runDir, 'members.json'),
-          report: reportLocation(folder, run.id, run.report)
+          run_dir: run_dir,
+          record: path.join(run_dir, 'run.json'),
+          members: path.join(run_dir, 'members.json'),
+          report: report_location(folder, run.id, run.report)
         }
       }
     })
@@ -386,7 +386,7 @@ function help(): AgentResponse {
  * a port or be told a number, and two coco windows over two stores is not a
  * case this prototype serves (§43).
  */
-export function socketPath(): string {
+export function socket_path(): string {
   const override = process.env['COCO_SOCKET_PATH']
   if (override !== undefined && override !== '') return override
   const home = process.env['HOME']
@@ -399,9 +399,9 @@ export interface AgentServer {
 }
 
 /** Whether something is listening on a socket file that already exists. */
-function isLive(socketFile: string): Promise<boolean> {
+function is_live(socket_file: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const probe = net.connect(socketFile)
+    const probe = net.connect(socket_file)
     const settle = (live: boolean): void => {
       probe.destroy()
       resolve(live)
@@ -420,15 +420,15 @@ function isLive(socketFile: string): Promise<boolean> {
  * design exists to avoid — so this throws, and the second window runs without
  * an interface rather than stealing the first's.
  */
-export async function serve(socketFile: string, deps: AgentDeps): Promise<AgentServer> {
-  fs.mkdirSync(path.dirname(socketFile), { recursive: true })
+export async function serve(socket_file: string, deps: AgentDeps): Promise<AgentServer> {
+  fs.mkdirSync(path.dirname(socket_file), { recursive: true })
 
-  if (fs.existsSync(socketFile)) {
-    if (await isLive(socketFile)) {
-      throw new Error(`another coco is already answering on ${socketFile}`)
+  if (fs.existsSync(socket_file)) {
+    if (await is_live(socket_file)) {
+      throw new Error(`another coco is already answering on ${socket_file}`)
     }
     // Nothing is listening: the file outlived the window that made it.
-    fs.rmSync(socketFile, { force: true })
+    fs.rmSync(socket_file, { force: true })
   }
 
   const server = http.createServer((incoming, outgoing) => {
@@ -437,7 +437,7 @@ export async function serve(socketFile: string, deps: AgentDeps): Promise<AgentS
 
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject)
-    server.listen(socketFile, () => {
+    server.listen(socket_file, () => {
       server.removeListener('error', reject)
       resolve()
     })
@@ -450,7 +450,7 @@ export async function serve(socketFile: string, deps: AgentDeps): Promise<AgentS
           // Dropping the file is part of stopping: the next launch should not
           // have to reason about whether what it found belongs to a live
           // window.
-          fs.rmSync(socketFile, { force: true })
+          fs.rmSync(socket_file, { force: true })
           resolve()
         })
         // A keep-alive connection would otherwise hold the close open.

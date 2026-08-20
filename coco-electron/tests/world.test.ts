@@ -5,30 +5,30 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { buildWorld } from '../src/main/engine/world'
+import { build_world } from '../src/main/engine/world'
 import {
-  benchFolder,
-  cleanupTempDirs,
+  bench_folder,
+  cleanup_temp_dirs,
   engine,
-  jobFolder,
+  job_folder,
   settle,
-  tempDir,
+  temp_dir,
   write,
-  writeScript
+  write_script
 } from './support'
 
-afterEach(cleanupTempDirs)
+afterEach(cleanup_temp_dirs)
 
-describe('buildWorld', () => {
+describe('build_world', () => {
   it('describes a job, its parameters and its run', async () => {
-    const dir = tempDir()
-    const job = jobFolder(dir, 'solver-gpu')
+    const dir = temp_dir()
+    const job = job_folder(dir, 'solver-gpu')
     const coco = engine(dir)
     coco.register(job)
-    await coco.startJob(job, { size: '256' }, { gpu: '0' }, 'human')
+    await coco.start_job(job, { size: '256' }, { gpu: '0' }, 'human')
     await settle(coco)
 
-    const world = buildWorld(coco, '2026-08-19T10:00:00.000+02:00')
+    const world = build_world(coco, '2026-08-19T10:00:00.000+02:00')
     expect(world.last_refresh).toBe('2026-08-19T10:00:00.000+02:00')
     expect(world.entities).toHaveLength(1)
     expect(world.entities[0]).toMatchObject({
@@ -55,36 +55,36 @@ describe('buildWorld', () => {
   })
 
   it('indexes a job history oldest first', async () => {
-    const dir = tempDir()
-    const job = jobFolder(dir, 'history')
+    const dir = temp_dir()
+    const job = job_folder(dir, 'history')
     const coco = engine(dir)
     coco.register(job)
     for (const size of ['1', '2', '3']) {
-      await coco.startJob(job, { size }, { gpu: '0' }, 'human')
+      await coco.start_job(job, { size }, { gpu: '0' }, 'human')
     }
     await settle(coco)
 
-    expect(buildWorld(coco, null).runs_by_job[job]).toEqual(['0', '1', '2'])
+    expect(build_world(coco, null).runs_by_job[job]).toEqual(['0', '1', '2'])
   })
 
   it('reports an available report with its size', async () => {
-    const dir = tempDir()
-    const job = jobFolder(dir, 'reported')
+    const dir = temp_dir()
+    const job = job_folder(dir, 'reported')
     const coco = engine(dir)
     coco.register(job)
-    const runId = await coco.startJob(job, { size: '1' }, { gpu: '0' }, 'human')
+    const run_id = await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
     await settle(coco)
     write(job, 'poll-state', 'COMPLETED')
-    await coco.pollJob(job)
-    await coco.reportRun(job, runId, 'auto')
+    await coco.poll_job(job)
+    await coco.report_run(job, run_id, 'auto')
 
-    const run = buildWorld(coco, null).job_runs[job][String(runId)]
+    const run = build_world(coco, null).job_runs[job][String(run_id)]
     expect(run.status).toBe('Succeeded')
     expect(run.ended_at).not.toBeNull()
     expect(run.report).toEqual({
       Available: {
         format: 'PlainText',
-        text_bytes: fs.statSync(path.join(job, 'report', `${runId}.txt`)).size
+        text_bytes: fs.statSync(path.join(job, 'report', `${run_id}.txt`)).size
       }
     })
   })
@@ -93,19 +93,19 @@ describe('buildWorld', () => {
   // run keeps showing what it was last known to be, and the query health
   // carries the reason (§9).
   it('shows the last known status when the cluster is unreachable', async () => {
-    const dir = tempDir()
-    const job = jobFolder(dir, 'flaky')
+    const dir = temp_dir()
+    const job = job_folder(dir, 'flaky')
     const coco = engine(dir)
     coco.register(job)
-    const runId = await coco.startJob(job, { size: '1' }, { gpu: '0' }, 'human')
+    const run_id = await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
     await settle(coco)
     write(job, 'poll-state', 'RUNNING')
-    await coco.pollJob(job)
+    await coco.poll_job(job)
 
-    writeScript(job, 'poll.sh', "echo 'squeue: connection timed out' >&2\nexit 3\n")
-    await coco.pollJob(job).catch(() => undefined)
+    write_script(job, 'poll.sh', "echo 'squeue: connection timed out' >&2\nexit 3\n")
+    await coco.poll_job(job).catch(() => undefined)
 
-    const run = buildWorld(coco, null).job_runs[job][String(runId)]
+    const run = build_world(coco, null).job_runs[job][String(run_id)]
     expect(run.status).toBe('Running')
     expect(run.query_health).toEqual({
       Unavailable: { message: expect.stringContaining('poll script failed') as string }
@@ -113,14 +113,14 @@ describe('buildWorld', () => {
   })
 
   it('keeps a broken folder visible, carrying its manifest error', () => {
-    const dir = tempDir()
-    const job = jobFolder(dir, 'was-fine')
+    const dir = temp_dir()
+    const job = job_folder(dir, 'was-fine')
     const coco = engine(dir)
     coco.register(job)
     write(job, 'coco.toml', 'kind = "pipeline"\nname = "was-fine"\n')
     coco.reconcile()
 
-    const world = buildWorld(coco, null)
+    const world = build_world(coco, null)
     expect(world.entities).toHaveLength(1)
     expect(world.entities[0].name).toBe('was-fine')
     expect(world.entities[0].manifest).toMatchObject({
@@ -130,17 +130,17 @@ describe('buildWorld', () => {
   })
 
   it('describes a bench run, its plan and the runs it dispatched', async () => {
-    const dir = tempDir()
-    const job = jobFolder(dir, 'member-job')
-    const bench = benchFolder(dir, 'sweep', ['member-job', 'member-job'])
+    const dir = temp_dir()
+    const job = job_folder(dir, 'member-job')
+    const bench = bench_folder(dir, 'sweep', ['member-job', 'member-job'])
     const coco = engine(dir)
     coco.register(job)
     coco.register(bench)
-    const start = await coco.startBench(bench, { mesh: 'fine' }, 'human')
+    const start = await coco.start_bench(bench, { mesh: 'fine' }, 'human')
     await settle(coco)
 
-    const world = buildWorld(coco, null)
-    const run = world.bench_runs[bench][String(start.runId)]
+    const world = build_world(coco, null)
+    const run = world.bench_runs[bench][String(start.run_id)]
     expect(run).toMatchObject({
       bench_id: bench,
       by: 'Human',
@@ -162,7 +162,7 @@ describe('buildWorld', () => {
         run_id: String(start.members[1].run_id)
       }
     ])
-    expect(world.runs_by_bench).toEqual({ [bench]: [String(start.runId)] })
+    expect(world.runs_by_bench).toEqual({ [bench]: [String(start.run_id)] })
 
     // The same run, two addresses (§2.3.1): a member knows the bench run and
     // the call that dispatched it.
@@ -170,7 +170,7 @@ describe('buildWorld', () => {
       Bench: {
         name: 'sweep',
         bench_id: bench,
-        bench_run_id: String(start.runId),
+        bench_run_id: String(start.run_id),
         call: 2
       }
     })

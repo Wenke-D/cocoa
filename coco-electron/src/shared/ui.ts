@@ -12,20 +12,20 @@
  * selected.
  */
 export type ReportContext =
-  | { kind: 'jobRun'; jobId: string }
-  | { kind: 'benchRun'; benchId: string }
-  | { kind: 'benchChild'; benchId: string; benchRunId: string }
+  | { kind: 'job_run'; job_id: string }
+  | { kind: 'bench_run'; bench_id: string }
+  | { kind: 'bench_child'; bench_id: string; bench_run_id: string }
 
 /** An address, never content — the same union as `navigation/route.rs`. */
 export type Route =
   | { page: 'empty' }
-  | { page: 'entity'; entityId: string }
-  | { page: 'start'; entityId: string }
-  | { page: 'jobRun'; jobId: string; runId: string }
-  | { page: 'benchRun'; benchId: string; runId: string }
+  | { page: 'entity'; entity_id: string }
+  | { page: 'start'; entity_id: string }
+  | { page: 'job_run'; job_id: string; run_id: string }
+  | { page: 'bench_run'; bench_id: string; run_id: string }
   /** A run dispatched by a bench, seen in the bench's context (§19). */
-  | { page: 'benchChild'; benchId: string; benchRunId: string; runId: string }
-  | { page: 'report'; context: ReportContext; runId: string }
+  | { page: 'bench_child'; bench_id: string; bench_run_id: string; run_id: string }
+  | { page: 'report'; context: ReportContext; run_id: string }
 
 /**
  * One breadcrumb — the port of `navigation::Crumb`. `route` is `null` for the
@@ -53,8 +53,8 @@ export interface WindowBounds {
  */
 export interface UiState {
   route: Route
-  sidebarWidth: number
-  reportWrapLines: boolean
+  sidebar_width: number
+  report_wrap_lines: boolean
   window: WindowBounds | null
 }
 
@@ -66,11 +66,11 @@ export const SIDEBAR_MAX_WIDTH = 400
 export const WINDOW_DEFAULT = { width: 1280, height: 820 }
 export const WINDOW_MIN = { width: 900, height: 600 }
 
-export function defaultUiState(): UiState {
+export function default_ui_state(): UiState {
   return {
     route: { page: 'empty' },
-    sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
-    reportWrapLines: false,
+    sidebar_width: SIDEBAR_DEFAULT_WIDTH,
+    report_wrap_lines: false,
     window: null
   }
 }
@@ -91,28 +91,28 @@ function clamp(value: number, low: number, high: number, fallback: number): numb
  * the world can answer, and `recover()` asks it once the bootstrap has landed.
  */
 export function sanitize(state: Partial<UiState> | null | undefined): UiState {
-  const restored = { ...defaultUiState(), ...(state ?? {}) }
+  const restored = { ...default_ui_state(), ...(state ?? {}) }
 
-  restored.sidebarWidth = clamp(
-    restored.sidebarWidth,
+  restored.sidebar_width = clamp(
+    restored.sidebar_width,
     SIDEBAR_MIN_WIDTH,
     SIDEBAR_MAX_WIDTH,
     SIDEBAR_DEFAULT_WIDTH
   )
-  restored.reportWrapLines = restored.reportWrapLines === true
-  restored.route = sanitizeRoute(restored.route)
-  restored.window = sanitizeWindow(restored.window)
+  restored.report_wrap_lines = restored.report_wrap_lines === true
+  restored.route = sanitize_route(restored.route)
+  restored.window = sanitize_window(restored.window)
   return restored
 }
 
-function sanitizeRoute(route: Route | null | undefined): Route {
+function sanitize_route(route: Route | null | undefined): Route {
   const empty: Route = { page: 'empty' }
   if (route === null || route === undefined || typeof route !== 'object') return empty
   switch (route.page) {
     case 'empty':
       return empty
     case 'entity':
-      return typeof route.entityId === 'string' ? route : empty
+      return typeof route.entity_id === 'string' ? route : empty
     // A report is read from disk when it is opened, and the file may be gone,
     // rewritten, or enormous by now. Restoring the address would make the
     // first thing a relaunch does a disk read nobody asked for.
@@ -122,17 +122,17 @@ function sanitizeRoute(route: Route | null | undefined): Route {
     // would open an empty form nobody asked for. Land on the experiment it
     // belonged to instead (§15).
     case 'start':
-      return typeof route.entityId === 'string'
-        ? { page: 'entity', entityId: route.entityId }
+      return typeof route.entity_id === 'string'
+        ? { page: 'entity', entity_id: route.entity_id }
         : empty
-    case 'jobRun':
-      return typeof route.jobId === 'string' && typeof route.runId === 'string' ? route : empty
-    case 'benchRun':
-      return typeof route.benchId === 'string' && typeof route.runId === 'string' ? route : empty
-    case 'benchChild':
-      return typeof route.benchId === 'string' &&
-        typeof route.benchRunId === 'string' &&
-        typeof route.runId === 'string'
+    case 'job_run':
+      return typeof route.job_id === 'string' && typeof route.run_id === 'string' ? route : empty
+    case 'bench_run':
+      return typeof route.bench_id === 'string' && typeof route.run_id === 'string' ? route : empty
+    case 'bench_child':
+      return typeof route.bench_id === 'string' &&
+        typeof route.bench_run_id === 'string' &&
+        typeof route.run_id === 'string'
         ? route
         : empty
     default:
@@ -142,7 +142,7 @@ function sanitizeRoute(route: Route | null | undefined): Route {
   }
 }
 
-function sanitizeWindow(bounds: WindowBounds | null | undefined): WindowBounds | null {
+function sanitize_window(bounds: WindowBounds | null | undefined): WindowBounds | null {
   if (bounds === null || bounds === undefined || typeof bounds !== 'object') return null
   const width = clamp(bounds.width, WINDOW_MIN.width, Number.MAX_SAFE_INTEGER, WINDOW_DEFAULT.width)
   const height = clamp(

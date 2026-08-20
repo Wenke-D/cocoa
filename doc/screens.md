@@ -200,21 +200,21 @@ address at render time. A route must never carry a copy of a run.
 ```ts
 // coco-electron/src/shared/ui.ts
 export type ReportContext =
-  | { kind: 'jobRun'; jobId: string }
-  | { kind: 'benchRun'; benchId: string }
-  | { kind: 'benchChild'; benchId: string; benchRunId: string }
+  | { kind: 'job_run'; job_id: string }
+  | { kind: 'bench_run'; bench_id: string }
+  | { kind: 'bench_child'; bench_id: string; bench_run_id: string }
 
 export type Route =
   | { page: 'empty' }
-  | { page: 'entity'; entityId: string }
+  | { page: 'entity'; entity_id: string }
   /** The start form (§15). Only the identity: what the user has typed is a
    *  draft held outside the route. */
-  | { page: 'start'; entityId: string }
-  | { page: 'jobRun'; jobId: string; runId: string }
-  | { page: 'benchRun'; benchId: string; runId: string }
+  | { page: 'start'; entity_id: string }
+  | { page: 'job_run'; job_id: string; run_id: string }
+  | { page: 'bench_run'; bench_id: string; run_id: string }
   /** A run dispatched by a bench, seen in the bench's context (§19). */
-  | { page: 'benchChild'; benchId: string; benchRunId: string; runId: string }
-  | { page: 'report'; context: ReportContext; runId: string }
+  | { page: 'bench_child'; bench_id: string; bench_run_id: string; run_id: string }
+  | { page: 'report'; context: ReportContext; run_id: string }
 ```
 
 Overlays are separate state, held by the renderer and never persisted:
@@ -225,7 +225,7 @@ Overlays are separate state, held by the renderer and never persisted:
 // operation has to show the refusal in place rather than dismiss into a toast.
 export type Overlay = { error: string | null; busy: boolean } & (
   | { kind: 'confirmCancel'; target: CancelTarget }
-  | { kind: 'confirmRemove'; entityId: string }
+  | { kind: 'confirmRemove'; entity_id: string }
 )
 ```
 
@@ -304,7 +304,7 @@ keeps the two from drifting.
 Ids are plain strings. TypeScript has no newtype, and a branded type would buy
 compile-time separation at the cost of every boundary — JSON, the socket, the
 records on disk — needing a cast. The field name carries the meaning instead:
-`jobId`, `runId`, `benchRunId` are never spelled `id` where the kind is
+`job_id`, `run_id`, `bench_run_id` are never spelled `id` where the kind is
 ambiguous.
 
 **A run id is unique within its experiment and nowhere wider.** It is allocated
@@ -317,7 +317,7 @@ by experiment rather than in one flat map:
 ```ts
 export type RunsByEntity<T> = Record<string, Record<string, T>>
 
-job_runs: RunsByEntity<JobRun>      // world.job_runs[jobId][runId]
+job_runs: RunsByEntity<JobRun>      // world.job_runs[job_id][run_id]
 bench_runs: RunsByEntity<BenchRun>
 ```
 

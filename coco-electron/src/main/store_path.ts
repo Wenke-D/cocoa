@@ -13,7 +13,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 /** Where it lived until 2026-08-20, and where coco-egui still looks. */
-export function legacyStorePath(): string {
+export function legacy_store_path(): string {
   return path.join(os.homedir(), '.local', 'share', 'coco', 'store.json')
 }
 
@@ -23,12 +23,12 @@ export function legacyStorePath(): string {
  * `COCO_STORE_PATH` wins outright and skips the move: a drive run points at a
  * scratch store, and must not touch the real one on the way past.
  */
-export function resolveStorePath(userDataDir: string, legacy = legacyStorePath()): string {
+export function resolve_store_path(user_data_dir: string, legacy = legacy_store_path()): string {
   const override = process.env.COCO_STORE_PATH
   if (override !== undefined && override !== '') return override
 
-  const target = path.join(userDataDir, 'store.json')
-  carryOver(legacy, target)
+  const target = path.join(user_data_dir, 'store.json')
+  carry_over(legacy, target)
   return target
 }
 
@@ -44,7 +44,7 @@ export function resolveStorePath(userDataDir: string, legacy = legacyStorePath()
  * Explorer that has forgotten its folders, which the user can add back; the
  * experiment records were never in this file.
  */
-function carryOver(legacy: string, target: string): void {
+function carry_over(legacy: string, target: string): void {
   try {
     if (fs.existsSync(target) || !fs.existsSync(legacy)) return
     fs.mkdirSync(path.dirname(target), { recursive: true })

@@ -9,7 +9,7 @@ import { app } from 'electron'
 import { Coco } from './engine/coco'
 import { NoticeGate } from './notices'
 import { serialize } from './serial'
-import { resolveStorePath } from './storePath'
+import { resolve_store_path } from './store_path'
 
 /**
  * The engine. Constructed here, at import: `store.json` is read exactly once.
@@ -19,10 +19,10 @@ import { resolveStorePath } from './storePath'
  * later. Where the store lives is this side's decision, not the engine's: the
  * engine takes a path and knows nothing about the machine it is on.
  */
-export const engine = new Coco(resolveStorePath(app.getPath('userData')))
+export const engine = new Coco(resolve_store_path(app.getPath('userData')))
 
 /** Every engine operation takes its turn; see `serial.ts` for why. */
-export const onEngine = serialize()
+export const on_engine = serialize()
 
 /** What the user hears about a refresh, and how often; see `notices.ts`. */
 export const notices = new NoticeGate()

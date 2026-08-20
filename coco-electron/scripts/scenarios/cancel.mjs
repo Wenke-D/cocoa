@@ -1,8 +1,8 @@
 // Start a mock run, cancel it, and watch the cluster confirm — the flow the
 // cancel modal exists for (specification §16).
 
-export async function run({ page, shot, log, waitText }) {
-  await waitText('solver-gpu', 20_000)
+export async function run({ page, shot, log, wait_text }) {
+  await wait_text('solver-gpu', 20_000)
   await shot('library')
 
   await page.locator('aside').getByText('solver-gpu').click()
@@ -21,7 +21,7 @@ export async function run({ page, shot, log, waitText }) {
   // the run to actually reach the cluster: until the launch script is
   // harvested there is no submission to cancel, and the engine says so.
   await page.locator('button.cancel').waitFor({ timeout: 15_000 })
-  await waitText('Running', 20_000)
+  await wait_text('Running', 20_000)
   const status = await page.locator('header').innerText()
   log('run detail header:', status.replace(/\n/g, ' | '))
   await shot('run-detail')
@@ -54,12 +54,12 @@ export async function run({ page, shot, log, waitText }) {
   // The modal closes only when the backend answers, and the run must read
   // Cancelling — never Cancelled before the cluster confirms it (§16.3).
   await page.locator('dialog').waitFor({ state: 'detached', timeout: 15_000 })
-  await waitText('Cancelling', 10_000)
+  await wait_text('Cancelling', 10_000)
   log('after confirm:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
   await shot('cancelling')
 
   // The mock poll confirms the cancellation on its next pass.
-  await waitText('Cancelled', 20_000)
+  await wait_text('Cancelled', 20_000)
   log('after poll:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
   await shot('cancelled')
 }

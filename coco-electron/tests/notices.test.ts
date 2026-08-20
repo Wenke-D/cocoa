@@ -4,46 +4,46 @@
 
 import { describe, expect, it } from 'vitest'
 import { EngineError } from '../src/main/engine/errors'
-import { NoticeGate, refreshSummary } from '../src/main/notices'
+import { NoticeGate, refresh_summary } from '../src/main/notices'
 
 interface Errors {
-  launchErrors: EngineError[]
-  pollErrors: EngineError[]
-  reportErrors: EngineError[]
+  launch_errors: EngineError[]
+  poll_errors: EngineError[]
+  report_errors: EngineError[]
 }
 
 function report(errors: Partial<Errors> = {}): Errors {
-  return { launchErrors: [], pollErrors: [], reportErrors: [], ...errors }
+  return { launch_errors: [], poll_errors: [], report_errors: [], ...errors }
 }
 
 function failure(message: string): EngineError {
   return EngineError.validation(message)
 }
 
-describe('refreshSummary', () => {
+describe('refresh_summary', () => {
   it('says nothing about a clean pass', () => {
-    expect(refreshSummary(report())).toBeNull()
+    expect(refresh_summary(report())).toBeNull()
   })
 
   it('gives one error in full', () => {
-    expect(refreshSummary(report({ pollErrors: [failure('poll script failed')] }))).toBe(
+    expect(refresh_summary(report({ poll_errors: [failure('poll script failed')] }))).toBe(
       'poll script failed'
     )
   })
 
   it('gives the first error and counts the rest', () => {
-    const summary = refreshSummary(
+    const summary = refresh_summary(
       report({
-        pollErrors: [failure('poll script failed'), failure('another one')],
-        reportErrors: [failure('and a third')]
+        poll_errors: [failure('poll script failed'), failure('another one')],
+        report_errors: [failure('and a third')]
       })
     )
     expect(summary).toBe('poll script failed (and 2 more)')
   })
 
   it('reads every source of failure, not just polls', () => {
-    expect(refreshSummary(report({ launchErrors: [failure('launch died')] }))).toBe('launch died')
-    expect(refreshSummary(report({ reportErrors: [failure('report died')] }))).toBe('report died')
+    expect(refresh_summary(report({ launch_errors: [failure('launch died')] }))).toBe('launch died')
+    expect(refresh_summary(report({ report_errors: [failure('report died')] }))).toBe('report died')
   })
 })
 

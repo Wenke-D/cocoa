@@ -7,8 +7,8 @@ export const seed = ['jobs/solver-gpu']
 import fs from 'node:fs'
 import path from 'node:path'
 
-export async function run({ page, shot, log, waitText, library }) {
-  await waitText('solver-gpu', 20_000)
+export async function run({ page, shot, log, wait_text, library }) {
+  await wait_text('solver-gpu', 20_000)
 
   // Start a run first, so the modal has to say what happens to it.
   await page.locator('aside').getByText('solver-gpu').click()
@@ -47,10 +47,10 @@ export async function run({ page, shot, log, waitText, library }) {
   await page.getByRole('menuitem', { name: 'Remove from Explorer' }).click()
   await page.locator('dialog button.primary').click({ timeout: 10_000 })
   await page.locator('dialog').waitFor({ state: 'detached', timeout: 15_000 })
-  await waitText('No jobs or benches have been added', 10_000)
+  await wait_text('No jobs or benches have been added', 10_000)
   log('after remove:', (await page.locator('aside').innerText()).replace(/\n/g, ' | '))
   // The confirmation lands with the answer, a moment after the events do.
-  await waitText('Removed from the Explorer', 10_000)
+  await wait_text('Removed from the Explorer', 10_000)
   log('notice:', await page.locator('.notice').innerText())
   await shot('removed')
 

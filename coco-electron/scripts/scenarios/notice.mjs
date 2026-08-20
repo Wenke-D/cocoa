@@ -12,14 +12,14 @@ sys.stderr.write("qstat: command not found\\n")
 sys.exit(1)
 `
 
-export async function run({ page, shot, log, waitText, library }) {
+export async function run({ page, shot, log, wait_text, library }) {
   const poll = path.join(library, 'jobs/solver-gpu/poll.py')
   const healthy = fs.readFileSync(poll)
 
   const notice = page.locator('.notice')
-  const errorNotice = page.locator('.notice.error')
+  const error_notice = page.locator('.notice.error')
 
-  await waitText('solver-gpu', 20_000)
+  await wait_text('solver-gpu', 20_000)
   await page.locator('aside').getByText('solver-gpu').click()
   await page.locator('button.start').click()
   await page.locator('form').waitFor({ timeout: 10_000 })
@@ -30,14 +30,14 @@ export async function run({ page, shot, log, waitText, library }) {
   // The poll can only fail once there is something to poll: a run whose
   // launch has been harvested, so the engine has a submission id to ask about.
   await page.locator('button.cancel').waitFor({ timeout: 15_000 })
-  await waitText('Running', 20_000)
+  await wait_text('Running', 20_000)
   await shot('running')
 
   log('breaking the poll script')
   fs.writeFileSync(poll, BROKEN_POLL)
 
-  await errorNotice.waitFor({ timeout: 15_000 })
-  const text = (await errorNotice.innerText()).replace(/\n/g, ' | ')
+  await error_notice.waitFor({ timeout: 15_000 })
+  const text = (await error_notice.innerText()).replace(/\n/g, ' | ')
   log('error notice:', text)
   if (!text.includes('poll.py')) {
     throw new Error(`the notice does not name the script that failed: ${text}`)
@@ -47,7 +47,7 @@ export async function run({ page, shot, log, waitText, library }) {
   // A failure does not fade: it is still there long after the four seconds an
   // ordinary message gets.
   await page.waitForTimeout(6_000)
-  if (!(await errorNotice.isVisible())) {
+  if (!(await error_notice.isVisible())) {
     throw new Error('the error notice faded; a failure must wait to be read')
   }
 
@@ -71,11 +71,11 @@ export async function run({ page, shot, log, waitText, library }) {
   // The status bar's refresh always answers — a button that can do nothing
   // visible is a button you cannot tell is working.
   await page.locator('button.refresh').click()
-  await waitText('Refreshed.', 10_000)
+  await wait_text('Refreshed.', 10_000)
   log('manual refresh:', (await notice.innerText()).trim())
   await shot('refreshed')
 
   // And the run the broken poll had left Unknown finds its way home.
-  await waitText('Succeeded', 30_000)
+  await wait_text('Succeeded', 30_000)
   await shot('succeeded')
 }

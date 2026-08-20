@@ -10,16 +10,16 @@
 <script lang="ts">
   import type { ReportFormat } from '@shared/world'
   import type { Crumb } from '@shared/ui'
-  import { app, contextEntityId, entityOf, notify, reportOwnerId } from '../state.svelte'
+  import { app, context_entity_id, entity_of, notify, report_owner_id } from '../state.svelte'
   import type { ReportContext } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
 
-  let { context, runId }: { context: ReportContext; runId: string } = $props()
+  let { context, run_id }: { context: ReportContext; run_id: string } = $props()
 
-  const entityId = $derived(contextEntityId(context))
-  const entity = $derived(entityOf(entityId))
+  const entity_id = $derived(context_entity_id(context))
+  const entity = $derived(entity_of(entity_id))
   /** The folder the file is in, which for a dispatched run is the job's. */
-  const ownerId = $derived(reportOwnerId(context, runId))
+  const owner_id = $derived(report_owner_id(context, run_id))
 
   /**
    * The trail a report is read under is the trail of the page it was opened
@@ -28,31 +28,31 @@
    */
   const crumbs = $derived.by<Crumb[]>(() => {
     const trail: Crumb[] = [
-      { label: entity?.name ?? '(removed)', route: { page: 'entity', entityId } }
+      { label: entity?.name ?? '(removed)', route: { page: 'entity', entity_id } }
     ]
-    if (context.kind === 'benchChild') {
+    if (context.kind === 'bench_child') {
       trail.push({
-        label: context.benchRunId,
-        route: { page: 'benchRun', benchId: context.benchId, runId: context.benchRunId },
+        label: context.bench_run_id,
+        route: { page: 'bench_run', bench_id: context.bench_id, run_id: context.bench_run_id },
         mono: true
       })
       trail.push({
-        label: runId,
+        label: run_id,
         route: {
-          page: 'benchChild',
-          benchId: context.benchId,
-          benchRunId: context.benchRunId,
-          runId
+          page: 'bench_child',
+          bench_id: context.bench_id,
+          bench_run_id: context.bench_run_id,
+          run_id
         },
         mono: true
       })
     } else {
       trail.push({
-        label: runId,
+        label: run_id,
         route:
-          context.kind === 'jobRun'
-            ? { page: 'jobRun', jobId: context.jobId, runId }
-            : { page: 'benchRun', benchId: context.benchId, runId },
+          context.kind === 'job_run'
+            ? { page: 'job_run', job_id: context.job_id, run_id }
+            : { page: 'bench_run', bench_id: context.bench_id, run_id },
         mono: true
       })
     }
@@ -65,14 +65,14 @@
   let format = $state<ReportFormat>('PlainText')
   let text = $state('')
 
-  let showSource = $state(false)
+  let show_source = $state(false)
   let query = $state('')
   let current = $state(0)
 
   // Reading is by run, and a run's report does not change under the viewer:
   // it is read once, when the address is opened.
   $effect(() => {
-    const target = { entityId: ownerId, runId }
+    const target = { entity_id: owner_id, run_id }
     loading = true
     void window.coco.report(target).then((result) => {
       loading = false
@@ -110,7 +110,7 @@
 
   /** Which lines to split for highlighting — the rest render untouched, so a
    * long report only pays for the lines that actually matched. */
-  const matchedLines = $derived(new Set(matches.map((match) => match.line)))
+  const matched_lines = $derived(new Set(matches.map((match) => match.line)))
 
   $effect(() => {
     if (current >= matches.length) current = 0
@@ -147,23 +147,23 @@
     notify('Report copied.')
   }
 
-  const showRendered = $derived(format === 'Html' && !showSource)
+  const show_rendered = $derived(format === 'Html' && !show_source)
 </script>
 
 <Breadcrumbs {crumbs} />
 
 <header>
-  <h1>Report <span class="mono run">{runId}</span></h1>
+  <h1>Report <span class="mono run">{run_id}</span></h1>
   <span class="format">{format === 'Html' ? 'HTML' : 'Plain text'}</span>
   <div class="tools">
     {#if format === 'Html'}
-      <button class="secondary" onclick={() => (showSource = !showSource)}>
-        {showSource ? 'Rendered' : 'Source'}
+      <button class="secondary" onclick={() => (show_source = !show_source)}>
+        {show_source ? 'Rendered' : 'Source'}
       </button>
     {/if}
-    {#if !showRendered}
+    {#if !show_rendered}
       <label class="toggle">
-        <input type="checkbox" bind:checked={app.reportWrap} />
+        <input type="checkbox" bind:checked={app.report_wrap} />
         Wrap lines
       </label>
     {/if}
@@ -171,7 +171,7 @@
   </div>
 </header>
 
-{#if !showRendered && error === null && !loading}
+{#if !show_rendered && error === null && !loading}
   <div class="search">
     <input type="search" placeholder="Search" bind:value={query} />
     <span class="count">
@@ -194,7 +194,7 @@
   <p class="none">Reading the report…</p>
 {:else if error !== null}
   <p class="error">{error}</p>
-{:else if showRendered}
+{:else if show_rendered}
   <!--
     The report is written by an experiment script and is not trusted. The
     sandbox carries `allow-scripts` so charting reports work, and deliberately
@@ -203,12 +203,12 @@
     this page. `nodeIntegrationInSubFrames` stays off, so no preload runs here
     and `window.coco` is unreachable from a report.
   -->
-  <iframe class="rendered" title="Report {runId}" sandbox="allow-scripts" srcdoc={text}></iframe>
+  <iframe class="rendered" title="Report {run_id}" sandbox="allow-scripts" srcdoc={text}></iframe>
 {:else}
-  <pre class="body" class:wrap={app.reportWrap}>{#each lines as line, index (index)}<span
+  <pre class="body" class:wrap={app.report_wrap}>{#each lines as line, index (index)}<span
         class="line"
         data-line={index}
-        >{#if matchedLines.has(index)}{#each pieces(line) as piece, part (part)}{#if piece.at < 0}{piece.text}{:else}<mark
+        >{#if matched_lines.has(index)}{#each pieces(line) as piece, part (part)}{#if piece.at < 0}{piece.text}{:else}<mark
                 class:current={matches[current]?.line === index &&
                   matches[current]?.at === piece.at}>{piece.text}</mark
               >{/if}{/each}{:else}{line}{/if}</span

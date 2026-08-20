@@ -25,14 +25,14 @@ const created: string[] = []
  * `/private/var`, and the engine keys everything by the canonical path it
  * gets from `register`.
  */
-export function tempDir(): string {
+export function temp_dir(): string {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'coco-test-')))
   created.push(dir)
   return dir
 }
 
-/** Removes every directory `tempDir` handed out. For `afterEach`. */
-export function cleanupTempDirs(): void {
+/** Removes every directory `temp_dir` handed out. For `afterEach`. */
+export function cleanup_temp_dirs(): void {
   while (created.length > 0) {
     fs.rmSync(created.pop() as string, { recursive: true, force: true })
   }
@@ -42,7 +42,7 @@ export function write(folder: string, name: string, contents: string): void {
   fs.writeFileSync(path.join(folder, name), contents)
 }
 
-export function writeScript(folder: string, name: string, body: string): void {
+export function write_script(folder: string, name: string, body: string): void {
   const file = path.join(folder, name)
   fs.writeFileSync(file, `#!/bin/sh\n${body}`)
   fs.chmodSync(file, 0o755)
@@ -54,7 +54,7 @@ export function writeScript(folder: string, name: string, body: string): void {
  * arrive seconds apart from the engine's own writes; a test writes in the same
  * millisecond, which would otherwise be indistinguishable from "unchanged".
  */
-export function handEdit(file: string, contents: string): void {
+export function hand_edit(file: string, contents: string): void {
   fs.writeFileSync(file, contents)
   const later = new Date(Date.now() + 2_000)
   fs.utimesSync(file, later, later)
@@ -71,32 +71,32 @@ export function engine(dir: string, config?: Config): Coco {
  * would collect them one by one. Tests assert on the settled record.
  */
 export async function settle(coco: Coco): Promise<string[]> {
-  const errors = await coco.settleLaunches()
+  const errors = await coco.settle_launches()
   return errors.map((error) => error.message)
 }
 
-export function runDir(folder: string, runId: number): string {
-  return path.join(folder, 'runs', String(runId))
+export function run_dir(folder: string, run_id: number): string {
+  return path.join(folder, 'runs', String(run_id))
 }
 
-export function recordPath(folder: string, runId: number): string {
-  return path.join(runDir(folder, runId), 'run.json')
+export function record_path(folder: string, run_id: number): string {
+  return path.join(run_dir(folder, run_id), 'run.json')
 }
 
-export function reportPath(folder: string, runId: number): string {
-  return path.join(folder, 'report', `${runId}.txt`)
+export function report_path(folder: string, run_id: number): string {
+  return path.join(folder, 'report', `${run_id}.txt`)
 }
 
 export function exists(...parts: string[]): boolean {
   return fs.existsSync(path.join(...parts))
 }
 
-export function isFile(...parts: string[]): boolean {
+export function is_file(...parts: string[]): boolean {
   const file = path.join(...parts)
   return fs.existsSync(file) && fs.statSync(file).isFile()
 }
 
-export function readText(...parts: string[]): string {
+export function read_text(...parts: string[]): string {
   return fs.readFileSync(path.join(...parts), 'utf8')
 }
 
@@ -105,29 +105,29 @@ export function readText(...parts: string[]): string {
  * `name`. The scripts are real files in the repository; see the fixture
  * README for the state files that drive them.
  */
-export function jobFolder(dir: string, name: string): string {
-  return copyFixture('job', dir, name)
+export function job_folder(dir: string, name: string): string {
+  return copy_fixture('job', dir, name)
 }
 
 /**
  * A copy of the shared bench fixture, whose plan dispatches one call per
- * named job. `planLines` rewrites that plan for tests that need a bad one.
+ * named job. `plan_lines` rewrites that plan for tests that need a bad one.
  */
-export function benchFolder(dir: string, name: string, jobNames: string[]): string {
-  const folder = copyFixture('bench', dir, name)
-  planLines(
+export function bench_folder(dir: string, name: string, job_names: string[]): string {
+  const folder = copy_fixture('bench', dir, name)
+  plan_lines(
     folder,
-    jobNames.map((job) => `{"job": "${job}", "params": {"size": "256", "gpu": "0"}}`)
+    job_names.map((job) => `{"job": "${job}", "params": {"size": "256", "gpu": "0"}}`)
   )
   return folder
 }
 
 /** The plan a bench fixture will produce, one call per line. */
-export function planLines(folder: string, lines: string[]): void {
+export function plan_lines(folder: string, lines: string[]): void {
   fs.writeFileSync(path.join(folder, 'plan-lines'), lines.join('\n') + '\n')
 }
 
-function copyFixture(fixture: 'job' | 'bench', dir: string, name: string): string {
+function copy_fixture(fixture: 'job' | 'bench', dir: string, name: string): string {
   const folder = path.join(dir, name)
   fs.cpSync(path.join(FIXTURES, fixture), folder, { recursive: true })
   const manifest = path.join(folder, 'coco.toml')

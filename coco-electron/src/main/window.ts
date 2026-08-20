@@ -15,8 +15,8 @@ let window: Maybe<BrowserWindow> = null
 
 /** What the window wants told when its geometry moves, and when it closes. */
 export interface WindowHooks {
-  onGeometryChanged: () => void
-  onClosing: () => void
+  on_geometry_changed: () => void
+  on_closing: () => void
 }
 
 /**
@@ -30,7 +30,7 @@ export interface WindowHooks {
  */
 const HIDDEN = process.env.COCO_HIDE_WINDOW === '1'
 
-export function createWindow(remembered: Maybe<WindowBounds>, hooks: WindowHooks): void {
+export function create_window(remembered: Maybe<WindowBounds>, hooks: WindowHooks): void {
   window = new BrowserWindow({
     show: !HIDDEN,
     width: remembered?.width ?? WINDOW_DEFAULT.width,
@@ -52,17 +52,17 @@ export function createWindow(remembered: Maybe<WindowBounds>, hooks: WindowHooks
 
   // Geometry is remembered as it changes rather than only on close: on macOS
   // quitting with the window open never fires a close at all.
-  window.on('resize', hooks.onGeometryChanged)
-  window.on('move', hooks.onGeometryChanged)
-  window.on('close', hooks.onClosing)
+  window.on('resize', hooks.on_geometry_changed)
+  window.on('move', hooks.on_geometry_changed)
+  window.on('close', hooks.on_closing)
 
   window.on('closed', () => {
     window = null
   })
 
-  const devServerUrl = process.env['ELECTRON_RENDERER_URL']
-  if (devServerUrl !== undefined && devServerUrl !== '') {
-    void window.loadURL(devServerUrl)
+  const dev_server_url = process.env['ELECTRON_RENDERER_URL']
+  if (dev_server_url !== undefined && dev_server_url !== '') {
+    void window.loadURL(dev_server_url)
   } else {
     void window.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -80,7 +80,7 @@ export function send(events: CocoEvent[]): void {
  * different answer: a window that is not on screen is not focused, and the
  * command went nowhere at all.
  */
-export function sendCommand(command: string): void {
+export function send_command(command: string): void {
   window?.webContents.send('coco:command', command)
 }
 
@@ -90,7 +90,7 @@ export function sendCommand(command: string): void {
  * A maximised or full-screen window would otherwise be recorded as the size of
  * the screen, and open that way for ever after.
  */
-export function windowBounds(): Maybe<WindowBounds> {
+export function window_bounds(): Maybe<WindowBounds> {
   if (window === null || window.isDestroyed() || window.isMinimized()) return null
   if (window.isMaximized() || window.isFullScreen()) return null
   const bounds = window.getBounds()
@@ -98,6 +98,6 @@ export function windowBounds(): Maybe<WindowBounds> {
 }
 
 /** For the macOS `activate` convention: reopen only when none is left. */
-export function anyWindowOpen(): boolean {
+export function any_window_open(): boolean {
   return BrowserWindow.getAllWindows().length > 0
 }

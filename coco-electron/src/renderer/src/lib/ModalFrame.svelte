@@ -31,12 +31,12 @@
   })
 
   /** The backdrop is the dialog element itself; a click on it dismisses. */
-  function onBackdrop(event: MouseEvent): void {
+  function on_backdrop(event: MouseEvent): void {
     if (event.target === dialog && !busy) onclose()
   }
 </script>
 
-<dialog bind:this={dialog} {onclose} onclick={onBackdrop}>
+<dialog bind:this={dialog} {onclose} onclick={on_backdrop}>
   <h2>{title}</h2>
   {@render body()}
   {#if error !== null}

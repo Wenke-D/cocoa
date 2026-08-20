@@ -9,16 +9,16 @@
 // macOS, because those roles are what wire the clipboard up.
 
 import { Menu, app } from 'electron'
-import { sendCommand } from './window'
+import { send_command } from './window'
 
 /** What a menu item asks the window to do. Mirrors what the buttons call. */
-export type MenuCommand = 'addFolder' | 'refresh'
+export type MenuCommand = 'add_folder' | 'refresh'
 
 function tell(command: MenuCommand): void {
-  sendCommand(command)
+  send_command(command)
 }
 
-export function buildMenu(): void {
+export function build_menu(): void {
   const mac = process.platform === 'darwin'
 
   const template: Electron.MenuItemConstructorOptions[] = [
@@ -50,7 +50,7 @@ export function buildMenu(): void {
           id: 'add-folder',
           label: 'Add Experiment Folder…',
           accelerator: 'CmdOrCtrl+O',
-          click: () => tell('addFolder')
+          click: () => tell('add_folder')
         },
         { type: 'separator' },
         mac ? { role: 'close' } : { role: 'quit' }

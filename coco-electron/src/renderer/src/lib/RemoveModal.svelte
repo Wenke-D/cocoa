@@ -4,17 +4,17 @@
   survives — because what makes this safe is that nothing on disk is touched.
 -->
 <script lang="ts">
-  import { benchRun, isActive, jobRun } from '@shared/world'
-  import { app, closeOverlay, confirmRemove, entityOf } from '../state.svelte'
+  import { bench_run, is_active, job_run } from '@shared/world'
+  import { app, close_overlay, confirm_remove, entity_of } from '../state.svelte'
   import type { Overlay } from '../state.svelte'
   import ModalFrame from './ModalFrame.svelte'
 
-  let { overlay }: { overlay: Overlay & { kind: 'confirmRemove' } } = $props()
+  let { overlay }: { overlay: Overlay & { kind: 'confirm_remove' } } = $props()
 
-  const entity = $derived(entityOf(overlay.entityId))
+  const entity = $derived(entity_of(overlay.entity_id))
 
   /** Runs coco would stop watching. They keep running on the cluster. */
-  const activeRuns = $derived.by(() => {
+  const active_runs = $derived.by(() => {
     if (entity === undefined) return 0
     const world = app.world
     const ids =
@@ -23,8 +23,8 @@
         : (world.runs_by_bench[entity.id] ?? [])
     return ids.filter((id) => {
       const run =
-        entity.kind === 'Job' ? jobRun(world, entity.id, id) : benchRun(world, entity.id, id)
-      return run !== undefined && isActive(run.status)
+        entity.kind === 'Job' ? job_run(world, entity.id, id) : bench_run(world, entity.id, id)
+      return run !== undefined && is_active(run.status)
     }).length
   })
 </script>
@@ -34,7 +34,7 @@
     title="Remove this experiment from the Explorer?"
     error={overlay.error}
     busy={overlay.busy}
-    onclose={closeOverlay}
+    onclose={close_overlay}
   >
     {#snippet body()}
       <p class="subject">{entity.name}</p>
@@ -44,17 +44,17 @@
         The folder is left exactly as it is — its manifest, its runs and its reports all stay on
         disk. Adding it again brings the history back.
       </p>
-      {#if activeRuns > 0}
+      {#if active_runs > 0}
         <p class="gap"></p>
         <p class="warning">
-          {activeRuns === 1 ? '1 run is' : `${activeRuns} runs are`} still active. They keep running;
+          {active_runs === 1 ? '1 run is' : `${active_runs} runs are`} still active. They keep running;
           coco just stops watching them.
         </p>
       {/if}
     {/snippet}
     {#snippet actions()}
-      <button class="secondary" onclick={closeOverlay} disabled={overlay.busy}>Keep</button>
-      <button class="primary" onclick={confirmRemove} disabled={overlay.busy}>
+      <button class="secondary" onclick={close_overlay} disabled={overlay.busy}>Keep</button>
+      <button class="primary" onclick={confirm_remove} disabled={overlay.busy}>
         {overlay.busy ? 'Removing…' : 'Remove from Explorer'}
       </button>
     {/snippet}

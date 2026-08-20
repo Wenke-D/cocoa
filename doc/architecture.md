@@ -44,9 +44,9 @@ Commit `package-lock.json`.
 renders what the main process sends and asks for operations by name (§26). Node
 integration stays off and context isolation stays on: the page's entire
 vocabulary is what `src/preload/index.ts` puts on `window.coco` through
-`contextBridge`: eight operations — `bootstrap`, `startRun`, `cancel`,
-`addFolder`, `removeFolder`, `report`, `refreshNow`, `saveUi` — and two event
-subscriptions, `onCommand` and `onEvents`. Nothing else crosses.
+`contextBridge`: eight operations — `bootstrap`, `start_run`, `cancel`,
+`add_folder`, `remove_folder`, `report`, `refresh_now`, `save_ui` — and two
+event subscriptions, `on_command` and `on_events`. Nothing else crosses.
 
 **Templates are Jinja on both sides.** The engine renders an experiment's
 templates with nunjucks; the egui implementation used minijinja. Both are
@@ -54,6 +54,24 @@ Jinja-family with the same delimiters and the same `{{ name }}` substitution, so
 one experiment folder renders identically under either, which is what makes the
 folders interchangeable. Template analysis is exact-match in both directions and
 imports are rejected (§15.2).
+
+**Names are `snake_case`, and the case tells you whose they are.** Everything
+coco declares is `snake_case` — functions, methods, class fields, local
+variables, parameters, the fields of `Route` and `UiState`, the preload
+bridge's members, and the IPC channel names. What stays `camelCase` is what
+belongs to somebody else: `fs.statSync`, `app.getPath`, Electron's
+`webPreferences`, Playwright's `executablePath`, vitest's `testTimeout`. A
+`camelCase` name in this codebase is a name from outside it.
+
+The on-disk record format is not part of this rule, though it agrees with it.
+`job_id`, `runs_by_job`, `last_successful_query` were `snake_case` before any
+of it, because they are what serde writes and what `doc/convention.md`
+specifies. They are fixed by the convention; the rest is fixed by this
+paragraph, and the two must not be confused when one of them changes.
+
+Component files stay `PascalCase.svelte` and `state.svelte.ts` keeps its
+suffix: those are the frameworks' own conventions, and the rule above is about
+names we choose.
 
 **No async framework beyond what Node gives.** The engine's own operations are
 synchronous and deterministic; the asynchrony in the application is the refresh
@@ -196,7 +214,7 @@ mutate domain state, and there must be no path by which it could.
 start(engine, name, parameters, trigger): StartResult
 cancel(engine, target): CancelResult
 addFolder(engine, picked): AddFolderResult
-removeFolder(engine, entityId): RemoveFolderResult
+remove_folder(engine, entity_id): RemoveFolderResult
 report(engine, target): ReportResult
 refresh(engine): RefreshReport
 ```
@@ -356,7 +374,7 @@ cause a request.
 ## 32. Persistence
 
 The window's own arrangement lives in `ui-state.json` in Electron's `userData`
-directory, written by `src/main/uiState.ts`. It is a **second, smaller file**
+directory, written by `src/main/ui_state_file.ts`. It is a **second, smaller file**
 next to the engine's `store.json`: the store is the *experiments'* memory
 (convention §5) and has no business holding which page was open.
 
@@ -435,7 +453,7 @@ coco-electron/
 │   │   ├── serial.ts              #   one turn at a time (§26.2)
 │   │   ├── sync.ts                #   diffWorlds — the backend judges change (§26.3)
 │   │   ├── notices.ts             #   announce once, then hold still (§26.4)
-│   │   ├── uiState.ts             #   ui-state.json (§32)
+│   │   ├── ui_state_file.ts             #   ui-state.json (§32)
 │   │   ├── menu.ts                #   application menu, routed through the window
 │   │   └── agent.ts               #   the unix socket (§43)
 │   │
@@ -499,9 +517,9 @@ export const app = $state({
   overlay: null as Overlay | null,  // never persisted (§9)
   menu: null as ContextMenu | null,
   notice: null as Notice | null,
-  sidebarWidth: ...,                // arrangement, persisted (§32)
-  reportWrap: ...,
-  nowMs: Date.now()                 // the clock durations tick off
+  sidebar_width: ...,                // arrangement, persisted (§32)
+  report_wrap: ...,
+  now_ms: Date.now()                 // the clock durations tick off
 })
 ```
 
@@ -536,7 +554,7 @@ Avoid:
 - Putting report text in the world (§10.5). Reports are fetched when opened, and
   refused above `MAX_REPORT_BYTES` rather than sent whole.
 - Re-sorting large history arrays on every render where a derived value would do.
-- A timer per run. One clock updates `nowMs`; durations are computed from it.
+- A timer per run. One clock updates `now_ms`; durations are computed from it.
 - Blocking the main process. It answers IPC, serves the agent socket, and runs
   the tick; a synchronous read of a large file there stalls all three.
 - Re-bootstrapping to recover from a missed event. If events can be missed, the

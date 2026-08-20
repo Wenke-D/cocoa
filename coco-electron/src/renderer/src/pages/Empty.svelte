@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { addFolder, app } from '../state.svelte'
+  import { add_folder, app } from '../state.svelte'
 </script>
 
 <div class="empty">
@@ -10,7 +10,7 @@
     <!-- §12: the empty page must not look like an error. -->
     <h2>No jobs or benches have been added.</h2>
     <p>Add a folder containing a valid experiment manifest to begin.</p>
-    <button class="primary" onclick={addFolder}>Add Folder</button>
+    <button class="primary" onclick={add_folder}>Add Folder</button>
   {:else}
     <h2>coco</h2>
     <p>Select an experiment in the Explorer.</p>

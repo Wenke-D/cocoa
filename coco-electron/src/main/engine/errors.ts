@@ -25,7 +25,7 @@ export class EngineError extends Error {
   }
 
   static io(path: string, cause: unknown): EngineError {
-    return new EngineError('io', `${path}: ${describeCause(cause)}`)
+    return new EngineError('io', `${path}: ${describe_cause(cause)}`)
   }
 
   static store(path: string, message: string): EngineError {
@@ -43,10 +43,10 @@ export class EngineError extends Error {
   static invocation(
     script: string,
     exit: number | null,
-    timedOut: boolean,
+    timed_out: boolean,
     output: string
   ): EngineError {
-    const cause = timedOut ? 'timed out' : exit !== null ? `exited ${exit}` : 'was killed'
+    const cause = timed_out ? 'timed out' : exit !== null ? `exited ${exit}` : 'was killed'
     const trimmed = output.trimEnd()
     const message = trimmed === '' ? `\`${script}\` ${cause}` : `\`${script}\` ${cause}: ${trimmed}`
     return new EngineError('invocation', message)
@@ -56,19 +56,19 @@ export class EngineError extends Error {
     return new EngineError('validation', message)
   }
 
-  static notFound(what: string): EngineError {
+  static not_found(what: string): EngineError {
     return new EngineError('not-found', `not found: ${what}`)
   }
 
-  static alreadyRegistered(path: string): EngineError {
+  static already_registered(path: string): EngineError {
     return new EngineError('already-registered', `already registered: ${path}`)
   }
 
-  static nameCollision(name: string): EngineError {
+  static name_collision(name: string): EngineError {
     return new EngineError('name-collision', `an entity named \`${name}\` is already registered`)
   }
 
-  static invalidPlan(calls: number, problems: string[]): EngineError {
+  static invalid_plan(calls: number, problems: string[]): EngineError {
     const noun = calls === 1 ? 'call' : 'calls'
     const listing = problems.map((problem) => `  ${problem}`).join('\n')
     return new EngineError(
@@ -79,13 +79,13 @@ export class EngineError extends Error {
   }
 }
 
-function describeCause(cause: unknown): string {
+function describe_cause(cause: unknown): string {
   if (cause instanceof Error) return cause.message
   return String(cause)
 }
 
 /** Coerces an unknown thrown value into an EngineError, as an io failure. */
-export function asEngineError(path: string, cause: unknown): EngineError {
+export function as_engine_error(path: string, cause: unknown): EngineError {
   if (cause instanceof EngineError) return cause
   return EngineError.io(path, cause)
 }

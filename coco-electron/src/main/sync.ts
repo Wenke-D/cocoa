@@ -20,22 +20,22 @@ function identity(entry: object): string {
  * entry-level over-push, never field diffs (the v1 protocol — see the sync
  * design note).
  */
-export function diffWorlds(previous: World, next: World): CocoEvent[] {
+export function diff_worlds(previous: World, next: World): CocoEvent[] {
   const events: CocoEvent[] = []
 
-  const previousEntities = new Map(previous.entities.map((entity) => [entity.id, entity]))
+  const previous_entities = new Map(previous.entities.map((entity) => [entity.id, entity]))
   for (const entity of next.entities) {
-    const old = previousEntities.get(entity.id)
+    const old = previous_entities.get(entity.id)
     if (old === undefined || JSON.stringify(old) !== JSON.stringify(entity)) {
       events.push({ kind: 'entity-upserted', entity })
     }
-    previousEntities.delete(entity.id)
+    previous_entities.delete(entity.id)
   }
-  for (const id of previousEntities.keys()) {
+  for (const id of previous_entities.keys()) {
     events.push({ kind: 'entity-removed', id })
   }
 
-  diffRuns(
+  diff_runs(
     previous.job_runs,
     next.job_runs,
     events,
@@ -43,10 +43,10 @@ export function diffWorlds(previous: World, next: World): CocoEvent[] {
       kind: 'job-run-upserted',
       run
     }),
-    (jobId, id) => ({ kind: 'job-run-removed', jobId, id })
+    (job_id, id) => ({ kind: 'job-run-removed', job_id, id })
   )
 
-  diffRuns(
+  diff_runs(
     previous.bench_runs,
     next.bench_runs,
     events,
@@ -54,7 +54,7 @@ export function diffWorlds(previous: World, next: World): CocoEvent[] {
       kind: 'bench-run-upserted',
       run
     }),
-    (benchId, id) => ({ kind: 'bench-run-removed', benchId, id })
+    (bench_id, id) => ({ kind: 'bench-run-removed', bench_id, id })
   )
 
   return events
@@ -66,24 +66,24 @@ export function diffWorlds(previous: World, next: World): CocoEvent[] {
  * run it had — the renderer is told about runs, not about the absence of a
  * container.
  */
-function diffRuns<T extends object>(
+function diff_runs<T extends object>(
   previous: RunsByEntity<T>,
   next: RunsByEntity<T>,
   events: CocoEvent[],
   upserted: (run: T) => CocoEvent,
-  removed: (entityId: string, runId: string) => CocoEvent
+  removed: (entity_id: string, run_id: string) => CocoEvent
 ): void {
-  for (const [entityId, runs] of Object.entries(next)) {
-    const before = previous[entityId] ?? {}
+  for (const [entity_id, runs] of Object.entries(next)) {
+    const before = previous[entity_id] ?? {}
     for (const [id, run] of Object.entries(runs)) {
       const old = before[id]
       if (old === undefined || identity(old) !== identity(run)) events.push(upserted(run))
     }
   }
-  for (const [entityId, runs] of Object.entries(previous)) {
-    const after = next[entityId] ?? {}
+  for (const [entity_id, runs] of Object.entries(previous)) {
+    const after = next[entity_id] ?? {}
     for (const id of Object.keys(runs)) {
-      if (!(id in after)) events.push(removed(entityId, id))
+      if (!(id in after)) events.push(removed(entity_id, id))
     }
   }
 }

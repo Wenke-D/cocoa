@@ -5,7 +5,7 @@
 //   npm run build
 //   npm run drive scripts/scenarios/cancel.mjs
 //
-// A scenario is a module exporting `run({ page, app, shot, log, waitText })`.
+// A scenario is a module exporting `run({ page, app, shot, log, wait_text })`.
 // The app is launched against a scratch store (COCO_STORE_PATH), never the
 // user's real one — the two cocos must not share a run-id counter.
 
@@ -35,7 +35,7 @@ const SOCKET_PATH = process.env.COCO_SOCKET_PATH ?? path.join(RUN_DIR, 'coco.soc
  * `'library-only'` for nothing registered, or an array of folder names
  * relative to the library for a scenario that wants exactly those.
  */
-function seedLibrary(seed) {
+function seed_library(seed) {
   const library = path.join(RUN_DIR, 'mock')
   fs.rmSync(library, { recursive: true, force: true })
   fs.cpSync(path.join(REPO_ROOT, 'mock'), library, { recursive: true })
@@ -85,15 +85,15 @@ const PACKAGED_BIN =
 
 const ELECTRON_BIN = PACKAGED ? PACKAGED_BIN : DEV_BIN
 
-const scenarioPath = process.argv[2]
-if (scenarioPath === undefined) {
+const scenario_path = process.argv[2]
+if (scenario_path === undefined) {
   console.error('usage: node scripts/drive.mjs <scenario.mjs>')
   process.exit(2)
 }
 
 // Loaded before the app: a scenario may say what the store should hold at
 // launch, and the engine reads it exactly once, on construction.
-const scenario = await import(pathToFileURL(path.resolve(scenarioPath)).href)
+const scenario = await import(pathToFileURL(path.resolve(scenario_path)).href)
 
 fs.mkdirSync(SHOT_DIR, { recursive: true })
 fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true })
@@ -105,7 +105,7 @@ const log = (...parts) => console.log('·', ...parts)
 if (process.env.COCO_STORE_PATH === undefined) {
   // `seed: 'library-only'` copies the library but registers nothing, for a
   // scenario that means to add folders itself.
-  const registered = seedLibrary(scenario.seed)
+  const registered = seed_library(scenario.seed)
   log('seeded', registered.length, 'registered folders in', RUN_DIR)
 }
 
@@ -176,7 +176,7 @@ async function close() {
  * Quits and starts again against the same store and the same ui-state file —
  * the only way to drive anything that is supposed to survive a launch.
  * Returns the new `{ app, page }`; the scenario's own `page` is stale after
- * this, though `shot` and `waitText` follow the new window on their own.
+ * this, though `shot` and `wait_text` follow the new window on their own.
  */
 async function relaunch() {
   log('relaunching')
@@ -186,17 +186,17 @@ async function relaunch() {
 
 await launch()
 
-let shotIndex = 0
+let shot_index = 0
 async function shot(name) {
-  shotIndex += 1
-  const file = path.join(SHOT_DIR, `${String(shotIndex).padStart(2, '0')}-${name}.png`)
+  shot_index += 1
+  const file = path.join(SHOT_DIR, `${String(shot_index).padStart(2, '0')}-${name}.png`)
   await page.screenshot({ path: file })
   log('screenshot', file)
   return file
 }
 
 /** Waits for text to appear anywhere on the page. */
-async function waitText(text, timeout = 10_000) {
+async function wait_text(text, timeout = 10_000) {
   await page.locator(`text=${text}`).first().waitFor({ timeout })
 }
 
@@ -206,11 +206,11 @@ try {
     page,
     shot,
     log,
-    waitText,
+    wait_text,
     relaunch,
     library: path.join(RUN_DIR, 'mock'),
-    uiStatePath: UI_STATE_PATH,
-    socketPath: SOCKET_PATH
+    ui_state_path: UI_STATE_PATH,
+    socket_path: SOCKET_PATH
   })
   console.log('\nscenario finished')
 } catch (error) {
