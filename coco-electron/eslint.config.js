@@ -35,9 +35,11 @@ export default ts.config(
   {
     languageOptions: {
       parserOptions: {
-        // Both, explicitly. There is no root `tsconfig.json` to discover —
-        // main/preload/tests are one config and the renderer is another,
-        // because only one of them lives in a window.
+        // Both, explicitly. The root `tsconfig.json` is solution-style — it
+        // carries references so the editor can find a project for an open
+        // file, and no compiler options of its own — so there is still nothing
+        // to discover: main/preload/tests are one config and the renderer is
+        // another, because only one of them lives in a window.
         project: ['./tsconfig.node.json', './tsconfig.web.json'],
         tsconfigRootDir: import.meta.dirname,
         extraFileExtensions: ['.svelte']
