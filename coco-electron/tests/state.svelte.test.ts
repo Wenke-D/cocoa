@@ -9,7 +9,7 @@
 // `.active-dot` assertion in `scripts/scenarios/remove-folder.mjs`.
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { BenchRun, CocoEvent, Entity, JobRun } from '@shared/world'
+import type { BenchPlanStep, BenchRun, CocoEvent, Entity, JobRun } from '@shared/world'
 import { emptyWorld } from '@shared/world'
 import {
   app,
@@ -30,8 +30,7 @@ function entity(id: string, kind: 'Job' | 'Bench' = 'Job'): Entity {
     name: id,
     path: `~/exp/${id}`,
     manifest: 'Valid',
-    parameter_names: [],
-    last_used: {}
+    parameter_names: []
   }
 }
 
@@ -52,7 +51,12 @@ function jobRun(id: string, jobId: string, extra: Partial<JobRun> = {}): JobRun 
   }
 }
 
-function benchRun(id: string, benchId: string): BenchRun {
+/**
+ * `steps` is what the bench dispatched. It is not decoration: the plan is the
+ * only link from a dispatched run back to the job that ran it (§2.3.1), now
+ * that a run id means nothing without its experiment.
+ */
+function benchRun(id: string, benchId: string, steps: BenchPlanStep[] = []): BenchRun {
   return {
     id,
     bench_id: benchId,
@@ -60,7 +64,7 @@ function benchRun(id: string, benchId: string): BenchRun {
     started_at: '2026-08-19T10:00:00.000+02:00',
     ended_at: null,
     parameters: '',
-    plan: { steps: [] },
+    plan: { steps },
     status: 'Running',
     query_health: 'Healthy',
     last_successful_query: '2026-08-19T10:00:03.000+02:00',
@@ -106,14 +110,14 @@ describe('applyEvents', () => {
     send({ kind: 'job-run-upserted', run: jobRun('0', 'solver', { status: 'Succeeded' }) })
 
     expect(app.world.runs_by_job['solver']).toEqual(['0'])
-    expect(app.world.job_runs['0'].status).toBe('Succeeded')
+    expect(app.world.job_runs['solver']['0'].status).toBe('Succeeded')
   })
 
   it('drops a removed run from the index as well as the map', () => {
     send({ kind: 'job-run-upserted', run: jobRun('0', 'solver') })
-    send({ kind: 'job-run-removed', id: '0' })
+    send({ kind: 'job-run-removed', jobId: 'solver', id: '0' })
 
-    expect(app.world.job_runs['0']).toBeUndefined()
+    expect(app.world.job_runs['solver']['0']).toBeUndefined()
     expect(app.world.runs_by_job['solver']).toEqual([])
   })
 
@@ -141,7 +145,7 @@ describe('recover', () => {
     send({ kind: 'job-run-upserted', run: jobRun('0', 'solver') })
     navigate({ page: 'jobRun', jobId: 'solver', runId: '0' })
 
-    send({ kind: 'job-run-removed', id: '0' })
+    send({ kind: 'job-run-removed', jobId: 'solver', id: '0' })
     expect(app.route).toEqual({ page: 'entity', entityId: 'solver' })
     expect(app.notice?.text).toContain('no longer listed')
   })
@@ -159,7 +163,7 @@ describe('recover', () => {
     send({ kind: 'job-run-upserted', run: jobRun('0', 'solver') })
     navigate({ page: 'report', context: { kind: 'jobRun', jobId: 'solver' }, runId: '0' })
 
-    send({ kind: 'job-run-removed', id: '0' })
+    send({ kind: 'job-run-removed', jobId: 'solver', id: '0' })
     expect(app.route).toEqual({ page: 'entity', entityId: 'solver' })
   })
 
@@ -243,7 +247,10 @@ describe('a dispatched run seen through its bench', () => {
   function dispatched(): void {
     send({ kind: 'entity-upserted', entity: entity('nightly', 'Bench') })
     send({ kind: 'entity-upserted', entity: entity('solver') })
-    send({ kind: 'bench-run-upserted', run: benchRun('7', 'nightly') })
+    send({
+      kind: 'bench-run-upserted',
+      run: benchRun('7', 'nightly', [{ index: 0, job_id: 'solver', parameters: '', run_id: '8' }])
+    })
     send({ kind: 'job-run-upserted', run: jobRun('8', 'solver') })
   }
 
@@ -259,7 +266,7 @@ describe('a dispatched run seen through its bench', () => {
     dispatched()
     navigate({ page: 'benchChild', benchId: 'nightly', benchRunId: '7', runId: '8' })
 
-    send({ kind: 'job-run-removed', id: '8' })
+    send({ kind: 'job-run-removed', jobId: 'solver', id: '8' })
     expect(app.route).toEqual({ page: 'benchRun', benchId: 'nightly', runId: '7' })
     expect(app.notice?.text).toContain('dispatched run')
   })
@@ -268,7 +275,7 @@ describe('a dispatched run seen through its bench', () => {
     dispatched()
     navigate({ page: 'benchChild', benchId: 'nightly', benchRunId: '7', runId: '8' })
 
-    send({ kind: 'bench-run-removed', id: '7' })
+    send({ kind: 'bench-run-removed', benchId: 'nightly', id: '7' })
     expect(app.route).toEqual({ page: 'entity', entityId: 'nightly' })
   })
 
@@ -288,7 +295,7 @@ describe('a dispatched run seen through its bench', () => {
       runId: '8'
     })
 
-    send({ kind: 'job-run-removed', id: '8' })
+    send({ kind: 'job-run-removed', jobId: 'solver', id: '8' })
     expect(app.route).toEqual({ page: 'entity', entityId: 'nightly' })
   })
 })

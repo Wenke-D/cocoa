@@ -60,7 +60,7 @@ function seedLibrary(seed) {
     : seed === 'library-only'
       ? []
       : folders
-  fs.writeFileSync(STORE_PATH, JSON.stringify({ entities, last_args: {}, next_run_id: 0 }, null, 2))
+  fs.writeFileSync(STORE_PATH, JSON.stringify({ entities }, null, 2))
   // Whatever page a previous drive was left on is not this run's starting
   // point either.
   fs.rmSync(UI_STATE_PATH, { force: true })
@@ -115,7 +115,12 @@ const env = {
   ...process.env,
   COCO_STORE_PATH: STORE_PATH,
   COCO_UI_STATE_PATH: UI_STATE_PATH,
-  COCO_SOCKET_PATH: SOCKET_PATH
+  COCO_SOCKET_PATH: SOCKET_PATH,
+  // `DRIVE_HEADLESS=1` runs the scenario without a window on screen — for
+  // sweeping every scenario without eleven windows taking the focus in turn.
+  // Screenshots still land in `.drive/shots/`: they come over CDP, not from
+  // the compositor. Off by default, because watching it is the point.
+  ...(process.env.DRIVE_HEADLESS === '1' ? { COCO_HIDE_WINDOW: '1' } : {})
 }
 delete env.ELECTRON_RUN_AS_NODE
 

@@ -9,9 +9,9 @@
   to that job.
 -->
 <script lang="ts">
-  import { isCancellable } from '@shared/world'
+  import { benchRun, isCancellable, jobRun } from '@shared/world'
   import type { Crumb } from '@shared/ui'
-  import { app, entityOf, navigate, requestCancel } from '../state.svelte'
+  import { app, dispatchedOwner, entityOf, navigate, requestCancel } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import RunFacts from '../lib/RunFacts.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
@@ -19,10 +19,12 @@
   let { benchId, benchRunId, runId }: { benchId: string; benchRunId: string; runId: string } =
     $props()
 
-  const benchRun = $derived(app.world.bench_runs[benchRunId])
+  /** The bench *entity*, for its name; and the bench *run* this was one call of. */
   const bench = $derived(entityOf(benchId))
-  const run = $derived(app.world.job_runs[runId])
-  const step = $derived(benchRun?.plan.steps.find((candidate) => candidate.run_id === runId))
+  const parentRun = $derived(benchRun(app.world, benchId, benchRunId))
+  const jobId = $derived(dispatchedOwner(benchId, benchRunId, runId))
+  const run = $derived(jobId === undefined ? undefined : jobRun(app.world, jobId, runId))
+  const step = $derived(parentRun?.plan.steps.find((candidate) => candidate.run_id === runId))
   const job = $derived(step === undefined ? undefined : entityOf(step.job_id))
 
   /**

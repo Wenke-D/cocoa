@@ -64,7 +64,6 @@ describe('job lifecycle', () => {
     expect(record.submission_id).toBe(`sub-${runId}`)
     expect(isFile(job, 'runs', String(runId), 'job.sbatch')).toBe(true)
     expect(readText(job, 'runs', String(runId), 'job.sbatch')).toContain('--nodes=256')
-    expect(coco.lastArgs()['solver-gpu']).toHaveProperty('size', '256')
 
     write(job, 'poll-state', 'RUNNING')
     const report = await coco.pollJob(job)
@@ -181,6 +180,56 @@ describe('job lifecycle', () => {
 
     await failure(coco.startJob(job, { size: '1' }, { gpu: '0' }, 'human'))
     expect(exists(job, 'runs', '0', 'run.json')).toBe(false)
+  })
+})
+
+describe('run ids', () => {
+  // A run id is one past the highest that experiment already has, read from
+  // the records rather than from a counter. The counter this replaced could
+  // disagree with the folder, and did.
+  it('is per experiment, so two experiments both start at 0', async () => {
+    const dir = tempDir()
+    const first = jobFolder(dir, 'first')
+    const second = jobFolder(dir, 'second')
+    const coco = engine(dir)
+    coco.register(first)
+    coco.register(second)
+
+    expect(await coco.startJob(first, { size: '1' }, { gpu: '0' }, 'human')).toBe(0)
+    expect(await coco.startJob(first, { size: '1' }, { gpu: '0' }, 'human')).toBe(1)
+    expect(await coco.startJob(second, { size: '1' }, { gpu: '0' }, 'human')).toBe(0)
+    await settle(coco)
+  })
+
+  // The folder is portable (doc/coco.md): carry it to another machine and its
+  // history comes with it. A stored counter knew nothing about the runs that
+  // arrived, handed out an id one of them already had, and the start wrote
+  // over that run's record.
+  it('does not reuse an id a carried-over folder arrived with', async () => {
+    const dir = tempDir()
+    const job = jobFolder(dir, 'imported')
+    const arrived = path.join(job, 'runs', '0')
+    fs.mkdirSync(arrived, { recursive: true })
+    fs.writeFileSync(
+      path.join(arrived, 'run.json'),
+      JSON.stringify({
+        run_id: 0,
+        submission_id: 'FROM-THE-OTHER-MACHINE',
+        render: {},
+        launch: {},
+        status: 'SUCCEEDED',
+        history: [],
+        origin: { by: 'human' }
+      })
+    )
+
+    const coco = engine(dir)
+    coco.register(job)
+    expect(await coco.startJob(job, { size: '1' }, { gpu: '0' }, 'human')).toBe(1)
+    await settle(coco)
+
+    const kept = JSON.parse(readText(arrived, 'run.json')) as { submission_id: string }
+    expect(kept.submission_id).toBe('FROM-THE-OTHER-MACHINE')
   })
 })
 

@@ -36,12 +36,11 @@ describe('buildWorld', () => {
       kind: 'Job',
       name: 'solver-gpu',
       manifest: 'Valid',
-      parameter_names: ['size', 'gpu'],
-      last_used: { gpu: '0', size: '256' }
+      parameter_names: ['size', 'gpu']
     })
 
-    expect(Object.keys(world.job_runs)).toEqual(['0'])
-    expect(world.job_runs['0']).toMatchObject({
+    expect(Object.keys(world.job_runs[job])).toEqual(['0'])
+    expect(world.job_runs[job]['0']).toMatchObject({
       id: '0',
       job_id: job,
       origin: 'Human',
@@ -79,7 +78,7 @@ describe('buildWorld', () => {
     await coco.pollJob(job)
     await coco.reportRun(job, runId, 'auto')
 
-    const run = buildWorld(coco, null).job_runs[String(runId)]
+    const run = buildWorld(coco, null).job_runs[job][String(runId)]
     expect(run.status).toBe('Succeeded')
     expect(run.ended_at).not.toBeNull()
     expect(run.report).toEqual({
@@ -106,7 +105,7 @@ describe('buildWorld', () => {
     writeScript(job, 'poll.sh', "echo 'squeue: connection timed out' >&2\nexit 3\n")
     await coco.pollJob(job).catch(() => undefined)
 
-    const run = buildWorld(coco, null).job_runs[String(runId)]
+    const run = buildWorld(coco, null).job_runs[job][String(runId)]
     expect(run.status).toBe('Running')
     expect(run.query_health).toEqual({
       Unavailable: { message: expect.stringContaining('poll script failed') as string }
@@ -141,7 +140,7 @@ describe('buildWorld', () => {
     await settle(coco)
 
     const world = buildWorld(coco, null)
-    const run = world.bench_runs[String(start.runId)]
+    const run = world.bench_runs[bench][String(start.runId)]
     expect(run).toMatchObject({
       bench_id: bench,
       by: 'Human',
@@ -167,7 +166,7 @@ describe('buildWorld', () => {
 
     // The same run, two addresses (§2.3.1): a member knows the bench run and
     // the call that dispatched it.
-    expect(world.job_runs[String(start.members[1].run_id)].origin).toEqual({
+    expect(world.job_runs[job][String(start.members[1].run_id)].origin).toEqual({
       Bench: {
         name: 'sweep',
         bench_id: bench,

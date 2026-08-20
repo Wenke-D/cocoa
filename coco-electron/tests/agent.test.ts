@@ -26,8 +26,7 @@ function world(): World {
       name: 'solver-gpu',
       path: FOLDER,
       manifest: 'Valid',
-      parameter_names: ['nodes', 'gpu'],
-      last_used: { nodes: '4' }
+      parameter_names: ['nodes', 'gpu']
     },
     {
       id: BENCH_FOLDER,
@@ -35,52 +34,55 @@ function world(): World {
       name: 'nightly',
       path: BENCH_FOLDER,
       manifest: 'Valid',
-      parameter_names: ['sweep'],
-      last_used: {}
+      parameter_names: ['sweep']
     }
   ]
   base.job_runs = {
-    '0': {
-      id: '0',
-      job_id: FOLDER,
-      origin: 'Human',
-      started_at: '2026-08-20T10:00:00.000+02:00',
-      ended_at: null,
-      parameters: '--nodes 4',
-      status: 'Running',
-      query_health: 'Healthy',
-      last_successful_query: '2026-08-20T10:00:03.000+02:00',
-      report: 'Missing',
-      error: null
-    },
-    '1': {
-      id: '1',
-      job_id: FOLDER,
-      origin: 'Agent',
-      started_at: '2026-08-20T11:00:00.000+02:00',
-      ended_at: '2026-08-20T11:05:00.000+02:00',
-      parameters: '--nodes 8',
-      status: 'Succeeded',
-      query_health: 'Healthy',
-      last_successful_query: '2026-08-20T11:05:00.000+02:00',
-      report: { Available: { format: 'PlainText', text_bytes: 120 } },
-      error: null
+    [FOLDER]: {
+      '0': {
+        id: '0',
+        job_id: FOLDER,
+        origin: 'Human',
+        started_at: '2026-08-20T10:00:00.000+02:00',
+        ended_at: null,
+        parameters: '--nodes 4',
+        status: 'Running',
+        query_health: 'Healthy',
+        last_successful_query: '2026-08-20T10:00:03.000+02:00',
+        report: 'Missing',
+        error: null
+      },
+      '1': {
+        id: '1',
+        job_id: FOLDER,
+        origin: 'Agent',
+        started_at: '2026-08-20T11:00:00.000+02:00',
+        ended_at: '2026-08-20T11:05:00.000+02:00',
+        parameters: '--nodes 8',
+        status: 'Succeeded',
+        query_health: 'Healthy',
+        last_successful_query: '2026-08-20T11:05:00.000+02:00',
+        report: { Available: { format: 'PlainText', text_bytes: 120 } },
+        error: null
+      }
     }
   }
   base.bench_runs = {
-    '2': {
-      id: '2',
-      bench_id: BENCH_FOLDER,
-      by: 'Agent',
-      started_at: '2026-08-20T12:00:00.000+02:00',
-      ended_at: null,
-      parameters: '--sweep full',
-      plan: { steps: [{ index: 0, job_id: FOLDER, parameters: '--nodes 4', run_id: '0' }] },
-      status: 'Running',
-      query_health: 'Healthy',
-      last_successful_query: '2026-08-20T12:00:03.000+02:00',
-      report: 'Unavailable',
-      error: null
+    [BENCH_FOLDER]: {
+      '2': {
+        id: '2',
+        bench_id: BENCH_FOLDER,
+        by: 'Agent',
+        started_at: '2026-08-20T12:00:00.000+02:00',
+        ended_at: null,
+        parameters: '--sweep full',
+        plan: { steps: [{ index: 0, job_id: FOLDER, parameters: '--nodes 4', run_id: '0' }] },
+        status: 'Running',
+        query_health: 'Healthy',
+        last_successful_query: '2026-08-20T12:00:03.000+02:00',
+        report: 'Unavailable',
+        error: null
+      }
     }
   }
   base.runs_by_job = { [FOLDER]: ['0', '1'] }

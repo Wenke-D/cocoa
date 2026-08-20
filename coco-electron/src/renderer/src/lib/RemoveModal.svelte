@@ -4,7 +4,7 @@
   survives — because what makes this safe is that nothing on disk is touched.
 -->
 <script lang="ts">
-  import { isActive } from '@shared/world'
+  import { benchRun, isActive, jobRun } from '@shared/world'
   import { app, closeOverlay, confirmRemove, entityOf } from '../state.svelte'
   import type { Overlay } from '../state.svelte'
   import ModalFrame from './ModalFrame.svelte'
@@ -22,7 +22,8 @@
         ? (world.runs_by_job[entity.id] ?? [])
         : (world.runs_by_bench[entity.id] ?? [])
     return ids.filter((id) => {
-      const run = entity.kind === 'Job' ? world.job_runs[id] : world.bench_runs[id]
+      const run =
+        entity.kind === 'Job' ? jobRun(world, entity.id, id) : benchRun(world, entity.id, id)
       return run !== undefined && isActive(run.status)
     }).length
   })

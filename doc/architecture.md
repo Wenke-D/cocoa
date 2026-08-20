@@ -229,7 +229,9 @@ a lost update, and that is accepted: coco is a single local instance and the
 alternative is a locking protocol over a directory tree.
 
 `store.json` persists only what is not in the folders — the registered folders,
-each experiment's `last_args`, and the run-id counter.
+and nothing else — not the runs, which live in the folders, and not a run-id
+counter, which was retired in favour of deriving an id from the experiment's
+own records (convention §5).
 
 ### 26.2 One Turn at a Time
 
@@ -263,6 +265,9 @@ coco:events      batches thereafter:
 Rules that make this safe:
 
 - **Upserts carry the whole entry.** Entry-level over-push, never field diffs.
+- **A removal names the experiment as well as the run.** An upsert does not
+  need to — the run carries its own `job_id` — but a removal has no run left to
+  carry it, and a run id alone no longer identifies anything (§10).
 - **One batch per logical operation**, so the renderer never sees a torn world.
   A start's events are sent *before* its answer resolves.
 - **`last_successful_query` is excluded from entry identity.** It changes on

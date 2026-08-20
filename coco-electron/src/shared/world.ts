@@ -52,7 +52,6 @@ export interface Entity {
   path: string
   manifest: ManifestState
   parameter_names: string[]
-  last_used: Record<string, string>
 }
 
 export interface JobRun {
@@ -91,13 +90,37 @@ export interface BenchRun {
   error: string | null
 }
 
+/**
+ * Runs, by the experiment they belong to and then by their id.
+ *
+ * Nested because a run id is only unique *within* its experiment (§10.1): it
+ * is allocated as one past the highest that experiment already has, so two
+ * experiments both have a run `1`. A flat map keyed by id would collide, and
+ * would be claiming a global uniqueness nothing guarantees.
+ *
+ * This is also the shape the engine already holds internally
+ * (`jobRecords: Map<folder, Map<runId, ...>>`); the flat view was the odd one
+ * out.
+ */
+export type RunsByEntity<T> = Record<string, Record<string, T>>
+
 export interface World {
   entities: Entity[]
-  job_runs: Record<string, JobRun>
-  bench_runs: Record<string, BenchRun>
+  job_runs: RunsByEntity<JobRun>
+  bench_runs: RunsByEntity<BenchRun>
+  /** Each experiment's run ids, oldest first — the index carries the order. */
   runs_by_job: Record<string, string[]>
   runs_by_bench: Record<string, string[]>
   last_refresh: string | null
+}
+
+/** One job run, or `undefined`. The pair is the address; neither half alone. */
+export function jobRun(world: World, jobId: string, runId: string): JobRun | undefined {
+  return world.job_runs[jobId]?.[runId]
+}
+
+export function benchRun(world: World, benchId: string, runId: string): BenchRun | undefined {
+  return world.bench_runs[benchId]?.[runId]
 }
 
 export function emptyWorld(): World {
@@ -137,10 +160,12 @@ export type NoticeLevel = 'info' | 'error'
 export type CocoEvent =
   | { kind: 'entity-upserted'; entity: Entity }
   | { kind: 'entity-removed'; id: string }
+  /** The run carries its own `job_id`, so an upsert needs nothing else. */
   | { kind: 'job-run-upserted'; run: JobRun }
-  | { kind: 'job-run-removed'; id: string }
+  /** A removal has no run to carry the pair, so it names both halves. */
+  | { kind: 'job-run-removed'; jobId: string; id: string }
   | { kind: 'bench-run-upserted'; run: BenchRun }
-  | { kind: 'bench-run-removed'; id: string }
+  | { kind: 'bench-run-removed'; benchId: string; id: string }
   /** Heartbeat: the engine completed a refresh pass. Content-free. */
   | { kind: 'refreshed'; at: string }
   /**

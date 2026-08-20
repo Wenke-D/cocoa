@@ -3,7 +3,6 @@
 // consumes, so the UI code does not change when the engine underneath does.
 
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import type {
   BenchRun,
@@ -41,8 +40,7 @@ export function buildWorld(coco: Coco, lastRefresh: string | null): World {
         name: path.basename(view.path),
         path: displayPath(view.path),
         manifest: { Invalid: { message: view.manifestError?.message ?? 'manifest error' } },
-        parameter_names: [],
-        last_used: {}
+        parameter_names: []
       })
       continue
     }
@@ -61,8 +59,9 @@ export function buildWorld(coco: Coco, lastRefresh: string | null): World {
       for (const runView of [...coco.jobRuns(view.path)].reverse()) {
         if (runView.record === null) continue
         const run = jobRunOf(coco, view.path, runView.record, nowIso)
-        world.job_runs[run.id] = run
-        indexRun(world.runs_by_job, run.job_id, run.id, run.started_at, world.job_runs)
+        const runs = (world.job_runs[run.job_id] ??= {})
+        runs[run.id] = run
+        indexRun(world.runs_by_job, run.job_id, run.id, run.started_at, runs)
       }
     } else {
       world.entities.push(
@@ -71,8 +70,9 @@ export function buildWorld(coco: Coco, lastRefresh: string | null): World {
       for (const runView of [...coco.benchRuns(view.path)].reverse()) {
         if (runView.record === null) continue
         const run = benchRunOf(coco, view.path, runView.record, nowIso)
-        world.bench_runs[run.id] = run
-        indexRun(world.runs_by_bench, run.bench_id, run.id, run.started_at, world.bench_runs)
+        const runs = (world.bench_runs[run.bench_id] ??= {})
+        runs[run.id] = run
+        indexRun(world.runs_by_bench, run.bench_id, run.id, run.started_at, runs)
       }
     }
   }
@@ -80,7 +80,12 @@ export function buildWorld(coco: Coco, lastRefresh: string | null): World {
   return world
 }
 
-/** Keeps each entity's run index sorted by start time, oldest first (§35). */
+/**
+ * Keeps each entity's run index sorted by start time, oldest first (§35).
+ *
+ * `runs` is that one entity's runs, which is all this needs to compare
+ * against — ids are unique within an experiment and nowhere wider.
+ */
 function indexRun(
   index: Record<string, string[]>,
   entityId: string,
@@ -114,8 +119,7 @@ function entityFor(
     name,
     path: displayPath(folder),
     manifest: 'Valid',
-    parameter_names: parameterNames,
-    last_used: coco.lastArgs()[name] ?? {}
+    parameter_names: parameterNames
   }
 }
 
@@ -276,9 +280,3 @@ export function displayPath(folder: string): string {
 }
 
 export { reportOnDisk }
-
-export function defaultStorePath(): string {
-  const override = process.env.COCO_STORE_PATH
-  if (override !== undefined && override !== '') return override
-  return path.join(os.homedir(), '.local', 'share', 'coco', 'store.json')
-}

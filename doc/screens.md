@@ -307,6 +307,25 @@ records on disk — needing a cast. The field name carries the meaning instead:
 `jobId`, `runId`, `benchRunId` are never spelled `id` where the kind is
 ambiguous.
 
+**A run id is unique within its experiment and nowhere wider.** It is allocated
+as one past the highest that experiment already has (convention §5), so two
+experiments both have a run `0`. The pair is the address; neither half means
+anything alone, which is why every route, cancel target, report target and
+agent path names the experiment as well — and why the world holds runs nested
+by experiment rather than in one flat map:
+
+```ts
+export type RunsByEntity<T> = Record<string, Record<string, T>>
+
+job_runs: RunsByEntity<JobRun>      // world.job_runs[jobId][runId]
+bench_runs: RunsByEntity<BenchRun>
+```
+
+The one link that cannot be spelled as a pair is a dispatched run seen from its
+bench: the bench run knows the child's id but not whose job it is. Its **plan**
+answers that — `plan.steps[].job_id` — and is the authoritative link between
+the two (§2.3.1).
+
 ```ts
 export type EntityKind = 'Job' | 'Bench'
 ```
@@ -885,8 +904,8 @@ PARAMETERS  (all required)                          [history]
 Cancel                                            Start Job
 ```
 
-Every field opens empty, and `[history]` is the icon action that fills them from
-the last run (§15.3). Start stays disabled until each one has a value.
+Every field opens empty and stays that way until a person types in it (§15.3).
+Start stays disabled until each one has a value.
 
 What the user has typed is a draft held outside the route: a route is a place,
 and a half-filled form is not one. Leaving the page discards the draft, and so
@@ -919,18 +938,19 @@ the same way.
 
 ### 15.3 No Prefill
 
-The modal opens with every field empty. It does not prefill from the last run,
+The page opens with every field empty. It does not prefill from the last run,
 from the manifest, or from anything else — every declared parameter is supplied
-by hand, deliberately, each time (convention §2.1).
-
-Reusing the last run's values is an explicit action, not a default: the
-`PARAMETERS` section carries a history icon that fills the fields and stops
-there (§15.1). It appears only once the experiment has been started at least
-once, and the user still sees, edits and submits the values themselves.
+by hand, deliberately, each time (convention §2).
 
 A prefilled field is indistinguishable from one the user filled, and a start is
-a job on a cluster. Restarting *last night's* sweep because the modal
-remembered it is a mistake this application must not be able to make for you.
+a job on a cluster. Restarting *last night's* sweep because the form remembered
+it is a mistake this application must not be able to make for you.
+
+> There used to be a **Fill from last run** action here, and a `last_args` map
+> in the store behind it: an explicit button, never a default, that filled the
+> fields and stopped there. Both are gone as of 2026-08-20. It was the one
+> thing coco remembered about what a person had typed, and the rule above reads
+> better without a qualifier on it. What replaces it is not decided yet.
 
 ### 15.4 Submission
 

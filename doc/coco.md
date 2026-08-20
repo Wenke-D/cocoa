@@ -59,9 +59,8 @@ Explorer row tell you which way you came.
 1. **Add a folder.** The `+` in the Explorer opens your operating system's own
    folder picker. One pick is one experiment.
 2. **Start a run.** The Start page shows the parameters this experiment's
-   manifest declares, and can fill them with what the last run used. A start
-   means *launched*: the run appears the moment its script is spawned, before
-   the cluster has said anything.
+   manifest declares, empty. A start means *launched*: the run appears the
+   moment its script is spawned, before the cluster has said anything.
 3. **Watch it.** coco polls every three seconds. Statuses move on their own; so
    does the duration.
 4. **Read the report.** When the run finishes, coco runs the report script and
@@ -156,7 +155,6 @@ A Job has:
 - A display name.
 - A folder path.
 - Manifest validity state.
-- The values its last run used, for the explicit fill action (§15.3).
 - Zero or more runs.
 - Zero or more active runs.
 - Historical reports.
@@ -197,7 +195,6 @@ A Bench has:
 - A display name.
 - A folder path.
 - Manifest validity state.
-- The values its last run used, for the explicit fill action (§15.3).
 - Zero or more Bench runs.
 
 A Bench has **no** static job list. Its calls are unknown until a run starts.

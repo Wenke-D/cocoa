@@ -8,13 +8,14 @@
 // not decoration — without it, Cmd+C in a parameter field does nothing on
 // macOS, because those roles are what wire the clipboard up.
 
-import { BrowserWindow, Menu, app } from 'electron'
+import { Menu, app } from 'electron'
+import { sendCommand } from './window'
 
 /** What a menu item asks the window to do. Mirrors what the buttons call. */
 export type MenuCommand = 'addFolder' | 'refresh'
 
 function tell(command: MenuCommand): void {
-  BrowserWindow.getFocusedWindow()?.webContents.send('coco:command', command)
+  sendCommand(command)
 }
 
 export function buildMenu(): void {

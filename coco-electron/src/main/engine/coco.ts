@@ -32,7 +32,7 @@ import type {
 } from './record'
 import { fromPollWord, isCancellable, isTerminal } from './status'
 import type { Status } from './status'
-import { allocateRunId, loadStore, saveStore, writeAtomic } from './store'
+import { loadStore, saveStore, writeAtomic } from './store'
 import type { StoreData } from './store'
 import * as template from './template'
 
@@ -148,9 +148,9 @@ export class Coco {
   private launching: LaunchInFlight[] = []
 
   // ------------------------------------------------------------------
-  // The in-memory truth. store.json persists only the global state
-  // (registered folders, last_args, the run-id counter); everything else
-  // lives here and is written through to the folders as records.
+  // The in-memory truth. store.json persists only which folders are
+  // registered; everything else lives here and is written through to the
+  // folders as records.
   // ------------------------------------------------------------------
   private manifests = new Map<string, ManifestSlot>()
   private jobRecords = new Map<string, Map<number, RecordSlot<RunRecord>>>()
@@ -166,8 +166,31 @@ export class Coco {
     this.reconcile()
   }
 
-  lastArgs(): Record<string, Record<string, string>> {
-    return this.store.last_args
+  /**
+   * The next run id for one experiment: one past the highest it already has.
+   *
+   * Derived, never stored. A persisted counter is a second opinion about what
+   * the folder contains, and the two drift — a folder copied in from another
+   * machine arrives with runs a fresh counter knows nothing about, and the
+   * next start writes over one of them. Reading the records cannot disagree
+   * with the records.
+   *
+   * It also needs no crash handling. The old counter was written at
+   * allocation so a crash could not hand the same id out twice; here the run
+   * directory *is* the record, so a crash before it exists allocated nothing,
+   * and a crash after it exists is skipped by the next maximum.
+   *
+   * The first run of an experiment is `0`, as it always was — the change here
+   * is where the number comes from, not what it is.
+   *
+   * Ids are per experiment, so two experiments each have a run `0`. Nothing
+   * needs them globally unique: every address for a run — a route, a cancel,
+   * a report, an agent path — already names the experiment too.
+   */
+  private nextRunId(records: Map<string, Map<number, unknown>>, folder: string): number {
+    const mine = records.get(folder)
+    if (mine === undefined || mine.size === 0) return 0
+    return Math.max(...mine.keys()) + 1
   }
 
   // ------------------------------------------------------------------
@@ -411,7 +434,7 @@ export class Coco {
       throw EngineError.template(templatePath, (cause as Error).message)
     }
 
-    const runId = allocateRunId(this.storePath, this.store)
+    const runId = this.nextRunId(this.jobRecords, folder)
     const runDir = path.join(folder, 'runs', String(runId))
     try {
       fs.mkdirSync(runDir, { recursive: true })
@@ -451,7 +474,6 @@ export class Coco {
       running
     })
 
-    this.store.last_args[manifest.name] = { ...sorted(render), ...sorted(launch) }
     saveStore(this.storePath, this.store)
     return runId
   }
@@ -740,7 +762,7 @@ export class Coco {
   ): Promise<BenchStart> {
     const manifest = this.benchManifest(folder)
     const instances = await this.planBench(folder, params)
-    const benchRunId = allocateRunId(this.storePath, this.store)
+    const benchRunId = this.nextRunId(this.benchRecords, folder)
 
     const members: BenchMember[] = []
     const launchFailures: LaunchFailure[] = []
@@ -773,7 +795,6 @@ export class Coco {
       launch_failures: launchFailures
     }
     this.writeBenchRecord(folder, record)
-    this.store.last_args[manifest.name] = sorted(params)
     saveStore(this.storePath, this.store)
 
     return { runId: benchRunId, members, launchFailures }

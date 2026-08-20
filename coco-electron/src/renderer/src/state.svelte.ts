@@ -6,7 +6,7 @@
 
 import { defaultUiState } from '@shared/ui'
 import type { Route, ReportContext, UiState } from '@shared/ui'
-import { emptyWorld, isActive } from '@shared/world'
+import { benchRun, emptyWorld, isActive, jobRun } from '@shared/world'
 import type {
   AddFolderResult,
   BenchRun,
@@ -17,6 +17,7 @@ import type {
   Entity,
   JobRun,
   NoticeLevel,
+  RunsByEntity,
   World
 } from '@shared/world'
 
@@ -314,13 +315,13 @@ export function applyEvents(events: CocoEvent[]): void {
         upsertRun(world.job_runs, world.runs_by_job, event.run, event.run.job_id)
         break
       case 'job-run-removed':
-        removeRun(world.job_runs, world.runs_by_job, event.id)
+        removeRun(world.job_runs, world.runs_by_job, event.jobId, event.id)
         break
       case 'bench-run-upserted':
         upsertRun(world.bench_runs, world.runs_by_bench, event.run, event.run.bench_id)
         break
       case 'bench-run-removed':
-        removeRun(world.bench_runs, world.runs_by_bench, event.id)
+        removeRun(world.bench_runs, world.runs_by_bench, event.benchId, event.id)
         break
       case 'refreshed':
         world.last_refresh = event.at
@@ -338,17 +339,21 @@ export function applyEvents(events: CocoEvent[]): void {
 
 /** Inserts into the entity's index sorted by start time, oldest first. */
 function upsertRun<Run extends { id: string; started_at: string }>(
-  runs: Record<string, Run>,
+  runs: RunsByEntity<Run>,
   index: Record<string, string[]>,
   run: Run,
   ownerId: string
 ): void {
-  runs[run.id] = run
-  // Read the list back after creating it. `index[o] ?? (index[o] = [])` hands
-  // back the raw array the assignment evaluated to, not the `$state` proxy
-  // that now stands in its place — every later `splice` would then write
-  // through the back of the store and change nothing on screen. That is why
-  // an entity's *first* run never lit its Explorer dot.
+  // Read both back after creating them. `x[o] ?? (x[o] = {})` hands back the
+  // raw value the assignment evaluated to, not the `$state` proxy that now
+  // stands in its place — every later write would then go through the back of
+  // the store and change nothing on screen. That is why an entity's *first*
+  // run never lit its Explorer dot, and it applies to the run map for exactly
+  // the same reason it applies to the index.
+  if (runs[ownerId] === undefined) runs[ownerId] = {}
+  const mine = runs[ownerId]
+  mine[run.id] = run
+
   if (index[ownerId] === undefined) index[ownerId] = []
   const list = index[ownerId]
   const existing = list.indexOf(run.id)
@@ -356,7 +361,7 @@ function upsertRun<Run extends { id: string; started_at: string }>(
   const startMs = Date.parse(run.started_at)
   let position = list.length
   for (let i = 0; i < list.length; i += 1) {
-    const other = runs[list[i]]
+    const other = mine[list[i]]
     if (other !== undefined && Date.parse(other.started_at) > startMs) {
       position = i
       break
@@ -365,16 +370,22 @@ function upsertRun<Run extends { id: string; started_at: string }>(
   list.splice(position, 0, run.id)
 }
 
+/**
+ * The event names the owner, so this no longer has to search every index for
+ * a bare id — which it could only do while ids were globally unique.
+ */
 function removeRun(
-  runs: Record<string, JobRun> | Record<string, BenchRun>,
+  runs: RunsByEntity<JobRun> | RunsByEntity<BenchRun>,
   index: Record<string, string[]>,
+  ownerId: string,
   id: string
 ): void {
-  delete runs[id]
-  for (const ownerId of Object.keys(index)) {
-    const at = index[ownerId].indexOf(id)
-    if (at >= 0) index[ownerId].splice(at, 1)
-  }
+  const mine = runs[ownerId]
+  if (mine !== undefined) delete mine[id]
+  const list = index[ownerId]
+  if (list === undefined) return
+  const at = list.indexOf(id)
+  if (at >= 0) list.splice(at, 1)
 }
 
 export function entityOf(id: string): Entity | undefined {
@@ -418,10 +429,26 @@ export function contextEntityId(context: ReportContext): string {
  * run happened; the bench is only how the reader arrived (§2.3.1, §20.1).
  */
 export function reportOwnerId(context: ReportContext, runId: string): string {
-  if (context.kind === 'benchRun') {
-    return app.world.bench_runs[runId]?.bench_id ?? context.benchId
+  if (context.kind === 'benchChild') {
+    return dispatchedOwner(context.benchId, context.benchRunId, runId) ?? context.benchId
   }
-  return app.world.job_runs[runId]?.job_id ?? contextEntityId(context)
+  return contextEntityId(context)
+}
+
+/**
+ * Which job a dispatched run belongs to, read from the bench run's own plan.
+ *
+ * The plan is the authoritative link between the two (§2.3.1), and now the
+ * only one: a run id means nothing without the experiment it was allocated
+ * in, so there is no map to look a bare child id up in.
+ */
+export function dispatchedOwner(
+  benchId: string,
+  benchRunId: string,
+  runId: string
+): string | undefined {
+  const bench = benchRun(app.world, benchId, benchRunId)
+  return bench?.plan.steps.find((step) => step.run_id === runId)?.job_id
 }
 
 /** Repairs a route — and closes an overlay — the world can no longer answer for. */
@@ -441,8 +468,8 @@ export function recover(): void {
     const gone =
       overlay.kind === 'confirmCancel'
         ? overlay.target.kind === 'jobRun'
-          ? !(overlay.target.runId in world.job_runs)
-          : !(overlay.target.runId in world.bench_runs)
+          ? jobRun(world, overlay.target.jobId, overlay.target.runId) === undefined
+          : benchRun(world, overlay.target.benchId, overlay.target.runId) === undefined
         : entityGone(overlay.entityId)
     if (gone) app.overlay = null
   }
@@ -460,7 +487,7 @@ export function recover(): void {
       }
       return
     case 'jobRun':
-      if (!(route.runId in world.job_runs)) {
+      if (jobRun(world, route.jobId, route.runId) === undefined) {
         app.route = entityGone(route.jobId)
           ? { page: 'empty' }
           : { page: 'entity', entityId: route.jobId }
@@ -468,7 +495,7 @@ export function recover(): void {
       }
       return
     case 'benchRun':
-      if (!(route.runId in world.bench_runs)) {
+      if (benchRun(world, route.benchId, route.runId) === undefined) {
         app.route = entityGone(route.benchId)
           ? { page: 'empty' }
           : { page: 'entity', entityId: route.benchId }
@@ -479,26 +506,38 @@ export function recover(): void {
     // dispatched run it shows, and the bench run whose context it is seen in.
     // Losing the child falls back to the bench run, which is where the user
     // came from; losing the bench run itself falls back further.
-    case 'benchChild':
-      if (!(route.benchRunId in world.bench_runs)) {
+    case 'benchChild': {
+      if (benchRun(world, route.benchId, route.benchRunId) === undefined) {
         app.route = entityGone(route.benchId)
           ? { page: 'empty' }
           : { page: 'entity', entityId: route.benchId }
         notify('That run is no longer listed.')
-      } else if (!(route.runId in world.job_runs)) {
+        return
+      }
+      // Which job the child belongs to comes from the bench's plan; if the
+      // plan no longer lists it, it is gone by the same test.
+      const jobId = dispatchedOwner(route.benchId, route.benchRunId, route.runId)
+      if (jobId === undefined || jobRun(world, jobId, route.runId) === undefined) {
         app.route = { page: 'benchRun', benchId: route.benchId, runId: route.benchRunId }
         notify('That dispatched run is no longer listed.')
       }
       return
+    }
     case 'report': {
       // A report is read from disk on open, so the world cannot say whether
       // the file is still there; what it can say is whether the run and its
       // entity are still listed.
       const entityId = contextEntityId(route.context)
       // A report opened from a dispatched run is a *job* run's report, even
-      // though the context is the bench's — the same two-addresses rule.
-      const runs = route.context.kind === 'benchRun' ? world.bench_runs : world.job_runs
-      if (!(route.runId in runs)) {
+      // though the context is the bench's — the same two-addresses rule. The
+      // owner is what says which map to look in, and for a dispatched run
+      // that owner comes from the plan.
+      const ownerId = reportOwnerId(route.context, route.runId)
+      const run =
+        route.context.kind === 'benchRun'
+          ? benchRun(world, ownerId, route.runId)
+          : jobRun(world, ownerId, route.runId)
+      if (run === undefined) {
         app.route = entityGone(entityId) ? { page: 'empty' } : { page: 'entity', entityId }
         notify('That run is no longer listed.')
       }
@@ -513,13 +552,13 @@ export function hasActiveRun(entity: Entity): boolean {
   if (entity.kind === 'Job') {
     const ids = world.runs_by_job[entity.id] ?? []
     return ids.some((id) => {
-      const run = world.job_runs[id]
+      const run = jobRun(world, entity.id, id)
       return run !== undefined && isActive(run.status)
     })
   }
   const ids = world.runs_by_bench[entity.id] ?? []
   return ids.some((id) => {
-    const run = world.bench_runs[id]
+    const run = benchRun(world, entity.id, id)
     return run !== undefined && isActive(run.status)
   })
 }
@@ -528,9 +567,13 @@ export function hasActiveRun(entity: Entity): boolean {
  * bench runs, never counting dispatched children twice. */
 export function activeRunCount(): number {
   const world = app.world
-  const direct = Object.values(world.job_runs).filter(
-    (run) => isActive(run.status) && (run.origin === 'Human' || run.origin === 'Agent')
-  ).length
-  const benches = Object.values(world.bench_runs).filter((run) => isActive(run.status)).length
+  const direct = Object.values(world.job_runs)
+    .flatMap((runs) => Object.values(runs))
+    .filter(
+      (run) => isActive(run.status) && (run.origin === 'Human' || run.origin === 'Agent')
+    ).length
+  const benches = Object.values(world.bench_runs)
+    .flatMap((runs) => Object.values(runs))
+    .filter((run) => isActive(run.status)).length
   return direct + benches
 }

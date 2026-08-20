@@ -7,6 +7,7 @@
     reportSummary,
     triggerLabel
   } from '@shared/world'
+  import { benchRun, jobRun } from '@shared/world'
   import type { Crumb } from '@shared/ui'
   import { app, entityOf, navigate, requestCancel } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
@@ -14,7 +15,7 @@
 
   let { benchId, runId }: { benchId: string; runId: string } = $props()
 
-  const run = $derived(app.world.bench_runs[runId])
+  const run = $derived(benchRun(app.world, benchId, runId))
   const bench = $derived(entityOf(benchId))
 
   const crumbs = $derived<Crumb[]>([
@@ -25,7 +26,7 @@
   const finished = $derived.by(() => {
     if (run === undefined) return 0
     return run.plan.steps.filter((step) => {
-      const child = app.world.job_runs[step.run_id]
+      const child = jobRun(app.world, step.job_id, step.run_id)
       return child !== undefined && isTerminal(child.status)
     }).length
   })
@@ -91,8 +92,8 @@
       <tr><th>#</th><th>Job</th><th>Status</th><th>Parameters</th></tr>
     </thead>
     <tbody>
-      {#each run.plan.steps as step (step.run_id)}
-        {@const child = app.world.job_runs[step.run_id]}
+      {#each run.plan.steps as step (step.index)}
+        {@const child = jobRun(app.world, step.job_id, step.run_id)}
         {@const jobName = entityOf(step.job_id)?.name ?? '(removed)'}
         <!-- The bench's context, not the job's: same run, other address
              (§2.3.1), and the Explorer stays on the bench (§19). -->

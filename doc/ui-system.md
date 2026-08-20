@@ -94,7 +94,6 @@ Section::new("PARAMETERS")                                  // the modal form
     .note("(all required)")
     .rule(false)                    // a modal's sections are too close for rules
     .enabled(!submitting)
-    .action_if(has_history, "Fill from last run", icons::history)
     .show(ui, |ui| { … });
 
 Section::new("OVERVIEW").show_heading(ui);                  // long page: no closure

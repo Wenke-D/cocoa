@@ -1,6 +1,13 @@
-// The private store (convention §5). Port of engine/store.rs.
-// Same file, same field names, so the Rust and TS engines are interchangeable
-// over one store — though they must not run at the same time.
+// The private store (convention §5). Originally a port of engine/store.rs.
+//
+// It holds the one thing that belongs to coco rather than to any folder:
+// which folders are registered. A folder cannot say that about itself.
+//
+// It no longer holds a run-id counter. An id is derived from the experiment's
+// own runs instead (`nextRunId` in coco.ts), which is the only source that
+// cannot disagree with what is on disk — a counter can, and did: a folder
+// carried over from another machine arrived with runs the counter knew
+// nothing about, and the next start overwrote one of them.
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -8,12 +15,10 @@ import { EngineError } from './errors'
 
 export interface StoreData {
   entities: string[]
-  last_args: Record<string, Record<string, string>>
-  next_run_id: number
 }
 
 export function emptyStore(): StoreData {
-  return { entities: [], last_args: {}, next_run_id: 0 }
+  return { entities: [] }
 }
 
 export function loadStore(storePath: string): StoreData {
@@ -32,22 +37,12 @@ export function loadStore(storePath: string): StoreData {
   }
   const data = parsed as Partial<StoreData>
   return {
-    entities: Array.isArray(data.entities) ? data.entities : [],
-    last_args: data.last_args ?? {},
-    next_run_id: typeof data.next_run_id === 'number' ? data.next_run_id : 0
+    entities: Array.isArray(data.entities) ? data.entities : []
   }
 }
 
 export function saveStore(storePath: string, store: StoreData): void {
   writeAtomic(storePath, JSON.stringify(store, null, 2))
-}
-
-/** Allocates the next run id and persists immediately (§5). */
-export function allocateRunId(storePath: string, store: StoreData): number {
-  const id = store.next_run_id
-  store.next_run_id += 1
-  saveStore(storePath, store)
-  return id
 }
 
 /** Writes a file atomically: temp file, fsync, then rename (convention §12). */

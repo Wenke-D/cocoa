@@ -11,8 +11,8 @@ Three rules hold everywhere:
 1. **Scripts are invoked as argv, never through a shell.** Values the user
    typed are argv elements, never text spliced into a command line.
 2. **No defaults, and no prefill.** Every declared parameter must be supplied
-   at start, by hand. Filling the form from the last run is an explicit button
-   the user presses — it fills the fields and stops there.
+   at start, by hand, every time. coco remembers nothing about what you typed
+   last time — a value on screen is one a person put there.
 3. **coco never invents a cluster state.** `PENDING`, `RUNNING`, `COMPLETED`,
    `FAILED`, `CANCELLED` and `UNREACHABLE` come from the poll script and from
    nowhere else. The states coco sets itself describe coco's *own* pending
@@ -169,32 +169,52 @@ intact. Listing happens on the refresh tick, not on every frame.
 
 ## 5. The private store
 
-Everything that is coco's own state, and nothing that belongs to a folder,
-lives in `~/.local/share/coco/store.json`:
+The one thing that is coco's own state, and that no folder can say about
+itself, is which folders are registered. That is all the store holds:
 
 ```json
 {
-  "entities":    ["/abs/path/to/solver-gpu", "/abs/path/to/nightly"],
-  "last_args":   { "solver-gpu": { "size": "256", "mesh": "256" } },
-  "next_run_id": 41
+  "entities": ["/abs/path/to/solver-gpu", "/abs/path/to/nightly"]
 }
 ```
 
 - **entities** — registered folder paths. Adding a folder is registration, and
   it persists across sessions. Registering a path that is already in the store
   is a no-op.
-- **last_args** — the values used by the most recent start of each entity.
-  These are never applied automatically. The start form offers a **Fill from
-  last run** button; pressing it fills the fields and does nothing else. Render
-  and launch params share one flat map here, which is unambiguous precisely
-  because a name cannot appear in both sets (§2.1).
-- **next_run_id** — a monotonic counter. Run ids are **platform-unique**:
-  allocated once, never reused, shared across every job and bench. A run id
-  therefore identifies a run on its own, with no entity needed to find it —
-  which is what lets every run-scoped view and action be flat.
 
-The counter is persisted at allocation, so an id is never handed out twice even
-across a crash.
+It lives in Electron's per-app, per-user data directory, beside `ui-state.json`
+— on macOS `~/Library/Application Support/coco/store.json`, on Linux
+`~/.config/coco/store.json`. `COCO_STORE_PATH` overrides it, which is how a
+drive run keeps its hands off the real one.
+
+> It used to live at `~/.local/share/coco/store.json`, the same path hardcoded
+> in both implementations so that a folder registered in one appeared in the
+> other. That was the point while there were two. `coco-egui/` still reads that
+> path; the workbench carries the file over once, by copy, and never looks at
+> it again.
+
+**Two fields have been retired**, and what replaced them is worth knowing:
+
+- **`next_run_id`** was a monotonic counter making run ids platform-unique. It
+  is gone, and so is platform-uniqueness: a run id is now allocated as one past
+  the highest that *experiment* already has, read from its own records (§7).
+  Two experiments both have a run `0`.
+
+  The counter was a second opinion about what a folder contained, and the two
+  could disagree — a folder carried over from another machine arrived with runs
+  a fresh counter knew nothing about, and the next start overwrote one of them.
+  Records cannot disagree with records. It also needs no crash handling: the
+  run directory *is* the allocation, so a crash before it exists allocated
+  nothing and a crash after it exists is skipped by the next maximum.
+
+  A run id therefore no longer identifies a run on its own. Every address for
+  one names its experiment too — a route, a cancel, a report, an agent path —
+  which they all did already.
+
+- **`last_args`** recorded the values each experiment was last started with, for
+  an explicit *Fill from last run* action on the Start page. Both the field and
+  the action are gone. §2's rule is unchanged and now unqualified: every
+  declared parameter is supplied by hand, every time.
 
 Names are platform-wide unique: registering a folder whose manifest name
 collides with an already-registered one is refused. A currently-broken manifest

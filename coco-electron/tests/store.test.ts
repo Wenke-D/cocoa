@@ -3,7 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { allocateRunId, loadStore, saveStore, writeAtomic } from '../src/main/engine/store'
+import { loadStore, saveStore, writeAtomic } from '../src/main/engine/store'
 import { cleanupTempDirs, tempDir } from './support'
 
 afterEach(cleanupTempDirs)
@@ -12,21 +12,9 @@ describe('store', () => {
   it('reads a missing store as the empty one and round-trips it', () => {
     const file = path.join(tempDir(), 'store.json')
     const store = loadStore(file)
-    expect(store).toEqual({ entities: [], last_args: {}, next_run_id: 0 })
+    expect(store).toEqual({ entities: [] })
     saveStore(file, store)
     expect(loadStore(file)).toEqual(store)
-  })
-
-  it('allocates monotonic ids and persists each one immediately', () => {
-    const file = path.join(tempDir(), 'store.json')
-    const store = loadStore(file)
-    expect(allocateRunId(file, store)).toBe(0)
-    expect(allocateRunId(file, store)).toBe(1)
-
-    // A crash right here must not hand the next session an id already used.
-    const reloaded = loadStore(file)
-    expect(reloaded.next_run_id).toBe(2)
-    expect(allocateRunId(file, reloaded)).toBe(2)
   })
 
   it('refuses a store that does not parse', () => {

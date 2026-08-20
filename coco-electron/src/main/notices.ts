@@ -17,6 +17,7 @@
 
 import type { CocoEvent } from '@shared/world'
 import type { RefreshReport } from './engine/coco'
+import type { Maybe } from './types'
 
 /** Just the parts of a refresh report that can carry a failure. */
 type Errors = Pick<RefreshReport, 'launchErrors' | 'pollErrors' | 'reportErrors'>
@@ -26,7 +27,7 @@ type Errors = Pick<RefreshReport, 'launchErrors' | 'pollErrors' | 'reportErrors'
  * as a count. Mirrors the Rust adapter's `refresh()` — a status bar has room
  * for a sentence, and the run rows carry the detail.
  */
-export function refreshSummary(report: Errors): string | null {
+export function refreshSummary(report: Errors): Maybe<string> {
   const errors = [...report.launchErrors, ...report.pollErrors, ...report.reportErrors].map(
     (error) => error.message
   )
@@ -45,7 +46,7 @@ function error(text: string): CocoEvent {
  */
 export class NoticeGate {
   /** The failure currently standing; `null` when the last pass was clean. */
-  private announced: string | null = null
+  private announced: Maybe<string> = null
 
   /**
    * A refresh nobody asked for. It speaks only when the situation changes:
@@ -53,7 +54,7 @@ export class NoticeGate {
    * says nothing at all — recovery shows in the run rows, which go back to
    * carrying real statuses.
    */
-  automatic(summary: string | null): CocoEvent | null {
+  automatic(summary: Maybe<string>): Maybe<CocoEvent> {
     if (summary === null) {
       this.announced = null
       return null
@@ -70,7 +71,7 @@ export class NoticeGate {
    * Its answer also counts as said, so the tick that follows a reported
    * failure does not repeat it.
    */
-  manual(summary: string | null): CocoEvent {
+  manual(summary: Maybe<string>): CocoEvent {
     this.announced = summary
     return summary === null ? { kind: 'notice', level: 'info', text: 'Refreshed.' } : error(summary)
   }

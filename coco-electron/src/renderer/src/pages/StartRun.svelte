@@ -19,13 +19,6 @@
     }
   })
 
-  function fillLastArgs(): void {
-    if (entity === undefined) return
-    for (const name of Object.keys(values)) {
-      values[name] = entity.last_used[name] ?? values[name]
-    }
-  }
-
   async function submit(event: SubmitEvent): Promise<void> {
     event.preventDefault()
     if (entity === undefined || submitting) return
@@ -80,11 +73,6 @@
       {/if}
 
       <div class="actions">
-        {#if Object.keys(entity.last_used).length > 0}
-          <button type="button" class="secondary" onclick={fillLastArgs} disabled={submitting}>
-            Fill from last run
-          </button>
-        {/if}
         <button type="submit" class="primary" disabled={submitting}>
           {submitting ? 'Starting…' : 'Start'}
         </button>

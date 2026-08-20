@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isCancellable } from '@shared/world'
+  import { isCancellable, jobRun } from '@shared/world'
   import type { Crumb } from '@shared/ui'
   import { app, entityOf, requestCancel } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
@@ -8,7 +8,7 @@
 
   let { jobId, runId }: { jobId: string; runId: string } = $props()
 
-  const run = $derived(app.world.job_runs[runId])
+  const run = $derived(jobRun(app.world, jobId, runId))
   const job = $derived(entityOf(jobId))
 
   const crumbs = $derived<Crumb[]>([

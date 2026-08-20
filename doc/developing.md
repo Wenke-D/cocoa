@@ -29,8 +29,10 @@ Beside them: `mock/` is the demonstration library both use, `doc/` is this
 documentation.
 
 **Do not run the egui coco and coco-electron at the same time** — they share
-`~/.local/share/coco/store.json` (override: `COCO_STORE_PATH`) and would race
-the run-id counter.
+`~/Library/Application Support/coco/` — but no longer the same `store.json`,
+and there is no run-id counter left to race. The remaining overlap is eframe's
+`app.ron` beside the workbench's own files, which is a shared directory rather
+than a shared file.
 
 ---
 
@@ -48,6 +50,7 @@ npm test                                    # vitest, ~10 s
 npm run test:watch                          # vitest in watch mode
 
 npm run build && npm run drive scripts/scenarios/cancel.mjs   # drive the real app
+DRIVE_HEADLESS=1 npm run drive scripts/scenarios/cancel.mjs   # ... without a window on screen
 npm run package                             # electron-builder → release/ (unsigned)
 npm run package:dir                         # unpacked .app only, for driving
 DRIVE_PACKAGED=1 npm run drive scripts/scenarios/agent.mjs    # drive the packaged app
@@ -90,7 +93,7 @@ convenience over the commands above, never a second definition of them — the
 
 `npm run drive` launches the **built** app under Playwright, against a scratch
 copy of `mock/` in `.drive/` with a store of its own — never the real store, so
-it cannot race the egui coco's run-id counter. Screenshots land in
+it cannot disturb the real Explorer. Screenshots land in
 `.drive/shots/`; renderer console errors are reported at the end, including
 when the scenario fails. Scenarios live in `scripts/scenarios/` and are plain
 modules exporting `run({ page, app, shot, log, waitText })`. Rebuild before
@@ -106,6 +109,12 @@ the dev binary. A scenario may `export const seed = 'library-only'` to launch
 against a store with nothing registered — the engine reads `store.json` exactly
 once, at construction, so an empty store is a launch-time decision, not
 something a scenario can arrange afterwards.
+
+`DRIVE_HEADLESS=1` opens the window without showing it (`COCO_HIDE_WINDOW` on
+the app side). Playwright drives the page over CDP and screenshots it the same
+way, so nothing is lost but the view — and sweeping every scenario stops taking
+the focus eleven times in a row, which made the machine unusable while it ran.
+Off by default, because watching it is the point.
 
 This is a verification tool, not a test suite. Scenarios are written to be
 watched and to leave screenshots, and they are not run by `npm test` — an
@@ -126,7 +135,7 @@ Playwright over Electron's own binary and runs a scenario against it — the
 A drive run is fully isolated from the real one, and must stay that way:
 
 ```text
-COCO_STORE_PATH      a scratch store    — the two cocos must not race the run-id counter
+COCO_STORE_PATH      a scratch store    — a drive run registers folders; not in the real one
 COCO_UI_STATE_PATH   a scratch layout   — a drive run must not move the user's window
 COCO_SOCKET_PATH     a scratch socket   — must not take the socket a real coco answers on
 ```

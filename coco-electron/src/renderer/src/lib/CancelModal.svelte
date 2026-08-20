@@ -4,7 +4,14 @@
   Port of `src/ui/overlays/cancel_modal.rs`.
 -->
 <script lang="ts">
-  import { formatClock, formatDuration, isActive, isTerminal } from '@shared/world'
+  import {
+    benchRun,
+    formatClock,
+    formatDuration,
+    isActive,
+    isTerminal,
+    jobRun
+  } from '@shared/world'
   import { app, closeOverlay, confirmCancel, entityOf } from '../state.svelte'
   import type { Overlay } from '../state.svelte'
   import ModalFrame from './ModalFrame.svelte'
@@ -14,7 +21,7 @@
   const copy = $derived.by(() => {
     const target = overlay.target
     if (target.kind === 'jobRun') {
-      const run = app.world.job_runs[target.runId]
+      const run = jobRun(app.world, target.jobId, target.runId)
       if (run === undefined) return null
       return {
         title: 'Cancel this Job run?',
@@ -28,10 +35,10 @@
         confirm: 'Cancel Run'
       }
     }
-    const run = app.world.bench_runs[target.runId]
+    const run = benchRun(app.world, target.benchId, target.runId)
     if (run === undefined) return null
     const children = run.plan.steps
-      .map((step) => app.world.job_runs[step.run_id])
+      .map((step) => jobRun(app.world, step.job_id, step.run_id))
       .filter((child) => child !== undefined)
     const active = children.filter((child) => isActive(child.status)).length
     const finished = children.filter((child) => isTerminal(child.status)).length

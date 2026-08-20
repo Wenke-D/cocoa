@@ -6,6 +6,7 @@
     originLabel,
     triggerLabel
   } from '@shared/world'
+  import { benchRun, jobRun } from '@shared/world'
   import { app, entityOf, navigate } from '../state.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
 
@@ -16,14 +17,14 @@
 
   const jobRuns = $derived(
     (app.world.runs_by_job[entityId] ?? [])
-      .map((id) => app.world.job_runs[id])
+      .map((id) => jobRun(app.world, entityId, id))
       .filter((run) => run !== undefined)
       .reverse()
   )
 
   const benchRuns = $derived(
     (app.world.runs_by_bench[entityId] ?? [])
-      .map((id) => app.world.bench_runs[id])
+      .map((id) => benchRun(app.world, entityId, id))
       .filter((run) => run !== undefined)
       .reverse()
   )

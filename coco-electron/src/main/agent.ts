@@ -18,6 +18,8 @@ import http from 'node:http'
 import net from 'node:net'
 import path from 'node:path'
 import type { BenchRun, Entity, JobRun, ReportState, StartResult, World } from '@shared/world'
+import { benchRun, jobRun } from '@shared/world'
+import type { Maybe } from './types'
 
 /**
  * The most a request body may be. A start's parameters are a handful of short
@@ -190,7 +192,7 @@ function listEntities(world: World, kind: 'Job' | 'Bench'): AgentResponse {
     .map((entity) => {
       const ids = runIdsOf(world, entity)
       const active = ids.filter((id) => {
-        const run = kind === 'Job' ? world.job_runs[id] : world.bench_runs[id]
+        const run = kind === 'Job' ? jobRun(world, entity.id, id) : benchRun(world, entity.id, id)
         return run !== undefined && isActiveStatus(run.status)
       }).length
       return {
@@ -206,7 +208,7 @@ function listEntities(world: World, kind: 'Job' | 'Bench'): AgentResponse {
 }
 
 /** Where the report file is, when there is one to read. */
-function reportLocation(folder: string, runId: string, report: ReportState): string | null {
+function reportLocation(folder: string, runId: string, report: ReportState): Maybe<string> {
   if (typeof report === 'object' && 'Available' in report) {
     const extension = report.Available.format === 'Html' ? 'html' : 'txt'
     return path.join(folder, 'report', `${runId}.${extension}`)
@@ -233,7 +235,7 @@ function jobDetail(world: World, name: string): AgentResponse {
   const folder = entity.id
 
   const runs = runIdsOf(world, entity)
-    .map((id) => world.job_runs[id])
+    .map((id) => jobRun(world, folder, id))
     .filter((run): run is JobRun => run !== undefined)
     .map((run) => {
       const runDir = path.join(folder, 'runs', run.id)
@@ -260,7 +262,6 @@ function jobDetail(world: World, name: string): AgentResponse {
     folder,
     manifest: entity.manifest,
     parameters: entity.parameter_names,
-    last_used: entity.last_used,
     runs
   })
 }
@@ -274,7 +275,7 @@ function benchDetail(world: World, name: string): AgentResponse {
     world.entities.find((candidate) => candidate.id === entityId)?.name ?? entityId
 
   const runs = runIdsOf(world, entity)
-    .map((id) => world.bench_runs[id])
+    .map((id) => benchRun(world, folder, id))
     .filter((run): run is BenchRun => run !== undefined)
     .map((run) => {
       const runDir = path.join(folder, 'runs', run.id)
@@ -291,7 +292,9 @@ function benchDetail(world: World, name: string): AgentResponse {
           call: step.index,
           job: nameOf(step.job_id),
           parameters: step.parameters,
-          // Follow it under /jobs/{job}: the member is an ordinary job run.
+          // Follow it under /jobs/{job}: the member is an ordinary job run,
+          // and its id only means anything beside that job's name — ids are
+          // per experiment (§10.1).
           run_id: step.run_id
         })),
         location: {
@@ -309,7 +312,6 @@ function benchDetail(world: World, name: string): AgentResponse {
     folder,
     manifest: entity.manifest,
     parameters: entity.parameter_names,
-    last_used: entity.last_used,
     runs
   })
 }
