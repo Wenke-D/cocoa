@@ -20,16 +20,6 @@ const api = {
 
   refresh_now: (): Promise<unknown> => ipcRenderer.invoke('coco:refresh'),
 
-  /** What the application menu asked for; the window runs it the way a click
-   *  would, so there is one path per operation and not two. */
-  on_command: (callback: (command: string) => void): (() => void) => {
-    const listener = (_event: unknown, command: string): void => callback(command)
-    ipcRenderer.on('coco:command', listener)
-    return () => {
-      ipcRenderer.removeListener('coco:command', listener)
-    }
-  },
-
   on_events: (callback: (events: unknown) => void): (() => void) => {
     const listener = (_event: unknown, events: unknown): void => callback(events)
     ipcRenderer.on('coco:events', listener)

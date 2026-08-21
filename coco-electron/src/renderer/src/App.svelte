@@ -2,15 +2,7 @@
   import { onMount } from 'svelte'
   import { fade } from 'svelte/transition'
   import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH } from './ui_state'
-  import {
-    add_folder,
-    app,
-    apply_events,
-    bootstrap,
-    dismiss_notice,
-    flush_ui,
-    refresh_now
-  } from './state.svelte'
+  import { app, apply_events, bootstrap, dismiss_notice, flush_ui } from './state.svelte'
   import CancelModal from './lib/CancelModal.svelte'
   import ContextMenu from './lib/ContextMenu.svelte'
   import RemoveModal from './lib/RemoveModal.svelte'
@@ -35,14 +27,6 @@
     // in between is applied to the empty world and then superseded by the
     // (newer) bootstrap. Order-safe in both interleavings.
     const unsubscribe = window.coco.on_events(apply_events)
-    // A menu item runs exactly what the button runs.
-    const unlisten = window.coco.on_command((command) => {
-      if (command === 'add_folder') {
-        void add_folder()
-      } else if (command === 'refresh') {
-        void refresh_now()
-      }
-    })
     void bootstrap()
     // The arrangement leaves the page exactly once, on its way out — a
     // reload's unload included; the bootstrap that follows pulls it back.
@@ -52,7 +36,6 @@
     }, 1000)
     return () => {
       unsubscribe()
-      unlisten()
       clearInterval(clock)
       window.removeEventListener('pagehide', flush_ui)
     }

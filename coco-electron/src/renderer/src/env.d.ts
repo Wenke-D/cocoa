@@ -23,7 +23,6 @@ declare global {
       add_folder(): Promise<AddFolderResult>
       remove_folder(entity_id: string): Promise<RemoveFolderResult>
       refresh_now(): Promise<void>
-      on_command(callback: (command: string) => void): () => void
       on_events(callback: (events: CocoEvent[]) => void): () => void
     }
   }
