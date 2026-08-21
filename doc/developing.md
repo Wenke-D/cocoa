@@ -101,7 +101,7 @@ driving — it runs `out/`, not the dev server.
 
 Scenarios that exist today: `cancel.mjs`, `cancel-bench.mjs`, `report.mjs`,
 `add-folder.mjs`, `remove-folder.mjs`, `notice.mjs`, `persistence.mjs`,
-`bench-child.mjs`, `agent.mjs`, `agent-busy.mjs`, `menu.mjs`. A scenario may
+`bench-child.mjs`, `agent.mjs`. A scenario may
 also call `relaunch()` — quit and start again against the same store and
 ui-state file, the only way to drive what is supposed to survive a launch —
 and `DRIVE_PACKAGED=1` runs any of them against the packaged `.app` instead of
@@ -143,7 +143,7 @@ COCO_SOCKET_PATH     a scratch socket   — must not take the socket a real coco
 The library is seeded as a private copy of `mock/`, never the user's own.
 
 Scenarios cover: add-folder, remove-folder, cancel, cancel-bench, bench-child,
-report, notice, menu, persistence, agent, agent-busy.
+report, notice, persistence, agent.
 
 Everything else is a test (§37). Do not add developer affordances to the
 production UI, and do not put them inside run-history rows.
@@ -265,8 +265,8 @@ The end-to-end scenarios are ports of the egui implementation's suite, so both
 engines answer the same questions and a divergence shows up as a failing test
 rather than as a surprise.
 
-Current coverage: 190 cases across 16 files — `engine`, `manifest`, `template`,
-`invoke`, `status`, `store`, `words`, `world`, `operations`, `serial`, `sync`,
+Current coverage: 195 cases across 18 files — `engine`, `manifest`, `template`,
+`invoke`, `status`, `store`, `words`, `world`, `operations`, `races`, `sync`,
 `notices`, `uiState`, `agent`, `state.svelte`, `mock-library`.
 
 ### 37.1 Engine Tests
@@ -338,8 +338,8 @@ Run these on both macOS and Linux where CI is available.
 
 Three ESLint rules are on for a reason rather than by default:
 
-- `no-floating-promises`, because an unawaited engine call leaves the queue and
-  races the refresh tick (§26.2), and `no-misused-promises` with it.
+- `no-floating-promises`, because an unawaited engine call runs unobserved and
+  its failure vanishes (§26.2), and `no-misused-promises` with it.
 - `curly: all`, so a body always gets braces and Prettier then always puts it
   on its own line. `if (x) return` reads as one thought and hides that it is
   two — the condition, and what happens — and a body on its own line is also
@@ -359,7 +359,7 @@ scripts into a temp directory and lets the engine spawn them.
 
 | File                                                                                                                                        | Covers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tests/engine.test.ts`                                                                                                                      | All 20 end-to-end scenarios of `coco-egui/tests/coco_engine.rs`, plus registration idempotence + unregister and two reconcile cases the Rust engine has no equivalent of (a hand-edited record, a deleted run folder). The corrupt-`run.json` scenario becomes a reconcile test here: disk is not this engine's truth, so the damage lands at the next tick rather than the next read.                                                                                                        |
+| `tests/engine.test.ts`                                                                                                                      | All 20 end-to-end scenarios of `coco-egui/tests/coco_engine.rs`, plus registration idempotence + unregister and the records-read-once rule the Rust engine has no equivalent of: a corrupt `run.json` fails only its own run at the next open, and an outside edit is ignored until then.                                                                                                                                                                                                     |
 | `tests/mock-library.test.ts`                                                                                                                | The bundled `mock/` library end to end — port of `coco-egui/tests/coco_mock_library.rs`, but over a **copy** in a temp dir, so a test run leaves no `runs/`/`report/` in the repo.                                                                                                                                                                                                                                                                                                            |
 | `tests/world.test.ts`                                                                                                                       | `buildWorld`: entity shape, run shape, report state, UNREACHABLE display (last known status + unavailable query health), bench plan steps, bench-origin members, history ordering.                                                                                                                                                                                                                                                                                                            |
 | `tests/agent.test.ts`                                                                                                                       | The agent interface (§43): every route as a function of a world and a start, then the same routes over a **real unix socket** with a real HTTP client — a start crossing the wire, an oversize body refused, a socket a live coco is answering on left alone, a stale one replaced, the file removed on stop, and every reply framed with a `Content-Length` (see below).                                                                                                                     |
@@ -367,7 +367,7 @@ scripts into a temp directory and lets the engine spawn them.
 | `tests/notices.test.ts`                                                                                                                     | `refreshSummary` (one error in full, the rest as a count) and the `NoticeGate`: a repeating failure announced once, a changed one announced again, a clean pass re-arming it, and a manual refresh that always answers and counts as said.                                                                                                                                                                                                                                                    |
 | `tests/sync.test.ts`                                                                                                                        | `diffWorlds`: silence when nothing moved, the `last_successful_query` exclusion, upserts/removals for all three entry kinds, one batch for a member and its bench.                                                                                                                                                                                                                                                                                                                            |
 | `tests/operations.test.ts`                                                                                                                  | What the renderer can ask for (`src/main/operations.ts`): start by name with the manifest's parameter split, cancel a run, cancel a bench, read a report (including the plain-text-wins rule the world builder also follows, an unregistered folder, and a run id that is not one), add a folder (including that a folder of experiments is _not_ searched), remove one (and that the disk is untouched) — each answered, never thrown.                                                       |
-| `tests/serial.test.ts`                                                                                                                      | The engine's one-turn-at-a-time queue, and the race it exists for (below).                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `tests/races.test.ts`                                                                                                                       | The engine's write guards under real interleaving: a cancel during an in-flight poll survives it (below), and two concurrent starts get distinct run ids.                                                                                                                                                                                                                                                                                                                                     |
 | `tests/state.svelte.test.ts`                                                                                                                | The renderer's state, compiled as runes: event application, the run index, every `recover()` rule, the notice (an error waits to be dismissed, anything else fades, an older timer never clears a newer message), and the two-addresses rules for a dispatched run (§19) — the bench stays selected, the fallbacks step back through the bench run, and a report reads from the job's folder. It covers what the state _holds_, not what it _notifies_ — see the note at the top of the file. |
 | `tests/manifest.test.ts` `tests/template.test.ts` `tests/words.test.ts` `tests/status.test.ts` `tests/store.test.ts` `tests/invoke.test.ts` | Ports of the corresponding Rust inline `#[cfg(test)]` modules, plus a few cases for the async spawn/harvest seam this port introduces.                                                                                                                                                                                                                                                                                                                                                        |
 
@@ -516,13 +516,13 @@ The workbench is built. What follows is the standing list, not a build order.
 
 **Working:** the engine port in full — manifests, templates, the job lifecycle,
 the poll protocol, auto and manual reports with ERROR healing, cancel, bench
-plan and fan-out, derived bench status, orphan detection, shutdown grace.
-Memory as the truth with write-through and mtime reconcile (§26.1). Event-driven
+plan and fan-out, derived bench status, orphan detection, abandonment at close.
+Memory as the truth with write-through; records read once, manifests re-read
+each tick (§26.1); guarded writes, no queue (§26.2). Event-driven
 sync (§26.3). Notices (§26.4). The agent socket and the MCP binary (§43). The
 persisted arrangement (§32). Explorer, overview, start, run detail, bench run
 detail, bench child detail, report viewer for both formats, add and remove
-folder, cancel with confirmation. The application menu and an electron-builder
-package.
+folder, cancel with confirmation. An electron-builder package.
 
 **Outstanding**, roughly by what each one costs:
 
@@ -630,8 +630,8 @@ both implementations write them identically. A change that makes a folder less
 portable between them is a regression even when every test passes.
 
 **The boundaries in §41 are the design.** The domain in the main process, the
-renderer as a client, the backend as the only judge of change, one turn at a
-time on the engine, the page's vocabulary fixed at the preload — each of these
+renderer as a client, the backend as the only judge of change, guarded writes
+on the engine, the page's vocabulary fixed at the preload — each of these
 was arrived at for a reason recorded somewhere in this document, and the
 security argument in §5.1 rests on the last of them.
 
@@ -658,18 +658,20 @@ re-argue it.
   and `curl --unix-socket` debugs it just as well.
   What would re-open it: wanting coco in a browser, or across machines — the
   network trigger. The IPC layer is thin enough that the swap stays cheap.
-  As built, the socket adapter is ~430 lines of routes over `operations.ts`
-  and shares the engine queue with the IPC handlers, which is what keeps the
-  two transports from being two implementations.
+  As built, the socket adapter is a set of routes over `operations.ts`,
+  driving the same engine as the IPC handlers, which is what keeps the two
+  transports from being two implementations.
 ---
 
 ### Deliberate divergences (do not "fix")
 
 - Script invocation is async (`invoke.ts`) — the main process must not block;
   the Rust engine blocks its dedicated worker thread instead.
-- The single-owner worker thread becomes `src/main/serial.ts`, one turn at a
-  time over an event loop (§26.2). It started as a `refreshing` flag, which was
-  not enough; the bug that proved it is below.
+- The single-owner worker thread becomes guarded writes on the event loop
+  (§26.2): synchronous work is atomic for free, and every write after an
+  `await` checks the world has not moved. It started as a `refreshing` flag,
+  passed through a serializing queue, and settled here; the bug that drove it
+  is below.
 - Memory-is-truth replaces the Rust engine's read-everything-fresh statelessness
   (user decision; the Rust engine keeps disk as truth to protect hand-edits).
 - Runs started from this UI are `origin: human` (the v1 socket-client
@@ -724,7 +726,7 @@ re-argue it.
 | **Overlays**                     | `ConfirmCancel`, `AddFolderReport`, `Settings`            | `ConfirmCancel` is ported, and `confirmRemove` joins it on the same `ModalFrame`; `AddFolderReport` and `Settings` are not. As in coco, overlay state is deliberately outside `Route` (§9) and never persisted.                                                                                               |
 | **`--dump-state`**               | prints the exact world as JSON                            | trivial: a `node` entry point or `npm run dump` calling `buildWorld`.                                                                                                                                                                                                                                         |
 | **Activity bar / view headers**  | shell chrome (§8)                                         | Electron shell is minimal: sidebar + page + status bar. Breadcrumbs exist per page (`Breadcrumbs.svelte`), not as a shell-level bar.                                                                                                                                                                          |
-| **Shortcuts beyond the menu**    | n/a (egui)                                                | Cmd+O and Cmd+R come from the app menu; there is no in-page keyboard surface (report search, sidebar focus, run filtering).                                                                                                                                                                                   |
+| **Shortcuts beyond the menu**    | n/a (egui)                                                | The app menu is the platform's minimum for now (Edit roles + Quit on macOS, none elsewhere), so no Cmd+O/Cmd+R; nor an in-page keyboard surface (report search, sidebar focus, run filtering).                                                                                                                 |
 | **Signed / notarised packaging** | n/a                                                       | `npm run package` builds an unsigned `coco.app` (`identity: null`) plus dmg/zip; Gatekeeper will object. mac targets are exercised, linux/win are configured but unbuilt.                                                                                                                                     |
 | **Renderer tests**               | `Backend::Local` sync test seam drives the UI in-process  | The engine, world builder and sync layer are covered (see Tests); nothing exercises the Svelte components or the IPC handlers in `index.ts`. Needs a component runner (vitest browser mode or @testing-library/svelte) and an `index.ts` refactor that lets the handlers be called without `app.whenReady()`. |
 ---
@@ -766,9 +768,9 @@ Neither of these could have been found by a green test suite; both came from
   top, and the run read `RUNNING` again with the user's cancel visibly
   undone. The Rust engine cannot hit this because it owns its state on one
   thread (§43.3); the `refreshing` flag here only stopped two _refreshes_
-  overlapping. Fixed by `src/main/serial.ts`: every engine operation —
-  refresh, start, cancel — takes its turn. `tests/serial.test.ts` reproduces
-  the stomp and holds the fix.
+  overlapping. First fixed by a serializing queue; now by the write guards of
+  §26.2 — `poll_job` versions each run by its history length and drops a
+  stale answer. `tests/races.test.ts` reproduces the stomp and holds the fix.
 - **A `$state` proxy cannot cross IPC.** `window.coco.cancel(overlay.target)`
   passed a Svelte proxy to `ipcRenderer.invoke`, structured clone refused it,
   and the rejected promise left the modal on "Cancelling…" for ever with no
@@ -804,10 +806,12 @@ open.
   now leaves the page before asking, and puts the route back if the removal
   is refused.
 - **The driver could not end.** On macOS closing the last window does not
-  quit the app (the platform convention, which `index.ts` follows), so
-  Playwright's `app.close()` waited for an exit that never came — a run took
-  over ten minutes and had to be killed. It now asks nicely, waits three
-  seconds, and insists.
+  quit the app (the platform convention, which `index.ts` followed at the
+  time), so Playwright's `app.close()` waited for an exit that never came — a
+  run took over ten minutes and had to be killed. It now asks nicely, waits
+  three seconds, and insists. (Coco has since dropped that convention — the
+  last window's close quits the app on every platform — but the driver keeps
+  its insistence.)
 
 ### What driving the app found, part three
 
@@ -833,9 +837,10 @@ open.
 - **A startup failure had nobody to tell.** The agent interface binds while
   the page is still loading, and a `notice` is not part of the bootstrap — so
   a refused socket was announced to a window that could not yet hear it, and
-  the message vanished. Notices raised before the first bootstrap are now held
-  and delivered just after it (`scripts/scenarios/agent-busy.mjs`, which binds
-  the socket itself before the app launches).
+  the message vanished. Notices raised before the first bootstrap were then
+  held and delivered just after it. (That machinery is gone again: a refused
+  socket now crashes the app — no agent interface, no coco — so there is no
+  startup notice left to hold, and `agent-busy.mjs` went with it.)
 - **A window nobody moves has no geometry to remember.** Geometry was read on
   `resize`/`move` only, so it was never recorded for exactly the people who
   leave the window where it opens. Every write reads it now, whatever prompted
@@ -860,7 +865,7 @@ not a coco-electron change.
 - `template.ts` reaches into `nunjucks/src/parser` and `nunjucks/src/nodes`
   (undocumented-but-stable internals, loaded via `createRequire`). A nunjucks
   major bump needs a look at the AST walker.
-- `fs.watch` deliberately deferred: it would only cut human-edit latency
+- `fs.watch` deliberately deferred: it would only cut manifest-edit latency
   below 3s. If added, watch-as-trigger only (debounce → run the existing
   reconcile); never interpret watcher events as truth; keep the 3s sweep.
 - Engine timeouts are `DEFAULT_CONFIG` constants; no settings surface.

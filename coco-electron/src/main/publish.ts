@@ -15,17 +15,8 @@ import type { Maybe } from '@shared/maybe'
 import { empty, some } from '@shared/maybe'
 import { send } from './window'
 
-let model: Maybe<World> = empty()
+let world: Maybe<World> = empty()
 let last_refresh: Maybe<string> = empty()
-
-/**
- * Whether the page has asked for its starting state yet. Events sent before
- * that are harmless — the bootstrap supersedes them — but a *notice* is not
- * in the bootstrap, so one said during startup would simply be lost. The
- * agent interface failing to bind is exactly that case.
- */
-let bootstrapped = false
-const pending_notices: CocoEvent[] = []
 
 export function message_of(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -35,42 +26,17 @@ export function announce(notice: Maybe<CocoEvent>): CocoEvent[] {
   return notice.is_empty() ? [] : [notice.value]
 }
 
-/** Says something that must survive the window not being ready to hear it. */
-export function announce_when_heard(events: CocoEvent[]): void {
-  if (events.length === 0) {
-    return
-  }
-  if (!bootstrapped) {
-    pending_notices.push(...events)
-    return
-  }
-  send(events)
-}
-
 /**
  * The world as the window renders it, built on demand. Answers the bootstrap
  * and the agent's reads, neither of which may wait on the engine.
  */
-export function current_model(): World {
-  if (model.is_present()) {
-    return model.value
+export function current_world(): World {
+  if (world.is_present()) {
+    return world.value
   }
   const built = build_world(engine, last_refresh.or_null())
-  model = some(built)
+  world = some(built)
   return built
-}
-
-/**
- * The page has its starting state. Anything held back during startup goes out
- * just after the answer, so the page has its world before it is told anything
- * about it.
- */
-export function mark_bootstrapped(): void {
-  bootstrapped = true
-  if (pending_notices.length > 0) {
-    const waiting = pending_notices.splice(0)
-    setImmediate(() => send(waiting))
-  }
 }
 
 /**
@@ -91,8 +57,8 @@ export function publish_cycle(refreshed_at: Maybe<string>, extra: CocoEvent[] = 
     send([...extra, ...announce(notices.automatic(some(message_of(error))))])
     return
   }
-  const events: CocoEvent[] = model.is_empty() ? [] : diff_worlds(model.value, next)
-  model = some(next)
+  const events: CocoEvent[] = world.is_empty() ? [] : diff_worlds(world.value, next)
+  world = some(next)
   if (refreshed_at.is_present()) {
     events.push({ kind: 'refreshed', at: refreshed_at.value })
   }

@@ -4,17 +4,19 @@
 // itself, in localStorage (`renderer/src/ui_state.ts`), and the two never
 // meet in one object.
 //
-// Nothing is written as it goes. The file is written when the window has
-// closed and again at will-quit — plus once at the very first launch, so a
-// session always has a file rather than only leaving one behind. A launch
-// that finds a file never rewrites it: what is on disk records what a
-// session actually had, and `sanitize_window_state` repairs it on the way
-// in, never on the way out. What a crash costs is the session's geometry,
-// which for a window rectangle is a trade worth making.
+// Nothing is written as it goes. The read at launch writes nothing back —
+// restoring answers from the file or the defaults and leaves the disk alone.
+// The file is written once the window is open, recording the geometry the
+// window actually got rather than what was asked for, and again at the one
+// ending: the window's close. A quit closes the window first (will-quit only
+// fires after every window has closed), so the close's write is always the
+// last word. `sanitize_window_state` repairs a record on the way in, never
+// on the way out. What a crash costs is the session's geometry, which for a
+// window rectangle is a trade worth making.
 //
-// Geometry is not tracked as it changes, either: `window.ts` takes one look
-// at it as the window closes, and `persist_window_state` reads that look
-// back. A resize therefore has no listener at all.
+// Geometry is not tracked as it changes, either: the close-time persist
+// takes one look while there is still a window to ask. A resize therefore
+// has no listener at all.
 //
 // The file is `window_state_file.ts`'s business, and the two layers are told
 // apart by their verbs: that one *reads* and *writes* the file, this one
@@ -23,6 +25,7 @@
 
 import type { Maybe } from '@shared/maybe'
 import { None, Some, empty, some } from '@shared/maybe'
+import { throw_coco } from '@shared/error'
 import { read_window_state_file, window_state_path, write_window_state } from './window_state_file'
 
 /** How big the window was. */
@@ -56,39 +59,35 @@ export function default_window_state(): WindowState {
 }
 
 /** The file the state came from — set by `restore_window_state`, never after. */
-let path: Maybe<string> = empty()
+let state_file_path: Maybe<string> = empty()
 
 /**
- * Restores the window state from its file, creating that file when there is
- * none yet. A created file records the defaults — that there is a file at
- * all, nothing more: no session has arranged anything yet.
+ * Restores the window state from its file, or the defaults when there is
+ * none. Nothing is written here — the first write comes once the window is
+ * open, from its actual geometry.
  */
 export function restore_window_state(user_data_dir: string): WindowState {
   const file = window_state_path(user_data_dir)
-  path = some(file)
+  state_file_path = some(file)
   // The read is also the existence check: one look at the disk, so "is there
   // a file" and "what does it say" can never disagree.
   const text = read_window_state_file(file)
   if (text.is_empty()) {
-    const state = default_window_state()
-    write_window_state(file, state)
-    return state
+    return default_window_state()
   }
   return parse_window_state(text.value)
 }
 
 /**
- * Writes the file with the freshest geometry the caller could get
- * (`window_bounds()`), keeping what the state already held when there was
- * none. Geometry comes in as an argument so this module never touches
- * Electron — the window is `window.ts`'s.
+ * Writes the state to its file as it is. Reading the window's geometry is
+ * the caller's business (`window_bounds()`), so this module never touches
+ * Electron.
  */
-export function persist_window_state(state: WindowState, freshest: Maybe<WindowState>): void {
-  if (path.is_empty()) {
-    throw new Error('window state persisted before it was restored')
+export function persist_window_state(state: WindowState): void {
+  if (state_file_path.is_empty()) {
+    throw_coco('window state persisted before it was restored')
   }
-  Object.assign(state, freshest.or(state))
-  write_window_state(path.value, state)
+  write_window_state(state_file_path.value, state)
 }
 
 /**

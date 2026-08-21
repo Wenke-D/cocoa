@@ -16,4 +16,7 @@ name = "coco-mcp-server"
 path = "src/main.rs"
 
 [dependencies]
+# No TLS: the socket is a private file, and the fewer features the smaller
+# the audit surface.
+curl = { version = "0.4", default-features = false }
 serde_json = "1"

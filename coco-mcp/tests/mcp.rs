@@ -179,7 +179,6 @@ fn the_mcp_binary_serves_the_socket_as_tools() {
         "coco_job",
         "coco_bench",
         "coco_start",
-        "coco_overview",
     ] {
         assert!(names.contains(&expected), "{names:?} misses {expected}");
     }

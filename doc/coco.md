@@ -90,7 +90,7 @@ what happened, so it has its own states, and coco waits to call a run
 
 coco answers on a Unix socket while its window is open, and an agent can list
 experiments, read runs, and start them through it — the same operations a click
-uses, through the same queue, landing on the same screen. Every run records who
+uses, on the same engine, landing on the same screen. Every run records who
 asked: **you**, an **agent**, or the **bench** that dispatched it. See
 [agent.md](agent.md).
 
@@ -313,11 +313,13 @@ a submission id completes the record; a failure or timeout moves the run to
 refuses the start itself, because that is a folder problem the submitter can
 act on now.
 
-Closing coco right after a start is normal, and must not lose the run. The
-close waits a short grace for launches still in flight — a script answers in
-seconds, so the submission id is recorded and the next open catches up on the
-run like any other (§10). A script still running past the grace is killed and
-its run moved to `ERROR` at the close, honestly. Only a *crash* leaves a run
+Closing coco waits for nothing. In practice a start is watched until it shows
+running before anyone walks away, so a close with a launch still unanswered
+is the rare worst case, not one worth a grace period — coco handles it by
+being honest instead of by waiting. An answer that already arrived is still
+collected on the way out; a script that has not answered is killed and its
+run moved to `ERROR` at the close, recording that coco closed too soon and
+the run can no longer be tracked (§10). Only a *crash* leaves a run
 mid-launch with nothing recorded; the next refresh finds it and moves it to
 `ERROR`, because the stdout that carried its submission id died with the
 process that read it.

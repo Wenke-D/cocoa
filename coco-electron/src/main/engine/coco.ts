@@ -155,9 +155,6 @@ export class Coco {
   private manifests = new Map<string, ManifestSlot>()
   private job_records = new Map<string, Map<number, RecordSlot<RunRecord>>>()
   private bench_records = new Map<string, Map<number, RecordSlot<BenchRecord>>>()
-  /** mtimes of record files as this engine last read or wrote them; the
-   * reconcile pass re-reads a file only when the disk disagrees. */
-  private file_mtimes = new Map<string, number>()
 
   constructor(store_path: string, config: Config = DEFAULT_CONFIG) {
     this.store_path = store_path
@@ -182,10 +179,11 @@ export class Coco {
   }
 
   // ------------------------------------------------------------------
-  // Reconciliation: disk → memory, for changes this engine did not make
-  // (a hand-edited run.json, an edited coco.toml, a deleted run folder).
-  // Manifests are small and re-read every pass, as the Rust engine does
-  // (§4); records re-read only when their mtime moved.
+  // Reconciliation. Records are coco's own files and nobody else changes
+  // them, so a folder's runs are read exactly once — the first time the
+  // folder is seen (startup, or its registration). Manifests stay the
+  // user's authored files: small, and re-read every pass so an edited
+  // coco.toml lands at the next tick (§4).
   // ------------------------------------------------------------------
 
   reconcile(): void {
@@ -212,14 +210,16 @@ export class Coco {
       }
 
       if (manifest.kind === 'job') {
-        this.reconcile_runs(folder, map_for(this.job_records, folder))
-      } else {
-        this.reconcile_runs(folder, map_for(this.bench_records, folder))
+        if (!this.job_records.has(folder)) {
+          this.load_runs(folder, map_for(this.job_records, folder))
+        }
+      } else if (!this.bench_records.has(folder)) {
+        this.load_runs(folder, map_for(this.bench_records, folder))
       }
     }
   }
 
-  private reconcile_runs<T>(folder: string, slots: Map<number, RecordSlot<T>>): void {
+  private load_runs<T>(folder: string, slots: Map<number, RecordSlot<T>>): void {
     const runs_dir = path.join(folder, 'runs')
     let entries: string[]
     try {
@@ -227,27 +227,12 @@ export class Coco {
     } catch {
       entries = []
     }
-    const on_disk = new Set<number>()
     for (const entry of entries) {
       if (!/^\d+$/.test(entry)) {
         continue
       }
       const run_id = Number(entry)
-      on_disk.add(run_id)
       const record_path = path.join(runs_dir, entry, 'run.json')
-      let mtime: number
-      try {
-        mtime = fs.statSync(record_path).mtimeMs
-      } catch {
-        slots.set(run_id, {
-          record: null,
-          error: EngineError.not_found(`run ${run_id} in ${folder}`)
-        })
-        continue
-      }
-      if (this.file_mtimes.get(record_path) === mtime && slots.has(run_id)) {
-        continue
-      }
       try {
         const text = fs.readFileSync(record_path, 'utf8')
         slots.set(run_id, { record: JSON.parse(text) as T, error: null })
@@ -259,12 +244,6 @@ export class Coco {
             `run.json does not parse: ${(cause as Error).message}`
           )
         })
-      }
-      this.file_mtimes.set(record_path, mtime)
-    }
-    for (const run_id of [...slots.keys()]) {
-      if (!on_disk.has(run_id)) {
-        slots.delete(run_id)
       }
     }
   }
@@ -456,17 +435,24 @@ export class Coco {
       argv.push(`--${name}`, launch[name])
     }
 
+    // The record is written before the spawn's await: the id was picked in
+    // the same synchronous stretch, and a concurrent start must find it
+    // taken rather than pick it too.
+    const record = new_run_record(run_id, '', sorted(render), sorted(launch), origin, now_stamp())
+    this.write_run_record(folder, record)
+
     // Only a script that cannot be started at all refuses the start itself:
-    // that is a folder problem the submitter can act on now.
+    // that is a folder problem the submitter can act on now, and it leaves
+    // no run behind — the reservation is dropped.
     let running: Running
     try {
       running = await invoke.spawn(folder, argv, this.config.launch_timeout)
     } catch (cause) {
+      this.job_records.get(folder)?.delete(run_id)
+      fs.rmSync(path.join(run_dir, 'run.json'), { force: true })
       throw EngineError.io(folder, cause)
     }
 
-    const record = new_run_record(run_id, '', sorted(render), sorted(launch), origin, now_stamp())
-    this.write_run_record(folder, record)
     this.launching.push({
       path: folder,
       run_id,
@@ -478,7 +464,7 @@ export class Coco {
     return run_id
   }
 
-  /** Polls one job's active runs through the job's own `poll` script (§7.2, §10). */
+  /** Polls one job's active runs, one `poll` script call per run (§7.2, §10). */
   async poll_job(folder: string): Promise<PollReport> {
     const manifest = this.job_manifest(folder)
     const active: [number, RunRecord][] = []
@@ -492,88 +478,82 @@ export class Coco {
     }
 
     const report: PollReport = { polled: active.length, changed: [], warnings: [] }
-    if (active.length === 0) {
-      return report
-    }
+    let broken: EngineError | null = null
 
-    const by_submission = new Map<string, [number, RunRecord]>()
+    // One script call per run (§7.2): the answer needs no submission prefix,
+    // and one run's slow or broken poll never speaks for another's.
     for (const [run_id, record] of active) {
-      by_submission.set(record.submission_id, [run_id, record])
-    }
-    const submissions = [...by_submission.keys()].sort()
+      // Another operation may land while a script runs — there is no queue.
+      // The history length is the record's version: a cancel during this
+      // run's (or an earlier run's) poll moves it, and an answer formed
+      // before that move is stale and must not land (`serial` history: a
+      // stale poll used to write the pre-cancel status back over
+      // CANCELLING).
+      if (is_terminal(record.status)) {
+        continue
+      }
+      const seen = record.history.length
 
-    const argv = [...manifest.poll.words, '--submissions', submissions.join(',')]
-    let invocation: Invocation
-    try {
-      invocation = await invoke.run(folder, argv, this.config.poll_timeout)
-    } catch (cause) {
-      throw EngineError.io(folder, cause)
-    }
-
-    if (!invoke.invocation_ok(invocation)) {
-      const reason = `poll script failed: ${invoke.invocation_output(invocation)}`
+      const argv = [...manifest.poll.words, '--submission', record.submission_id]
+      let invocation: Invocation
+      try {
+        invocation = await invoke.run(folder, argv, this.config.poll_timeout)
+      } catch (cause) {
+        throw EngineError.io(folder, cause)
+      }
       const now = now_stamp()
-      for (const [run_id, record] of by_submission.values()) {
+      if (record.history.length !== seen) {
+        continue
+      }
+
+      const lines = invoke.coco_return_lines(invocation.stdout)
+      if (!invoke.invocation_ok(invocation) || lines.length === 0) {
+        // Broken code rather than an unreachable scheduler — a poll answers
+        // exactly one line, always (§7.2) — but coco cannot see the run
+        // either way (§10). Mark it, keep polling the others, and raise the
+        // first failure loudly once the sweep is done.
+        const detail =
+          lines.length === 0 && invoke.invocation_ok(invocation)
+            ? 'poll script answered nothing'
+            : invoke.invocation_output(invocation)
         if (record.status !== 'UNREACHABLE') {
-          apply_status(record, 'UNREACHABLE', now, reason)
+          apply_status(record, 'UNREACHABLE', now, `poll script failed: ${detail}`)
           this.write_run_record(folder, record)
           report.changed.push([run_id, 'UNREACHABLE'])
         }
+        broken ??= EngineError.invocation(
+          manifest.poll.display,
+          invocation.exit,
+          invocation.timed_out,
+          detail
+        )
+        continue
       }
-      throw EngineError.invocation(
-        manifest.poll.display,
-        invocation.exit,
-        invocation.timed_out,
-        invoke.invocation_output(invocation)
-      )
+
+      if (lines.length > 1) {
+        report.warnings.push(`run ${run_id}: extra poll lines ignored`)
+      }
+      const match = lines[0].match(/^(\S+)(?:\s+(.*))?$/)
+      if (match === null) {
+        report.warnings.push(`malformed poll line ignored: \`${lines[0]}\``)
+        continue
+      }
+      const [, word, rest] = match
+      const reason = rest?.trim() !== '' ? rest?.trim() : undefined
+      const status = word === 'UNREACHABLE' ? 'UNREACHABLE' : from_poll_word(word)
+      if (status === null) {
+        report.warnings.push(`unknown status \`${word}\` for run ${run_id} ignored`)
+        continue
+      }
+      if (record.status !== status) {
+        apply_status(record, status, now, reason)
+        this.write_run_record(folder, record)
+        report.changed.push([run_id, status])
+      }
     }
 
-    const lines = invoke.coco_return_lines(invocation.stdout)
-    const status_lines = lines.filter((line) => line.split(/\s+/)[0] !== 'UNREACHABLE')
-    const unreachable_reasons = lines
-      .filter((line) => line.split(/\s+/)[0] === 'UNREACHABLE')
-      .map((line) => line.replace(/^UNREACHABLE\s*/, '').trim())
-
-    const now = now_stamp()
-    if (status_lines.length > 0) {
-      for (const line of status_lines) {
-        const match = line.match(/^(\S+)\s+(\S+)(?:\s+(.*))?$/)
-        if (match === null) {
-          report.warnings.push(`malformed poll line ignored: \`${line}\``)
-          continue
-        }
-        const [, submission, word, rest] = match
-        const reason = rest?.trim() !== '' ? rest?.trim() : undefined
-        const entry = by_submission.get(submission)
-        if (entry === undefined) {
-          report.warnings.push(`poll line for unknown submission \`${submission}\` ignored`)
-          continue
-        }
-        const [run_id, record] = entry
-        const status = from_poll_word(word)
-        if (status === null) {
-          report.warnings.push(`unknown status \`${word}\` for run ${run_id} ignored`)
-          continue
-        }
-        if (is_terminal(record.status)) {
-          continue
-        }
-        if (record.status !== status) {
-          apply_status(record, status, now, reason)
-          this.write_run_record(folder, record)
-          report.changed.push([run_id, status])
-        }
-      }
-    } else if (unreachable_reasons.length > 0) {
-      const last = unreachable_reasons[unreachable_reasons.length - 1]
-      const reason = last !== '' ? last : undefined
-      for (const [run_id, record] of by_submission.values()) {
-        if (record.status !== 'UNREACHABLE') {
-          apply_status(record, 'UNREACHABLE', now, reason)
-          this.write_run_record(folder, record)
-          report.changed.push([run_id, 'UNREACHABLE'])
-        }
-      }
+    if (broken !== null) {
+      throw broken
     }
     return report
   }
@@ -671,8 +651,13 @@ export class Coco {
       throw EngineError.io(folder, cause)
     }
     if (invoke.invocation_ok(invocation)) {
-      apply_status(record, 'CANCELLING', now_stamp())
-      this.write_run_record(folder, record)
+      // The run may have moved while the cancel script ran — ended on its
+      // own, or another cancel got there first. The cluster has been told
+      // either way; only a run still cancellable takes the CANCELLING mark.
+      if (is_cancellable(record.status)) {
+        apply_status(record, 'CANCELLING', now_stamp())
+        this.write_run_record(folder, record)
+      }
       return
     }
     throw EngineError.invocation(
@@ -1042,22 +1027,21 @@ export class Coco {
     return this.launching.length
   }
 
-  /** The way a closing coco leaves its launches (§10). */
-  async shutdown_launches(grace_ms: number): Promise<void> {
-    const deadline = Date.now() + grace_ms
-    while (this.launching.length > 0 && Date.now() < deadline) {
-      this.harvest_launches()
-      if (this.launching.length > 0) {
-        await sleep(5)
-      }
-    }
+  /**
+   * The way a closing coco leaves its launches (§10): the close waits for
+   * nothing. An answer already delivered is still collected; a script that
+   * has not answered is killed and its run marked ERROR now, honestly,
+   * saying why the run cannot be tracked.
+   */
+  abandon_launches(): void {
+    this.harvest_launches()
     for (const in_flight of this.launching) {
       in_flight.running.kill()
       try {
         const record = this.run_record(in_flight.path, in_flight.run_id)
         apply_status(record, 'ERROR', now_stamp())
         record.error =
-          'coco closed while the launch script was still running; the launch was abandoned'
+          'coco closed before the launch script answered; the run can no longer be tracked'
         this.write_run_record(in_flight.path, record)
       } catch {
         // Nothing left to mark.
@@ -1200,11 +1184,6 @@ export class Coco {
   private persist(folder: string, run_id: number, record: object): void {
     const record_path = path.join(folder, 'runs', String(run_id), 'run.json')
     write_atomic(record_path, JSON.stringify(record, null, 2))
-    try {
-      this.file_mtimes.set(record_path, fs.statSync(record_path).mtimeMs)
-    } catch {
-      // Unreadable right after writing: let the next reconcile sort it out.
-    }
   }
 
   private resolve_members(record: BenchRecord): ResolvedMember[] {

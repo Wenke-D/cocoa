@@ -1,8 +1,7 @@
 // The main process is the server side of the classic Electron shape: it owns
-// the coco engine, runs the refresh
-// loop, monitoring jobs/benches, and emit changes to UI and AI.
-// The renderer bootstraps
-// once, then receives typed events.
+// the coco engine, runs the refresh loop that monitors jobs and benches, and
+// emits changes to the UI and the AI. The renderer bootstraps once, then
+// receives typed events.
 //
 // This file is the process's lifetime and nothing else: what happens when the
 // app is ready, and what has to finish before it may quit. Each piece of state
@@ -16,70 +15,102 @@
 //   ipc.ts            what the renderer may ask for
 
 import { app } from 'electron'
-import type { WindowState } from './window_state'
 import { restore_window_state, persist_window_state } from './window_state'
-import type { AgentServer } from './agent'
-import { serve, socket_path } from './agent'
-import { build_menu } from './menu'
+import { serve, socket_path } from './agent/serve'
 import * as operations from './operations'
-import { announce, announce_when_heard, current_model, message_of, publish_cycle } from './publish'
+import { current_world, message_of, publish_cycle } from './publish'
 import { REFRESH_INTERVAL_MS, refresh_and_publish } from './refresh'
-import { engine, notices, on_engine } from './runtime'
+import { engine } from './runtime'
 import { register_ipc } from './ipc'
-import type { Maybe } from '@shared/maybe'
-import { empty, some } from '@shared/maybe'
-import { any_window_open, create_window, window_bounds } from './window'
+import { env_var } from './env'
+import { build_menu } from './menu'
+import { empty } from '@shared/maybe'
+import { create_window, focus_window, window_bounds } from './window'
+import { AgentDeps } from './agent/answer'
 
 /**
- * The agent interface (§43), if it can have the socket. A second window must
- * not steal the first one's — it would be a second owner of the same store —
- * so a refusal here leaves this window running without an interface, and says
- * so once.
+ * Starts the agent server and settles its whole fate here, both ways: once
+ * serving, quitting coco closes it — the ending is registered on the success
+ * path, where the server exists; a refusal is logged and exits the app.
+ * Either way the caller has nothing to hold and nothing to clean up.
  */
-let agent: Maybe<AgentServer> = empty()
-
-async function start_agent_interface(): Promise<void> {
-  const file = socket_path()
-  try {
-    agent = some(
-      await serve(file, {
-        // Reads are answered from the model the window renders from, so they
-        // never wait on the engine — at most one pass old, which is what a read
-        // over a socket is anyway.
-        world: current_model,
-        // Writes take exactly the path a click takes: the same operation, the
-        // same queue, the same publish. Only the trigger differs.
-        start: (name, parameters) =>
-          on_engine(async () => {
-            const result = await operations.start_run(engine, name, parameters, 'agent')
-            publish_cycle(empty())
-            return result
-          })
-      })
-    )
-    console.log('agent interface listening on', file)
-  } catch (error) {
-    console.error('agent interface:', message_of(error))
-    announce_when_heard(
-      announce(notices.automatic(some(`Agent interface is off: ${message_of(error)}`)))
-    )
+function start_agent_server(): void {
+  const socket_file = socket_path()
+  const agent_server_input: AgentDeps = {
+    // Reads are answered from the model the window renders from, so they
+    // never wait on the engine — at most one pass old, which is what a read
+    // over a socket is anyway.
+    current_world,
+    // Writes take exactly the path a click takes: the same operation, the
+    // same publish. Only the trigger differs.
+    start: async (name, parameters) => {
+      const result = await operations.start_run(engine, name, parameters, 'agent')
+      publish_cycle(empty())
+      return result
+    }
   }
+
+  serve(socket_file, agent_server_input).then(
+    (server) => {
+      console.log('agent interface listening on', socket_file)
+      // Fire and forget: the process is leaving, and the close needs no
+      // waiting to remove the socket file it owns.
+      app.on('will-quit', () => void server.close())
+    },
+    (error: unknown) => {
+      // If the agent interface fails to launch, coco crashes with it: an
+      // internal error, not a state to keep running in. `serve` left nothing
+      // behind — the file only appears once the bind succeeds.
+      console.error('agent interface:', message_of(error))
+      app.exit(1)
+    }
+  )
 }
 
-/** The window, opened the way it was left. */
-function open_window(restored: WindowState): void {
-  create_window(restored, () => persist_window_state(restored, window_bounds()))
+/** The window's whole launch sequence: the state its file kept — or the
+ *  defaults when there is none — the window opened with it, and the geometry
+ *  it actually got written back, at once and again by its close. The state
+ *  stays in here: after launch, the window itself is the one to ask. */
+function launch_window(user_data_dir: string): void {
+  const restored = restore_window_state(user_data_dir)
+  create_window(restored, () => persist_window_state(window_bounds()))
+  persist_window_state(window_bounds())
 }
 
 // A drive run redirects everything the app keeps per-user — the window state
 // file, the renderer's localStorage — so it never touches the real profile
 // (`scripts/drive.mjs`). Before ready, or the default profile is already open.
-const user_data_override = process.env.COCO_USER_DATA_DIR
-if (user_data_override !== undefined && user_data_override !== '') {
-  app.setPath('userData', user_data_override)
+const user_data_override = env_var('COCO_USER_DATA_DIR')
+if (user_data_override.is_present()) {
+  app.setPath('userData', user_data_override.value)
+}
+
+/**
+ * Whether this launch is the machine's one coco: the holder of the
+ * single-instance lock.
+ *
+ * One coco instance per user machine, by design: coco monitors the
+ * experiments the user launches, and a second instance is useless for that.
+ */
+const is_first_one = app.requestSingleInstanceLock()
+if (is_first_one) {
+  // The first instance hears about a second launch attempt, and should open
+  // its window to the user who asked.
+  app.on('second-instance', focus_window)
+} else {
+  // A subsequent launch just quits, directly. It registers no
+  // `second-instance` handler — that event only ever reaches the lock's
+  // holder.
+  app.quit()
 }
 
 void app.whenReady().then(() => {
+  // `quit()` on a subsequent launch still lets `ready` fire on the way out;
+  // this guard keeps such a launch from doing anything with it.
+  if (!is_first_one) {
+    return
+  }
+
   // A hidden window still puts an icon in the dock and takes the focus with
   // it; the point of hiding it was not to. macOS only, and only under the
   // same flag (`window.ts`).
@@ -87,54 +118,27 @@ void app.whenReady().then(() => {
     app.dock?.hide()
   }
 
-  // only when app is ready, this returns a valid path
-  const user_data_path = app.getPath('userData')
-
-  // restore window state from last run
-  const restored = restore_window_state(user_data_path)
-
   register_ipc()
 
   build_menu()
 
-  open_window(restored)
+  // `getPath` returns a valid path only when the app is ready
+  launch_window(app.getPath('userData'))
 
   void refresh_and_publish()
   setInterval(() => void refresh_and_publish(), REFRESH_INTERVAL_MS)
-  void start_agent_interface()
 
-  app.on('activate', () => {
-    if (!any_window_open()) {
-      open_window(restored)
-    }
-  })
+  start_agent_server()
 
-  // A launch script gets its grace period before the process exits (§10).
-  let shutting_down = false
-  app.on('will-quit', (event) => {
-    // The second ending — the first is the window's close (`open_window`);
-    // both persist the same record.
-    persist_window_state(restored, window_bounds())
-    // The socket file is this process's to remove; leaving it behind makes
-    // the next launch decide whether a live coco owns it.
-    if (agent.is_present()) {
-      void agent.value.close()
-    }
-    agent = empty()
-    if (shutting_down) {
-      return
-    }
-    if (engine.launches_in_flight() === 0) {
-      return
-    }
-    event.preventDefault()
-    shutting_down = true
-    void engine.shutdown_launches(5_000).then(() => app.quit())
+  app.on('will-quit', () => {
+    engine.abandon_launches()
   })
 })
 
+/**
+ * Quits when the last window closes. Coco has no reason to run behind the
+ * scenes, so macOS's stay-in-the-dock convention means nothing here.
+ */
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
+  app.quit()
 })

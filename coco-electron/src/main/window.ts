@@ -9,13 +9,9 @@ import { BrowserWindow } from 'electron'
 import type { CocoEvent } from '@shared/world'
 import type { WindowState } from './window_state'
 import { WINDOW_MIN_SIZE } from './window_state'
-import type { Maybe } from '@shared/maybe'
-import { empty, some } from '@shared/maybe'
-
-let window: Maybe<BrowserWindow> = empty()
-
-/** The geometry taken at the last close, for the persist that follows it. */
-let last_bounds: Maybe<WindowState> = empty()
+import { some } from '@shared/maybe'
+import { throw_coco } from '@shared/error'
+import { env_var } from './env'
 
 /**
  * `COCO_HIDE_WINDOW` opens the window without showing it.
@@ -30,8 +26,8 @@ const HIDDEN = process.env.COCO_HIDE_WINDOW === '1'
 
 export function create_window(old_win: WindowState, on_closing: () => void): void {
   const size = old_win.size
-  // A remembered position is a pair or nothing (`window_state.ts`); nothing
-  // means no x/y keys at all, which leaves the platform to place the window.
+
+  // in case position empty, leave OS to pick a place
   const position = old_win.position.or({})
   const opened = new BrowserWindow({
     show: !HIDDEN,
@@ -47,42 +43,31 @@ export function create_window(old_win: WindowState, on_closing: () => void): voi
       sandbox: false
     }
   })
-  window = some(opened)
+  // One window is the whole application: the shell only ever makes this one,
+  // and the page may not conjure another (`window.open`, a target="_blank"
+  // link). Report content is doubly barred — its iframe sandbox grants
+  // scripts, not popups (`ReportViewer.svelte`).
+  opened.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
 
-  // The last look at the geometry, taken while there is still a window to
-  // ask; will-quit, after the window is gone, keeps what this look took.
-  opened.on('close', () => {
-    last_bounds = some(bounds_of(opened))
-    on_closing()
-  })
+  // `close` is the last moment the geometry can be read — the window leaves
+  // the registry at `closed` — so the persist inside `on_closing` still finds
+  // a window to ask, and writes what it finds into the state it keeps.
+  opened.on('close', on_closing)
 
-  opened.on('closed', () => {
-    window = empty()
-  })
-
-  const dev_server_url = process.env['ELECTRON_RENDERER_URL']
-  if (dev_server_url !== undefined && dev_server_url !== '') {
-    void opened.loadURL(dev_server_url)
+  const dev_server_url = env_var('ELECTRON_RENDERER_URL')
+  if (dev_server_url.is_present()) {
+    void opened.loadURL(dev_server_url.value)
   } else {
     void opened.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
 
 export function send(events: CocoEvent[]): void {
-  if (events.length > 0 && window.is_present()) {
-    window.value.webContents.send('coco:events', events)
+  if (events.length === 0) {
+    return
   }
-}
-
-/**
- * Sends a menu item's command to the window (`menu.ts`).
- *
- * The window this module owns — not the focused one, which a hidden window
- * is not.
- */
-export function send_command(command: string): void {
-  if (window.is_present()) {
-    window.value.webContents.send('coco:command', command)
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send('coco:events', events)
   }
 }
 
@@ -99,17 +84,38 @@ function bounds_of(win: BrowserWindow): WindowState {
 
 /**
  * Where the window would be if it were neither maximised, full-screen nor
- * minimised — which is the only geometry worth reopening at: the window's,
- * read now, or the look `close` took once there is no window left to ask.
+ * minimised — which is the only geometry worth reopening at. A minimised
+ * window still answers: it is neither gone nor destroyed, and
+ * `getNormalBounds` reports its restored rectangle, so quitting a minimised
+ * coco keeps the place it would have come back to.
+ *
+ * Callers ask while there is a window to ask — at the open, and at its
+ * close. No window is not an answer here but a mistake, and throws.
  */
-export function window_bounds(): Maybe<WindowState> {
-  if (window.is_present() && !window.value.isDestroyed()) {
-    return some(bounds_of(window.value))
+export function window_bounds(): WindowState {
+  const open = BrowserWindow.getAllWindows().find((win) => !win.isDestroyed())
+  if (open === undefined) {
+    throw_coco('window bounds read with no window to ask')
   }
-  return last_bounds
+  return bounds_of(open)
 }
 
-/** For the macOS `activate` convention: reopen only when none is left. */
-export function any_window_open(): boolean {
-  return BrowserWindow.getAllWindows().length > 0
+/**
+ * Brings the window to the front, restoring it if it is minimised.
+ *
+ * For now it is only called when a second coco launches: the second one
+ * quits, and the first shows itself in front.
+ */
+export function focus_window(): void {
+  const open = BrowserWindow.getAllWindows().find((win) => !win.isDestroyed())
+  if (open === undefined) {
+    // This happens when the first coco is quitting as the second one is
+    // clicked, so there is no window. Nothing needs bringing to the front —
+    // letting the first one finish quitting is enough.
+    return
+  }
+  if (open.isMinimized()) {
+    open.restore()
+  }
+  open.focus()
 }

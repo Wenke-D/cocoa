@@ -117,13 +117,10 @@ export async function run({ page, shot, log, wait_text, socket_path }) {
   }
   await shot('agent-run-in-the-window')
 
-  // And it is in /world, which is what an agent reads back.
-  const world = JSON.parse((await call(socket_path, 'GET', '/world')).text)
-  // Runs are indexed by the experiment they belong to and then by id: an id
-  // is only unique inside its own experiment.
-  const folder = world.entities.find((entity) => entity.name === 'solver-gpu').id
-  const run = world.job_runs[folder][run_id]
-  log('world says run', run_id, 'is', run.status, 'origin', JSON.stringify(run.origin))
+  // And it is in the job's own detail, which is what an agent reads back.
+  const read_back = JSON.parse((await call(socket_path, 'GET', '/jobs/solver-gpu')).text)
+  const run = read_back.runs.find((candidate) => candidate.id === run_id)
+  log('the job detail says run', run_id, 'is', run.status, 'origin', JSON.stringify(run.origin))
   if (run.origin !== 'Agent') {
     throw new Error(`origin is ${JSON.stringify(run.origin)}`)
   }

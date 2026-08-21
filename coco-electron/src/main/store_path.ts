@@ -11,6 +11,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { env_var } from './env'
 
 /** Where it lived until 2026-08-20, and where coco-egui still looks. */
 export function legacy_store_path(): string {
@@ -24,9 +25,9 @@ export function legacy_store_path(): string {
  * scratch store, and must not touch the real one on the way past.
  */
 export function resolve_store_path(user_data_dir: string, legacy = legacy_store_path()): string {
-  const override = process.env.COCO_STORE_PATH
-  if (override !== undefined && override !== '') {
-    return override
+  const override = env_var('COCO_STORE_PATH')
+  if (override.is_present()) {
+    return override.value
   }
 
   const target = path.join(user_data_dir, 'store.json')

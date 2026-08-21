@@ -1,14 +1,13 @@
-// The three things the whole main process shares, in one place so that nobody
+// The two things the whole main process shares, in one place so that nobody
 // has to import `index.ts` to reach them — which is what would make the
 // dependency graph a cycle.
 //
 // Everything else in `main/` owns its own state and exports functions over it;
-// these three are genuinely process-wide singletons.
+// these two are genuinely process-wide singletons.
 
 import { app } from 'electron'
 import { Coco } from './engine/coco'
 import { NoticeGate } from './notices'
-import { serialize } from './serial'
 import { resolve_store_path } from './store_path'
 
 /**
@@ -18,11 +17,13 @@ import { resolve_store_path } from './store_path'
  * moment `package.json` is loaded, and answers the same thing it will answer
  * later. Where the store lives is this side's decision, not the engine's: the
  * engine takes a path and knows nothing about the machine it is on.
+ *
+ * Operations call the engine directly — there is no queue. Synchronous work
+ * is atomic on the event loop, and every write that follows an `await` guards
+ * itself against the world having moved (`poll_job`'s history check,
+ * `cancel_run`'s recheck, `start_job`'s reservation).
  */
 export const engine = new Coco(resolve_store_path(app.getPath('userData')))
-
-/** Every engine operation takes its turn; see `serial.ts` for why. */
-export const on_engine = serialize()
 
 /** What the user hears about a refresh, and how often; see `notices.ts`. */
 export const notices = new NoticeGate()

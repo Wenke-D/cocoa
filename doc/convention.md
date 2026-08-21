@@ -72,7 +72,7 @@ command     = "./launch.sh"         # gets --script and --run
 params      = ["mesh", "gpu"]       # ALL required; passed as --mesh v --gpu v
 
 [poll]
-command     = "./poll.py"           # gets --submissions
+command     = "./poll.py"           # gets --submission
 
 [report]
 command     = "./report.py"         # gets --run and --submission
@@ -261,7 +261,7 @@ are expected depends on the script:
 | Script | `COCO_RETURN:` lines | Payload |
 |---|---|---|
 | `launch` | exactly one (last wins) | the submission id |
-| `poll` | zero or more | `<submission_id> <STATUS> [reason]`, or `UNREACHABLE <reason>` |
+| `poll` | exactly one | `<STATUS> [reason]`, or `UNREACHABLE <reason>` |
 | `plan` | one or more | one JSON instance object |
 | `report` | none | — |
 | `cancel` | none | — |
@@ -359,25 +359,24 @@ The record written at this point holds both parameter sets separately:
 ### 7.2 `poll`
 
 ```
-./poll.py --submissions 5001,5002,5003,5004
+./poll.py --submission 5001
 ```
 
-Receives the comma-separated submission ids of that job's currently active
-runs — one argv value, so no quoting rules are involved — and prints one line
-per id it can speak for:
+Called once per active run with that run's submission id — the same shape
+`cancel` gets — and answers for that one run, no id prefix needed:
 
 ```
-COCO_RETURN: 5001 RUNNING
-COCO_RETURN: 5002 COMPLETED
-COCO_RETURN: 5003 PENDING
-COCO_RETURN: 5004 FAILED slurm reported TIMEOUT after 4h
+COCO_RETURN: FAILED slurm reported TIMEOUT after 4h
 ```
 
 Everything after the status is a free-text reason, kept and displayed as-is.
 
-A line for an unknown id, or for a run already terminal, is ignored. Ids the
-script says nothing about keep their current status — silence is not a state, so
-a poll may report a subset.
+The answer is exactly one line, always — a run that is simply still running
+is still an answer (`RUNNING`), and a poll with nothing to print is broken
+code, treated as §10 treats a non-zero exit. One call per run rather than one
+aggregated call, so a script stays a line of `squeue -j $sub` rather than a
+loop with parsing, and one run's slow or broken poll never speaks for
+another's.
 
 Poll is where a scheduler's vocabulary gets translated: slurm's `COMPLETING`
 is reported as `RUNNING`, `TIMEOUT` and `NODE_FAIL` as `FAILED`. That mapping
@@ -388,8 +387,7 @@ Note that poll reports `COMPLETED`, not `SUCCEEDED`: it speaks only for the
 cluster, and `SUCCEEDED` is coco's word for "finished and reported" (§9).
 
 If the first token after `COCO_RETURN: ` is the keyword `UNREACHABLE` rather
-than one of the ids coco passed in, the line is job-level rather than
-run-level — see §10.
+than a status word, coco cannot currently see this run — see §10.
 
 ### 7.3 `report`
 
@@ -648,27 +646,25 @@ currently see is not a run that failed, and `UNREACHABLE` exists so that the
 difference survives: it sits on the same status axis, but it is **not terminal**
 and it does not end anything.
 
-A poll that cannot reach its scheduler says so once, for the whole job, and
-exits **0** — it did its job; the scheduler is the problem:
+A poll that cannot reach its scheduler says so and exits **0** — it did its
+job; the scheduler is the problem:
 
 ```
 COCO_RETURN: UNREACHABLE squeue: connection timed out
 ```
 
-coco moves that job's active runs to `UNREACHABLE`, showing the reason and the
-last known status beside it (`UNREACHABLE — last known RUNNING`). Polling
-continues, and the next successful poll overwrites it. Nothing needs recovering
-by hand.
+coco moves that run to `UNREACHABLE`, showing the reason and the last known
+status beside it (`UNREACHABLE — last known RUNNING`). Polling continues, and
+the next successful poll overwrites it. Nothing needs recovering by hand. (A
+scheduler that is down for one run is usually down for all of them — each
+run's own poll call reports it for itself.)
 
 A poll that **exits non-zero** is broken code rather than an unreachable
-scheduler, but the effect on coco is the same — it cannot see the runs — so it
-is treated the same way: the job's active runs go `UNREACHABLE` with
+scheduler, but the effect on coco is the same — it cannot see the run — so it
+is treated the same way: that run goes `UNREACHABLE` with
 `poll script failed: <captured output>` as the reason, and the failure is also
 raised as a loud operation error so the script gets fixed. Fixing it heals
 everything on the next tick.
-
-A status line and an `UNREACHABLE` line in the same output is a contradiction;
-the status lines win and the `UNREACHABLE` is ignored.
 
 ---
 

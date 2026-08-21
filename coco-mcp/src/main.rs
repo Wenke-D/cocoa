@@ -7,20 +7,21 @@
 //! sentence a person would have been shown.
 //!
 //! The MCP subset needed — initialize, tools/list, tools/call, one line of
-//! JSON per message — is written out rather than taken as a dependency, which
-//! is also what keeps this crate free of an async runtime.
+//! JSON per message — is written out rather than taken as a dependency. HTTP
+//! is the opposite call: libcurl speaks it (the `curl` crate), because a
+//! hand-rolled HTTP client is code its reviewer would have to audit line by
+//! line, and libcurl has been audited by the world instead. No TLS and no
+//! async runtime — a private socket needs neither.
 //!
 //! It is its own crate because it outlived the implementation it was written
 //! in. It speaks only the socket protocol of §43.2, and both cocos serve that
 //! protocol identically, so it drives the Electron workbench unchanged and
-//! never learns which one is listening. Building it needs nothing but
-//! `serde_json`; `coco-egui` appears only as a dev-dependency, for the test
-//! that stands a real server up to talk to.
+//! never learns which one is listening.
 
 use std::collections::BTreeMap;
-use std::io::{BufRead, Read, Write};
-use std::os::unix::net::UnixStream;
-use std::path::PathBuf;
+use std::io::{BufRead, Write};
+use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use serde_json::{Value, json};
 
@@ -150,18 +151,12 @@ fn tools() -> Value {
                 "required": ["experiment"],
             },
         },
-        {
-            "name": "coco_overview",
-            "description": "The whole world the workbench renders from — every entity and every run. Large; prefer the scoped tools.",
-            "inputSchema": no_arguments,
-        },
     ])
 }
 
 fn call_tool(name: &str, arguments: &Value) -> Result<Value, (i64, String)> {
     let outcome = match name {
         "coco_help" => http("GET", "/help", None),
-        "coco_overview" => http("GET", "/world", None),
         "coco_list_jobs" => http("GET", "/jobs", None),
         "coco_list_benches" => http("GET", "/benches", None),
         "coco_job" => http("GET", &format!("/jobs/{}", encoded_name(arguments)?), None),
@@ -206,44 +201,57 @@ fn encoded_name(arguments: &Value) -> Result<String, (i64, String)> {
         .ok_or((-32602, "this tool needs `name`".to_owned()))
 }
 
-/// One request, one response, connection closed — the subset §43.2 serves.
+/// One request, one response — libcurl over the Unix socket (§43.2), the
+/// same dialect `curl --unix-socket` speaks by hand.
 fn http(method: &str, path: &str, body: Option<String>) -> Result<(u16, String), String> {
     let socket = socket_path();
-    let mut stream = UnixStream::connect(&socket).map_err(|error| {
-        format!(
-            "coco is not answering on {} ({error}); the interface exists only while \
-             the coco window is running",
-            socket.display()
-        )
-    })?;
-
-    let body = body.unwrap_or_default();
-    stream
-        .write_all(
+    perform(&socket, method, path, body).map_err(|error| {
+        if error.is_couldnt_connect() {
             format!(
-                "{method} {path} HTTP/1.1\r\nHost: coco\r\nContent-Length: {}\r\n\
-                 Connection: close\r\n\r\n{body}",
-                body.len()
+                "coco is not answering on {} ({error}); the interface exists only while \
+                 the coco window is running",
+                socket.display()
             )
-            .as_bytes(),
-        )
-        .map_err(|error| error.to_string())?;
+        } else {
+            error.to_string()
+        }
+    })
+}
 
-    let mut raw = String::new();
-    stream
-        .read_to_string(&mut raw)
-        .map_err(|error| error.to_string())?;
+fn perform(
+    socket: &Path,
+    method: &str,
+    path: &str,
+    body: Option<String>,
+) -> Result<(u16, String), curl::Error> {
+    let mut easy = curl::easy::Easy::new();
+    easy.unix_socket(&socket.to_string_lossy())?;
+    // The host is never resolved over a Unix socket; the URL just needs one.
+    easy.url(&format!("http://coco{path}"))?;
+    easy.connect_timeout(Duration::from_secs(5))?;
+    // Outlives the server's own 30-second engine wait (§43.3), so a slow
+    // answer is still an answer and only a hang times out.
+    easy.timeout(Duration::from_secs(60))?;
+    if let Some(body) = &body {
+        debug_assert_eq!(method, "POST");
+        easy.post(true)?;
+        easy.post_fields_copy(body.as_bytes())?;
+        let mut headers = curl::easy::List::new();
+        headers.append("Content-Type: application/json")?;
+        easy.http_headers(headers)?;
+    }
 
-    let status: u16 = raw
-        .split_whitespace()
-        .nth(1)
-        .and_then(|code| code.parse().ok())
-        .ok_or_else(|| format!("unreadable reply: {raw:.80}"))?;
-    let body = raw
-        .split_once("\r\n\r\n")
-        .map(|(_, body)| body.to_owned())
-        .unwrap_or_default();
-    Ok((status, body))
+    let mut reply = Vec::new();
+    {
+        let mut transfer = easy.transfer();
+        transfer.write_function(|data| {
+            reply.extend_from_slice(data);
+            Ok(data.len())
+        })?;
+        transfer.perform()?;
+    }
+    let status = easy.response_code()? as u16;
+    Ok((status, String::from_utf8_lossy(&reply).into_owned()))
 }
 
 /// Experiment names are folder names, and a folder name may hold a space.

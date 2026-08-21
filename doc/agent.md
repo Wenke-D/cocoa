@@ -1,7 +1,8 @@
 # The agent interface
 
 coco can be driven by an agent as well as by a person: the same operations,
-the same queue, the same screen, with one word on the record saying who asked.
+the same guarded engine, the same screen, with one word on the record saying
+who asked.
 
 Covered here: §43.
 
@@ -26,8 +27,11 @@ the first refresh, and if the cluster finished it, the stage that follows runs
 
 ### 43.2 Transport
 
-A Unix domain socket at a fixed path — `$HOME/.local/share/coco/coco.sock`,
-overridable with `COCO_SOCKET_PATH` for development.
+A Unix domain socket at a fixed path per build —
+`$HOME/.local/share/coco/coco.sock`, with `coco-dev.sock` beside it for the
+dev build, overridable with `COCO_SOCKET_PATH`. The dev build's own file keeps
+hacking on coco from stealing the packaged coco's socket; the single-instance
+lock cannot referee across builds.
 
 A socket rather than a TCP port: there is no port to discover, publish, or
 collide over, nothing else on the machine reaches it by accident, and the
@@ -35,27 +39,26 @@ filesystem's own permissions decide who may. Socket paths are bounded well below
 a filesystem's path limit, so a failure to bind is reported with the path in it.
 
 The wire format is HTTP/1.1, so `curl --unix-socket` is the whole client
-library. In the workbench the protocol is spoken by Node's own `http` server
-bound to the socket path; the egui implementation used `tiny_http`. Either way
-parsing, framing, and status lines are common code rather than coco's own. What
-stays coco's is what no
-library decides — who may bind the socket, when the file goes away, and where a
-request's answer comes from. Request bodies are capped at 64 KiB; a larger
-declared length is answered `413` before a byte of it is read.
+library. Both ends speak it through libraries a reviewer never has to audit:
+the workbench serves through Express on Node's `http` server, and the bundled
+`coco-mcp-server` asks through libcurl — routing, decoding, framing, and the
+body cap are theirs. What stays coco's is what no library decides — who may
+bind the socket, when the file goes away, and where a request's answer comes
+from. Request bodies are capped at 64 KiB; a larger declared length is
+answered `413` before a byte of it is read.
 
-Failing to bind is not fatal. Another coco already owns the socket, or the
-directory is not writable; either way the workbench is still a workbench, and it
-says so in the log. A socket file with nothing listening behind it is a crash's
-leftover and is replaced. One with a live coco behind it is not: the second
-window runs without an interface rather than stealing the first's.
+Failing to bind is fatal: no agent interface, no coco. A socket file already
+at the path is deleted outright, not probed: a Unix socket cannot listen where
+a file sits, dead or not, and nothing alive can own it — the single-instance
+lock keeps each build to one coco, and each build listens on its own path.
 
 ### 43.3 Path through the application
 
-Every request is handed to the engine's one owner — the worker thread that
-also executes the commands from the screen. An agent's start takes the same
-call a click takes — the same validation, the same origin stamping (§10.6),
-the same screen update. There is no second way into the engine to keep in step
-with the first.
+Every request lands on the same engine the screen drives, on the same event
+loop. An agent's start takes the same call a click takes — the same
+validation, the same origin stamping (§10.6), the same write guards (§26.2),
+the same screen update. There is no second way into the engine to keep in
+step with the first.
 
 Reads are answered from the snapshot the worker publishes after each pass, so
 they never wait on one. Writes wait, because the engine has one owner and the
@@ -66,7 +69,6 @@ rather than left hanging.
 
 ```text
 GET  /help                         what this is, and every route, from the tool itself
-GET  /world                        the world, as §26.1's dump prints it
 GET  /jobs                         every Job: name, folder, parameters, run tallies
 GET  /benches                      every Bench, same shape
 GET  /jobs/{name}                  one Job and its runs, with file locations

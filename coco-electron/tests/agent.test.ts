@@ -1,8 +1,6 @@
-// The agent interface (§43): the routes, and the socket they are served on.
-//
-// The routes are exercised directly — they are a function of a world and a
-// start — and then once over a real Unix socket with a real HTTP client,
-// because "it parses" and "curl can reach it" are different claims.
+// The agent interface (§43): the routes, exercised the only way they exist —
+// over a real Unix socket with a real HTTP client. Routing, decoding and the
+// body cap are Express's; what these tests pin down is coco's surface.
 
 import fs from 'node:fs'
 import http from 'node:http'
@@ -11,8 +9,9 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { World } from '@shared/world'
 import { empty_world } from '@shared/world'
-import type { AgentDeps, AgentServer } from '../src/main/agent'
-import { route, segments, serve, socket_path } from '../src/main/agent'
+import type { AgentDeps } from '../src/main/agent/answer'
+import type { AgentServer } from '../src/main/agent/serve'
+import { serve, socket_path } from '../src/main/agent/serve'
 
 const FOLDER = '/exp/solver-gpu'
 const BENCH_FOLDER = '/exp/nightly'
@@ -92,27 +91,74 @@ function world(): World {
 
 function deps(start?: AgentDeps['start']): AgentDeps {
   return {
-    world,
+    current_world: world,
     start: start ?? (async () => ({ ok: true, run_id: '7' }))
   }
 }
 
+/** One HTTP request against a Unix socket, the way any client makes it. */
+function request(
+  socket: string,
+  method: string,
+  route_path: string,
+  body?: string
+): Promise<{
+  status: number
+  type: string | undefined
+  length: string | undefined
+  encoding: string | undefined
+  text: string
+}> {
+  return new Promise((resolve, reject) => {
+    const call = http.request(
+      {
+        socketPath: socket,
+        path: route_path,
+        method,
+        headers: { 'Content-Type': 'application/json' }
+      },
+      (response) => {
+        let text = ''
+        response.setEncoding('utf8')
+        response.on('data', (chunk: string) => (text += chunk))
+        response.on('end', () =>
+          resolve({
+            status: response.statusCode ?? 0,
+            type: response.headers['content-type'],
+            length: response.headers['content-length'],
+            encoding: response.headers['transfer-encoding'],
+            text
+          })
+        )
+      }
+    )
+    call.on('error', reject)
+    if (body !== undefined) {
+      call.write(body)
+    }
+    call.end()
+  })
+}
+
+/** One request against a freshly served instance, torn down after. */
 async function ask(method: string, url: string, body = '', start?: AgentDeps['start']) {
-  const response = await route({ method, url, body }, deps(start))
-  return { status: response.status, json: JSON.parse(response.body) as Record<string, never> }
+  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'coco-ask-')))
+  const server = await serve(path.join(dir, 'coco.sock'), deps(start))
+  try {
+    const answer = await request(
+      path.join(dir, 'coco.sock'),
+      method,
+      url,
+      body === '' ? undefined : body
+    )
+    return { status: answer.status, json: JSON.parse(answer.text) as Record<string, never> }
+  } finally {
+    await server.close()
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
 }
 
 describe('paths', () => {
-  it('reads a target as its segments', () => {
-    expect(segments('/experiments/solver-gpu/runs')).toEqual(['experiments', 'solver-gpu', 'runs'])
-  })
-
-  // A query string is not part of the route, and a percent-escaped name is
-  // the name: an experiment is a folder, and a folder name may hold a space.
-  it('drops the query and decodes the path', () => {
-    expect(segments('/experiments/my%20sweep?verbose=1')).toEqual(['experiments', 'my sweep'])
-  })
-
   it('puts the socket where the Rust coco puts it', () => {
     const previous = process.env['COCO_SOCKET_PATH']
     delete process.env['COCO_SOCKET_PATH']
@@ -125,6 +171,28 @@ describe('paths', () => {
       process.env['COCO_SOCKET_PATH'] = previous
     }
   })
+
+  // The dev build must not take the packaged coco's socket: the
+  // single-instance lock cannot referee across builds, so the paths diverge.
+  it('gives the dev build a socket of its own', () => {
+    const previous_override = process.env['COCO_SOCKET_PATH']
+    const previous_url = process.env['ELECTRON_RENDERER_URL']
+    delete process.env['COCO_SOCKET_PATH']
+    process.env['ELECTRON_RENDERER_URL'] = 'http://localhost:5173'
+    expect(socket_path()).toBe(
+      path.join(process.env['HOME'] ?? '', '.local/share/coco/coco-dev.sock')
+    )
+    if (previous_override === undefined) {
+      delete process.env['COCO_SOCKET_PATH']
+    } else {
+      process.env['COCO_SOCKET_PATH'] = previous_override
+    }
+    if (previous_url === undefined) {
+      delete process.env['ELECTRON_RENDERER_URL']
+    } else {
+      process.env['ELECTRON_RENDERER_URL'] = previous_url
+    }
+  })
 })
 
 describe('reads', () => {
@@ -135,14 +203,8 @@ describe('reads', () => {
     const paths = (json as unknown as { endpoints: { path: string }[] }).endpoints.map(
       (e) => e.path
     )
-    expect(paths).toContain('/world')
+    expect(paths).toContain('/jobs')
     expect(paths).toContain('/experiments/{name}/runs')
-  })
-
-  it('serves the whole world', async () => {
-    const { status, json } = await ask('GET', '/world')
-    expect(status).toBe(200)
-    expect(json).toEqual(JSON.parse(JSON.stringify(world())))
   })
 
   it('lists jobs with their tallies', async () => {
@@ -211,7 +273,16 @@ describe('reads', () => {
 
   it('refuses an endpoint it does not have', async () => {
     expect((await ask('GET', '/nope')).status).toBe(404)
-    expect((await ask('DELETE', '/world')).status).toBe(405)
+    expect((await ask('DELETE', '/jobs')).status).toBe(405)
+  })
+
+  // A percent-escaped name is the name — an experiment is a folder, and a
+  // folder name may hold a space — and a query string is not part of the
+  // route.
+  it('decodes the name and ignores the query', async () => {
+    const { status, json } = await ask('GET', '/jobs/my%20sweep?verbose=1')
+    expect(status).toBe(404)
+    expect(json.error).toBe('No such job: my sweep')
   })
 })
 
@@ -282,56 +353,13 @@ describe('the socket', () => {
     return path.join(dir, 'coco.sock')
   }
 
-  function request(
-    socket: string,
-    method: string,
-    route_path: string,
-    body?: string
-  ): Promise<{
-    status: number
-    type: string | undefined
-    length: string | undefined
-    encoding: string | undefined
-    text: string
-  }> {
-    return new Promise((resolve, reject) => {
-      const call = http.request(
-        {
-          socketPath: socket,
-          path: route_path,
-          method,
-          headers: { 'Content-Type': 'application/json' }
-        },
-        (response) => {
-          let text = ''
-          response.setEncoding('utf8')
-          response.on('data', (chunk: string) => (text += chunk))
-          response.on('end', () =>
-            resolve({
-              status: response.statusCode ?? 0,
-              type: response.headers['content-type'],
-              length: response.headers['content-length'],
-              encoding: response.headers['transfer-encoding'],
-              text
-            })
-          )
-        }
-      )
-      call.on('error', reject)
-      if (body !== undefined) {
-        call.write(body)
-      }
-      call.end()
-    })
-  }
-
   it('answers HTTP over a unix socket', async () => {
     const file = socket_file()
     open.push(await serve(file, deps()))
 
     const answer = await request(file, 'GET', '/jobs')
     expect(answer.status).toBe(200)
-    expect(answer.type).toBe('application/json')
+    expect(answer.type).toBe('application/json; charset=utf-8')
     const jobs = JSON.parse(answer.text) as { name: string }[]
     expect(jobs[0].name).toBe('solver-gpu')
   })
@@ -341,7 +369,7 @@ describe('the socket', () => {
     let started = false
     open.push(
       await serve(file, {
-        world,
+        current_world: world,
         start: async () => {
           started = true
           return { ok: true, run_id: '9' }
@@ -373,32 +401,35 @@ describe('the socket', () => {
     expect(answer.status).toBe(413)
   })
 
-  // Two owners of one store is the situation the whole design exists to
-  // avoid: a second coco must not take the first one's socket.
-  it('will not steal a socket a live coco is answering on', async () => {
+  // A file already at the path is deleted without a probe: nothing alive can
+  // own it — one coco per build (the single-instance lock), one path per
+  // build (`socket_path`). So the last bind wins, even over a listener.
+  it('takes the path over from whatever held it', async () => {
     const file = socket_file()
     open.push(await serve(file, deps()))
-    await expect(serve(file, deps())).rejects.toThrow('already answering')
+
+    let second_answered = false
+    open.push(
+      await serve(file, {
+        current_world: () => {
+          second_answered = true
+          return world()
+        },
+        start: async () => ({ ok: true, run_id: '7' })
+      })
+    )
+
+    expect((await request(file, 'GET', '/jobs')).status).toBe(200)
+    expect(second_answered).toBe(true)
   })
 
-  // A crash leaves the file behind with nothing listening; that one is free.
+  // A crash leaves the file behind with nothing listening; a Unix socket
+  // cannot listen where a file sits, so the leftover must go.
   it('replaces a socket file nothing is listening on', async () => {
     const file = socket_file()
     fs.writeFileSync(file, '')
     open.push(await serve(file, deps()))
     expect((await request(file, 'GET', '/help')).status).toBe(200)
-  })
-
-  // The bundled `coco-mcp-server` reads a reply as everything after the blank
-  // line — it does not decode chunked framing — so a chunked body reaches it
-  // with the frame sizes still in it. Found by driving the real binary.
-  it('frames every reply with a Content-Length, never chunked', async () => {
-    const file = socket_file()
-    open.push(await serve(file, deps()))
-
-    const answer = await request(file, 'GET', '/jobs')
-    expect(answer.encoding).toBeUndefined()
-    expect(answer.length).toBe(String(Buffer.byteLength(answer.text)))
   })
 
   it('removes the socket file when it stops', async () => {

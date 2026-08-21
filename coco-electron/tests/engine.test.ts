@@ -2,10 +2,11 @@
 // convention. Ported from the Rust suite (`tests/coco_engine.rs`) so the two
 // engines answer the same scenarios the same way.
 //
-// Where the TypeScript engine deliberately differs — memory is the truth, so
-// an outside edit lands at the next reconcile rather than at the next read —
-// the test says so and reconciles explicitly, which is what the 3s refresh
-// tick does in the app.
+// Where the TypeScript engine deliberately differs — memory is the truth,
+// and coco's own files are coco's alone, so run records are read once when a
+// folder is first seen and never re-scanned — the test says so: an outside
+// change to a record shows up in a reopened engine, not a running one.
+// Manifests stay the user's files and are re-read every reconcile pass.
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -110,27 +111,31 @@ describe('job lifecycle', () => {
     await settle(coco)
   })
 
-  // Closing coco right after a start is normal (§10): the launch script gets
-  // its moment to land, so the submission id is recorded and the next open
-  // catches up on the run instead of finding an orphan.
-  it('records the submission when coco closes right after a start', async () => {
+  // The close never waits, but an answer that already arrived is still
+  // collected on the way out (§10): the submission id is recorded and the
+  // next open catches up on the run like any other.
+  it('collects an already-landed answer when coco closes', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'close-me')
     const coco = engine(dir)
     coco.register(job)
     const run_id = await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
 
-    await coco.shutdown_launches(5_000)
+    // The script gets a moment to exit before the close — the wait is the
+    // test's, standing in for a user who saw the run land; the close itself
+    // waits for nothing.
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    coco.abandon_launches()
 
     const record = coco.run_record(job, run_id)
     expect(record.status).toBe('STARTING')
     expect(record.submission_id).toBe(`sub-${run_id}`)
   })
 
-  // A script still running past the shutdown grace is killed and its run
-  // moved to ERROR now, honestly, rather than left for the reopen sweep to
-  // guess about.
-  it('abandons a launch hung past the shutdown grace as ERROR', async () => {
+  // A script that has not answered by the close is killed and its run moved
+  // to ERROR now, honestly — not waited on, not left for the reopen sweep
+  // to guess about.
+  it('abandons an unanswered launch at close as ERROR', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'hung')
     write_script(job, 'launch.sh', "sleep 30\necho 'COCO_RETURN: late'\n")
@@ -138,11 +143,11 @@ describe('job lifecycle', () => {
     coco.register(job)
     const run_id = await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
 
-    await coco.shutdown_launches(50)
+    coco.abandon_launches()
 
     const record = coco.run_record(job, run_id)
     expect(record.status).toBe('ERROR')
-    expect(record.error).toContain('abandoned')
+    expect(record.error).toContain('no longer be tracked')
   })
 
   // A record still "launching" in a coco that holds no script for it is a
@@ -165,7 +170,7 @@ describe('job lifecycle', () => {
     expect(record.status).toBe('ERROR')
     expect(record.error).toContain('closed')
 
-    await crashed.shutdown_launches(0)
+    crashed.abandon_launches()
   })
 
   // A script that cannot be started at all — no interpreter, no file — is a
@@ -250,12 +255,12 @@ describe('polling', () => {
     expect(record.reason).toContain('poll script failed')
 
     // A bare UNREACHABLE line leaves the run where it is.
-    write_script(job, 'poll.sh', "subs='' ; echo 'COCO_RETURN: UNREACHABLE never mind'\n")
+    write_script(job, 'poll.sh', "echo 'COCO_RETURN: UNREACHABLE never mind'\n")
     await coco.poll_job(job)
     expect(coco.run_record(job, run_id).status).toBe('UNREACHABLE')
 
     // The next good poll overwrites UNREACHABLE.
-    write_script(job, 'poll.sh', "echo 'COCO_RETURN: sub-0 RUNNING'\n")
+    write_script(job, 'poll.sh', "echo 'COCO_RETURN: RUNNING'\n")
     const report = await coco.poll_job(job)
     expect(report.changed).toEqual([[run_id, 'RUNNING']])
     expect(coco.run_record(job, run_id).status).toBe('RUNNING')
@@ -269,7 +274,7 @@ describe('polling', () => {
     const run_id = await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
     await settle(coco)
 
-    write_script(job, 'poll.sh', "echo 'COCO_RETURN: sub-0 HYPERDRIVE'\n")
+    write_script(job, 'poll.sh', "echo 'COCO_RETURN: HYPERDRIVE'\n")
     const report = await coco.poll_job(job)
     expect(report.changed).toEqual([])
     expect(report.warnings).toHaveLength(1)
@@ -513,7 +518,7 @@ describe('reports', () => {
   })
 })
 
-describe('reconcile (memory is the truth)', () => {
+describe('records are read once, at first sight', () => {
   it('fails only the corrupt run, not the history around it', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'mixed-history')
@@ -524,16 +529,19 @@ describe('reconcile (memory is the truth)', () => {
     await settle(coco)
 
     hand_edit(record_path(job, 0), '{ not json')
-    coco.reconcile()
+    const reopened = engine(dir)
 
-    const views = coco.job_runs(job)
+    const views = reopened.job_runs(job)
     expect(views.map((view) => view.run_id)).toEqual([1, 0])
     expect(views[1].record).toBeNull()
     expect(views[1].record_error?.message).toContain('does not parse')
     expect(views[0].record?.run_id).toBe(1)
   })
 
-  it('pulls a hand-edited run.json back into memory', async () => {
+  // coco's own files are coco's alone: an outside edit to a run.json is not
+  // watched for. A running engine keeps its memory; the next open reads the
+  // disk once and sees whatever is there then.
+  it('ignores an outside edit until the next open', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'edited-by-hand')
     const coco = engine(dir)
@@ -544,22 +552,10 @@ describe('reconcile (memory is the truth)', () => {
     const record = { ...coco.run_record(job, run_id), status: 'CANCELLED' as const }
     hand_edit(record_path(job, run_id), JSON.stringify(record, null, 2))
     coco.reconcile()
+    expect(coco.run_record(job, run_id).status).toBe('STARTING')
 
-    expect(coco.run_record(job, run_id).status).toBe('CANCELLED')
-  })
-
-  it('drops a run whose folder was deleted', async () => {
-    const dir = temp_dir()
-    const job = job_folder(dir, 'deleted-run')
-    const coco = engine(dir)
-    coco.register(job)
-    const run_id = await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
-    await settle(coco)
-
-    fs.rmSync(path.join(job, 'runs', String(run_id)), { recursive: true })
-    coco.reconcile()
-
-    expect(coco.job_runs(job)).toEqual([])
+    const reopened = engine(dir)
+    expect(reopened.run_record(job, run_id).status).toBe('CANCELLED')
   })
 })
 

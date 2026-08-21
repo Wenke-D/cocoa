@@ -164,6 +164,12 @@ on:
 The implementation must not contain architecture-specific code that prevents
 either Apple Silicon or Intel macOS builds.
 
+The application is single-instance per machine: the engine is the store's and
+the agent socket's single owner, so a second launch hands over to the running
+coco — which brings its window to the front — and quits. The instance lock
+follows `userData`, so a drive run's private profile runs alongside a real
+coco rather than refusing to start.
+
 ### 6.2 macOS Requirements
 
 On macOS:
@@ -171,9 +177,14 @@ On macOS:
 - Use the normal operating-system window frame and title bar.
 - Do not implement a custom frameless title bar.
 - Respect Retina/HiDPI scaling.
-- Use platform-aware command shortcuts: the application menu declares
-  `CmdOrCtrl` accelerators, and a menu pick and a click must route through the
-  same operation (§25).
+- The application menu carries no workbench commands for now — it is the
+  platform's minimum: the Edit roles, which are what wire up the clipboard on
+  macOS, and Quit. Other platforms get no menu at all. If commands return, they
+  declare platform-aware `CmdOrCtrl` accelerators, and a menu pick and a click
+  must route through the same operation (§25).
+- Closing the window quits the app — coco deliberately breaks with the macOS
+  stay-in-the-dock convention. Coco is its window: a windowless engine would
+  keep refreshing and answering the agent socket with nothing watching it.
 - Do not assume `/home/...` paths.
 - Do not depend on Bash-specific commands.
 - Do not depend on Homebrew packages to run the application.
@@ -232,8 +243,8 @@ atomic from the UI's perspective: either the Bench run and all its child runs
 exist, or nothing was created.
 
 `trigger` — `Human` or `Agent` — is the whole difference between a click and an
-agent's call (§43): same lookup, same validation, same queue, one word on the
-record (§10.6).
+agent's call (§43): same lookup, same validation, same guarded engine, one
+word on the record (§10.6).
 
 ### 26.1 Memory Is the Truth
 
@@ -241,29 +252,39 @@ The engine holds the domain in memory. Reads never touch disk. Writes go to
 memory first and are then written through to the experiment folders, so the
 folders stay the record ([convention.md](convention.md)) without being on the read path.
 
-Each refresh tick runs a reconcile pass that pulls hand-edited files back in by
-mtime. A file edited by hand between two ticks while coco writes the same run is
-a lost update, and that is accepted: coco is a single local instance and the
-alternative is a locking protocol over a directory tree.
+coco's own files are coco's alone: run records are read once, when a folder
+is first seen (startup, or its registration), and never re-scanned — an
+outside edit shows up at the next open, not the next tick. Manifests stay the
+user's authored files, so each refresh tick re-reads `coco.toml` and an edit
+lands within 3 s.
 
 `store.json` persists only what is not in the folders — the registered folders,
 and nothing else — not the runs, which live in the folders, and not a run-id
 counter, which was retired in favour of deriving an id from the experiment's
 own records (convention §5).
 
-### 26.2 One Turn at a Time
+### 26.2 Guarded Writes, No Queue
 
-Operations are serialized (`src/main/serial.ts`). A poll, a start, and a cancel
-run one after another and never interleave.
+There is no queue on the engine. Synchronous work is atomic on the event loop
+for free; the only interleaving points are the `await`s around scripts, and
+every write that follows one guards itself against the world having moved:
 
-This is not optional bookkeeping. Every operation awaits a script, so without a
-queue a poll that *started* before a cancel can *finish* after it and write the
-pre-cancel status back over `CANCELLING`. A "refresh in progress" flag does not
-help: it only stops two refreshes overlapping.
+- `poll_job` records each run's `history.length` before its script and drops
+  an answer formed before any later change — the stale poll that used to
+  write the pre-cancel status back over `CANCELLING` now lands on nothing.
+  The next tick re-asks with fresh eyes.
+- `cancel_run` re-checks cancellability after its script: a run that ended on
+  its own meanwhile keeps its own ending.
+- `start_job` reserves the run id and its record in the same synchronous
+  stretch that picked the id, before the spawn's `await`, so two concurrent
+  starts cannot share an id.
+- Refreshes are single-flight (`refresh.ts`): the clock's tick is dropped
+  while one runs, a person's waits and then answers — so poll, harvest and
+  report never overlap themselves.
 
-Queued, not dropped — a user's cancel waits its turn rather than being lost. A
-failed turn does not cancel the queue; the next one runs either way and each
-caller still sees its own outcome.
+The price of no queue is this discipline: a new write placed after an `await`
+must bring its own guard. The prize is that a cancel or a start runs the
+moment it is asked, never behind a slow poll.
 
 ### 26.3 The Backend Judges Change
 
@@ -362,7 +383,7 @@ its children, not stored independently of them.
 
 One interval drives everything: `REFRESH_INTERVAL_MS = 3000` in
 `src/main/index.ts`. On each tick the engine harvests pending launches, polls
-active runs, takes reports that are due, reconciles hand-edited files, rebuilds
+active runs, takes reports that are due, re-reads manifests, rebuilds
 the world, and publishes the difference.
 
 There is no filesystem watcher (§4.3) and no per-run timer. Duration fields tick
@@ -388,8 +409,9 @@ Persist:
 - Report wrap setting.
 - Window geometry.
 
-Geometry is recorded as it changes, not only on close: on macOS, quitting with
-the window open never fires a close at all.
+Geometry is recorded at the endings: once the window opens (what it actually
+got) and at its close. A quit closes the window first, so the close's write is
+the last word — nothing tracks resizes as they happen.
 
 Do not persist:
 
@@ -437,7 +459,7 @@ coco-electron/
 │   │   └── ui.ts                  #   Route, UiState, sanitize (§9, §32)
 │   │
 │   ├── main/                      # the server: owns everything
-│   │   ├── index.ts               #   window, menu, IPC handlers, refresh tick
+│   │   ├── index.ts               #   window, IPC handlers, refresh tick
 │   │   ├── engine/                #   the domain — no Electron import anywhere
 │   │   │   ├── coco.ts            #     the engine proper
 │   │   │   ├── manifest.ts        #     coco.toml, fully validated
@@ -450,12 +472,18 @@ coco-electron/
 │   │   │   ├── world.ts           #     folders → World
 │   │   │   └── errors.ts
 │   │   ├── operations.ts          #   what the renderer may ask for (§26)
-│   │   ├── serial.ts              #   one turn at a time (§26.2)
+│   │   ├── env.ts                 #   env vars: set-but-empty is absent
 │   │   ├── sync.ts                #   diffWorlds — the backend judges change (§26.3)
 │   │   ├── notices.ts             #   announce once, then hold still (§26.4)
 │   │   ├── ui_state_file.ts             #   ui-state.json (§32)
-│   │   ├── menu.ts                #   application menu, routed through the window
-│   │   └── agent.ts               #   the unix socket (§43)
+│   │   ├── menu.ts                #   the platform's minimum: Edit roles + Quit
+│   │   └── agent/                 #   the unix socket (§43)
+│   │       ├── serve.ts           #     the socket's lifecycle
+│   │       ├── app.ts             #     the Express route table
+│   │       ├── reads.ts           #     the GET answers
+│   │       ├── start.ts           #     the POST answer
+│   │       ├── help.ts            #     the self-description
+│   │       └── answer.ts          #     AgentDeps, AgentResponse
 │   │
 │   ├── preload/index.ts           # the typed bridge — the page's whole vocabulary
 │   │
@@ -579,7 +607,7 @@ justify moving to it.
 5. Do not let the renderer mutate `app.world` to reflect an action it took.
    Events update the screen (§34).
 6. Do not make the renderer judge change or compute a diff (§26.3).
-7. Do not bypass the serialized turn (§26.2).
+7. Do not write engine state after an `await` without a guard (§26.2).
 8. Do not put report text in the world (§10.5).
 9. Do not run a shell from the UI. Commands are split lexically from the
    manifest and spawned without a shell (`invoke.ts`).
