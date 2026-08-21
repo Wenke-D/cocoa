@@ -48,3 +48,7 @@ Bench are, and what using it looks like.
 Sections throughout are numbered, and the source cites them by number: a comment
 reading `(§2.3.1)` means the rule of that number. [doc/sections.md](doc/sections.md)
 says which document holds which.
+
+## Acknowledgement
+
+`coco` is vibe-coded, designed and built with [Claude Code](https://claude.com/claude-code).
