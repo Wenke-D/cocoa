@@ -12,6 +12,9 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { env_var } from './env'
+import { log_for } from './log'
+
+const log = log_for('store_path')
 
 /** Where it lived until 2026-08-20, and where coco-egui still looks. */
 export function legacy_store_path(): string {
@@ -48,8 +51,8 @@ function carry_over(legacy: string, target: string): void {
     }
     fs.mkdirSync(path.dirname(target), { recursive: true })
     fs.copyFileSync(legacy, target)
-    console.log('store: carried over from', legacy)
+    log.info('carried over from', legacy)
   } catch (error) {
-    console.error('store: could not carry over from', legacy, error)
+    log.error('could not carry over from', legacy, error)
   }
 }

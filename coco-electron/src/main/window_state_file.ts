@@ -14,6 +14,9 @@ import path from 'node:path'
 import type { Maybe } from '@shared/maybe'
 import { empty, some } from '@shared/maybe'
 import type { WindowState } from './window_state'
+import { log_for } from './log'
+
+const log = log_for('window_state_file')
 
 /** Where the window state lives: `window-state.json` under `userData`. */
 export function window_state_path(user_data_dir: string): string {
@@ -41,6 +44,6 @@ export function write_window_state(file_path: string, state: WindowState): void 
     fs.mkdirSync(path.dirname(file_path), { recursive: true })
     fs.writeFileSync(file_path, JSON.stringify(state, null, 2))
   } catch (error) {
-    console.error('window state:', error)
+    log.error('could not write', file_path, error)
   }
 }

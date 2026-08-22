@@ -13,6 +13,7 @@
 //   publish.ts        the model, and turning its changes into events
 //   refresh.ts        the tick
 //   ipc.ts            what the renderer may ask for
+//   log.ts            how the process prints
 
 import { app } from 'electron'
 import { restore_window_state, persist_window_state } from './window_state'
@@ -27,6 +28,9 @@ import { build_menu } from './menu'
 import { empty } from '@shared/maybe'
 import { create_window, focus_window, window_bounds } from './window'
 import { AgentDeps } from './agent/answer'
+import { log_for } from './log'
+
+const log = log_for('index')
 
 /**
  * Starts the agent server and settles its whole fate here, both ways: once
@@ -52,7 +56,7 @@ function start_agent_server(): void {
 
   serve(socket_file, agent_server_input).then(
     (server) => {
-      console.log('agent interface listening on', socket_file)
+      log.info('agent interface listening on', socket_file)
       // Fire and forget: the process is leaving, and the close needs no
       // waiting to remove the socket file it owns.
       app.on('will-quit', () => void server.close())
@@ -61,7 +65,7 @@ function start_agent_server(): void {
       // If the agent interface fails to launch, coco crashes with it: an
       // internal error, not a state to keep running in. `serve` left nothing
       // behind — the file only appears once the bind succeeds.
-      console.error('agent interface:', message_of(error))
+      log.error('agent interface:', message_of(error))
       app.exit(1)
     }
   )

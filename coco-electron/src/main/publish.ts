@@ -14,6 +14,9 @@ import { diff_worlds } from './sync'
 import type { Maybe } from '@shared/maybe'
 import { empty, some } from '@shared/maybe'
 import { send } from './window'
+import { log_for } from './log'
+
+const log = log_for('publish')
 
 let world: Maybe<World> = empty()
 let last_refresh: Maybe<string> = empty()
@@ -50,7 +53,7 @@ export function publish_cycle(refreshed_at: Maybe<string>, extra: CocoEvent[] = 
   try {
     next = build_world(engine, refreshed_at.or(last_refresh.or_null()))
   } catch (error) {
-    console.error('world build failed:', error)
+    log.error('world build failed:', error)
     // Nothing can be said about the world, but something must still be said
     // about the failure: a build that throws leaves the page showing a world
     // that has quietly stopped being updated.
