@@ -91,28 +91,30 @@ function launch_window(user_data_dir: string): void {
  */
 const is_first_one = app.requestSingleInstanceLock()
 if (is_first_one) {
-  // The first instance hears about a second launch attempt, and should open
-  // its window to the user who asked.
-  app.on('second-instance', focus_window)
+  app.on('second-instance', () => {
+    log.info('a second coco launched and quit; bringing this one to the front')
+    focus_window()
+  })
 } else {
-  // A subsequent launch just quits, directly. It registers no
-  // `second-instance` handler — that event only ever reaches the lock's
-  // holder.
-  log.info('coco is already running; this launch quits, and the running one comes to the front')
+  log.info('coco is already running; this launch quits')
   app.quit()
 }
 
 void app.whenReady().then(() => {
-  // `quit()` on a subsequent launch still lets `ready` fire on the way out;
-  // this guard keeps such a launch from doing anything with it.
+  // A launch that lost the lock has already called `quit()`, and on Linux
+  // `ready` still reaches it: an early quit only posts the exit for after the
+  // message loop's first pass, and `ready` is emitted before that pass,
+  // unconditionally — without this guard the quitting instance would open a
+  // window on its way out. On macOS `ready` never comes to it: a lost lock
+  // pulls the launch Apple Event off the queue to forward it (Chromium's
+  // process_singleton_mac.mm), and AppKit's did-finish-launching goes with
+  // it. doc/developing.md, "Settled questions", has the trace.
   if (!is_first_one) {
+    log.debug('ready fired on the quitting second launch; nothing to do')
     return
   }
 
-  // A hidden window still puts an icon in the dock and takes the focus with
-  // it; the point of hiding it was not to. The platform is a fact of the
-  // launch, not a probe of `dock` — the `?.` is only what its type asks for,
-  // the property being declared for macOS alone.
+  // also hide dock for mac
   if (launch.hide_window && launch.is_mac) {
     app.dock?.hide()
   }
