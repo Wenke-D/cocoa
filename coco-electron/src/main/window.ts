@@ -12,17 +12,7 @@ import { WINDOW_MIN_SIZE } from './window_state'
 import { some } from '@shared/maybe'
 import { throw_coco } from '@shared/error'
 import { env_var } from './env'
-
-/**
- * `COCO_HIDE_WINDOW` opens the window without showing it.
- *
- * For a drive run that is only there to be *checked*, not watched: Playwright
- * drives the page over CDP and screenshots it the same way, neither of which
- * needs the window on screen — but eleven scenarios in a row each stealing
- * focus makes the machine unusable while they run. Never set in normal use;
- * `npm run drive` still opens a window you can watch, which is its whole point.
- */
-const HIDDEN = process.env.COCO_HIDE_WINDOW === '1'
+import { launch } from './launch'
 
 export function create_window(old_win: WindowState, on_closing: () => void): void {
   const size = old_win.size
@@ -30,7 +20,7 @@ export function create_window(old_win: WindowState, on_closing: () => void): voi
   // in case position empty, leave OS to pick a place
   const position = old_win.position.or({})
   const opened = new BrowserWindow({
-    show: !HIDDEN,
+    show: !launch.hide_window,
     width: size.width,
     height: size.height,
     ...position,

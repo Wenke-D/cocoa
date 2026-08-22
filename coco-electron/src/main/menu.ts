@@ -5,13 +5,14 @@
 // platforms handle both without a menu, so they get none at all.
 
 import { Menu, app } from 'electron'
+import { launch } from './launch'
 
 /**
  * Setup the workbench menu for macOS.
  * Do nothing for Windows and Linux
  */
 export function build_menu(): void {
-  if (process.platform !== 'darwin') {
+  if (!launch.is_mac) {
     Menu.setApplicationMenu(null)
     return
   }

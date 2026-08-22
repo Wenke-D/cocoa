@@ -14,6 +14,7 @@
 //   refresh.ts        the tick
 //   ipc.ts            what the renderer may ask for
 //   log.ts            how the process prints
+//   launch.ts         what this launch is: its profile, window, platform
 
 import { app } from 'electron'
 import { restore_window_state, persist_window_state } from './window_state'
@@ -23,7 +24,7 @@ import { current_world, message_of, publish_cycle } from './publish'
 import { REFRESH_INTERVAL_MS, refresh_and_publish } from './refresh'
 import { engine } from './runtime'
 import { register_ipc } from './ipc'
-import { env_var } from './env'
+import { launch } from './launch'
 import { build_menu } from './menu'
 import { empty } from '@shared/maybe'
 import { create_window, focus_window, window_bounds } from './window'
@@ -81,14 +82,6 @@ function launch_window(user_data_dir: string): void {
   persist_window_state(window_bounds())
 }
 
-// A drive run redirects everything the app keeps per-user — the window state
-// file, the renderer's localStorage — so it never touches the real profile
-// (`scripts/drive.mjs`). Before ready, or the default profile is already open.
-const user_data_override = env_var('COCO_USER_DATA_DIR')
-if (user_data_override.is_present()) {
-  app.setPath('userData', user_data_override.value)
-}
-
 /**
  * Whether this launch is the machine's one coco: the holder of the
  * single-instance lock.
@@ -105,6 +98,7 @@ if (is_first_one) {
   // A subsequent launch just quits, directly. It registers no
   // `second-instance` handler — that event only ever reaches the lock's
   // holder.
+  log.info('coco is already running; this launch quits, and the running one comes to the front')
   app.quit()
 }
 
@@ -116,9 +110,10 @@ void app.whenReady().then(() => {
   }
 
   // A hidden window still puts an icon in the dock and takes the focus with
-  // it; the point of hiding it was not to. macOS only, and only under the
-  // same flag (`window.ts`).
-  if (process.env.COCO_HIDE_WINDOW === '1') {
+  // it; the point of hiding it was not to. The platform is a fact of the
+  // launch, not a probe of `dock` — the `?.` is only what its type asks for,
+  // the property being declared for macOS alone.
+  if (launch.hide_window && launch.is_mac) {
     app.dock?.hide()
   }
 
@@ -126,8 +121,7 @@ void app.whenReady().then(() => {
 
   build_menu()
 
-  // `getPath` returns a valid path only when the app is ready
-  launch_window(app.getPath('userData'))
+  launch_window(launch.user_data)
 
   void refresh_and_publish()
   setInterval(() => void refresh_and_publish(), REFRESH_INTERVAL_MS)
