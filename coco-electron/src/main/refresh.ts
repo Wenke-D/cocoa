@@ -13,31 +13,55 @@ const log = log_for('refresh')
 export const REFRESH_INTERVAL_MS = 3_000
 
 // Refreshes never overlap: two in a row would only run the same poll scripts
-// twice. The clock's tick is dropped while one is under way; a person's
-// refresh waits for it and then runs — never dropped, and always answers.
+// twice. The clock's tick is dropped while one is under way. A person's
+// refresh is queued behind it instead, and there is at most one of those:
+// the status bar holds its button down until the answer comes, so a second
+// one can only be a stray, and a stray is ignored.
 // @ai use /** */ for comments, and use Maybe for this type
 let current: Promise<void> | null = null
+/** Whether a person's refresh is queued or running. */
+let manual_pending = false
 
 /**
  * One refresh. `manual` is the difference between the clock asking and a
- * person asking: a person's refresh is never dropped, and always answers.
+ * person asking: the clock's is dropped while a pass is under way; a
+ * person's waits for it and then runs, and always answers — unless one is
+ * already pending, in which case this one is ignored.
  */
 export async function refresh_and_publish(manual = false): Promise<void> {
-  while (current !== null) {
-    if (!manual) {
+  if (!manual) {
+    if (current !== null) {
       return
     }
-    await current
+    await hold(one_refresh(false))
+    return
   }
-  const pass = one_refresh(manual)
-  current = pass.then(
+  if (manual_pending) {
+    return
+  }
+  manual_pending = true
+  try {
+    // Queued behind whatever is under way. `current` is never empty in
+    // between, so no tick slips in ahead of it.
+    await hold((current ?? Promise.resolve()).then(() => one_refresh(true)))
+  } finally {
+    manual_pending = false
+  }
+}
+
+/** Keeps `current` for the length of one pass, however it ends. */
+async function hold(pass: Promise<void>): Promise<void> {
+  const done = pass.then(
     () => undefined,
     () => undefined
   )
+  current = done
   try {
     await pass
   } finally {
-    current = null
+    if (current === done) {
+      current = null
+    }
   }
 }
 

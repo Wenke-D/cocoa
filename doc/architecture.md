@@ -392,6 +392,10 @@ One interval drives everything: `REFRESH_INTERVAL_MS = 3000` in
 active runs, takes reports that are due, re-reads manifests, rebuilds
 the world, and publishes the difference.
 
+A tick that finds a pass under way is dropped. The status bar's refresh queues
+behind it instead, one at a time: a second one while it is pending is ignored,
+and the button is held down until the answer so that never happens by hand.
+
 There is no filesystem watcher (§4.3) and no per-run timer. Duration fields tick
 in the renderer off a clock of its own; they are display, and they must not
 cause a request.

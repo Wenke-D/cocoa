@@ -79,8 +79,9 @@ export function register_ipc(): void {
     operations.read_report(engine, target)
   )
 
-  // The status bar's refresh: it waits out a tick already under way, is never
-  // dropped, and says how it went.
+  // The status bar's refresh: it waits out a tick already under way and says
+  // how it went. One at a time — a second while it is pending is ignored,
+  // which the held-down button makes a stray rather than a case.
   ipcMain.handle('coco:refresh', async (): Promise<void> => {
     await refresh_and_publish(true)
   })
