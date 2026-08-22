@@ -3,9 +3,8 @@
 // fan-out). No cluster needed — the same folders the user adds by picking
 // `mock/` in the Add Folder picker.
 //
-// Ported from tests/coco_mock_library.rs, with one change: the folders are
-// copied into a temp directory rather than driven in place, so a test run
-// leaves no `runs/` or `report/` behind in the repository.
+// The folders are copied into a temp directory rather than driven in place,
+// so a test run leaves no `runs/` or `report/` behind in the repository.
 
 import fs from 'node:fs'
 import path from 'node:path'

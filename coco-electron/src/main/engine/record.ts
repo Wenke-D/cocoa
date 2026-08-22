@@ -1,6 +1,6 @@
-// Run and bench records (convention §7, §8, §12). Port of engine/record.rs.
-// Field names and enum spellings match serde exactly, so run.json files are
-// interchangeable between the Rust and TS engines.
+// Run and bench records (convention §7, §8, §12). Field names and enum
+// spellings are the convention's, so a run.json written by an earlier coco
+// still reads.
 
 import type { Status } from './status'
 import { is_terminal } from './status'

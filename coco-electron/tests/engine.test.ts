@@ -1,12 +1,11 @@
 // End-to-end engine tests: real folders, real executable scripts, the whole
-// convention. Ported from the Rust suite (`tests/coco_engine.rs`) so the two
-// engines answer the same scenarios the same way.
+// convention.
 //
-// Where the TypeScript engine deliberately differs — memory is the truth,
-// and coco's own files are coco's alone, so run records are read once when a
-// folder is first seen and never re-scanned — the test says so: an outside
-// change to a record shows up in a reopened engine, not a running one.
-// Manifests stay the user's files and are re-read every reconcile pass.
+// Memory is the truth, and coco's own files are coco's alone, so run records
+// are read once when a folder is first seen and never re-scanned — the tests
+// say so: an outside change to a record shows up in a reopened engine, not a
+// running one. Manifests stay the user's files and are re-read every
+// reconcile pass.
 
 import fs from 'node:fs'
 import path from 'node:path'

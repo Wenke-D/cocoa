@@ -1,7 +1,6 @@
 <!--
   Cancel confirmation (specification §16). Cancel is destructive, so it always
   asks first, and the copy states exactly what will and will not be touched.
-  Port of `src/ui/overlays/cancel_modal.rs`.
 -->
 <script lang="ts">
   import {

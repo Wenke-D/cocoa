@@ -1,6 +1,5 @@
-// The `COCO_RETURN:` contract and the invocation shape. The first two cases
-// are ported from engine/invoke.rs's inline tests; the rest cover the async
-// spawn/harvest seam this port introduces.
+// The `COCO_RETURN:` contract and the invocation shape, including the async
+// spawn/harvest seam.
 
 import { describe, expect, it } from 'vitest'
 import {

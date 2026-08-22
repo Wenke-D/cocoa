@@ -1,4 +1,4 @@
-// The private store (convention §5). Originally a port of engine/store.rs.
+// The private store (convention §5).
 //
 // It holds the one thing that belongs to coco rather than to any folder:
 // which folders are registered. A folder cannot say that about itself.

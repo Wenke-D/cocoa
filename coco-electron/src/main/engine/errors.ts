@@ -1,5 +1,5 @@
-// Port of engine/error.rs. One class, a kind tag, and a message built to read
-// exactly as the Rust Display impl words it, so the UI's sentences match.
+// One class, a kind tag, and a message built to read as a sentence, so the
+// UI can show it as it is.
 
 export type EngineErrorKind =
   | 'io'

@@ -38,7 +38,7 @@ describe('resolve_store_path', () => {
 
     expect(resolved).toBe(path.join(user_data, 'store.json'))
     expect(JSON.parse(fs.readFileSync(resolved, 'utf8'))).toEqual({ entities: ['/exp/solver'] })
-    // Copied, not moved: coco-egui still reads the old one.
+    // Copied, not moved: the old one is left where it was.
     expect(fs.existsSync(legacy)).toBe(true)
   })
 

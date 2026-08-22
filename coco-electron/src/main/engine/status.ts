@@ -1,4 +1,4 @@
-// The closed status vocabulary (convention §9). Port of engine/status.rs.
+// The closed status vocabulary (convention §9).
 // Scripts speak this vocabulary; the engine never learns new state names at
 // runtime. Serialized UPPERCASE in run.json, exactly as serde writes it.
 

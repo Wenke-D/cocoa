@@ -1,4 +1,4 @@
-// The private store (§5). Ported from engine/store.rs's inline tests.
+// The private store (§5).
 
 import fs from 'node:fs'
 import path from 'node:path'

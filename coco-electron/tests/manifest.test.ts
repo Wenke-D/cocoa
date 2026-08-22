@@ -1,5 +1,5 @@
-// Manifest loading and validation. Ported from engine/manifest.rs's inline
-// tests: a manifest either loads or it does not, and the message says why.
+// Manifest loading and validation: a manifest either loads or it does not,
+// and the message says why.
 
 import fs from 'node:fs'
 import path from 'node:path'

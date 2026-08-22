@@ -1,6 +1,6 @@
-// Builds the renderer's World from engine state. Port of the world-building
-// half of src/adapter/engine.rs — same JSON shape the renderer already
-// consumes, so the UI code does not change when the engine underneath does.
+// Builds the renderer's World from engine state: the one JSON shape the
+// renderer consumes, so the UI does not change when the engine underneath
+// does.
 
 import fs from 'node:fs'
 import path from 'node:path'

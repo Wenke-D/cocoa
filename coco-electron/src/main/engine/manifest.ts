@@ -1,6 +1,6 @@
-// Manifest loading and validation (convention §2–§4). Port of
-// engine/manifest.rs. A manifest either loads or it does not; a folder whose
-// manifest is broken stays visible with its error rather than being dropped.
+// Manifest loading and validation (convention §2–§4). A manifest either loads
+// or it does not; a folder whose manifest is broken stays visible with its
+// error rather than being dropped.
 
 import fs from 'node:fs'
 import path from 'node:path'

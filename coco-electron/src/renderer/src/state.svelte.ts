@@ -1,8 +1,6 @@
-// The renderer's whole mutable state, as one rune. `Route` is the same
-// discriminated union coco's `src/navigation/route.rs` models: an address,
-// never content. `recover` mirrors `Route::recover` — a restored or stale
-// address pointing at something the world no longer contains is repaired,
-// with a message.
+// The renderer's whole mutable state, as one rune. `Route` is an address,
+// never content. `recover` repairs a restored or stale address pointing at
+// something the world no longer contains, with a message.
 
 import { load_ui_state, store_ui_state } from './ui_state'
 import type { Route, ReportContext } from './ui_state'

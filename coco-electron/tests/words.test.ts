@@ -1,4 +1,4 @@
-// Lexical command splitting. Ported from engine/words.rs's inline tests.
+// Lexical command splitting.
 
 import { describe, expect, it } from 'vitest'
 import { split_command } from '../src/main/engine/words'

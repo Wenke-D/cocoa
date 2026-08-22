@@ -7,13 +7,12 @@
 // judgement about change (see `sync.ts`), and the renderer only hears
 // conclusions.
 //
-// The Rust worker avoids the same flood differently: its automatic tick
-// swallows errors entirely (`let _ = self.coco.refresh()` in
-// `adapter/engine.rs`) and only an explicit Refresh reports. That is quieter
-// than it should be — a poll script that will not run at all is invisible
-// until somebody happens to press refresh, and no run row can carry it,
-// because the failure is that there is no answer. Announcing a failure once
-// and then holding still is the same silence with the first sentence kept.
+// The alternative — an automatic tick that swallows its errors, and only an
+// explicit Refresh reports — is quieter than it should be: a poll script that
+// will not run at all is invisible until somebody happens to press refresh,
+// and no run row can carry it, because the failure is that there is no
+// answer. Announcing a failure once and then holding still is the same
+// silence with the first sentence kept.
 
 import type { CocoEvent } from '@shared/world'
 import type { RefreshReport } from './engine'

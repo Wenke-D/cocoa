@@ -1,5 +1,5 @@
-// Lexical command splitting. Port of engine/words.rs: shell-style word rules,
-// but the split is lexical only — no shell runs, nothing expands.
+// Lexical command splitting: shell-style word rules, but the split is lexical
+// only — no shell runs, nothing expands.
 
 export function split_command(input: string): string[] {
   const words: string[] = []

@@ -16,7 +16,7 @@ import { log_for } from './log'
 
 const log = log_for('store_path')
 
-/** Where it lived until 2026-08-20, and where coco-egui still looks. */
+/** Where it lived until 2026-08-20. */
 export function legacy_store_path(): string {
   return path.join(os.homedir(), '.local', 'share', 'coco', 'store.json')
 }
@@ -40,7 +40,7 @@ export function resolve_store_path(user_data_dir: string, legacy = legacy_store_
 
 /**
  * Copies the old store to the new place, if there is one and nothing is there
- * yet. Copies rather than moves, so `coco-egui/` keeps reading the old file.
+ * yet. Copies rather than moves; the old file is left where it was.
  *
  * A failure is logged and swallowed: it is not worth stopping a launch for.
  */

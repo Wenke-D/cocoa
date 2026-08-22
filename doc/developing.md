@@ -17,22 +17,15 @@ how to work on this).
 
 ---
 
-## The three trees
+## The two trees
 
 | | |
 |---|---|
 | `coco-electron/` | the workbench. The only implementation under development. |
 | `coco-mcp/` | the MCP server. Its own crate, in continued use; `serde_json` its only dependency. |
-| `coco-egui/` | the first implementation, Rust and eframe/egui. Not developed; kept for its history and the convention it worked out. |
 
-Beside them: `mock/` is the demonstration library both use, `doc/` is this
+Beside them: `mock/` is the demonstration library, `doc/` is this
 documentation.
-
-**Do not run the egui coco and coco-electron at the same time** — they share
-`~/Library/Application Support/coco/` — but no longer the same `store.json`,
-and there is no run-id counter left to race. The remaining overlap is eframe's
-`app.ron` beside the workbench's own files, which is a shared directory rather
-than a shared file.
 
 ---
 
@@ -59,16 +52,15 @@ DRIVE_PACKAGED=1 npm run drive scripts/scenarios/agent.mjs    # drive the packag
 `npm run gate` is the one command that has to pass. It runs cheapest-failure
 first.
 
-The other two trees:
+The other tree:
 
 ```bash
 cd coco-mcp  && cargo build && cargo test   # the MCP server; serde_json only
-cd coco-egui && cargo test                  # the retired workbench, still green
 ```
 
 ### Or through alors
 
-`tasks.alors` in the repository root wraps all of the above, so three trees with
+`tasks.alors` in the repository root wraps all of the above, so two trees with
 two build systems answer to one verb. It reads only the current directory's task
 file, so run it **from the root**:
 
@@ -76,11 +68,9 @@ file, so run it **from the root**:
 alors                       # list the tasks
 alors dev                   # the workbench, with ELECTRON_RUN_AS_NODE unset for you
 alors gate                  # the workbench's gate
-alors gate all              # all three trees
+alors gate all              # both trees
 alors drive cancel          # build, then drive a scenario
 alors mcp                   # build, lint and test the MCP server
-alors egui gate             # keep the retired tree green
-alors egui shot dark out/start.png start-page
 ```
 
 One task per invocation; tokens after it are arguments or a subcommand. It is a
@@ -261,9 +251,8 @@ scripts** — never mocks of the filesystem or of a process. The shared fixtures
 live in `mock/.fixtures/` (see its README); a suite copies one, points it at a
 scratch store, and drives it.
 
-The end-to-end scenarios are ports of the egui implementation's suite, so both
-engines answer the same questions and a divergence shows up as a failing test
-rather than as a surprise.
+The end-to-end scenarios began as ports of the first implementation's suite;
+the questions outlived it.
 
 Current coverage: 195 cases across 18 files — `engine`, `manifest`, `template`,
 `invoke`, `status`, `store`, `words`, `world`, `operations`, `races`, `sync`,
@@ -378,9 +367,9 @@ cases. The `job` fixture answers from a `poll-state`/`report-state` file and
 the `bench` fixture plans from a `plan-lines` file, so most tests change
 behaviour by writing data, not by rewriting a script; a test whose _subject_
 is a broken script still overwrites that one script in its copy. The directory
-is hidden so that `tests/mock-library.test.ts`, which walks the library the way
-`coco-egui/`'s Add Folder scan does, sees the four demonstration experiments
-and none of the fixtures.
+is hidden so that `tests/mock-library.test.ts`, which walks the library skipping
+hidden names, sees the four demonstration experiments and none of the
+fixtures.
 
 `tests/support.ts` holds the helpers (`jobFolder`, `benchFolder`, `planLines`,
 `settle`, `handEdit`). Two things it is careful about, both of which bite
@@ -541,8 +530,8 @@ folder, cancel with confirmation. An electron-builder package.
   §5.1 flags as the one measurement that could revise its own record.
 - Packaging is unsigned; no notarization, no auto-update (§4.2).
 
-The gap tables below say what each of these looks like against the egui
-implementation, where most of them exist.
+The gap tables below say what each of these looked like in the egui
+implementation, where most of them existed.
 
 ---
 
@@ -606,7 +595,8 @@ A change is done when all of the following hold.
 - `src/renderer/` imports nothing from `src/main/`.
 - The preload bridge gained no general-purpose channel.
 - The renderer judged no change and mutated no world entry.
-- Records stay byte-compatible with `coco-egui/`.
+- Records stay readable across versions: a folder an earlier coco wrote still
+  loads (`convention.md`).
 
 **Checks**
 
@@ -679,7 +669,7 @@ re-argue it.
 - **Add Folder registers only the folder that was picked** (user decision,
   2026-08-19; **no longer a divergence** — §11.5 was rewritten to say this on
   2026-08-20, and the scan is not wanted). One pick = one experiment; a
-  directory of experiments is added one at a time. `coco-egui/` keeps its scan
+  directory of experiments is added one at a time. `coco-egui/` kept its scan
   (`experiment_folders`, `SCAN_DEPTH` in `coco-egui/src/adapter/engine.rs`),
   which is now the older behaviour rather than the specified one. Knock-on: the
   `AddFolderReport` modal existed because one pick could refuse a whole batch;
@@ -700,13 +690,17 @@ re-argue it.
   "embedding a browser engine is out of the question", which is precisely the
   constraint this form does not have. §20 was rewritten on 2026-08-20 and now
   specifies the in-app viewer, so this is the rule rather than a departure
-  from it. `coco-egui/` still shells out, and cannot do otherwise.
+  from it. `coco-egui/` shelled out, and could not do otherwise.
   The part that stays load-bearing: report HTML is written by experiment
   scripts and is not trusted. It loads in a sandboxed frame without
   `allow-same-origin`, so a report can never reach `window.coco`.
 ---
 
 ## Feature gaps against the egui implementation
+
+The egui implementation was deleted on 2026-08-22. The `Rust reference`
+column says where each feature lived in it; the tree is in git history before
+that date.
 
 ### Operations wired in the engine but missing UI/IPC
 
@@ -846,16 +840,15 @@ open.
   leave the window where it opens. Every write reads it now, whatever prompted
   the write.
 
-### Known inconsistency, shared with the egui implementation
+### Known inconsistency, inherited from the first implementation
 
 A dispatched run's page shows `Call 1` and `Started by nightly-benchmark ·
 call 2` for the same run. They come from two places: `plan.steps[].index` is
 the plan's 0-based position, and the run record's `origin.call` is stamped
-`index + 1` by the engine (`bench.ts`, and the Rust engine identically). The
-Rust UI displays both the same way, so this port is faithful rather than
-newly wrong — but a reader seeing both at once has no way to know that. Fixing
-it means picking one convention for display in **both** implementations; it is
-not a coco-electron change.
+`index + 1` by the engine (`bench.ts`). The first implementation displayed both
+the same way, so this was faithful rather than newly wrong — but a reader
+seeing both at once has no way to know that. Fixing it means picking one
+convention for display.
 ---
 
 ## Tech debt / pinned versions

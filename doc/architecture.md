@@ -129,9 +129,9 @@ that mattered.
 **What would re-open it again.** A hard startup-time or memory requirement that
 Electron cannot meet; a target platform without a Chromium build; or a Linux-at-1×
 comparison that finds the two renderers meaningfully different in the direction
-the old record flagged as unmeasured. None of these is in play, and the egui
-implementation is kept in `coco-egui/` so the comparison remains possible rather
-than hypothetical.
+the old record flagged as unmeasured. None of these is in play. The egui
+implementation was kept beside this one until 2026-08-22 so the comparison
+stayed possible; it is now in git history only (`coco-egui/`, before that date).
 
 **What the reversal did not throw away.** The convention the folders follow, the
 protocol §43 serves, and the questions the test suites ask were all worked out in
@@ -513,7 +513,6 @@ Beside it in the repository:
 
 ```text
 coco-mcp/         the MCP server (§43.5) — one binary, serde_json, nothing else
-coco-egui/        the superseded first implementation (§5.1)
 mock/             the demonstration library, shared; .fixtures/ for the suites
 doc/              this documentation
 ```
@@ -632,8 +631,7 @@ justify moving to it.
 21. Do not silently discard user-entered parameters after a failed Start.
 22. Do not let dependency versions float; do not upgrade without recording the
     reason.
-23. Keep the on-disk convention byte-compatible with `coco-egui/`. A folder that
-    stops being interchangeable is a regression, and the ported test suites are
-    what catch it.
+23. Keep the on-disk convention as `convention.md` states it. A folder an
+    earlier coco wrote must still load; the test suites are what catch it.
 
 ---

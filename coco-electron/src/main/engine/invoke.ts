@@ -1,8 +1,6 @@
-// Script invocation. Port of engine/invoke.rs, with one structural change:
-// the Rust engine blocks its worker thread; the Electron main process must
-// not block, so `run` is async. `Running` keeps the non-blocking harvest
-// shape — `try_finish()` answers without waiting, exactly like the Rust
-// `try_finish`.
+// Script invocation. The Electron main process must not block, so `run` is
+// async, and `Running` is the non-blocking harvest shape: `try_finish()`
+// answers without waiting.
 
 import { spawn as spawnProcess } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'

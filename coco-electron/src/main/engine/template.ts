@@ -1,5 +1,4 @@
-// Template validation and rendering (convention §6.1). Port of
-// engine/template.rs, on nunjucks instead of minijinja.
+// Template validation and rendering (convention §6.1), on nunjucks.
 //
 // A template's variables and `[render].params` must match exactly: an
 // undefined variable is an error, not an empty string, and a declared param
@@ -30,8 +29,7 @@ export class TemplateError extends Error {}
  * Names the language provides that are not experiment data: nunjucks'
  * globals, exactly. `loop` is deliberately not among them — it exists only
  * inside a `for` body, where the walker binds it as a local, so
- * `{{ loop.index }}` outside a loop is the undefined variable it really is
- * (engine/template.rs draws the same line over minijinja's globals).
+ * `{{ loop.index }}` outside a loop is the undefined variable it really is.
  */
 const BUILTINS = new Set(['range', 'cycler', 'joiner'])
 

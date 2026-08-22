@@ -8,7 +8,8 @@ screen shows; this says *what to reach for* when drawing it.
 > the spacing steps — are the design system, and the workbench in
 > `coco-electron/` implements them in `src/renderer/src/theme.css` as CSS custom
 > properties and utility classes. The **module table and code examples are
-> egui's**, from `coco-egui/`, and have not been rewritten for the workbench.
+> egui's**, from the first implementation (deleted 2026-08-22; in git history),
+> and have not been rewritten for the workbench.
 > Read them as the reference statement of each rule, not as the API to call.
 
 The rule behind everything below: **a call site states a purpose, never an
@@ -140,15 +141,10 @@ action in a table behaves exactly like one in a title row.
 6. Reach for `add_space` only between sections. Inside one, the widget owns its
    spacing.
 
-Then look at it:
-
-```sh
-cd coco-egui && cargo run --example screenshot -- dark out/screen.png job
-```
-
-Surfaces: `job`, `run-detail`, `start-modal`, `start-modal-last`,
-`bench-modal`, `cancel-modal`. Add one there rather than checking a new screen by
-eye.
+Then look at it: `npm run drive scripts/scenarios/<name>.mjs` in
+`coco-electron/` runs the built app and leaves screenshots in `.drive/shots/`
+(developing.md, "Driving the built app"). Add a scenario there rather than
+checking a new screen by eye.
 
 ## Invariants
 

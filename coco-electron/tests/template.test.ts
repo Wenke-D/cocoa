@@ -1,6 +1,4 @@
-// Template analysis and rendering. Ported from engine/template.rs's inline
-// tests — the same templates, held to the same verdicts, over nunjucks
-// instead of minijinja.
+// Template analysis and rendering, over nunjucks.
 
 import { describe, expect, it } from 'vitest'
 import { analyze, render } from '../src/main/engine/template'

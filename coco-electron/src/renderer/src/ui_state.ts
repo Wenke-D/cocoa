@@ -26,7 +26,7 @@ export type ReportContext =
   | { kind: 'bench_run'; bench_id: string }
   | { kind: 'bench_child'; bench_id: string; bench_run_id: string }
 
-/** An address, never content — the same union as `navigation/route.rs`. */
+/** An address, never content. */
 export type Route =
   | { page: 'empty' }
   | { page: 'entity'; entity_id: string }

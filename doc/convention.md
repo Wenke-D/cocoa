@@ -189,9 +189,8 @@ drive run keeps its hands off the real one.
 
 > It used to live at `~/.local/share/coco/store.json`, the same path hardcoded
 > in both implementations so that a folder registered in one appeared in the
-> other. That was the point while there were two. `coco-egui/` still reads that
-> path; the workbench carries the file over once, by copy, and never looks at
-> it again.
+> other. That was the point while there were two. The workbench carries the
+> file over once, by copy, and never looks at it again.
 
 **Two fields have been retired**, and what replaced them is worth knowing:
 

@@ -1,7 +1,6 @@
 // Fixtures for the engine tests: real folders, real executable scripts, the
 // whole convention. The folders themselves live in `mock/.fixtures` and are
-// copied per test; the scenarios they serve are ports of the Rust suite's in
-// `coco-egui/tests/coco_engine.rs`, so both engines are held to the same questions.
+// copied per test.
 
 import fs from 'node:fs'
 import os from 'node:os'

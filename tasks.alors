@@ -4,8 +4,7 @@
 # directory and never looks upward, so this file is the whole surface.
 #
 # Bare tasks act on `coco-electron/`, because that is coco (doc/coco.md). The
-# other two trees live under their own namespaces: `alors mcp ...` for the MCP
-# server, `alors egui ...` for the retired first implementation.
+# MCP server lives under its own namespace: `alors mcp ...`.
 #
 # The exit code is the verdict for every task here — read that, not the output.
 # A summary line like "13 passed; 1 failed" still contains the word "passed",
@@ -13,7 +12,6 @@
 
 electron := coco-electron
 mcp := coco-mcp
-egui := coco-egui
 
 
 # --- the workbench -----------------------------------------------------------
@@ -30,9 +28,9 @@ gate:
     cd {{electron}}
     npm run gate
 
-# Every tree, for a change that crosses more than one of them.
-gate::all: gate, mcp::gate, egui::gate
-    echo "all three trees are clean"
+# Both trees, for a change that crosses them.
+gate::all: gate, mcp::gate
+    echo "both trees are clean"
 
 test:
     cd {{electron}}
@@ -96,54 +94,3 @@ mcp::gate:
 mcp::fmt:
     cd {{mcp}}
     cargo fmt --all
-
-
-# --- the retired egui workbench ----------------------------------------------
-#
-# Not developed (doc/architecture.md §5.1). Kept green so the comparison and
-# the shared convention stay honest.
-
-egui::run:
-    cd {{egui}}
-    cargo run
-
-# The whole world the UI renders from, as JSON. A symptom on screen becomes a
-# fact you can grep.
-egui::dump:
-    cd {{egui}}
-    cargo run -- --dump-state
-
-egui::test:
-    cd {{egui}}
-    cargo test
-
-egui::lint:
-    cd {{egui}}
-    cargo clippy --all-targets -- -D warnings
-
-egui::fmt:
-    cd {{egui}}
-    cargo fmt --all
-
-egui::gate:
-    cd {{egui}}
-    cargo fmt --all -- --check
-    cargo clippy --all-targets -- -D warnings
-    cargo test
-
-# One surface of the running egui app, captured to a PNG. Surfaces are listed
-# at the top of coco-egui/examples/screenshot.rs. The output path is relative
-# to the repository root, not to the crate:
-#
-#     alors egui shot dark out/start.png start-page
-egui::shot theme out surface:
-    case "{{out}}" in /*) dest="{{out}}" ;; *) dest="$(pwd)/{{out}}" ;; esac
-    cd {{egui}}
-    cargo run --example screenshot -- {{theme}} "$dest" {{surface}}
-
-# Reshoot the two reference images in doc/images/. They document the visual
-# system, so anything that changes how the workbench looks should end here.
-egui::refs:
-    cd {{egui}}
-    cargo run --example screenshot -- dark ../doc/images/workbench-dark.png job-active
-    cargo run --example screenshot -- light ../doc/images/workbench-light.png job-active

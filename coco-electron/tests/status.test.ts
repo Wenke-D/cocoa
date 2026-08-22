@@ -1,4 +1,4 @@
-// The closed status vocabulary. Ported from engine/status.rs's inline tests.
+// The closed status vocabulary.
 
 import { describe, expect, it } from 'vitest'
 import { from_poll_word, is_active, is_cancellable, is_terminal } from '../src/main/engine/status'

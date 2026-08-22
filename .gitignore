@@ -1,14 +1,9 @@
 # Rust / Cargo build output
-/coco-egui/target
 /coco-mcp/target
 **/*.rs.bk
 *.pdb
 
 # Note: Cargo.lock is intentionally tracked — this crate builds a binary.
-
-# Screenshot example output (see examples/screenshot.rs)
-/coco-egui/out
-/coco-egui/screenshot.png
 
 # Environment / secrets
 .env

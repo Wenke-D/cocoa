@@ -1,6 +1,5 @@
-// The World the renderer reads, built from a real engine over real folders.
-// Port of the world-building half of src/adapter/engine.rs: same JSON shape,
-// so a wrong field here is a wrong screen there.
+// The World the renderer reads, built from a real engine over real folders:
+// a wrong field here is a wrong screen there.
 
 import fs from 'node:fs'
 import path from 'node:path'

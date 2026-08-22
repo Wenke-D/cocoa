@@ -29,7 +29,6 @@ Bench are, and what using it looks like.
 |---|---|
 | [`coco-electron/`](coco-electron/) | The workbench. Electron, Svelte 5, and a TypeScript engine in the main process. The only implementation under development. |
 | [`coco-mcp/`](coco-mcp/) | The MCP server, so an agent can drive a running coco. Its own Rust crate, in continued use. |
-| [`coco-egui/`](coco-egui/) | The first implementation, in Rust and egui. No longer developed; kept for its history and for the folder convention it worked out. See [§5.1](doc/architecture.md) for why the framework decision was reversed. |
 | [`mock/`](mock/) | A library of small, real experiments to try it against. No cluster needed. |
 | [`doc/`](doc/) | Everything below. |
 
