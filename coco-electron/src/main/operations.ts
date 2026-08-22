@@ -17,7 +17,7 @@ import type {
   ReportTarget,
   StartResult
 } from '@shared/world'
-import type { Coco } from './engine/coco'
+import type { Engine } from './engine'
 
 /** Reports larger than this are refused rather than sent over IPC whole. */
 const MAX_REPORT_BYTES = 16 * 1024 * 1024
@@ -29,7 +29,7 @@ const MAX_REPORT_BYTES = 16 * 1024 * 1024
  * which is what the history table reads back as "you" or "agent".
  */
 export async function start_run(
-  engine: Coco,
+  engine: Engine,
   name: string,
   parameters: Record<string, string>,
   trigger: 'human' | 'agent' = 'human'
@@ -72,7 +72,7 @@ export async function start_run(
  * discards the per-member results here; a cancel that half worked should not
  * read as done.)
  */
-export async function cancel(engine: Coco, target: CancelTarget): Promise<CancelResult> {
+export async function cancel(engine: Engine, target: CancelTarget): Promise<CancelResult> {
   try {
     if (target.kind === 'job_run') {
       await engine.cancel_run(target.job_id, Number(target.run_id))
@@ -102,7 +102,7 @@ export async function cancel(engine: Coco, target: CancelTarget): Promise<Cancel
  * in the world builder — the two must agree, or the viewer would offer a
  * format the page did not announce.
  */
-export function read_report(engine: Coco, target: ReportTarget): ReportResult {
+export function read_report(engine: Engine, target: ReportTarget): ReportResult {
   const registered = engine.entities().some((entity) => entity.path === target.entity_id)
   if (!registered) {
     return { ok: false, message: `no experiment is registered at ${target.entity_id}` }
@@ -149,7 +149,7 @@ export function read_report(engine: Coco, target: ReportTarget): ReportResult {
  * Explorer is a no-op, and says so rather than reporting a registration that
  * did not happen.
  */
-export function add_folder(engine: Coco, folder: string): AddFolderResult {
+export function add_folder(engine: Engine, folder: string): AddFolderResult {
   const before = new Set(engine.entities().map((entity) => entity.path))
   try {
     engine.register(folder)
@@ -180,7 +180,7 @@ export function add_folder(engine: Coco, folder: string): AddFolderResult {
  * the reports stay exactly where they are, so adding the folder again brings
  * its whole history back.
  */
-export function remove_folder(engine: Coco, entity_id: string): RemoveFolderResult {
+export function remove_folder(engine: Engine, entity_id: string): RemoveFolderResult {
   try {
     engine.unregister(entity_id)
     return { ok: true }

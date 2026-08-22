@@ -6,7 +6,7 @@
 // these two are genuinely process-wide singletons.
 
 import { launch } from './launch'
-import { Coco } from './engine/coco'
+import { Engine } from './engine'
 import { NoticeGate } from './notices'
 import { resolve_store_path } from './store_path'
 
@@ -23,7 +23,7 @@ import { resolve_store_path } from './store_path'
  * itself against the world having moved (`poll_job`'s history check,
  * `cancel_run`'s recheck, `start_job`'s reservation).
  */
-export const engine = new Coco(resolve_store_path(launch.user_data))
+export const engine = new Engine(resolve_store_path(launch.user_data))
 
 /** What the user hears about a refresh, and how often; see `notices.ts`. */
 export const notices = new NoticeGate()

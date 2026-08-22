@@ -7,8 +7,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Coco } from '../src/main/engine/coco'
-import type { Config } from '../src/main/engine/coco'
+import { Engine } from '../src/main/engine'
+import type { Config } from '../src/main/engine'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 
@@ -60,17 +60,17 @@ export function hand_edit(file: string, contents: string): void {
   fs.utimesSync(file, later, later)
 }
 
-export function engine(dir: string, config?: Config): Coco {
+export function engine(dir: string, config?: Config): Engine {
   return config === undefined
-    ? new Coco(path.join(dir, 'store.json'))
-    : new Coco(path.join(dir, 'store.json'), config)
+    ? new Engine(path.join(dir, 'store.json'))
+    : new Engine(path.join(dir, 'store.json'), config)
 }
 
 /**
  * Waits for every launch script to land, as the workbench's refresh tick
  * would collect them one by one. Tests assert on the settled record.
  */
-export async function settle(coco: Coco): Promise<string[]> {
+export async function settle(coco: Engine): Promise<string[]> {
   const errors = await coco.settle_launches()
   return errors.map((error) => error.message)
 }

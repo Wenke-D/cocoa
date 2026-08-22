@@ -136,3 +136,12 @@ export function apply_status(record: RunRecord, status: Status, at: string, reas
 export function all_params(record: RunRecord): Record<string, string> {
   return { ...record.render, ...record.launch }
 }
+
+/** BTreeMap parity: object keys in sorted order, so JSON output is stable. */
+export function sorted(map: Record<string, string>): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const key of Object.keys(map).sort()) {
+    result[key] = map[key]
+  }
+  return result
+}

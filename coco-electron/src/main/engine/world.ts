@@ -14,13 +14,13 @@ import type {
   RunStatus,
   World
 } from '@shared/world'
-import type { Coco } from './coco'
-import { report_on_disk } from './coco'
+import type { Engine } from './index'
+import { report_on_disk } from './job'
 import { all_params, ended_at, started_at } from './record'
 import type { BenchRecord, RunRecord } from './record'
 import type { Status } from './status'
 
-export function build_world(coco: Coco, last_refresh: string | null): World {
+export function build_world(engine: Engine, last_refresh: string | null): World {
   const world: World = {
     entities: [],
     job_runs: {},
@@ -31,7 +31,7 @@ export function build_world(coco: Coco, last_refresh: string | null): World {
   }
   const now_iso = new Date().toISOString()
 
-  for (const view of coco.entities()) {
+  for (const view of engine.entities()) {
     const manifest = view.manifest
     if (manifest === null) {
       world.entities.push({
@@ -47,7 +47,7 @@ export function build_world(coco: Coco, last_refresh: string | null): World {
 
     if (manifest.kind === 'job') {
       world.entities.push(
-        entity_for(coco, view.path, manifest.name, 'Job', [
+        entity_for(engine, view.path, manifest.name, 'Job', [
           ...manifest.render_params,
           ...manifest.launch_params
         ])
@@ -56,24 +56,24 @@ export function build_world(coco: Coco, last_refresh: string | null): World {
       // started in the same millisecond tie on start time, and then
       // insertion order — ascending run id — is what keeps them
       // chronological.
-      for (const run_view of [...coco.job_runs(view.path)].reverse()) {
+      for (const run_view of [...engine.job_runs(view.path)].reverse()) {
         if (run_view.record === null) {
           continue
         }
-        const run = job_run_of(coco, view.path, run_view.record, now_iso)
+        const run = job_run_of(engine, view.path, run_view.record, now_iso)
         const runs = (world.job_runs[run.job_id] ??= {})
         runs[run.id] = run
         index_run(world.runs_by_job, run.job_id, run.id, run.started_at, runs)
       }
     } else {
       world.entities.push(
-        entity_for(coco, view.path, manifest.name, 'Bench', [...manifest.plan_params])
+        entity_for(engine, view.path, manifest.name, 'Bench', [...manifest.plan_params])
       )
-      for (const run_view of [...coco.bench_runs(view.path)].reverse()) {
+      for (const run_view of [...engine.bench_runs(view.path)].reverse()) {
         if (run_view.record === null) {
           continue
         }
-        const run = bench_run_of(coco, view.path, run_view.record, now_iso)
+        const run = bench_run_of(engine, view.path, run_view.record, now_iso)
         const runs = (world.bench_runs[run.bench_id] ??= {})
         runs[run.id] = run
         index_run(world.runs_by_bench, run.bench_id, run.id, run.started_at, runs)
@@ -111,7 +111,7 @@ function index_run(
 }
 
 function entity_for(
-  coco: Coco,
+  engine: Engine,
   folder: string,
   name: string,
   kind: 'Job' | 'Bench',
@@ -127,12 +127,12 @@ function entity_for(
   }
 }
 
-function job_run_of(coco: Coco, job_path: string, record: RunRecord, now_iso: string): JobRun {
+function job_run_of(engine: Engine, job_path: string, record: RunRecord, now_iso: string): JobRun {
   const [status, query_health] = display_status_of(record)
   return {
     id: String(record.run_id),
     job_id: job_path,
-    origin: origin_of(coco, record),
+    origin: origin_of(engine, record),
     started_at: started_at(record),
     ended_at: ended_at(record),
     parameters: format_params(all_params(record)),
@@ -144,7 +144,7 @@ function job_run_of(coco: Coco, job_path: string, record: RunRecord, now_iso: st
   }
 }
 
-function origin_of(coco: Coco, record: RunRecord): RunOrigin {
+function origin_of(engine: Engine, record: RunRecord): RunOrigin {
   const origin = record.origin ?? { by: 'human' }
   if (origin.by === 'human') {
     return 'Human'
@@ -155,7 +155,7 @@ function origin_of(coco: Coco, record: RunRecord): RunOrigin {
   return {
     Bench: {
       name: origin.name,
-      bench_id: coco.find_bench_path_by_name(origin.name),
+      bench_id: engine.find_bench_path_by_name(origin.name),
       bench_run_id: String(origin.run_id),
       call: origin.call
     }
@@ -163,14 +163,14 @@ function origin_of(coco: Coco, record: RunRecord): RunOrigin {
 }
 
 function bench_run_of(
-  coco: Coco,
+  engine: Engine,
   bench_path: string,
   record: BenchRecord,
   now_iso: string
 ): BenchRun {
   let status: RunStatus = 'Error'
   try {
-    status = map_status(coco.bench_status(bench_path, record.run_id).status)
+    status = map_status(engine.bench_status(bench_path, record.run_id).status)
   } catch {
     // Fall through to Error, as the Rust adapter does.
   }
@@ -183,11 +183,11 @@ function bench_run_of(
     parameters: format_params(record.params),
     plan: {
       steps: record.members.map((member, index) => {
-        const found = coco.find_job_by_name(member.job)
+        const found = engine.find_job_by_name(member.job)
         let parameters = ''
         if (found !== null) {
           try {
-            parameters = format_params(all_params(coco.run_record(found[0], member.run_id)))
+            parameters = format_params(all_params(engine.run_record(found[0], member.run_id)))
           } catch {
             parameters = ''
           }

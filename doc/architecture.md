@@ -461,7 +461,11 @@ coco-electron/
 │   ├── main/                      # the server: owns everything
 │   │   ├── index.ts               #   window, IPC handlers, refresh tick
 │   │   ├── engine/                #   the domain — no Electron import anywhere
-│   │   │   ├── coco.ts            #     the engine proper
+│   │   │   ├── index.ts           #     the engine proper: Engine, and the refresh tick
+│   │   │   ├── memory.ts          #     the in-memory truth, written through to folders
+│   │   │   ├── job.ts             #     start / poll / report / cancel (§7)
+│   │   │   ├── bench.ts           #     plan / start / report / cancel / status (§8, §9)
+│   │   │   ├── in_flight.ts       #     launch scripts not yet answered (§7.1)
 │   │   │   ├── manifest.ts        #     coco.toml, fully validated
 │   │   │   ├── template.ts        #     analyze / render (§15.2)
 │   │   │   ├── invoke.ts          #     lexical command split, spawn

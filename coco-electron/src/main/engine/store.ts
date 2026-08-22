@@ -4,7 +4,7 @@
 // which folders are registered. A folder cannot say that about itself.
 //
 // It no longer holds a run-id counter. An id is derived from the experiment's
-// own runs instead (`next_run_id` in coco.ts), which is the only source that
+// own runs instead (`next_run_id` in memory.ts), which is the only source that
 // cannot disagree with what is on disk — a counter can, and did: a folder
 // carried over from another machine arrived with runs the counter knew
 // nothing about, and the next start overwrote one of them.
