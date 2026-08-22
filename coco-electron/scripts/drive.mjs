@@ -66,7 +66,14 @@ function seed_library(seed) {
     : seed === 'library-only'
       ? []
       : folders
-  fs.writeFileSync(STORE_PATH, JSON.stringify({ entities }, null, 2))
+  // The store lists jobs and benches separately (convention §5); the library
+  // keeps them in folders of those names.
+  const side = (folder) => path.basename(path.dirname(folder))
+  const store = {
+    jobs: entities.filter((folder) => side(folder) === 'jobs'),
+    benches: entities.filter((folder) => side(folder) === 'benches')
+  }
+  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2))
   // Whatever a previous drive arranged — window state on disk, the page's
   // own localStorage — is not this run's starting point either.
   fs.rmSync(USER_DATA_DIR, { recursive: true, force: true })

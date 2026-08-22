@@ -38,7 +38,7 @@ describe('a cancel during a refresh', () => {
     ])
 
     expect(result).toEqual({ ok: true })
-    expect(coco.run_record(job, run_id).status).toBe('CANCELLING')
+    expect(coco.job(job).runs.record(run_id).status).toBe('CANCELLING')
   })
 })
 
@@ -58,7 +58,7 @@ describe('two starts at once', () => {
     await settle(coco)
 
     expect(first).not.toBe(second)
-    expect(coco.run_record(job, first).submission_id).toBe(`sub-${first}`)
-    expect(coco.run_record(job, second).submission_id).toBe(`sub-${second}`)
+    expect(coco.job(job).runs.record(first).submission_id).toBe(`sub-${first}`)
+    expect(coco.job(job).runs.record(second).submission_id).toBe(`sub-${second}`)
   })
 })

@@ -35,27 +35,26 @@ export async function start_run(
   trigger: 'human' | 'agent' = 'human'
 ): Promise<StartResult> {
   try {
-    const view = engine
-      .entities()
-      .find((entity) => entity.manifest !== null && entity.manifest.name === name)
-    if (view === undefined || view.manifest === null) {
-      return { ok: false, message: `no experiment named \`${name}\` is registered` }
-    }
+    const job = engine.find_job_by_name(name)
+    const bench = engine.find_bench_by_name(name)
     let run_id: number
-    if (view.manifest.kind === 'job') {
+    if (job !== null) {
+      const manifest = job.usable_manifest()
       const render: Record<string, string> = {}
       const launch: Record<string, string> = {}
       for (const [key, value] of Object.entries(parameters)) {
-        if (view.manifest.render_params.includes(key)) {
+        if (manifest.render_params.includes(key)) {
           render[key] = value
         } else {
           launch[key] = value
         }
       }
-      run_id = await engine.start_job(view.path, render, launch, trigger)
-    } else {
-      const start = await engine.start_bench(view.path, parameters, trigger)
+      run_id = await engine.start_job(job.path, render, launch, trigger)
+    } else if (bench !== null) {
+      const start = await engine.start_bench(bench.path, parameters, trigger)
       run_id = start.run_id
+    } else {
+      return { ok: false, message: `no experiment named \`${name}\` is registered` }
     }
     return { ok: true, run_id: String(run_id) }
   } catch (error) {
@@ -103,8 +102,7 @@ export async function cancel(engine: Engine, target: CancelTarget): Promise<Canc
  * format the page did not announce.
  */
 export function read_report(engine: Engine, target: ReportTarget): ReportResult {
-  const registered = engine.entities().some((entity) => entity.path === target.entity_id)
-  if (!registered) {
+  if (!engine.registered(target.entity_id)) {
     return { ok: false, message: `no experiment is registered at ${target.entity_id}` }
   }
   if (!/^\d+$/.test(target.run_id)) {
@@ -150,28 +148,13 @@ export function read_report(engine: Engine, target: ReportTarget): ReportResult 
  * did not happen.
  */
 export function add_folder(engine: Engine, folder: string): AddFolderResult {
-  const before = new Set(engine.entities().map((entity) => entity.path))
   try {
-    engine.register(folder)
+    // The entity id is the canonical path, which is what `register` keys by.
+    const registration = engine.register(folder)
+    return { ok: true, entity_id: registration.path, already: registration.already }
   } catch (error) {
     return { ok: false, cancelled: false, message: (error as Error).message }
   }
-  const added = engine.entities().find((entity) => !before.has(entity.path))
-  if (added !== undefined) {
-    return { ok: true, entity_id: added.path, already: false }
-  }
-
-  // `register` returns silently for a folder already in the store. Which one
-  // it was is answered in the store's own terms — canonical paths, since that
-  // is what `register` writes and what an entity id is.
-  let canonical = folder
-  try {
-    canonical = fs.realpathSync(folder)
-  } catch {
-    // Unreadable now; `register` would have refused it above, so this is a
-    // path that resolved a moment ago. Compare with what we were given.
-  }
-  return { ok: true, entity_id: canonical, already: true }
 }
 
 /**

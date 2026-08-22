@@ -61,18 +61,20 @@ export class InFlight {
       }
       if (submission_id !== null) {
         try {
-          const record = this.memory.run_record(in_flight.path, in_flight.run_id)
+          const runs = this.memory.job(in_flight.path).runs
+          const record = runs.record(in_flight.run_id)
           record.submission_id = submission_id
-          this.memory.write_run_record(in_flight.path, record)
+          runs.write(record)
         } catch (cause) {
           errors.push(as_engine_error(in_flight.path, cause))
         }
       } else if (failure !== null) {
         try {
-          const record = this.memory.run_record(in_flight.path, in_flight.run_id)
+          const runs = this.memory.job(in_flight.path).runs
+          const record = runs.record(in_flight.run_id)
           apply_status(record, 'ERROR', now_stamp())
           record.error = failure.message
-          this.memory.write_run_record(in_flight.path, record)
+          runs.write(record)
         } catch {
           // The record is gone; the error below still reaches the caller.
         }
@@ -106,11 +108,12 @@ export class InFlight {
     for (const in_flight of this.launching) {
       in_flight.running.kill()
       try {
-        const record = this.memory.run_record(in_flight.path, in_flight.run_id)
+        const runs = this.memory.job(in_flight.path).runs
+        const record = runs.record(in_flight.run_id)
         apply_status(record, 'ERROR', now_stamp())
         record.error =
           'coco closed before the launch script answered; the run can no longer be tracked'
-        this.memory.write_run_record(in_flight.path, record)
+        runs.write(record)
       } catch {
         // Nothing left to mark.
       }

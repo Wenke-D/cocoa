@@ -64,18 +64,19 @@ describe('bundled mock library', () => {
     for (const folder of [solver, flaky, failing, bench]) {
       coco.register(folder)
     }
-    expect(coco.entities()).toHaveLength(4)
+    expect(coco.jobs()).toHaveLength(3)
+    expect(coco.benches()).toHaveLength(1)
 
     // A healthy job lifecycle through the first polls. The launch script runs
     // in its own time (§7.1); the record settles once it lands.
     const run_id = await coco.start_job(solver, { nodes: '64' }, { gpu: '0' }, 'human')
     expect(await settle(coco)).toEqual([])
-    expect(coco.run_record(solver, run_id).submission_id).toBe(`slurm-${run_id}`)
+    expect(coco.job(solver).runs.record(run_id).submission_id).toBe(`slurm-${run_id}`)
 
     const poll = await coco.poll_job(solver)
     expect(poll.warnings).toEqual([])
     expect(poll.changed).toHaveLength(1)
-    expect(['PENDING', 'RUNNING']).toContain(coco.run_record(solver, run_id).status)
+    expect(['PENDING', 'RUNNING']).toContain(coco.job(solver).runs.record(run_id).status)
 
     // The bench plans three instances and dispatches them all at once.
     const plan = await coco.plan_bench(bench, { sweep: 'nightly' })
@@ -107,14 +108,14 @@ describe('bundled mock library', () => {
     // from the record on disk — so backdating means editing the file and
     // letting the reconcile pass bring it back in, exactly as a hand-edit
     // would.
-    const record = coco.run_record(failing, run_id)
+    const record = coco.job(failing).runs.record(run_id)
     record.history[0].at = now_stamp(new Date(Date.now() - 60_000))
     hand_edit(record_path(failing, run_id), JSON.stringify(record, null, 2))
     coco.reconcile()
 
     const report = await coco.poll_job(failing)
     expect(report.changed).toEqual([[run_id, 'FAILED']])
-    const polled = coco.run_record(failing, run_id)
+    const polled = coco.job(failing).runs.record(run_id)
     expect(polled.status).toBe('FAILED')
     expect(polled.reason).toContain('convergence stalled')
   })

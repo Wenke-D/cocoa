@@ -1,6 +1,6 @@
 // The job operations (convention §7, §10, §11): start, poll, report, cancel.
 // Each runs one of the manifest's scripts and writes what it said into the
-// engine's memory.
+// job's runs.
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -8,6 +8,7 @@ import type { Engine } from './index'
 import { EngineError } from './errors'
 import * as invoke from './invoke'
 import type { Invocation, Running } from './invoke'
+import type { Job } from './memory'
 import { apply_status, new_run_record, now_stamp, sorted } from './record'
 import type { RunOrigin, RunRecord } from './record'
 import { from_poll_word, is_cancellable, is_terminal } from './status'
@@ -30,18 +31,18 @@ export type ReportMode = 'auto' | 'manual'
  */
 export async function start_job(
   engine: Engine,
-  folder: string,
+  job: Job,
   render: Record<string, string>,
   launch: Record<string, string>,
   origin: RunOrigin
 ): Promise<number> {
-  const manifest = engine.job_manifest(folder)
+  const manifest = job.usable_manifest()
   validate_params(manifest.render_params, render, 'render')
   validate_params(manifest.launch_params, launch, 'launch')
 
   // The template is read from disk at the moment of use — it is authored
   // content, not engine state, and must be as fresh as the start.
-  const template_path = path.join(folder, manifest.template)
+  const template_path = path.join(job.path, manifest.template)
   let source: string
   try {
     source = fs.readFileSync(template_path, 'utf8')
@@ -60,8 +61,8 @@ export async function start_job(
     throw EngineError.template(template_path, (cause as Error).message)
   }
 
-  const run_id = engine.next_run_id('job', folder)
-  const run_dir = path.join(folder, 'runs', String(run_id))
+  const run_id = job.runs.next_id()
+  const run_dir = path.join(job.path, 'runs', String(run_id))
   try {
     fs.mkdirSync(run_dir, { recursive: true })
   } catch (cause) {
@@ -86,28 +87,28 @@ export async function start_job(
   // the same synchronous stretch, and a concurrent start must find it
   // taken rather than pick it too.
   const record = new_run_record(run_id, '', sorted(render), sorted(launch), origin, now_stamp())
-  engine.write_run_record(folder, record)
+  job.runs.write(record)
 
   // Only a script that cannot be started at all refuses the start itself:
   // that is a folder problem the submitter can act on now, and it leaves
   // no run behind — the reservation is dropped.
   let running: Running
   try {
-    running = await invoke.spawn(folder, argv, engine.config.launch_timeout)
+    running = await invoke.spawn(job.path, argv, engine.config.launch_timeout)
   } catch (cause) {
-    engine.drop_run(folder, run_id)
-    throw EngineError.io(folder, cause)
+    job.runs.drop(run_id)
+    throw EngineError.io(job.path, cause)
   }
 
-  engine.in_flight.track(folder, run_id, manifest.launch.display, running)
+  engine.in_flight.track(job.path, run_id, manifest.launch.display, running)
   return run_id
 }
 
 /** Polls one job's active runs, one `poll` script call per run (§7.2, §10). */
-export async function poll_job(engine: Engine, folder: string): Promise<PollReport> {
-  const manifest = engine.job_manifest(folder)
+export async function poll_job(engine: Engine, job: Job): Promise<PollReport> {
+  const manifest = job.usable_manifest()
   const active: [number, RunRecord][] = []
-  for (const view of engine.job_runs(folder)) {
+  for (const view of job.runs.all()) {
     const record = view.record
     // A run whose launch script has not returned yet has no submission id
     // to poll by; it is the launch's business until harvest collects it.
@@ -136,9 +137,9 @@ export async function poll_job(engine: Engine, folder: string): Promise<PollRepo
     const argv = [...manifest.poll.words, '--submission', record.submission_id]
     let invocation: Invocation
     try {
-      invocation = await invoke.run(folder, argv, engine.config.poll_timeout)
+      invocation = await invoke.run(job.path, argv, engine.config.poll_timeout)
     } catch (cause) {
-      throw EngineError.io(folder, cause)
+      throw EngineError.io(job.path, cause)
     }
     const now = now_stamp()
     if (record.history.length !== seen) {
@@ -157,7 +158,7 @@ export async function poll_job(engine: Engine, folder: string): Promise<PollRepo
           : invoke.invocation_output(invocation)
       if (record.status !== 'UNREACHABLE') {
         apply_status(record, 'UNREACHABLE', now, `poll script failed: ${detail}`)
-        engine.write_run_record(folder, record)
+        job.runs.write(record)
         report.changed.push([run_id, 'UNREACHABLE'])
       }
       broken ??= EngineError.invocation(
@@ -186,7 +187,7 @@ export async function poll_job(engine: Engine, folder: string): Promise<PollRepo
     }
     if (record.status !== status) {
       apply_status(record, status, now, reason)
-      engine.write_run_record(folder, record)
+      job.runs.write(record)
       report.changed.push([run_id, status])
     }
   }
@@ -204,12 +205,12 @@ export async function poll_job(engine: Engine, folder: string): Promise<PollRepo
  */
 export async function report_run(
   engine: Engine,
-  folder: string,
+  job: Job,
   run_id: number,
   mode: ReportMode
 ): Promise<void> {
-  const manifest = engine.job_manifest(folder)
-  const record = engine.run_record(folder, run_id)
+  const manifest = job.usable_manifest()
+  const record = job.runs.record(run_id)
 
   const eligible =
     mode === 'auto'
@@ -225,10 +226,10 @@ export async function report_run(
 
   if (record.status !== 'ANALYZING') {
     apply_status(record, 'ANALYZING', now_stamp())
-    engine.write_run_record(folder, record)
+    job.runs.write(record)
   }
 
-  const report_dir = path.join(folder, 'report')
+  const report_dir = path.join(job.path, 'report')
   try {
     fs.mkdirSync(report_dir, { recursive: true })
   } catch (cause) {
@@ -243,15 +244,15 @@ export async function report_run(
   ]
   let invocation: Invocation
   try {
-    invocation = await invoke.run(folder, argv, engine.config.report_timeout)
+    invocation = await invoke.run(job.path, argv, engine.config.report_timeout)
   } catch (cause) {
-    throw EngineError.io(folder, cause)
+    throw EngineError.io(job.path, cause)
   }
 
-  if (invoke.invocation_ok(invocation) && report_on_disk(folder, run_id)) {
+  if (invoke.invocation_ok(invocation) && report_on_disk(job.path, run_id)) {
     apply_status(record, 'SUCCEEDED', now_stamp())
     delete record.error
-    engine.write_run_record(folder, record)
+    job.runs.write(record)
     return
   }
 
@@ -267,15 +268,15 @@ export async function report_run(
   if (mode === 'auto') {
     apply_status(record, 'ERROR', now_stamp())
     record.error = detail
-    engine.write_run_record(folder, record)
+    job.runs.write(record)
   }
   throw error
 }
 
 /** Cancels one run through the job's `cancel` script (§7.4). */
-export async function cancel_run(engine: Engine, folder: string, run_id: number): Promise<void> {
-  const manifest = engine.job_manifest(folder)
-  const record = engine.run_record(folder, run_id)
+export async function cancel_run(engine: Engine, job: Job, run_id: number): Promise<void> {
+  const manifest = job.usable_manifest()
+  const record = job.runs.record(run_id)
   if (!is_cancellable(record.status)) {
     throw EngineError.validation(`run ${run_id} (${record.status}) cannot be cancelled`)
   }
@@ -287,9 +288,9 @@ export async function cancel_run(engine: Engine, folder: string, run_id: number)
   const argv = [...manifest.cancel.words, '--submission', record.submission_id]
   let invocation: Invocation
   try {
-    invocation = await invoke.run(folder, argv, engine.config.cancel_timeout)
+    invocation = await invoke.run(job.path, argv, engine.config.cancel_timeout)
   } catch (cause) {
-    throw EngineError.io(folder, cause)
+    throw EngineError.io(job.path, cause)
   }
   if (invoke.invocation_ok(invocation)) {
     // The run may have moved while the cancel script ran — ended on its
@@ -297,7 +298,7 @@ export async function cancel_run(engine: Engine, folder: string, run_id: number)
     // either way; only a run still cancellable takes the CANCELLING mark.
     if (is_cancellable(record.status)) {
       apply_status(record, 'CANCELLING', now_stamp())
-      engine.write_run_record(folder, record)
+      job.runs.write(record)
     }
     return
   }

@@ -10,6 +10,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { load_store } from '../src/main/engine/store'
 import {
   bench_folder,
   cleanup_temp_dirs,
@@ -59,7 +60,7 @@ describe('job lifecycle', () => {
     const run_id = await coco.start_job(job, { size: '256' }, { gpu: '0' }, 'human')
     expect(await settle(coco)).toEqual([])
 
-    let record = coco.run_record(job, run_id)
+    let record = coco.job(job).runs.record(run_id)
     expect(record.status).toBe('STARTING')
     expect(record.submission_id).toBe(`sub-${run_id}`)
     expect(is_file(job, 'runs', String(run_id), 'job.sbatch')).toBe(true)
@@ -68,14 +69,14 @@ describe('job lifecycle', () => {
     write(job, 'poll-state', 'RUNNING')
     const report = await coco.poll_job(job)
     expect(report.changed).toEqual([[run_id, 'RUNNING']])
-    expect(coco.run_record(job, run_id).status).toBe('RUNNING')
+    expect(coco.job(job).runs.record(run_id).status).toBe('RUNNING')
 
     write(job, 'poll-state', 'COMPLETED')
     await coco.poll_job(job)
-    expect(coco.run_record(job, run_id).status).toBe('COMPLETED')
+    expect(coco.job(job).runs.record(run_id).status).toBe('COMPLETED')
 
     await coco.report_run(job, run_id, 'auto')
-    record = coco.run_record(job, run_id)
+    record = coco.job(job).runs.record(run_id)
     expect(record.status).toBe('SUCCEEDED')
     expect(is_file(job, 'report', `${run_id}.txt`)).toBe(true)
 
@@ -100,7 +101,7 @@ describe('job lifecycle', () => {
     expect(errors).toHaveLength(1)
     expect(errors[0]).toContain('cluster refused')
 
-    const record = coco.run_record(job, run_id)
+    const record = coco.job(job).runs.record(run_id)
     expect(record.status).toBe('ERROR')
     expect(record.error).toContain('cluster refused')
 
@@ -126,7 +127,7 @@ describe('job lifecycle', () => {
     await new Promise((resolve) => setTimeout(resolve, 500))
     coco.abandon_launches()
 
-    const record = coco.run_record(job, run_id)
+    const record = coco.job(job).runs.record(run_id)
     expect(record.status).toBe('STARTING')
     expect(record.submission_id).toBe(`sub-${run_id}`)
   })
@@ -144,7 +145,7 @@ describe('job lifecycle', () => {
 
     coco.abandon_launches()
 
-    const record = coco.run_record(job, run_id)
+    const record = coco.job(job).runs.record(run_id)
     expect(record.status).toBe('ERROR')
     expect(record.error).toContain('no longer be tracked')
   })
@@ -165,7 +166,7 @@ describe('job lifecycle', () => {
 
     const reopened = engine(dir)
     await reopened.refresh()
-    const record = reopened.run_record(job, run_id)
+    const record = reopened.job(job).runs.record(run_id)
     expect(record.status).toBe('ERROR')
     expect(record.error).toContain('closed')
 
@@ -249,20 +250,20 @@ describe('polling', () => {
     write_script(job, 'poll.sh', "echo 'squeue broke' >&2\nexit 3\n")
     expect(await failure(coco.poll_job(job))).toContain('squeue broke')
 
-    const record = coco.run_record(job, run_id)
+    const record = coco.job(job).runs.record(run_id)
     expect(record.status).toBe('UNREACHABLE')
     expect(record.reason).toContain('poll script failed')
 
     // A bare UNREACHABLE line leaves the run where it is.
     write_script(job, 'poll.sh', "echo 'COCO_RETURN: UNREACHABLE never mind'\n")
     await coco.poll_job(job)
-    expect(coco.run_record(job, run_id).status).toBe('UNREACHABLE')
+    expect(coco.job(job).runs.record(run_id).status).toBe('UNREACHABLE')
 
     // The next good poll overwrites UNREACHABLE.
     write_script(job, 'poll.sh', "echo 'COCO_RETURN: RUNNING'\n")
     const report = await coco.poll_job(job)
     expect(report.changed).toEqual([[run_id, 'RUNNING']])
-    expect(coco.run_record(job, run_id).status).toBe('RUNNING')
+    expect(coco.job(job).runs.record(run_id).status).toBe('RUNNING')
   })
 
   it('ignores an unknown poll status with a warning', async () => {
@@ -278,7 +279,7 @@ describe('polling', () => {
     expect(report.changed).toEqual([])
     expect(report.warnings).toHaveLength(1)
     expect(report.warnings[0]).toContain('HYPERDRIVE')
-    expect(coco.run_record(job, run_id).status).toBe('STARTING')
+    expect(coco.job(job).runs.record(run_id).status).toBe('STARTING')
   })
 })
 
@@ -295,11 +296,11 @@ describe('cancel', () => {
 
     write_script(job, 'cancel.sh', "echo 'already gone' >&2\nexit 9\n")
     expect(await failure(coco.cancel_run(job, run_id))).toContain('already gone')
-    expect(coco.run_record(job, run_id).status).toBe('RUNNING')
+    expect(coco.job(job).runs.record(run_id).status).toBe('RUNNING')
 
     write_script(job, 'cancel.sh', 'exit 0\n')
     await coco.cancel_run(job, run_id)
-    expect(coco.run_record(job, run_id).status).toBe('CANCELLING')
+    expect(coco.job(job).runs.record(run_id).status).toBe('CANCELLING')
   })
 })
 
@@ -316,11 +317,44 @@ describe('registration', () => {
     write(folder, 'coco.toml', 'kind = "pipeline"\nname = "solver"\n')
     coco.reconcile()
 
-    const views = coco.entities()
-    expect(views).toHaveLength(1)
-    expect(views[0].manifest_error).not.toBeNull()
+    const jobs = coco.jobs()
+    expect(jobs).toHaveLength(1)
+    expect(jobs[0].manifest_error).not.toBeNull()
 
     expect(await failure(coco.start_job(folder, {}, {}, 'human'))).toContain('kind')
+  })
+
+  // The store remembers which side a folder registered on, so a manifest
+  // found broken at the next open still lands there, carrying the error.
+  it('opens a job whose manifest broke while coco was closed, as a job', () => {
+    const dir = temp_dir()
+    const folder = job_folder(dir, 'solver')
+    engine(dir).register(folder)
+    write(folder, 'coco.toml', 'kind = "pipeline"\nname = "solver"\n')
+
+    const reopened = engine(dir)
+    expect(reopened.jobs().map((job) => job.path)).toEqual([folder])
+    expect(reopened.benches()).toEqual([])
+    expect(reopened.job(folder).manifest).toBeNull()
+    expect(reopened.job(folder).manifest_error?.message).toContain('kind')
+  })
+
+  // A manifest that now declares the other kind moves the folder across,
+  // and the store follows: the manifest decides, the store only remembers.
+  it('moves a folder to the other side when its manifest changes kind', () => {
+    const dir = temp_dir()
+    const folder = job_folder(dir, 'was-a-job')
+    const coco = engine(dir)
+    coco.register(folder)
+
+    const bench_manifest = path.join(bench_folder(dir, 'now-a-bench', []), 'coco.toml')
+    fs.copyFileSync(bench_manifest, path.join(folder, 'coco.toml'))
+    coco.reconcile()
+
+    expect(coco.jobs()).toEqual([])
+    expect(coco.benches().map((bench) => bench.path)).toEqual([folder])
+    expect(coco.bench(folder).manifest?.name).toBe('now-a-bench')
+    expect(load_store(path.join(dir, 'store.json'))).toEqual({ jobs: [], benches: [folder] })
   })
 
   // The other side of that rule: a manifest already broken when the folder is
@@ -333,7 +367,7 @@ describe('registration', () => {
 
     const coco = engine(dir)
     expect(throws(() => coco.register(folder))).toContain('kind')
-    expect(coco.entities()).toEqual([])
+    expect(coco.jobs()).toEqual([])
   })
 
   it('refuses a second entity with a name already registered', () => {
@@ -356,15 +390,15 @@ describe('registration', () => {
     const coco = engine(dir)
     coco.register(job)
     coco.register(job)
-    expect(coco.entities()).toHaveLength(1)
+    expect(coco.jobs()).toHaveLength(1)
 
     await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
     await settle(coco)
-    expect(coco.job_runs(job)).toHaveLength(1)
+    expect(coco.job(job).runs.all()).toHaveLength(1)
 
     coco.unregister(job)
-    expect(coco.entities()).toEqual([])
-    expect(coco.job_runs(job)).toEqual([])
+    expect(coco.jobs()).toEqual([])
+    expect(throws(() => coco.job(job))).toContain('not found')
     expect(throws(() => coco.unregister(job))).toContain('not found')
   })
 })
@@ -391,7 +425,7 @@ describe('benches', () => {
     expect(start.launch_failures[0].job).toBe('bad-job')
 
     // A dispatched run records which bench run and which call dispatched it.
-    const member = coco.run_record(good, start.members[0].run_id)
+    const member = coco.job(good).runs.record(start.members[0].run_id)
     expect(member.origin).toEqual({
       by: 'bench',
       run_id: start.run_id,
@@ -477,7 +511,7 @@ describe('benches', () => {
     expect(message).toContain('call 3')
     expect(message).toContain('call 4')
     expect(message).not.toContain('call 2')
-    expect(coco.bench_runs(bench)).toEqual([])
+    expect(coco.bench(bench).runs.all()).toEqual([])
   })
 
   it('dispatches nothing when the plan is invalid', async () => {
@@ -489,7 +523,7 @@ describe('benches', () => {
 
     const message = await failure(coco.start_bench(bench, { mesh: 'fine' }, 'human'))
     expect(message).toContain('not a registered job')
-    expect(coco.bench_runs(bench)).toEqual([])
+    expect(coco.bench(bench).runs.all()).toEqual([])
   })
 })
 
@@ -506,13 +540,13 @@ describe('reports', () => {
 
     write(job, 'report-state', 'fail')
     expect(await failure(coco.report_run(job, run_id, 'auto'))).toContain('exploded')
-    const record = coco.run_record(job, run_id)
+    const record = coco.job(job).runs.record(run_id)
     expect(record.status).toBe('ERROR')
     expect(record.error).toContain('exploded')
 
     fs.rmSync(path.join(job, 'report-state'))
     await coco.report_run(job, run_id, 'manual')
-    expect(coco.run_record(job, run_id).status).toBe('SUCCEEDED')
+    expect(coco.job(job).runs.record(run_id).status).toBe('SUCCEEDED')
     expect(is_file(job, 'report', `${run_id}.txt`)).toBe(true)
   })
 })
@@ -530,7 +564,7 @@ describe('records are read once, at first sight', () => {
     hand_edit(record_path(job, 0), '{ not json')
     const reopened = engine(dir)
 
-    const views = reopened.job_runs(job)
+    const views = reopened.job(job).runs.all()
     expect(views.map((view) => view.run_id)).toEqual([1, 0])
     expect(views[1].record).toBeNull()
     expect(views[1].record_error?.message).toContain('does not parse')
@@ -548,13 +582,13 @@ describe('records are read once, at first sight', () => {
     const run_id = await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
     await settle(coco)
 
-    const record = { ...coco.run_record(job, run_id), status: 'CANCELLED' as const }
+    const record = { ...coco.job(job).runs.record(run_id), status: 'CANCELLED' as const }
     hand_edit(record_path(job, run_id), JSON.stringify(record, null, 2))
     coco.reconcile()
-    expect(coco.run_record(job, run_id).status).toBe('STARTING')
+    expect(coco.job(job).runs.record(run_id).status).toBe('STARTING')
 
     const reopened = engine(dir)
-    expect(reopened.run_record(job, run_id).status).toBe('CANCELLED')
+    expect(reopened.job(job).runs.record(run_id).status).toBe('CANCELLED')
   })
 })
 

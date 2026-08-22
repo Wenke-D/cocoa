@@ -14,6 +14,7 @@ import type {
   RunStatus,
   World
 } from '@shared/world'
+import type { EngineError } from './errors'
 import type { Engine } from './index'
 import { report_on_disk } from './job'
 import { all_params, ended_at, started_at } from './record'
@@ -31,53 +32,50 @@ export function build_world(engine: Engine, last_refresh: string | null): World 
   }
   const now_iso = new Date().toISOString()
 
-  for (const view of engine.entities()) {
-    const manifest = view.manifest
+  // A folder whose manifest is unusable is still listed, as what the store
+  // says it is, carrying the error; its runs wait for a manifest.
+  for (const job of engine.jobs()) {
+    const manifest = job.manifest
     if (manifest === null) {
-      world.entities.push({
-        id: view.path,
-        kind: 'Job',
-        name: path.basename(view.path),
-        path: display_path(view.path),
-        manifest: { Invalid: { message: view.manifest_error?.message ?? 'manifest error' } },
-        parameter_names: []
-      })
+      world.entities.push(broken_entity(job, 'Job'))
       continue
     }
+    world.entities.push(
+      entity_for(job.path, manifest.name, 'Job', [
+        ...manifest.render_params,
+        ...manifest.launch_params
+      ])
+    )
+    // Oldest first, which is also the order the index wants: two runs
+    // started in the same millisecond tie on start time, and then
+    // insertion order — ascending run id — is what keeps them
+    // chronological.
+    for (const run_view of [...job.runs.all()].reverse()) {
+      if (run_view.record === null) {
+        continue
+      }
+      const run = job_run_of(engine, job.path, run_view.record, now_iso)
+      const runs = (world.job_runs[run.job_id] ??= {})
+      runs[run.id] = run
+      index_run(world.runs_by_job, run.job_id, run.id, run.started_at, runs)
+    }
+  }
 
-    if (manifest.kind === 'job') {
-      world.entities.push(
-        entity_for(engine, view.path, manifest.name, 'Job', [
-          ...manifest.render_params,
-          ...manifest.launch_params
-        ])
-      )
-      // Oldest first, which is also the order the index wants: two runs
-      // started in the same millisecond tie on start time, and then
-      // insertion order — ascending run id — is what keeps them
-      // chronological.
-      for (const run_view of [...engine.job_runs(view.path)].reverse()) {
-        if (run_view.record === null) {
-          continue
-        }
-        const run = job_run_of(engine, view.path, run_view.record, now_iso)
-        const runs = (world.job_runs[run.job_id] ??= {})
-        runs[run.id] = run
-        index_run(world.runs_by_job, run.job_id, run.id, run.started_at, runs)
+  for (const bench of engine.benches()) {
+    const manifest = bench.manifest
+    if (manifest === null) {
+      world.entities.push(broken_entity(bench, 'Bench'))
+      continue
+    }
+    world.entities.push(entity_for(bench.path, manifest.name, 'Bench', [...manifest.plan_params]))
+    for (const run_view of [...bench.runs.all()].reverse()) {
+      if (run_view.record === null) {
+        continue
       }
-    } else {
-      world.entities.push(
-        entity_for(engine, view.path, manifest.name, 'Bench', [...manifest.plan_params])
-      )
-      for (const run_view of [...engine.bench_runs(view.path)].reverse()) {
-        if (run_view.record === null) {
-          continue
-        }
-        const run = bench_run_of(engine, view.path, run_view.record, now_iso)
-        const runs = (world.bench_runs[run.bench_id] ??= {})
-        runs[run.id] = run
-        index_run(world.runs_by_bench, run.bench_id, run.id, run.started_at, runs)
-      }
+      const run = bench_run_of(engine, bench.path, run_view.record, now_iso)
+      const runs = (world.bench_runs[run.bench_id] ??= {})
+      runs[run.id] = run
+      index_run(world.runs_by_bench, run.bench_id, run.id, run.started_at, runs)
     }
   }
 
@@ -110,8 +108,21 @@ function index_run(
   list.splice(position, 0, run_id)
 }
 
+function broken_entity(
+  broken: { path: string; manifest_error: EngineError | null },
+  kind: 'Job' | 'Bench'
+): Entity {
+  return {
+    id: broken.path,
+    kind,
+    name: path.basename(broken.path),
+    path: display_path(broken.path),
+    manifest: { Invalid: { message: broken.manifest_error?.message ?? 'manifest error' } },
+    parameter_names: []
+  }
+}
+
 function entity_for(
-  engine: Engine,
   folder: string,
   name: string,
   kind: 'Job' | 'Bench',
@@ -155,7 +166,7 @@ function origin_of(engine: Engine, record: RunRecord): RunOrigin {
   return {
     Bench: {
       name: origin.name,
-      bench_id: engine.find_bench_path_by_name(origin.name),
+      bench_id: engine.find_bench_by_name(origin.name)?.path ?? null,
       bench_run_id: String(origin.run_id),
       call: origin.call
     }
@@ -183,19 +194,12 @@ function bench_run_of(
     parameters: format_params(record.params),
     plan: {
       steps: record.members.map((member, index) => {
-        const found = engine.find_job_by_name(member.job)
-        let parameters = ''
-        if (found !== null) {
-          try {
-            parameters = format_params(all_params(engine.run_record(found[0], member.run_id)))
-          } catch {
-            parameters = ''
-          }
-        }
+        const job = engine.find_job_by_name(member.job)
+        const member_record = job?.runs.find(member.run_id) ?? null
         return {
           index,
-          job_id: found?.[0] ?? member.job,
-          parameters,
+          job_id: job?.path ?? member.job,
+          parameters: member_record === null ? '' : format_params(all_params(member_record)),
           run_id: String(member.run_id)
         }
       })

@@ -121,6 +121,7 @@ describe('build_world', () => {
 
     const world = build_world(coco, null)
     expect(world.entities).toHaveLength(1)
+    expect(world.entities[0].kind).toBe('Job')
     expect(world.entities[0].name).toBe('was-fine')
     expect(world.entities[0].manifest).toMatchObject({
       Invalid: { message: expect.stringContaining('kind') as string }

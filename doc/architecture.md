@@ -258,10 +258,16 @@ outside edit shows up at the next open, not the next tick. Manifests stay the
 user's authored files, so each refresh tick re-reads `coco.toml` and an edit
 lands within 3 s.
 
-`store.json` persists only what is not in the folders — the registered folders,
-and nothing else — not the runs, which live in the folders, and not a run-id
-counter, which was retired in favour of deriving an id from the experiment's
-own records (convention §5).
+`store.json` persists only what is not in the folders — the registered folders
+and which side each is on, jobs or benches, and nothing else — not the runs,
+which live in the folders, and not a run-id counter, which was retired in
+favour of deriving an id from the experiment's own records (convention §5).
+
+The kind is remembered so that a folder whose manifest breaks stays listed as
+what it was, carrying the error; a manifest that changes kind moves the folder
+across, and the store follows (convention §5). In memory that is two maps, of
+`Job` and `Bench`, each holding its manifest as last read and its runs — there
+is no type over both.
 
 ### 26.2 Guarded Writes, No Queue
 

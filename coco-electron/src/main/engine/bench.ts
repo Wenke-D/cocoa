@@ -9,6 +9,7 @@ import type { Engine } from './index'
 import { EngineError } from './errors'
 import * as invoke from './invoke'
 import type { Invocation } from './invoke'
+import type { Bench } from './memory'
 import { cancel_run, describe_names, report_on_disk, start_job, validate_params } from './job'
 import { all_params, now_stamp, sorted } from './record'
 import type {
@@ -62,10 +63,10 @@ interface PlanLine {
 /** Runs `plan` and validates every instance before anything is submitted (§8.1). */
 export async function plan_bench(
   engine: Engine,
-  folder: string,
+  bench: Bench,
   params: Record<string, string>
 ): Promise<PlanInstance[]> {
-  const manifest = engine.bench_manifest(folder)
+  const manifest = bench.usable_manifest()
   validate_params(manifest.plan_params, params, 'plan')
 
   const argv = [...manifest.plan.words]
@@ -74,9 +75,9 @@ export async function plan_bench(
   }
   let invocation: Invocation
   try {
-    invocation = await invoke.run(folder, argv, engine.config.plan_timeout)
+    invocation = await invoke.run(bench.path, argv, engine.config.plan_timeout)
   } catch (cause) {
-    throw EngineError.io(folder, cause)
+    throw EngineError.io(bench.path, cause)
   }
   if (!invoke.invocation_ok(invocation)) {
     throw EngineError.invocation(
@@ -104,13 +105,13 @@ export async function plan_bench(
       problems.push(`call ${call}: ${(cause as Error).message}`)
       continue
     }
-    const found = engine.find_job_by_name(planned.job)
-    if (found === null) {
+    const job = engine.find_job_by_name(planned.job)
+    if (job === null) {
       problems.push(`call ${call}: \`${planned.job}\` is not a registered job`)
       continue
     }
-    const [job_path, job] = found
-    const expected = new Set([...job.render_params, ...job.launch_params])
+    const job_manifest = job.usable_manifest()
+    const expected = new Set([...job_manifest.render_params, ...job_manifest.launch_params])
     const provided = new Set(Object.keys(planned.params))
     const missing = [...expected].filter((name) => !provided.has(name)).sort()
     const extra = [...provided].filter((name) => !expected.has(name)).sort()
@@ -128,13 +129,13 @@ export async function plan_bench(
     const render: Record<string, string> = {}
     const launch: Record<string, string> = {}
     for (const [name, value] of Object.entries(planned.params)) {
-      if (job.render_params.includes(name)) {
+      if (job_manifest.render_params.includes(name)) {
         render[name] = value
       } else {
         launch[name] = value
       }
     }
-    instances.push({ job_path, job_name: job.name, render, launch })
+    instances.push({ job_path: job.path, job_name: job_manifest.name, render, launch })
   }
 
   if (problems.length > 0) {
@@ -146,24 +147,30 @@ export async function plan_bench(
 /** Starts a bench: validates the plan, then dispatches every instance (§8.2). */
 export async function start_bench(
   engine: Engine,
-  folder: string,
+  bench: Bench,
   params: Record<string, string>,
   by: Trigger
 ): Promise<BenchStart> {
-  const manifest = engine.bench_manifest(folder)
-  const instances = await plan_bench(engine, folder, params)
-  const bench_run_id = engine.next_run_id('bench', folder)
+  const manifest = bench.usable_manifest()
+  const instances = await plan_bench(engine, bench, params)
+  const bench_run_id = bench.runs.next_id()
 
   const members: BenchMember[] = []
   const launch_failures: LaunchFailure[] = []
   for (const [index, instance] of instances.entries()) {
     try {
-      const run_id = await start_job(engine, instance.job_path, instance.render, instance.launch, {
-        by: 'bench',
-        run_id: bench_run_id,
-        name: manifest.name,
-        call: index + 1
-      })
+      const run_id = await start_job(
+        engine,
+        engine.job(instance.job_path),
+        instance.render,
+        instance.launch,
+        {
+          by: 'bench',
+          run_id: bench_run_id,
+          name: manifest.name,
+          call: index + 1
+        }
+      )
       members.push({ run_id: run_id, job: instance.job_name })
     } catch (cause) {
       launch_failures.push({
@@ -184,15 +191,15 @@ export async function start_bench(
     members,
     launch_failures: launch_failures
   }
-  engine.write_bench_record(folder, record)
+  bench.runs.write(record)
 
   return { run_id: bench_run_id, members, launch_failures }
 }
 
 /** Runs the bench's report over its members' results (§8.3). */
-export async function bench_report(engine: Engine, folder: string, run_id: number): Promise<void> {
-  const manifest = engine.bench_manifest(folder)
-  const record = engine.bench_record(folder, run_id)
+export async function bench_report(engine: Engine, bench: Bench, run_id: number): Promise<void> {
+  const manifest = bench.usable_manifest()
+  const record = bench.runs.record(run_id)
 
   const resolved = engine.resolve_members(record)
   const block_reasons: string[] = []
@@ -212,7 +219,7 @@ export async function bench_report(engine: Engine, folder: string, run_id: numbe
     throw EngineError.validation(`no bench report: ${block_reasons.join(', ')}`)
   }
 
-  const run_dir = path.join(folder, 'runs', String(run_id))
+  const run_dir = path.join(bench.path, 'runs', String(run_id))
   const members_file: BenchMembersFile = {
     run_id: run_id,
     bench: record.bench,
@@ -231,7 +238,7 @@ export async function bench_report(engine: Engine, folder: string, run_id: numbe
   }
   write_atomic(path.join(run_dir, 'members.json'), JSON.stringify(members_file, null, 2))
 
-  const report_dir = path.join(folder, 'report')
+  const report_dir = path.join(bench.path, 'report')
   try {
     fs.mkdirSync(report_dir, { recursive: true })
   } catch (cause) {
@@ -246,9 +253,9 @@ export async function bench_report(engine: Engine, folder: string, run_id: numbe
   ]
   let invocation: Invocation
   try {
-    invocation = await invoke.run(folder, argv, engine.config.report_timeout)
+    invocation = await invoke.run(bench.path, argv, engine.config.report_timeout)
   } catch (cause) {
-    throw EngineError.io(folder, cause)
+    throw EngineError.io(bench.path, cause)
   }
 
   const report_path = path.join(report_dir, `${run_id}.txt`)
@@ -259,7 +266,7 @@ export async function bench_report(engine: Engine, folder: string, run_id: numbe
       ? `report script exited 0 but produced no report/${run_id}.txt`
       : invoke.invocation_output(invocation)
   record.report = { attempted: true, ...(error !== undefined ? { error } : {}) }
-  engine.write_bench_record(folder, record)
+  bench.runs.write(record)
 
   if (!ok) {
     throw EngineError.invocation(
@@ -274,28 +281,25 @@ export async function bench_report(engine: Engine, folder: string, run_id: numbe
 /** Cancels a bench run by cancelling its still-cancellable members (§3, §9.1). */
 export async function cancel_bench(
   engine: Engine,
-  folder: string,
+  bench: Bench,
   run_id: number
 ): Promise<MemberCancel[]> {
-  const record = engine.bench_record(folder, run_id)
+  const record = bench.runs.record(run_id)
   const results: MemberCancel[] = []
   for (const member of record.members) {
-    const found = engine.find_job_by_name(member.job)
-    if (found === null) {
+    const job = engine.find_job_by_name(member.job)
+    if (job === null) {
       throw EngineError.not_found(`member job \`${member.job}\` of bench run ${run_id}`)
     }
-    const [job_path] = found
-    let member_record: RunRecord
-    try {
-      member_record = engine.run_record(job_path, member.run_id)
-    } catch {
+    const member_record = job.runs.find(member.run_id)
+    if (member_record === null) {
       continue
     }
     if (!is_cancellable(member_record.status)) {
       continue
     }
     try {
-      await cancel_run(engine, job_path, member.run_id)
+      await cancel_run(engine, job, member.run_id)
       results.push({ run_id: member.run_id, job: member.job, ok: true })
     } catch (cause) {
       results.push({
@@ -310,8 +314,8 @@ export async function cancel_bench(
 }
 
 /** Derives a bench run's status (§9.1). Never stored, computed from memory. */
-export function bench_status(engine: Engine, folder: string, run_id: number): BenchStatusView {
-  const record = engine.bench_record(folder, run_id)
+export function bench_status(engine: Engine, bench: Bench, run_id: number): BenchStatusView {
+  const record = bench.runs.record(run_id)
   const resolved = engine.resolve_members(record)
   const missing = resolved.filter((member) => member.record === null).map((m) => m.job_name)
   const members = resolved
@@ -321,7 +325,7 @@ export function bench_status(engine: Engine, folder: string, run_id: number): Be
   const status =
     missing.length > 0
       ? 'ERROR'
-      : derive_bench_status(members, record, report_on_disk(folder, run_id))
+      : derive_bench_status(members, record, report_on_disk(bench.path, run_id))
 
   const counts: BenchStatusView = {
     status,

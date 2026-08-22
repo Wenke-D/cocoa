@@ -30,7 +30,7 @@ describe('start_run', () => {
     expect(result).toEqual({ ok: true, run_id: '0' })
     await settle(coco)
 
-    const record = coco.run_record(job, 0)
+    const record = coco.job(job).runs.record(0)
     expect(record.render).toEqual({ size: '256' })
     expect(record.launch).toEqual({ gpu: '0' })
     expect(record.origin).toEqual({ by: 'human' })
@@ -47,7 +47,7 @@ describe('start_run', () => {
     const result = await start_run(coco, 'sweep', { mesh: 'fine' })
     expect(result.ok).toBe(true)
     await settle(coco)
-    expect(coco.bench_runs(bench)).toHaveLength(1)
+    expect(coco.bench(bench).runs.all()).toHaveLength(1)
   })
 
   it('refuses an unknown name without throwing', async () => {
@@ -87,11 +87,11 @@ describe('cancel', () => {
       ok: true
     })
     // Never labelled CANCELLED before the cluster confirms it (§16.3).
-    expect(coco.run_record(job, run_id).status).toBe('CANCELLING')
+    expect(coco.job(job).runs.record(run_id).status).toBe('CANCELLING')
 
     write(job, 'poll-state', 'CANCELLED')
     await coco.poll_job(job)
-    expect(coco.run_record(job, run_id).status).toBe('CANCELLED')
+    expect(coco.job(job).runs.record(run_id).status).toBe('CANCELLED')
   })
 
   it('reports a refused cancel and leaves the status alone', async () => {
@@ -108,7 +108,7 @@ describe('cancel', () => {
     const result = await cancel(coco, { kind: 'job_run', job_id: job, run_id: String(run_id) })
     expect(result.ok).toBe(false)
     expect(result.ok === false && result.message).toContain('already gone')
-    expect(coco.run_record(job, run_id).status).toBe('RUNNING')
+    expect(coco.job(job).runs.record(run_id).status).toBe('RUNNING')
   })
 
   it('refuses to cancel a run that has already ended', async () => {
@@ -143,7 +143,7 @@ describe('cancel', () => {
       await cancel(coco, { kind: 'bench_run', bench_id: bench, run_id: String(start.run_id) })
     ).toEqual({ ok: true })
     for (const member of start.members) {
-      expect(coco.run_record(job, member.run_id).status).toBe('CANCELLING')
+      expect(coco.job(job).runs.record(member.run_id).status).toBe('CANCELLING')
     }
     expect(coco.bench_status(bench, start.run_id).status).toBe('CANCELLING')
   })
@@ -192,7 +192,7 @@ describe('cancel', () => {
     expect(
       await cancel(coco, { kind: 'bench_run', bench_id: bench, run_id: String(start.run_id) })
     ).toEqual({ ok: true })
-    expect(coco.run_record(job, start.members[0].run_id).status).toBe('SUCCEEDED')
+    expect(coco.job(job).runs.record(start.members[0].run_id).status).toBe('SUCCEEDED')
   })
 
   it('answers rather than throws for a run that is not there', async () => {
@@ -278,7 +278,7 @@ describe('add_folder', () => {
     const coco = engine(dir)
 
     expect(add_folder(coco, job)).toEqual({ ok: true, entity_id: job, already: false })
-    expect(coco.entities().map((entity) => entity.path)).toEqual([job])
+    expect(coco.jobs().map((registered) => registered.path)).toEqual([job])
   })
 
   // One pick registers one folder: nothing beneath it is searched, which is
@@ -292,7 +292,7 @@ describe('add_folder', () => {
     const result = add_folder(coco, dir)
     expect(result.ok).toBe(false)
     expect(result.ok === false && result.message).toContain('no coco.toml')
-    expect(coco.entities()).toEqual([])
+    expect(coco.jobs()).toEqual([])
   })
 
   it('treats a folder already in the Explorer as a no-op, not a duplicate', () => {
@@ -302,7 +302,7 @@ describe('add_folder', () => {
     add_folder(coco, job)
 
     expect(add_folder(coco, job)).toEqual({ ok: true, entity_id: job, already: true })
-    expect(coco.entities()).toHaveLength(1)
+    expect(coco.jobs()).toHaveLength(1)
   })
 
   it('refuses a manifest that is unusable at the moment it is picked', () => {
@@ -315,7 +315,7 @@ describe('add_folder', () => {
     const result = add_folder(coco, folder)
     expect(result.ok).toBe(false)
     expect(result.ok === false && result.message).toContain('kind')
-    expect(coco.entities()).toEqual([])
+    expect(coco.jobs()).toEqual([])
   })
 
   it('refuses a folder whose name is already taken', () => {
@@ -330,7 +330,7 @@ describe('add_folder', () => {
     const result = add_folder(coco, second)
     expect(result.ok).toBe(false)
     expect(result.ok === false && result.message).toContain('already registered')
-    expect(coco.entities()).toHaveLength(1)
+    expect(coco.jobs()).toHaveLength(1)
   })
 
   it('refuses a path that is not a folder', () => {
@@ -352,7 +352,7 @@ describe('remove_folder', () => {
     await settle(coco)
 
     expect(remove_folder(coco, job)).toEqual({ ok: true })
-    expect(coco.entities()).toEqual([])
+    expect(coco.jobs()).toEqual([])
     // §36: removed from the Explorer, not deleted from disk.
     expect(fs.existsSync(path.join(job, 'coco.toml'))).toBe(true)
     expect(fs.existsSync(path.join(job, 'runs', String(run_id), 'run.json'))).toBe(true)
@@ -367,10 +367,10 @@ describe('remove_folder', () => {
     await settle(coco)
 
     remove_folder(coco, job)
-    expect(coco.job_runs(job)).toEqual([])
+    expect(coco.registered(job)).toBe(false)
 
     add_folder(coco, job)
-    expect(coco.job_runs(job)).toHaveLength(1)
+    expect(coco.job(job).runs.all()).toHaveLength(1)
   })
 
   it('answers rather than throws for a folder that is not registered', () => {

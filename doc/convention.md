@@ -143,8 +143,8 @@ A bench has no template, no launch, no poll and no cancel of its own:
 
 A manifest either loads or it does not. A folder whose manifest is broken stays
 registered and is **shown with its error** — never hidden, never silently
-dropped. Until it loads, coco knows only its path and the error: not its name,
-not its kind, not its parameters.
+dropped. Until it loads, coco knows its path, the side it registered on (§5)
+and the error: not its name, not its parameters.
 
 Rejected at load time:
 
@@ -160,8 +160,8 @@ Rejected at load time:
 - a template that pulls in another file with `{% include %}`, `{% extends %}`
   or `{% import %}` (§6.1).
 
-Manifests are re-read on every listing: coco stores only the folder path, never
-a parsed copy. Editing `coco.toml` therefore takes effect without
+Manifests are re-read on every listing: the store holds the folder path and
+its kind, never a parsed copy. Editing `coco.toml` therefore takes effect without
 re-registering, and fixing a broken manifest heals the entity in place, history
 intact. Listing happens on the refresh tick, not on every frame.
 
@@ -170,17 +170,23 @@ intact. Listing happens on the refresh tick, not on every frame.
 ## 5. The private store
 
 The one thing that is coco's own state, and that no folder can say about
-itself, is which folders are registered. That is all the store holds:
+itself, is which folders are registered, and as what. That is all the store
+holds:
 
 ```json
 {
-  "entities": ["/abs/path/to/solver-gpu", "/abs/path/to/nightly"]
+  "jobs": ["/abs/path/to/solver-gpu"],
+  "benches": ["/abs/path/to/nightly"]
 }
 ```
 
-- **entities** — registered folder paths. Adding a folder is registration, and
-  it persists across sessions. Registering a path that is already in the store
-  is a no-op.
+- **jobs**, **benches** — registered folder paths, on the side their manifest
+  declared when they were registered. Adding a folder is registration, and it
+  persists across sessions. Registering a path that is already in the store is
+  a no-op. A folder whose manifest breaks later stays on its side, carrying the
+  error (§4); one whose manifest now declares the other kind moves across at
+  the next tick, and the store follows — the manifest decides, the store only
+  remembers.
 
 It lives in Electron's per-app, per-user data directory, beside `ui-state.json`
 — on macOS `~/Library/Application Support/coco/store.json`, on Linux
@@ -219,7 +225,7 @@ Names are platform-wide unique: registering a folder whose manifest name
 collides with an already-registered one is refused. A currently-broken manifest
 cannot collide, since it has no name.
 
-This file stays plain JSON — it holds three small things and being readable and
+This file stays plain JSON — it holds two short lists and being readable and
 hand-editable is worth more than structure. If the global views (all active
 runs, cross-entity history) ever make scanning every folder's `runs/` too slow,
 the answer is a **rebuildable cache** that can be deleted at any time without
