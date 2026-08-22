@@ -8,7 +8,9 @@
     "noEmit": true,
     "skipLibCheck": true,
     "paths": {
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "$lib": ["./src/renderer/src/lib"],
+      "$lib/*": ["./src/renderer/src/lib/*"]
     }
   },
   "include": [

@@ -31,13 +31,6 @@ export type Overlay = { error: string | null; busy: boolean } & (
   { kind: 'confirm_cancel'; target: CancelTarget } | { kind: 'confirm_remove'; entity_id: string }
 )
 
-/** An open context menu: which row, and where the pointer was. */
-export interface ContextMenu {
-  entity_id: string
-  x: number
-  y: number
-}
-
 /**
  * The transient message — coco's `TransientMessage`, shown here as the toast
  * above the status bar. There is only ever one: the newest thing to say is
@@ -61,7 +54,6 @@ export interface AppState {
   world: World
   route: Route
   overlay: Overlay | null
-  menu: ContextMenu | null
   notice: Notice | null
   // Arrangement, not content: persisted across launches (see `flush_ui`).
   sidebar_width: number
@@ -81,7 +73,6 @@ export const app: AppState = $state({
   world: empty_world(),
   route: arranged.route,
   overlay: null,
-  menu: null,
   notice: null,
   sidebar_width: arranged.sidebar_width,
   report_wrap: arranged.report_wrap_lines,
@@ -120,16 +111,7 @@ export function request_cancel(target: CancelTarget): void {
   app.overlay = { kind: 'confirm_cancel', target, error: null, busy: false }
 }
 
-export function open_menu(entity_id: string, x: number, y: number): void {
-  app.menu = { entity_id, x, y }
-}
-
-export function close_menu(): void {
-  app.menu = null
-}
-
 export function request_remove(entity_id: string): void {
-  app.menu = null
   app.overlay = { kind: 'confirm_remove', entity_id, error: null, busy: false }
 }
 
@@ -484,10 +466,6 @@ export function recover(): void {
     if (gone) {
       app.overlay = null
     }
-  }
-  // A menu about a row that is no longer there closes with it.
-  if (app.menu !== null && entity_gone(app.menu.entity_id)) {
-    app.menu = null
   }
 
   switch (route.page) {

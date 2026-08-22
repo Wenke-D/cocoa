@@ -15,6 +15,7 @@
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import RunFacts from '../lib/RunFacts.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
+  import { Button } from '$lib/components/ui/button'
 
   let {
     bench_id,
@@ -68,12 +69,13 @@
       the job run, exactly as it is on the job's own page.
     -->
     {#if is_cancellable(run.status) && step !== undefined}
-      <button
-        class="cancel secondary"
+      <Button
+        variant="secondary"
+        class="cancel ml-auto"
         onclick={() => request_cancel({ kind: 'job_run', job_id: step.job_id, run_id: run.id })}
       >
         Cancel Run
-      </button>
+      </Button>
     {/if}
   </header>
 
@@ -106,10 +108,6 @@
     align-items: center;
     gap: 14px;
     margin-bottom: 16px;
-  }
-
-  .cancel {
-    margin-left: auto;
   }
 
   h1 {

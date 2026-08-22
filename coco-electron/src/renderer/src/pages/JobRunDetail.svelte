@@ -5,6 +5,7 @@
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import RunFacts from '../lib/RunFacts.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
+  import { Button } from '$lib/components/ui/button'
 
   let { job_id, run_id }: { job_id: string; run_id: string } = $props()
 
@@ -24,12 +25,13 @@
     <h1 class="mono">{run.id}</h1>
     <StatusPill status={run.status} health={run.query_health} />
     {#if is_cancellable(run.status)}
-      <button
-        class="cancel secondary"
+      <Button
+        variant="secondary"
+        class="cancel ml-auto"
         onclick={() => request_cancel({ kind: 'job_run', job_id, run_id: run.id })}
       >
         Cancel Run
-      </button>
+      </Button>
     {/if}
   </header>
 
@@ -42,10 +44,6 @@
     align-items: center;
     gap: 14px;
     margin-bottom: 16px;
-  }
-
-  .cancel {
-    margin-left: auto;
   }
 
   h1 {

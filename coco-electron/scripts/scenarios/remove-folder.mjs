@@ -29,24 +29,24 @@ export async function run({ page, shot, log, wait_text, library }) {
   }
 
   await page.locator('aside').getByText('solver-gpu').click({ button: 'right' })
-  await page.locator('.menu').waitFor({ timeout: 5_000 })
-  log('menu:', await page.locator('.menu').innerText())
+  await page.locator('[role="menu"]').waitFor({ timeout: 5_000 })
+  log('menu:', await page.locator('[role="menu"]').innerText())
   await shot('context-menu')
 
   await page.getByRole('menuitem', { name: 'Remove from Explorer' }).click()
-  await page.locator('dialog').waitFor({ timeout: 5_000 })
-  log('modal:', (await page.locator('dialog').innerText()).replace(/\n/g, ' | '))
+  await page.locator('[role="dialog"]').waitFor({ timeout: 5_000 })
+  log('modal:', (await page.locator('[role="dialog"]').innerText()).replace(/\n/g, ' | '))
   await shot('confirm-remove')
 
   // Escape dismisses it, and nothing happens.
   await page.keyboard.press('Escape')
-  await page.locator('dialog').waitFor({ state: 'detached', timeout: 5_000 })
+  await page.locator('[role="dialog"]').waitFor({ state: 'detached', timeout: 5_000 })
   log('after escape:', (await page.locator('aside').innerText()).replace(/\n/g, ' | '))
 
   await page.locator('aside').getByText('solver-gpu').click({ button: 'right' })
   await page.getByRole('menuitem', { name: 'Remove from Explorer' }).click()
-  await page.locator('dialog button.primary').click({ timeout: 10_000 })
-  await page.locator('dialog').waitFor({ state: 'detached', timeout: 15_000 })
+  await page.locator('[role="dialog"] button.confirm').click({ timeout: 10_000 })
+  await page.locator('[role="dialog"]').waitFor({ state: 'detached', timeout: 15_000 })
   await wait_text('No jobs or benches have been added', 10_000)
   log('after remove:', (await page.locator('aside').innerText()).replace(/\n/g, ' | '))
   // The confirmation lands with the answer, a moment after the events do.

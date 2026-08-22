@@ -17,12 +17,12 @@ export async function run({ page, shot, log, wait_text }) {
   await shot('bench-run')
 
   await page.locator('button.cancel').click()
-  await page.locator('dialog').waitFor({ timeout: 5_000 })
-  log('modal copy:', (await page.locator('dialog').innerText()).replace(/\n/g, ' | '))
+  await page.locator('[role="dialog"]').waitFor({ timeout: 5_000 })
+  log('modal copy:', (await page.locator('[role="dialog"]').innerText()).replace(/\n/g, ' | '))
   await shot('bench-confirm')
 
-  await page.locator('dialog button.primary').click({ timeout: 10_000 })
-  await page.locator('dialog').waitFor({ state: 'detached', timeout: 20_000 })
+  await page.locator('[role="dialog"] button.confirm').click({ timeout: 10_000 })
+  await page.locator('[role="dialog"]').waitFor({ state: 'detached', timeout: 20_000 })
   await wait_text('Cancelling', 10_000)
   log('after confirm:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
   await shot('bench-cancelling')

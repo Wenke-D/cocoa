@@ -8,6 +8,8 @@
   import { app, close_overlay, confirm_remove, entity_of } from '../state.svelte'
   import type { Overlay } from '../state.svelte'
   import ModalFrame from './ModalFrame.svelte'
+  import { Button } from '$lib/components/ui/button'
+  import { Spinner } from '$lib/components/ui/spinner'
 
   let { overlay }: { overlay: Overlay & { kind: 'confirm_remove' } } = $props()
 
@@ -55,10 +57,10 @@
       {/if}
     {/snippet}
     {#snippet actions()}
-      <button class="secondary" onclick={close_overlay} disabled={overlay.busy}>Keep</button>
-      <button class="primary" onclick={confirm_remove} disabled={overlay.busy}>
-        {overlay.busy ? 'Removing…' : 'Remove from Explorer'}
-      </button>
+      <Button variant="secondary" onclick={close_overlay} disabled={overlay.busy}>Keep</Button>
+      <Button class="confirm" onclick={confirm_remove} disabled={overlay.busy}>
+        {#if overlay.busy}<Spinner />Removing…{:else}Remove from Explorer{/if}
+      </Button>
     {/snippet}
   </ModalFrame>
 {/if}

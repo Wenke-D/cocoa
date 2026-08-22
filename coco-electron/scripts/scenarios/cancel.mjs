@@ -27,23 +27,23 @@ export async function run({ page, shot, log, wait_text }) {
   await shot('run-detail')
 
   await page.locator('button.cancel').click()
-  await page.locator('dialog').waitFor({ timeout: 5_000 })
-  log('modal copy:', (await page.locator('dialog').innerText()).replace(/\n/g, ' | '))
+  await page.locator('[role="dialog"]').waitFor({ timeout: 5_000 })
+  log('modal copy:', (await page.locator('[role="dialog"]').innerText()).replace(/\n/g, ' | '))
   await shot('confirm-modal')
 
   log(
     'dialog probe:',
     JSON.stringify(
       await page.evaluate(() => {
-        const dialog = document.querySelector('dialog')
-        const button = dialog?.querySelector('button.primary')
+        const dialog = document.querySelector('[role="dialog"]')
+        const button = dialog?.querySelector('button.confirm')
         if (!dialog || !button) {
           return { dialog: Boolean(dialog), button: false }
         }
         const box = button.getBoundingClientRect()
         const at = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)
         return {
-          open: dialog.open,
+          open: dialog.getAttribute('data-state'),
           label: button.textContent?.trim(),
           box: { x: Math.round(box.x), y: Math.round(box.y), w: Math.round(box.width) },
           topmost: at?.tagName + '.' + at?.className
@@ -51,11 +51,11 @@ export async function run({ page, shot, log, wait_text }) {
       })
     )
   )
-  await page.locator('dialog button.primary').click({ timeout: 10_000 })
+  await page.locator('[role="dialog"] button.confirm').click({ timeout: 10_000 })
 
   // The modal closes only when the backend answers, and the run must read
   // Cancelling — never Cancelled before the cluster confirms it (§16.3).
-  await page.locator('dialog').waitFor({ state: 'detached', timeout: 15_000 })
+  await page.locator('[role="dialog"]').waitFor({ state: 'detached', timeout: 15_000 })
   await wait_text('Cancelling', 10_000)
   log('after confirm:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
   await shot('cancelling')

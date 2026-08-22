@@ -4,10 +4,11 @@
     app,
     has_active_run,
     navigate,
-    open_menu,
+    request_remove,
     selected_entity_id
   } from '../state.svelte'
   import type { Entity } from '@shared/world'
+  import * as ContextMenu from '$lib/components/ui/context-menu'
 
   const jobs = $derived(app.world.entities.filter((entity) => entity.kind === 'Job'))
   const benches = $derived(app.world.entities.filter((entity) => entity.kind === 'Bench'))
@@ -18,26 +19,41 @@
   }
 </script>
 
+<!--
+  Each row is its own context menu's trigger (the `child` snippet makes the
+  row button the trigger rather than wrapping it). Rendered rather than
+  native, for the same reason VS Code renders its own: it follows the app's
+  theme, and it is reachable by the things that verify this app. A row that
+  leaves the world takes its menu with it.
+-->
 {#snippet section(title: string, entities: Entity[])}
   <div class="section-header">{title}</div>
   {#each entities as entity (entity.id)}
-    <button
-      class="row"
-      class:selected={entity.id === selected}
-      onclick={() => open(entity)}
-      oncontextmenu={(event) => {
-        event.preventDefault()
-        open_menu(entity.id, event.clientX, event.clientY)
-      }}
-    >
-      <span class="name">{entity.name}</span>
-      {#if has_active_run(entity)}
-        <span class="active-dot" title="has an active run"></span>
-      {/if}
-      {#if entity.manifest !== 'Valid'}
-        <span class="warn" title="manifest problem">!</span>
-      {/if}
-    </button>
+    <ContextMenu.Root>
+      <ContextMenu.Trigger>
+        {#snippet child({ props })}
+          <button
+            {...props}
+            class="row"
+            class:selected={entity.id === selected}
+            onclick={() => open(entity)}
+          >
+            <span class="name">{entity.name}</span>
+            {#if has_active_run(entity)}
+              <span class="active-dot" title="has an active run"></span>
+            {/if}
+            {#if entity.manifest !== 'Valid'}
+              <span class="warn" title="manifest problem">!</span>
+            {/if}
+          </button>
+        {/snippet}
+      </ContextMenu.Trigger>
+      <ContextMenu.Content>
+        <ContextMenu.Item onSelect={() => request_remove(entity.id)}>
+          Remove from Explorer
+        </ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu.Root>
   {:else}
     <div class="empty">none</div>
   {/each}

@@ -12,6 +12,7 @@
   import { app, entity_of, navigate, request_cancel } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
+  import { Button } from '$lib/components/ui/button'
 
   let { bench_id, run_id }: { bench_id: string; run_id: string } = $props()
 
@@ -42,12 +43,13 @@
     <StatusPill status={run.status} health={run.query_health} />
     <span class="progress">{finished} / {run.plan.steps.length} finished</span>
     {#if is_cancellable(run.status)}
-      <button
-        class="cancel secondary"
+      <Button
+        variant="secondary"
+        class="cancel ml-auto"
         onclick={() => request_cancel({ kind: 'bench_run', bench_id, run_id: run.id })}
       >
         Cancel Bench
-      </button>
+      </Button>
     {/if}
   </header>
 
@@ -141,10 +143,6 @@
 
   .progress {
     color: var(--description);
-  }
-
-  .cancel {
-    margin-left: auto;
   }
 
   dl {

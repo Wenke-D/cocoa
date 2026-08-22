@@ -24,12 +24,12 @@ export async function run({ app, page, shot, log, wait_text, library }) {
 
   // Cancelling the picker does nothing at all.
   await pick(app, null)
-  await page.locator('main button.primary').click()
+  await page.locator('main').getByRole('button', { name: 'Add Folder' }).click()
   await page.waitForTimeout(500)
   log('after cancel:', (await page.locator('main').innerText()).split('\n')[0])
 
   await pick(app, path.join(library, 'jobs/solver-gpu'))
-  await page.locator('main button.primary').click()
+  await page.locator('main').getByRole('button', { name: 'Add Folder' }).click()
   await wait_text('solver-gpu', 10_000)
   log('after add:', (await page.locator('aside').innerText()).replace(/\n/g, ' | '))
   log('landed on:', await page.locator('main h1').innerText())

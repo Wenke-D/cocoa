@@ -13,6 +13,8 @@
   import { app, context_entity_id, entity_of, notify, report_owner_id } from '../state.svelte'
   import type { ReportContext } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
+  import { Button } from '$lib/components/ui/button'
+  import { Input } from '$lib/components/ui/input'
 
   let { context, run_id }: { context: ReportContext; run_id: string } = $props()
 
@@ -167,9 +169,9 @@
   <span class="format">{format === 'Html' ? 'HTML' : 'Plain text'}</span>
   <div class="tools">
     {#if format === 'Html'}
-      <button class="secondary" onclick={() => (show_source = !show_source)}>
+      <Button variant="secondary" onclick={() => (show_source = !show_source)}>
         {show_source ? 'Rendered' : 'Source'}
-      </button>
+      </Button>
     {/if}
     {#if !show_rendered}
       <label class="toggle">
@@ -177,13 +179,13 @@
         Wrap lines
       </label>
     {/if}
-    <button class="secondary" onclick={copy} disabled={text === ''}>Copy</button>
+    <Button variant="secondary" onclick={copy} disabled={text === ''}>Copy</Button>
   </div>
 </header>
 
 {#if !show_rendered && error === null && !loading}
   <div class="search">
-    <input type="search" placeholder="Search" bind:value={query} />
+    <Input type="search" placeholder="Search" class="w-60" bind:value={query} />
     <span class="count">
       {#if query.trim() === ''}
         &nbsp;
@@ -193,10 +195,11 @@
         {current + 1} of {matches.length}
       {/if}
     </span>
-    <button class="secondary" onclick={() => step(-1)} disabled={matches.length === 0}>
+    <Button variant="secondary" onclick={() => step(-1)} disabled={matches.length === 0}>
       Previous
-    </button>
-    <button class="secondary" onclick={() => step(1)} disabled={matches.length === 0}>Next</button>
+    </Button>
+    <Button variant="secondary" onclick={() => step(1)} disabled={matches.length === 0}>Next</Button
+    >
   </div>
 {/if}
 
@@ -270,28 +273,9 @@
     margin-bottom: 10px;
   }
 
-  .search input {
-    width: 240px;
-    height: 26px;
-    padding: 0 8px;
-    background: var(--input-bg);
-    color: var(--strong-foreground);
-    border: 1px solid var(--control-border);
-    border-radius: 3px;
-  }
-
-  .search input:focus {
-    outline: 1px solid var(--accent);
-  }
-
   .count {
     color: var(--description);
     min-width: 90px;
-  }
-
-  /* Toolbar buttons sit tighter than the app's default. */
-  .secondary {
-    padding: 4px 10px;
   }
 
   .body {
@@ -342,6 +326,7 @@
   }
 
   .error {
+    margin: 0;
     padding: 10px 12px;
     border: 1px solid var(--error);
     border-radius: 3px;
@@ -349,6 +334,7 @@
   }
 
   .none {
+    margin: 0;
     color: var(--description);
     font-style: italic;
   }

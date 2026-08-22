@@ -4,7 +4,6 @@
   import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH } from './ui_state'
   import { app, apply_events, bootstrap, dismiss_notice, flush_ui } from './state.svelte'
   import CancelModal from './lib/CancelModal.svelte'
-  import ContextMenu from './lib/ContextMenu.svelte'
   import RemoveModal from './lib/RemoveModal.svelte'
   import Sidebar from './lib/Sidebar.svelte'
   import StatusBar from './lib/StatusBar.svelte'
@@ -109,10 +108,6 @@
     </main>
   </div>
   <StatusBar />
-
-  {#if app.menu !== null}
-    <ContextMenu menu={app.menu} />
-  {/if}
 
   {#if app.overlay?.kind === 'confirm_cancel'}
     <CancelModal overlay={app.overlay} />

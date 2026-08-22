@@ -14,6 +14,8 @@
   import { app, close_overlay, confirm_cancel, entity_of } from '../state.svelte'
   import type { Overlay } from '../state.svelte'
   import ModalFrame from './ModalFrame.svelte'
+  import { Button } from '$lib/components/ui/button'
+  import { Spinner } from '$lib/components/ui/spinner'
 
   let { overlay }: { overlay: Overlay & { kind: 'confirm_cancel' } } = $props()
 
@@ -72,12 +74,12 @@
       {/each}
     {/snippet}
     {#snippet actions()}
-      <button class="secondary" onclick={close_overlay} disabled={overlay.busy}>
+      <Button variant="secondary" onclick={close_overlay} disabled={overlay.busy}>
         Keep Running
-      </button>
-      <button class="primary" onclick={confirm_cancel} disabled={overlay.busy}>
-        {overlay.busy ? 'Cancelling…' : copy.confirm}
-      </button>
+      </Button>
+      <Button class="confirm" onclick={confirm_cancel} disabled={overlay.busy}>
+        {#if overlay.busy}<Spinner />Cancelling…{:else}{copy.confirm}{/if}
+      </Button>
     {/snippet}
   </ModalFrame>
 {/if}

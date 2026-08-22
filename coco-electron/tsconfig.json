@@ -1,4 +1,13 @@
 {
   "files": [],
-  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }]
+  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }],
+  // Solution-style: no sources of its own. `paths` is here only because the
+  // shadcn-svelte CLI reads this file to find where `$lib` lives; the configs
+  // that compile anything carry their own.
+  "compilerOptions": {
+    "paths": {
+      "$lib": ["./src/renderer/src/lib"],
+      "$lib/*": ["./src/renderer/src/lib/*"]
+    }
+  }
 }

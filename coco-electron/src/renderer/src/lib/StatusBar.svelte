@@ -1,12 +1,16 @@
 <script lang="ts">
   import { format_relative } from '@shared/world'
   import { active_run_count, app, refresh_now } from '../state.svelte'
+  import { Button } from '$lib/components/ui/button'
+  import { Spinner } from '$lib/components/ui/spinner'
+  import RefreshIcon from '@lucide/svelte/icons/refresh-cw'
 
   const active = $derived(active_run_count())
 
   // A refresh the user asks for is never the tick that gets dropped, and it
   // always answers — the backend sends a notice either way, so the button
-  // does not have to guess whether it worked.
+  // does not have to guess whether it worked. Held down until then: the
+  // backend takes one person's refresh at a time and ignores a second.
   let asking = $state(false)
 
   async function refresh(): Promise<void> {
@@ -32,13 +36,21 @@
       <span class="sep">·</span>
       <span>refreshed {format_relative(app.world.last_refresh, app.now_ms)}</span>
     {/if}
-    <button
-      class="refresh"
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      class="refresh ml-0.5 size-5 text-description hover:text-strong"
       title="Refresh now"
       aria-label="Refresh now"
       onclick={refresh}
-      disabled={asking}>⟳</button
+      disabled={asking}
     >
+      {#if asking}
+        <Spinner class="size-3.5" />
+      {:else}
+        <RefreshIcon class="size-3.5" />
+      {/if}
+    </Button>
   {:else}
     <span>engine offline — is coco running?</span>
   {/if}
@@ -71,25 +83,5 @@
 
   .sep {
     opacity: 0.5;
-  }
-
-  .refresh {
-    background: none;
-    border: none;
-    padding: 0 4px;
-    margin-left: 2px;
-    color: var(--description);
-    font-size: 13px;
-    line-height: 1;
-    cursor: pointer;
-  }
-
-  .refresh:hover:not(:disabled) {
-    color: var(--strong-foreground);
-  }
-
-  .refresh:disabled {
-    opacity: 0.5;
-    cursor: default;
   }
 </style>

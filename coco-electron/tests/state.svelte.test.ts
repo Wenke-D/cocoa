@@ -77,7 +77,6 @@ function reset(): void {
   app.world = empty_world()
   app.route = { page: 'empty' }
   app.overlay = null
-  app.menu = null
   app.notice = null
 }
 
@@ -179,14 +178,6 @@ describe('recover', () => {
     app.overlay.busy = false
     recover()
     expect(app.overlay).toBeNull()
-  })
-
-  it('closes a context menu whose row is gone', () => {
-    send({ kind: 'entity-upserted', entity: entity('solver') })
-    app.menu = { entity_id: 'solver', x: 10, y: 10 }
-
-    send({ kind: 'entity-removed', id: 'solver' })
-    expect(app.menu).toBeNull()
   })
 })
 

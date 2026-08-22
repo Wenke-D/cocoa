@@ -111,39 +111,8 @@ body {
   height: 100%;
 }
 
-button {
-  font: inherit;
-}
-
-/* The two button shapes the whole app uses. Global rather than per-component:
-   they were on their third copy, and a modal cannot style buttons it is
-   handed as a snippet anyway. */
-.primary {
-  background: var(--accent);
-  color: var(--on-accent);
-  border: none;
-  border-radius: 3px;
-  padding: 5px 16px;
-  cursor: pointer;
-}
-
-.secondary {
-  background: var(--secondary-bg);
-  color: var(--foreground);
-  border: none;
-  border-radius: 3px;
-  padding: 5px 12px;
-  cursor: pointer;
-}
-
-.secondary:hover {
-  background: var(--secondary-hover-bg);
-}
-
-button:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
+/* Buttons, inputs and overlays are shadcn-svelte components (see app.css
+   and `lib/components/ui/`); what follows is coco's own chrome. */
 
 code,
 .mono {

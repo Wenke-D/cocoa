@@ -22,8 +22,19 @@ main process is the server, and the whole domain lives on the server side.
 // coco-electron/package.json — the versions that matter
 {
   "dependencies": {
+    "express":   "^5.2.1",   // the agent socket's HTTP (§43) — wire code is never hand-rolled
     "nunjucks":  "^3.2.4",   // template rendering (§15.2)
-    "smol-toml": "^1.8.0"    // coco.toml
+    "smol-toml": "^1.8.0",   // coco.toml
+    // The renderer's controls are shadcn-svelte components: source copied into
+    // src/renderer/src/lib/components/ui/ and owned there, not a package. What
+    // the copied sources import:
+    "bits-ui":               "^2.16.3",  // the behaviour under Dialog, ContextMenu, Label
+    "@internationalized/date": "^3.12.0", // bits-ui's peer; nothing of ours uses it
+    "@lucide/svelte":        "^1.33.0",  // the icons (spinner, refresh, close)
+    "tailwind-variants":     "^3.3.0",   // Button's variant table
+    "clsx":                  "^2.1.1",   // `cn()` in /utils
+    "tailwind-merge":        "^3.6.0",   // `cn()`: a later class overrides an earlier one
+    "tw-animate-css":        "^1.4.0"    // the open/close animations the components carry
   },
   "devDependencies": {
     "electron":         "^43.4.1",
@@ -33,7 +44,9 @@ main process is the server, and the whole domain lives on the server side.
     "electron-vite":    "^5.0.0",
     "vitest":           "^4.1.11",
     "electron-builder": "^26.15.3",
-    "playwright-core":  "^1.62.1"    // drives the built app (§28)
+    "playwright-core":  "^1.62.1",   // drives the built app (§28)
+    "tailwindcss":      "^4.3.3",    // the components' styling; app.css maps its names onto theme.css
+    "@tailwindcss/vite": "^4.3.3"
   }
 }
 ```
@@ -79,6 +92,16 @@ tick, the spawned scripts, and IPC.
 
 Additional dependencies may be added only when clearly justified. Do not let
 them float; do not upgrade without recording the reason.
+
+**The renderer's controls are shadcn-svelte's.** Buttons, inputs, dialogs and
+menus come from the shadcn-svelte registry, which copies source into
+`src/renderer/src/lib/components/ui/` rather than installing a package: the
+files are ours to read and edit, and each edited one says so at the top.
+Tailwind is there because they are written in it; `app.css` tells Tailwind
+that `bg-primary` is `--accent` and `bg-popover` is `--widget-bg`, so the one
+palette in `theme.css` stays the one palette (ui-system.md). coco's own
+screens keep scoped CSS on the tokens; utilities are for composing the
+components and one-off placement beside them.
 
 ### 5.1 Why a Web View, Reversed
 
@@ -459,7 +482,8 @@ coco-electron/
 ├── electron.vite.config.ts        # three builds: main, preload, renderer
 ├── electron-builder.yml
 ├── vitest.config.ts
-├── svelte.config.mjs
+├── svelte.config.mjs              # preprocess; `kit.alias` only for the shadcn-svelte CLI
+├── components.json                # the shadcn-svelte CLI's config: where components go
 ├── tsconfig.node.json             # main + preload
 ├── tsconfig.web.json              # renderer
 │
@@ -507,10 +531,13 @@ coco-electron/
 │           ├── main.ts
 │           ├── App.svelte
 │           ├── state.svelte.ts    #   the one rune (§34)
-│           ├── theme.css          #   the design system (ui-system.md)
+│           ├── theme.css          #   the palette and coco's chrome (ui-system.md)
+│           ├── app.css            #   Tailwind; shadcn's names for theme.css's tokens
 │           ├── lib/               #   Sidebar, StatusBar, StatusPill, Breadcrumbs,
-│           │                      #   ModalFrame, CancelModal, RemoveModal,
-│           │                      #   ContextMenu, RunFacts
+│           │   │                  #   ModalFrame, CancelModal, RemoveModal, RunFacts
+│           │   ├── utils.ts       #   `cn()` and the prop types the components import
+│           │   └── components/ui/ #   shadcn-svelte: Button, Dialog, ContextMenu,
+│           │                      #   Input, Label, Spinner — copied-in, owned source
 │           └── pages/             #   Empty, EntityOverview, StartRun,
 │                                  #   JobRunDetail, BenchRunDetail,
 │                                  #   BenchChildRunDetail, ReportViewer
@@ -556,7 +583,6 @@ export const app = $state({
   world: emptyWorld() as World,     // a mirror; only events write it
   route: { page: 'empty' } as Route,
   overlay: null as Overlay | null,  // never persisted (§9)
-  menu: null as ContextMenu | null,
   notice: null as Notice | null,
   sidebar_width: ...,                // arrangement, persisted (§32)
   report_wrap: ...,

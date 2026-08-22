@@ -1,5 +1,6 @@
 <script lang="ts">
   import { add_folder, app } from '../state.svelte'
+  import { Button } from '$lib/components/ui/button'
 </script>
 
 <div class="empty">
@@ -10,7 +11,7 @@
     <!-- §12: the empty page must not look like an error. -->
     <h2>No jobs or benches have been added.</h2>
     <p>Add a folder containing a valid experiment manifest to begin.</p>
-    <button class="primary" onclick={add_folder}>Add Folder</button>
+    <Button class="mt-3" onclick={add_folder}>Add Folder</Button>
   {:else}
     <h2>coco</h2>
     <p>Select an experiment in the Explorer.</p>
@@ -25,6 +26,8 @@
   }
 
   h2 {
+    margin: 0;
+    font-size: 19px;
     color: var(--foreground);
     font-weight: 500;
   }
@@ -33,10 +36,5 @@
     max-width: 420px;
     margin: 8px auto;
     line-height: 1.5;
-  }
-
-  .primary {
-    margin-top: 12px;
-    padding: 6px 18px;
   }
 </style>

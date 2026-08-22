@@ -9,6 +9,7 @@
   import { bench_run, job_run } from '@shared/world'
   import { app, entity_of, navigate } from '../state.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
+  import { Button } from '$lib/components/ui/button'
 
   let { entity_id }: { entity_id: string } = $props()
 
@@ -34,14 +35,14 @@
   <header>
     <span class="kind">{entity.kind === 'Job' ? 'JOB' : 'BENCH'}</span>
     <h1>{entity.name}</h1>
-    <button
+    <Button
       class="start"
       disabled={blocking !== null}
       title={blocking ?? ''}
       onclick={() => navigate({ page: 'start', entity_id })}
     >
       {entity.kind === 'Job' ? 'Start Job' : 'Start Bench'}
-    </button>
+    </Button>
   </header>
   <div class="path mono">{entity.path}</div>
   {#if blocking !== null}
@@ -137,20 +138,6 @@
     flex: 1;
   }
 
-  .start {
-    background: var(--accent);
-    color: var(--on-accent);
-    border: none;
-    border-radius: 3px;
-    padding: 5px 14px;
-    cursor: pointer;
-  }
-
-  .start:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-
   .path {
     margin-top: 4px;
     color: var(--description);
@@ -169,6 +156,7 @@
   }
 
   .none {
+    margin: 0;
     color: var(--description);
     font-style: italic;
   }

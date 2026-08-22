@@ -1,6 +1,10 @@
 <script lang="ts">
   import { manifest_blocking_reason } from '@shared/world'
   import { entity_of, navigate, notify } from '../state.svelte'
+  import { Button } from '$lib/components/ui/button'
+  import { Input } from '$lib/components/ui/input'
+  import { Label } from '$lib/components/ui/label'
+  import { Spinner } from '$lib/components/ui/spinner'
 
   let { entity_id }: { entity_id: string } = $props()
 
@@ -60,10 +64,11 @@
   {:else}
     <form onsubmit={submit}>
       {#each entity.parameter_names as name (name)}
-        <label>
-          <span>{name}</span>
-          <input type="text" bind:value={values[name]} disabled={submitting} />
-        </label>
+        <!-- The label wraps its field, so the name needs no `for`. -->
+        <Label class="mb-3 flex flex-col items-stretch gap-1 font-normal">
+          <span class="text-description">{name}</span>
+          <Input type="text" bind:value={values[name]} disabled={submitting} />
+        </Label>
       {:else}
         <p class="none">This experiment takes no parameters.</p>
       {/each}
@@ -77,9 +82,9 @@
       {/if}
 
       <div class="actions">
-        <button type="submit" class="primary" disabled={submitting}>
-          {submitting ? 'Starting…' : 'Start'}
-        </button>
+        <Button type="submit" disabled={submitting}>
+          {#if submitting}<Spinner />Starting…{:else}Start{/if}
+        </Button>
       </div>
     </form>
   {/if}
@@ -115,31 +120,6 @@
 
   form {
     max-width: 460px;
-  }
-
-  label {
-    display: block;
-    margin-bottom: 12px;
-  }
-
-  label span {
-    display: block;
-    margin-bottom: 4px;
-    color: var(--description);
-  }
-
-  input {
-    width: 100%;
-    height: 26px;
-    padding: 0 8px;
-    background: var(--input-bg);
-    color: var(--strong-foreground);
-    border: 1px solid var(--control-border);
-    border-radius: 3px;
-  }
-
-  input:focus {
-    outline: 1px solid var(--accent);
   }
 
   .error {

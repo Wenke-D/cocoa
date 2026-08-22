@@ -69,6 +69,20 @@ export default ts.config(
     }
   },
 
+  // shadcn-svelte's components are upstream's source, copied in and owned here
+  // (see app.css). They are written against looser typing than this gate
+  // asks of coco's own code, and re-adding one from the registry would undo
+  // any fix — so the `any`-safety rules stand down for that folder only.
+  {
+    files: ['src/renderer/src/lib/components/ui/**/*.{ts,svelte}'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-explicit-any': 'off'
+    }
+  },
+
   // svelte-eslint-parser handles the markup, but the type-aware rules run on
   // the <script> blocks, so it has to be told which parser to hand those to.
   {
