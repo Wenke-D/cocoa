@@ -612,6 +612,12 @@ so the last known status stays visible even while the current one is
 `UNREACHABLE`. Duration runs from the record's start to the first terminal
 change.
 
+Every timestamp a record carries — `started_at`, each status change, the
+bench's `report.at` — is RFC 3339 with the writer's UTC offset,
+`2026-08-23T13:02:40.123+02:00`: a moment, never a wall-clock reading that
+only means something in the room it was taken in. A reader converts to its
+own local zone for display; the folder may be read from another one.
+
 ### 9.1 Bench status is derived, never stored
 
 A bench run's status is computed from its members every time it is read. It is

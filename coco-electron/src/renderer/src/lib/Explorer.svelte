@@ -152,7 +152,9 @@
     flex-direction: column;
   }
 
-  /* A band, not a line of text: the section is a region, its rows are not. */
+  /* A heading, not a band: bold, uppercase and flush left, its rows indented
+     under it, as VS Code draws its sections. It has no ground of its own, so
+     the one ground in the list is the selection's (§8.3). */
   .section {
     flex-shrink: 0;
     display: flex;
@@ -164,9 +166,6 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--strong-foreground);
-    background: var(--secondary-bg);
-    /* The selected row is nearly the band's colour; the line keeps them apart. */
-    border-bottom: 1px solid var(--border);
   }
 
   .list {
@@ -174,6 +173,14 @@
     min-height: 0;
     overflow-y: auto;
     padding: 2px 0;
+  }
+
+  /* The divider is drawn as the lower pane's top edge, so there is a line to
+     see; the splitter straddles it, invisible until the pointer is on it,
+     when it turns the accent colour, as VS Code's sash does — the line says
+     there is a divider, the colour says it drags. */
+  .splitter + .pane {
+    border-top: 1px solid var(--border);
   }
 
   .splitter {

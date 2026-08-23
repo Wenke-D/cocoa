@@ -93,7 +93,10 @@
       <col />
     </colgroup>
     <thead>
-      <tr><th>#</th><th>Job</th><th>Status</th><th>Parameters</th></tr>
+      <tr
+        ><th class="num">#</th><th>Job</th><th>Status</th><th class="over-params">Parameters</th
+        ></tr
+      >
     </thead>
     <tbody>
       {#each run.plan.steps as step (step.index)}
@@ -110,7 +113,7 @@
               run_id: step.run_id
             })}
         >
-          <td>{step.index}</td>
+          <td class="num">{step.index}</td>
           <td title={job_name}>{job_name}</td>
           <td>
             {#if child !== undefined}
@@ -119,7 +122,9 @@
               <span class="missing">not listed</span>
             {/if}
           </td>
-          <td class="mono" title={step.parameters}>{step.parameters}</td>
+          <td title={step.parameters}>
+            {#if step.parameters !== ''}<span class="mono params">{step.parameters}</span>{/if}
+          </td>
         </tr>
       {/each}
     </tbody>
@@ -167,13 +172,6 @@
     padding: 0;
     color: var(--link);
     cursor: pointer;
-  }
-
-  .params {
-    background: var(--code-bg);
-    padding: 4px 8px;
-    border-radius: 3px;
-    user-select: text;
   }
 
   .error {

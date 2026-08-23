@@ -34,6 +34,7 @@ function entity(id: string, kind: 'Job' | 'Bench' = 'Job'): Entity {
     id,
     kind,
     name: id,
+    description: null,
     path: `~/exp/${id}`,
     manifest: 'Valid',
     parameter_names: []

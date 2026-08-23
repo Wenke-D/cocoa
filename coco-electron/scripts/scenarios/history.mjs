@@ -19,7 +19,7 @@ export async function run({ page, shot, log, wait_text }) {
 
   // Start again: a new row, the same parameters, the page does not move.
   await page.locator('table.runs tbody tr').first().click({ button: 'right' })
-  await page.getByRole('menuitem', { name: 'Start again with these parameters' }).click()
+  await page.getByRole('menuitem', { name: 'Start over' }).click()
   await wait_text('Run 1 started', 15_000)
   await page.locator('table.runs tbody tr').nth(1).waitFor({ timeout: 5_000 })
   const rows = await page.locator('table.runs tbody tr').allInnerTexts()
@@ -31,7 +31,7 @@ export async function run({ page, shot, log, wait_text }) {
 
   // Start with…: the Start page, filled in.
   await page.locator('table.runs tbody tr').first().click({ button: 'right' })
-  await page.getByRole('menuitem', { name: 'Start with these parameters…' }).click()
+  await page.getByRole('menuitem', { name: 'Refill…' }).click()
   await page.locator('form').waitFor({ timeout: 5_000 })
   const nodes = await page.locator('label:has-text("nodes") input').inputValue()
   const gpu = await page.locator('label:has-text("gpu") input').inputValue()

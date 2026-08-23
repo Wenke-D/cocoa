@@ -34,6 +34,7 @@ describe('build_world', () => {
       id: job,
       kind: 'Job',
       name: 'solver-gpu',
+      description: 'Test fixture: a job whose scripts answer from state files',
       manifest: 'Valid',
       parameter_names: ['size', 'gpu']
     })
@@ -123,6 +124,7 @@ describe('build_world', () => {
     expect(world.entities).toHaveLength(1)
     expect(world.entities[0].kind).toBe('Job')
     expect(world.entities[0].name).toBe('was-fine')
+    expect(world.entities[0].description).toBeNull()
     expect(world.entities[0].manifest).toMatchObject({
       Invalid: { message: expect.stringContaining('kind') as string }
     })

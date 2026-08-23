@@ -1,6 +1,7 @@
 <!--
   The icon strip at the far left (§8.2): one item per sidebar view, the open
-  one marked on its leading edge, Active Runs carrying the count as a badge.
+  one on the same wash as the Explorer's selected row, Active Runs carrying
+  the count as a badge.
 -->
 <script lang="ts">
   import { active_run_count, app, select_view } from '../state.svelte'
@@ -61,13 +62,17 @@
     cursor: pointer;
   }
 
+  /* The same two grounds a list row has (§11.4) — one way of saying "the
+     one that is open", whether it is a view or a folder. Not VS Code's edge
+     rule: that is one idiom more than coco needs. */
   .item:hover {
     color: var(--strong-foreground);
+    background: var(--row-hover);
   }
 
   .item.open {
     color: var(--strong-foreground);
-    box-shadow: inset 2px 0 0 var(--accent);
+    background: var(--row-selected);
   }
 
   .badge {

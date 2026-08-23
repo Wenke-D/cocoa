@@ -13,6 +13,7 @@ function entity(id: string, extra: Partial<Entity> = {}): Entity {
     id,
     kind: 'Job',
     name: id,
+    description: null,
     path: `~/exp/${id}`,
     manifest: 'Valid',
     parameter_names: ['size'],

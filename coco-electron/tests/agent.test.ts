@@ -23,6 +23,7 @@ function world(): World {
       id: FOLDER,
       kind: 'Job',
       name: 'solver-gpu',
+      description: null,
       path: FOLDER,
       manifest: 'Valid',
       parameter_names: ['nodes', 'gpu']
@@ -31,6 +32,7 @@ function world(): World {
       id: BENCH_FOLDER,
       kind: 'Bench',
       name: 'nightly',
+      description: null,
       path: BENCH_FOLDER,
       manifest: 'Valid',
       parameter_names: ['sweep']

@@ -121,7 +121,7 @@ Behavior:
 
 - Clicking an item that is not currently open selects that sidebar view and opens the sidebar.
 - Clicking the item that is already open collapses the sidebar.
-- The open item carries a 2-point accent rule on its leading edge.
+- The open item sits on the same accent wash as the Explorer's selected row, and hover is the rows' hover wash (§11.4): one way of saying "the one that is open", whether it is a view or a folder. Not VS Code's edge rule — that would be a second idiom for the same thing.
 - Every item has a tooltip.
 
 The badge:
@@ -156,7 +156,9 @@ The `Explorer` view contains:
 
 Both sections are collapsible, and their collapsed state persists.
 
-The two sections are panes, `BENCHES` above `JOBS`, each scrolling on its own, with a horizontal divider between them that drags; where it sits persists with the sidebar's width.
+A section heading is bold, uppercase and flush left, on the same left edge as the view's title row above it, with its rows indented under it — and that is all that marks it — no ground of its own, as VS Code draws them. The only row in the Explorer with a ground is the selected one (§11.4); a heading on a grey band beside a selection on a grey wash said the same thing twice, and the reader had to work out which was which.
+
+The two sections are panes, `BENCHES` above `JOBS`, each scrolling on its own, with a horizontal divider between them that drags; where it sits persists with the sidebar's width. The divider is a visible line — the lower pane's top edge — so a reader knows there is one, and it takes the accent colour under the pointer, which is how it says it drags.
 
 The `Active Runs` view contains a title row with no actions, followed by its rows (§11.1).
 
@@ -570,7 +572,9 @@ Use an icon or text together with semantic color.
 
 ### 11.4 Selected Row
 
-The selected row must have a clear background highlight.
+The selected row must have a clear background highlight: a light wash of the
+theme's accent blue, not a grey — grey is the hover's colour, and a selection
+that is the hover with a little more weight is not clear.
 
 It must remain selected when viewing:
 
@@ -632,27 +636,36 @@ The Job overview is the default page after selecting a Job.
 
 ### 13.1 Header
 
-Show:
+Top to bottom — what it is called, what it is for, what it takes, where it is:
 
-- Small `JOB` type label.
 - Job display name.
+- The manifest's `description`, when it gives one.
+- The declared parameters, each name on inline code's ground (§22.2); `No
+  parameters.` when it declares none.
 - Folder path.
 - Manifest validity.
-- `Start Job` primary button.
-- Optional overflow menu.
+
+Below the header, at the left, the `Start Job` primary button; the history
+follows it. There is no `JOB` type label: the button says it, and so does the
+Explorer section the row came from — a third statement next to the name was
+the one too many.
 
 Example:
 
 ```text
-JOB
-
-Solver GPU                                      Start Job
+Solver GPU
+Mesh sweep across the GPU solver
+ mesh   gpu
 ~/Experiments/solver-gpu
+
+[Start Job]
+
+History
 ```
 
 When the manifest is invalid:
 
-- Show the validation message.
+- Show the validation message, in place of the parameters.
 - Disable Start.
 - Explain why Start is disabled.
 
@@ -767,33 +780,36 @@ The Bench overview follows the same hierarchy as the Job overview.
 
 ### 14.1 Header
 
-Show:
+As §13.1, with the bench's own parameters — what its plan takes — and the
+`Start Bench` button below:
 
-- Small `BENCH` type label.
 - Bench display name.
+- The manifest's `description`, when it gives one.
+- The declared parameters, each name on inline code's ground.
 - Folder path.
 - Manifest validity.
-- `Start Bench` primary button.
 
 A Bench has no static job list, so the header cannot state how many Jobs it will
 dispatch. Show the size of the most recent run instead, and say so:
 
 ```text
-BENCH
-
-Nightly Benchmark                              Start Bench
+Nightly Benchmark
+Two solver instances and one flaky solver, nightly
+ sweep
 ~/Experiments/nightly-benchmark
 Last run dispatched 6 runs
+
+[Start Bench]
 ```
 
 For a Bench that has never run:
 
 ```text
-BENCH
-
-Smoke Test                                     Start Bench
+Smoke Test
 ~/Experiments/smoke-test
 Dispatched runs are determined at start
+
+[Start Bench]
 ```
 
 Never display a fixed job count as if it were a property of the Bench.
@@ -1466,39 +1482,43 @@ hover text (§22.3, §36).
 - Entire row is clickable.
 - Hover state.
 - Selected or focused state where applicable.
-- No horizontal layout jitter when durations update.
-- Stable status-column width.
+- No horizontal layout jitter when durations or relative times update.
+- Stable status-dot and Run column widths.
 - Stable Report-column width.
 
 ### 22.2 Suggested Column Behavior
 
-Each column is sized for the widest value it can actually hold — `CANCELLING`
-with its dot, a locale timestamp, `HH:MM:SS` — and the last one takes what is
-left. Parameters is the one column whose content has no bound, so in every
-table it is the one worth the leftover width, and it goes last.
+Each column is sized for the widest value it can actually hold — a dot, a
+run id, a duration, `59 minutes ago`, `CANCELLING` with its dot — except one,
+which is left unsized and takes what is left. Parameters is the one column
+whose content has no bound — a sweep is what varies them — so in every table
+it is the one worth the leftover width.
 
 Job history:
 
 ```text
-Run         72    a run id
-Status     116    the longest status word, plus its dot
+            22    the status dot (§23), under no heading
+Run         44    a run id, flush right, so the digits line up
+Parameters   —    remainder; the run's parameters, as given, on code's ground
+Duration   100    `HH:MM:SS` while it runs, `1h 12m 33s` once it ended
+Started    116    `2 days ago`; the locale date and time on hover
 By          80    `you`, `agent`, or a bench name and call number, truncated
-Started    190    a locale date and time
-Duration    84    only ever needs `HH:MM:SS`
-Parameters   —    remainder; the run's parameters, as given
 ```
 
 Bench history:
 
 ```text
-Run         72
-Status     116
-By          80
-Calls       60    a count
-Started    190
-Duration    84
+            22
+Run         44
 Parameters   —    remainder
+Duration   100
+Started    116
+By          80
 ```
+
+A bench history has no Calls column: how many members a run dispatched is
+the plan's business, on the run's own page (§18), and it was the one count
+in a row of facts.
 
 Bench dispatch:
 
@@ -1509,9 +1529,26 @@ Status    116
 Parameters  —    remainder
 ```
 
-Parameters last is not the reading order, but it is the one the width rule
-gives — a sweep is what varies them, so they are the column with no bound —
-and all three tables keep to it.
+In a history the parameters come second, right after the id: they are what
+tells one run of an experiment from the next, and the history is read to
+find a run. The dispatch table keeps them last — its rows are told apart by
+the call index and the job, and the parameters are what a sweep varied.
+
+A duration is a clock while the run is live — `HH:MM:SS`, ticking — and a
+length once it has ended: `1h 12m 33s`, `2m 0s`, `5s`, the empty leading
+units dropped. A finished run's duration is a fact, and `00:00:00` reads as
+a clock still to start. The same helper serves the detail pages, so they
+agree with the table.
+
+A start is said relative to now — `just now`, `38 seconds ago`, `2 days
+ago`, `3 months ago` — in the largest unit that fits, whole; the locale date
+and time is the cell's hover text, and the run's page prints it. A history is
+read for how long ago, and a timestamp makes the reader subtract.
+
+Parameters are the string as given — `--mesh 1024 --gpu 0` — on inline
+code's ground, as the run's page shows them (§17.3): a chip that ends where
+the text does, and truncates inside itself. The heading over it is set in
+by the chip's padding, so it sits over the text rather than the ground.
 
 ### 22.3 Long Parameters
 
@@ -1547,22 +1584,32 @@ A drive scenario (§28) may start a larger dataset to check this.
 Every row of a job or bench history has a context menu with two actions, both
 about that run's parameters:
 
-- **Start again with these parameters** starts a new run at once, with exactly
-  the values this run had. The backend validates them against the manifest as
-  it is now; if they no longer match — a parameter added, removed or renamed —
-  nothing starts, and the refusal is shown in a modal with one `OK`, because
-  it has to be read. On success the new run appears in the table and the
-  transient message names it; the page does not move.
-- **Start with these parameters…** opens the Start page (§15) with this run's
-  values filled in, as far as the manifest now allows: a parameter it no
-  longer declares is dropped, one it newly declares is left empty, and the
-  message says which. The user still presses Start.
+- **Start over** starts a new run at once, with exactly the values this run
+  had. The backend validates them against the manifest as it is now; if they
+  no longer match — a parameter added, removed or renamed — nothing starts,
+  and the refusal is shown in a modal with one `OK`, because it has to be
+  read. On success the new run appears in the table and the transient message
+  names it; the page does not move.
+- **Refill…** opens the Start page (§15) with this run's values filled in, as
+  far as the manifest now allows: a parameter it no longer declares is
+  dropped, one it newly declares is left empty, and the message says which.
+  The user still presses Start — which is what the ellipsis says: this one
+  opens something, the other acts.
 
 ## 23. Status Presentation
 
 Use both text and visual indicators.
 
 Do not rely on color alone.
+
+The one place the word is not printed is a history table (§22), where the
+status is its dot alone, leading the row in a narrow column of its own with
+no heading, the run id beside it. Read down that column, the five colours
+are the five outcomes a history is scanned for, and the word is the dot's
+hover text and its accessible label. What the dot does not tell apart — `Failed` from
+`Error`, both red; `Queued`, `Running` and `Cancelling`, all pulsing blue —
+the detail page does, one click away, as does the Active Runs view for
+anything live.
 
 Recommended semantics:
 

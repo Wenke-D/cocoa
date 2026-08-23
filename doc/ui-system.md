@@ -37,6 +37,7 @@ names a purpose and gets whatever colour that purpose owns:
 --error  --warning                                         /* how loudly we are speaking */
 --chart-*                                                  /* a run status */
 --search-match  --search-match-current                     /* washes behind report text */
+--code-bg  --code-inline-bg                                /* code's ground: a block, and a chip, heavier for being small */
 ```
 
 The failure this prevents is not inventing a new shade — it is **borrowing** one

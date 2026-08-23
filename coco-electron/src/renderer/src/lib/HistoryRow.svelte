@@ -1,7 +1,8 @@
 <!--
   One row of a job's or a bench's history (§22): the cells are the page's;
   this is the row's behaviour — a click opens the run, and a right-click
-  offers the run's parameters again (§22.6).
+  offers the run's parameters again (§22.6): Start over runs them now, Refill…
+  puts them in the Start page.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte'
@@ -31,11 +32,11 @@
     {/snippet}
   </ContextMenu.Trigger>
   <ContextMenu.Content>
-    <ContextMenu.Item onSelect={() => void start_again(entity_id, params)}>
-      Start again with these parameters
-    </ContextMenu.Item>
-    <ContextMenu.Item onSelect={() => prefill_start(entity_id, run_id, params)}>
-      Start with these parameters…
-    </ContextMenu.Item>
+    <ContextMenu.Item onSelect={() => void start_again(entity_id, params)}
+      >Start over</ContextMenu.Item
+    >
+    <ContextMenu.Item onSelect={() => prefill_start(entity_id, run_id, params)}
+      >Refill…</ContextMenu.Item
+    >
   </ContextMenu.Content>
 </ContextMenu.Root>

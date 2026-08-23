@@ -23,7 +23,11 @@
   --secondary-hover-bg: #cccccc;
 
   --row-hover: #f2f2f2;
-  --row-selected: #e8e8e8;
+  /* The one departure from VS Code's list colours: its selection is grey with
+     a blue focus ring, and coco's Explorer has no ring, so the selection
+     carries the accent itself, as a wash — grey was the hover's colour
+     with a little more weight, and nobody could tell which was which. */
+  --row-selected: rgba(0, 95, 184, 0.12);
   --row-selected-fg: #000000;
 
   --error: #e51400;
@@ -36,6 +40,7 @@
   --chart-gray: #717171;
 
   --code-bg: rgba(34, 0, 0, 0.04);
+  --code-inline-bg: rgba(34, 0, 0, 0.1);
 
   --search-match: #f8e3a1;
   --search-match-current: #f6b73c;
@@ -64,7 +69,7 @@
     --secondary-hover-bg: #3c3c3c;
 
     --row-hover: #2a2d2e;
-    --row-selected: #04395e;
+    --row-selected: rgba(0, 120, 212, 0.3);
     --row-selected-fg: #ffffff;
 
     --error: #f85149;
@@ -77,6 +82,7 @@
     --chart-gray: #9d9d9d;
 
     --code-bg: rgba(255, 255, 255, 0.06);
+    --code-inline-bg: rgba(255, 255, 255, 0.12);
 
     --search-match: #623315;
     --search-match-current: #9e6a03;
@@ -158,15 +164,51 @@ table.runs th {
    anything longer than its width ends in an ellipsis and carries the full
    value as hover text (§22.3, §36). */
 table.runs td {
-  padding: 4px 10px 4px 0;
+  padding: 7px 10px 7px 0;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* A number that names the row — a run id, a call index — sits flush right
+   under a heading that does too, so the digits line up on the ones. */
+table.runs .num {
+  text-align: right;
+}
+
 table.runs tbody tr {
   cursor: pointer;
+}
+
+/* A parameter string as it was given — `--mesh 1024 --gpu 0` — on inline
+   code's ground, wherever a run's parameters are shown: the facts of a run, a
+   row of a history or a dispatch (§17.3, §22.3). Global once it was on its
+   third copy, like the table. A chip: the ground ends where the text does,
+   not at the column's or the page's edge. In a row it truncates inside
+   itself — the cell clips, so nothing may hang outside it — and the heading
+   over it is set in by the chip's padding, so it sits over the text rather
+   than the ground. */
+.params {
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  background: var(--code-inline-bg);
+  border-radius: 3px;
+  padding: 4px 8px;
+  user-select: text;
+}
+
+table.runs .params {
+  padding: 1px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  user-select: none;
+}
+
+table.runs th.over-params {
+  padding-left: 6px;
 }
 
 table.runs tbody tr:hover {

@@ -42,10 +42,7 @@ export function build_world(engine: Engine, last_refresh: string | null): World 
       continue
     }
     world.entities.push(
-      entity_for(job.path, manifest.name, 'Job', [
-        ...manifest.render_params,
-        ...manifest.launch_params
-      ])
+      entity_for(job.path, manifest, 'Job', [...manifest.render_params, ...manifest.launch_params])
     )
     // Oldest first, which is also the order the index wants: two runs
     // started in the same millisecond tie on start time, and then
@@ -68,7 +65,7 @@ export function build_world(engine: Engine, last_refresh: string | null): World 
       world.entities.push(broken_entity(bench, 'Bench'))
       continue
     }
-    world.entities.push(entity_for(bench.path, manifest.name, 'Bench', [...manifest.plan_params]))
+    world.entities.push(entity_for(bench.path, manifest, 'Bench', [...manifest.plan_params]))
     for (const run_view of [...bench.runs.all()].reverse()) {
       if (run_view.record === null) {
         continue
@@ -117,6 +114,7 @@ function broken_entity(
     id: broken.path,
     kind,
     name: path.basename(broken.path),
+    description: null,
     path: display_path(broken.path),
     manifest: { Invalid: { message: broken.manifest_error?.message ?? 'manifest error' } },
     parameter_names: []
@@ -125,14 +123,15 @@ function broken_entity(
 
 function entity_for(
   folder: string,
-  name: string,
+  manifest: { name: string; description?: string },
   kind: 'Job' | 'Bench',
   parameter_names: string[]
 ): Entity {
   return {
     id: folder,
     kind,
-    name,
+    name: manifest.name,
+    description: manifest.description ?? null,
     path: display_path(folder),
     manifest: 'Valid',
     parameter_names: parameter_names

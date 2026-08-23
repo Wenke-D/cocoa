@@ -91,13 +91,6 @@
     cursor: pointer;
   }
 
-  .params {
-    background: var(--code-bg);
-    padding: 4px 8px;
-    border-radius: 3px;
-    user-select: text;
-  }
-
   .warning {
     color: var(--warning);
   }

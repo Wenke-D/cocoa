@@ -13,10 +13,12 @@
 </div>
 
 <style>
+  /* Flush with the section headings under it — EXPLORER and BENCHES share a
+     left edge; only rows are indented (§8.3). */
   .title {
     display: flex;
     align-items: center;
-    padding: 10px 8px 6px 16px;
+    padding: 10px 8px 6px 8px;
     font-size: 11px;
     letter-spacing: 0.08em;
     color: var(--description);

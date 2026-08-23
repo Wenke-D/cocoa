@@ -47,6 +47,8 @@ export interface Entity {
   id: string
   kind: EntityKind
   name: string
+  /** The manifest's `description`, or `null` when it gives none. */
+  description: string | null
   path: string
   manifest: ManifestState
   parameter_names: string[]
@@ -281,7 +283,12 @@ export function report_summary(report: ReportState): string {
   return `Unable to read report: ${report.ReadError.message}`
 }
 
-/** `HH:MM:SS`, mirrors `format_duration`. */
+/**
+ * How long a run has taken: `HH:MM:SS` while it runs — a clock, ticking off
+ * `now_ms` — and `1h 12m 33s` once it has ended, a length with its empty
+ * leading units dropped. A finished run's duration is a fact, not a clock,
+ * and `00:00:00` reads as one still to start (§22.2).
+ */
 export function format_duration(
   started_at: string,
   ended_at: string | null,
@@ -293,32 +300,45 @@ export function format_duration(
   const h = Math.floor(total / 3600)
   const m = Math.floor((total % 3600) / 60)
   const s = total % 60
-  const pad = (n: number): string => String(n).padStart(2, '0')
-  return `${pad(h)}:${pad(m)}:${pad(s)}`
+  if (ended_at === null) {
+    const pad = (n: number): string => String(n).padStart(2, '0')
+    return `${pad(h)}:${pad(m)}:${pad(s)}`
+  }
+  const parts: string[] = []
+  if (h > 0) {
+    parts.push(`${h}h`)
+  }
+  if (h > 0 || m > 0) {
+    parts.push(`${m}m`)
+  }
+  parts.push(`${s}s`)
+  return parts.join(' ')
 }
 
-/** "38 seconds ago", mirrors `format_relative`. */
+const DAY_SECONDS = 86400
+
+/** The units of `format_relative`, longest first; a month is thirty days and a year 365. */
+const RELATIVE_UNITS: readonly (readonly [number, string])[] = [
+  [365 * DAY_SECONDS, 'year'],
+  [30 * DAY_SECONDS, 'month'],
+  [DAY_SECONDS, 'day'],
+  [3600, 'hour'],
+  [60, 'minute']
+]
+
+/** "38 seconds ago", "2 days ago": the largest unit that fits, whole, and never the next one down. */
 export function format_relative(then: string, now_ms: number): string {
   const seconds = Math.max(0, Math.floor((now_ms - Date.parse(then)) / 1000))
   if (seconds === 0) {
     return 'just now'
   }
-  if (seconds === 1) {
-    return '1 second ago'
+  for (const [length, unit] of RELATIVE_UNITS) {
+    if (seconds >= length) {
+      const count = Math.floor(seconds / length)
+      return `${count} ${unit}${count === 1 ? '' : 's'} ago`
+    }
   }
-  if (seconds < 60) {
-    return `${seconds} seconds ago`
-  }
-  if (seconds < 120) {
-    return '1 minute ago'
-  }
-  if (seconds < 3600) {
-    return `${Math.floor(seconds / 60)} minutes ago`
-  }
-  if (seconds < 7200) {
-    return '1 hour ago'
-  }
-  return `${Math.floor(seconds / 3600)} hours ago`
+  return seconds === 1 ? '1 second ago' : `${seconds} seconds ago`
 }
 
 /** `HH:MM:SS` in local time, as the cancel modal states a start (§16.1). */

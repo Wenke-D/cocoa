@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     format_duration,
+    format_relative,
     format_started_at,
     manifest_blocking_reason,
     origin_label,
@@ -33,22 +34,37 @@
 </script>
 
 {#if entity !== undefined}
+  <!-- Top to bottom: what it is called, what it is for, what it takes, where
+       it is (§13.1). No kind label: the Start button below says "Job" or
+       "Bench", and so does the Explorer section the row came from. -->
   <header>
-    <span class="kind">{entity.kind === 'Job' ? 'JOB' : 'BENCH'}</span>
     <h1>{entity.name}</h1>
+    {#if entity.description !== null}
+      <p class="description">{entity.description}</p>
+    {/if}
+    {#if blocking === null}
+      <div class="parameters">
+        {#each entity.parameter_names as name (name)}
+          <span class="param mono">{name}</span>
+        {:else}
+          <span class="none">No parameters.</span>
+        {/each}
+      </div>
+    {/if}
+    <div class="path mono">{entity.path}</div>
+    {#if blocking !== null}
+      <div class="blocking">{blocking}</div>
+    {/if}
+  </header>
+  <div class="actions">
     <Button
-      class="start"
       disabled={blocking !== null}
       title={blocking ?? ''}
       onclick={() => navigate({ page: 'start', entity_id })}
     >
       {entity.kind === 'Job' ? 'Start Job' : 'Start Bench'}
     </Button>
-  </header>
-  <div class="path mono">{entity.path}</div>
-  {#if blocking !== null}
-    <div class="blocking">{blocking}</div>
-  {/if}
+  </div>
 
   <h2>History</h2>
   {#if entity.kind === 'Job'}
@@ -56,23 +72,25 @@
       <p class="none">No runs yet.</p>
     {:else}
       <table class="runs">
-        <!-- Sized for the widest value each column actually holds: `CANCELLING`
-             with its dot, a locale timestamp, `HH:MM:SS`. Parameters is the one
-             column with no bound — a sweep is what varies them — so it takes
-             what is left, and goes last so the slack collects at the table's
-             edge rather than opening a gap in the middle of every row (§22.2). -->
+        <!-- Sized for the widest value each column actually holds: the status
+             dot, a run id, `120h 59m 59s`, `59 minutes ago`. Parameters is the
+             one column with no bound — a sweep is what varies them — so it is
+             the one left unsized and takes what is left, right after the id,
+             since it is what tells runs apart (§22.2). -->
         <colgroup>
-          <col style="width: 72px" />
+          <col style="width: 22px" />
+          <col style="width: 44px" />
+          <col />
+          <col style="width: 100px" />
           <col style="width: 116px" />
           <col style="width: 80px" />
-          <col style="width: 190px" />
-          <col style="width: 84px" />
-          <col />
         </colgroup>
         <thead>
           <tr>
-            <th>Run</th><th>Status</th><th>By</th><th>Started</th><th>Duration</th>
-            <th>Parameters</th>
+            <th aria-label="Status"></th><th class="num">Run</th><th class="over-params"
+              >Parameters</th
+            >
+            <th>Duration</th><th>Started</th><th>By</th>
           </tr>
         </thead>
         <tbody>
@@ -83,12 +101,16 @@
               params={run.params}
               route={{ page: 'job_run', job_id: entity_id, run_id: run.id }}
             >
-              <td class="mono">{run.id}</td>
-              <td><StatusPill status={run.status} health={run.query_health} /></td>
-              <td title={origin_label(run.origin)}>{origin_label(run.origin)}</td>
-              <td title={format_started_at(run.started_at)}>{format_started_at(run.started_at)}</td>
+              <td><StatusPill status={run.status} health={run.query_health} compact /></td>
+              <td class="mono num">{run.id}</td>
+              <td title={run.parameters}>
+                {#if run.parameters !== ''}<span class="mono params">{run.parameters}</span>{/if}
+              </td>
               <td class="mono">{format_duration(run.started_at, run.ended_at, app.now_ms)}</td>
-              <td class="mono" title={run.parameters}>{run.parameters}</td>
+              <td title={format_started_at(run.started_at)}>
+                {format_relative(run.started_at, app.now_ms)}
+              </td>
+              <td title={origin_label(run.origin)}>{origin_label(run.origin)}</td>
             </HistoryRow>
           {/each}
         </tbody>
@@ -99,18 +121,19 @@
   {:else}
     <table class="runs">
       <colgroup>
-        <col style="width: 72px" />
+        <col style="width: 22px" />
+        <col style="width: 44px" />
+        <col />
+        <col style="width: 100px" />
         <col style="width: 116px" />
         <col style="width: 80px" />
-        <col style="width: 60px" />
-        <col style="width: 190px" />
-        <col style="width: 84px" />
-        <col />
       </colgroup>
       <thead>
         <tr>
-          <th>Run</th><th>Status</th><th>By</th><th>Calls</th><th>Started</th><th>Duration</th>
-          <th>Parameters</th>
+          <th aria-label="Status"></th><th class="num">Run</th><th class="over-params"
+            >Parameters</th
+          >
+          <th>Duration</th><th>Started</th><th>By</th>
         </tr>
       </thead>
       <tbody>
@@ -121,13 +144,16 @@
             params={run.params}
             route={{ page: 'bench_run', bench_id: entity_id, run_id: run.id }}
           >
-            <td class="mono">{run.id}</td>
-            <td><StatusPill status={run.status} health={run.query_health} /></td>
-            <td title={trigger_label(run.by)}>{trigger_label(run.by)}</td>
-            <td>{run.plan.steps.length}</td>
-            <td title={format_started_at(run.started_at)}>{format_started_at(run.started_at)}</td>
+            <td><StatusPill status={run.status} health={run.query_health} compact /></td>
+            <td class="mono num">{run.id}</td>
+            <td title={run.parameters}>
+              {#if run.parameters !== ''}<span class="mono params">{run.parameters}</span>{/if}
+            </td>
             <td class="mono">{format_duration(run.started_at, run.ended_at, app.now_ms)}</td>
-            <td class="mono" title={run.parameters}>{run.parameters}</td>
+            <td title={format_started_at(run.started_at)}>
+              {format_relative(run.started_at, app.now_ms)}
+            </td>
+            <td title={trigger_label(run.by)}>{trigger_label(run.by)}</td>
           </HistoryRow>
         {/each}
       </tbody>
@@ -138,15 +164,9 @@
 <style>
   header {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
-  }
-
-  .kind {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    color: var(--description);
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
   }
 
   h1 {
@@ -154,17 +174,37 @@
     font-size: 20px;
     font-weight: 600;
     color: var(--strong-foreground);
-    flex: 1;
+  }
+
+  .description {
+    margin: 0;
+    max-width: 640px;
+  }
+
+  .parameters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* A declared parameter's name, on inline code's ground like a run's values (§22.2). */
+  .param {
+    background: var(--code-inline-bg);
+    border-radius: 3px;
+    padding: 1px 6px;
   }
 
   .path {
-    margin-top: 4px;
     color: var(--description);
   }
 
   .blocking {
-    margin-top: 10px;
+    margin-top: 4px;
     color: var(--warning);
+  }
+
+  .actions {
+    margin-top: 14px;
   }
 
   h2 {
