@@ -90,7 +90,7 @@ function require_string(value: unknown, manifest_path: string, key: string): str
   return value
 }
 
-const PARAM_TYPES: readonly ParamType[] = ['flag', 'string', 'enum']
+const PARAM_TYPES: readonly ParamType[] = ['string', 'enum']
 
 /**
  * A `params` list: one table per parameter (convention §2.1), in the order the
@@ -141,10 +141,7 @@ function require_param(table: TomlTable, manifest_path: string, where: string): 
   const at = `parameter \`${name}\``
   const type = table.type
   if (typeof type !== 'string' || !PARAM_TYPES.includes(type as ParamType)) {
-    throw EngineError.manifest(
-      manifest_path,
-      `${at} needs a \`type\` of \`flag\`, \`string\` or \`enum\``
-    )
+    throw EngineError.manifest(manifest_path, `${at} needs a \`type\` of \`string\` or \`enum\``)
   }
   const description = table.description
   if (typeof description !== 'string' || description.trim() === '') {
@@ -153,9 +150,6 @@ function require_param(table: TomlTable, manifest_path: string, where: string): 
   const list = table.list
   if (list !== undefined && typeof list !== 'boolean') {
     throw EngineError.manifest(manifest_path, `${at}: \`list\` must be true or false`)
-  }
-  if (type === 'flag' && list === true) {
-    throw EngineError.manifest(manifest_path, `${at}: a flag cannot be a list`)
   }
   const values = table.values
   if (type === 'enum') {

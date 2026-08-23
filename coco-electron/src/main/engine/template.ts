@@ -260,8 +260,9 @@ const strict_environment = new nunjucks.Environment(null, {
  * Renders a template with strict undefined-variable behavior. The caller
  * re-runs `analyze` before rendering, so a template edited between one
  * refresh and the next can never produce a half-rendered submission (§6.1).
- * The values keep their shape: a flag is a boolean `{% if %}` can test, a
- * list an array `{% for %}` can walk.
+ * The values keep their shape: a list is an array `{% for %}` can walk. A
+ * yes/no enum's value is a string, so a branch tests the word — `{% if
+ * profile == "true" %}` — never the bare name, which is always truthy.
  */
 export function render(source: string, params: Params): string {
   try {

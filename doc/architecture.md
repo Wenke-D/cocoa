@@ -546,8 +546,8 @@ coco-electron/
 │           │   │                  #   RunFacts
 │           │   ├── utils.ts       #   `cn()` and the prop types the components import
 │           │   └── components/ui/ #   shadcn-svelte: Button, Dialog, ContextMenu,
-│           │                      #   Input, Label, Spinner, Select, RadioGroup,
-│           │                      #   Checkbox, Textarea — copied-in, owned source
+│           │                      #   Input, Label, Spinner, Select, Checkbox,
+│           │                      #   Textarea — copied-in, owned source
 │           └── pages/             #   Empty, EntityOverview, StartRun,
 │                                  #   JobRunDetail, BenchRunDetail,
 │                                  #   BenchChildRunDetail, ReportViewer

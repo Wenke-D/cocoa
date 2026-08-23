@@ -648,8 +648,10 @@ declared parameter, in declaration order, and three named columns — `Name`,
 `Values`, `Description` (convention §2.2). The heading row is what says which
 column is the description; without it the last column is just the longest
 text. `Values` is phrased from the filling-in side, not the type system's: `a
-string`, an enum's values themselves (`ok, fail`), `true or false` for a
-flag, `one or more strings`, `one or more of cuda, hip`. `No parameters.`
+string`, an enum's values with a slash between them (`ok / fail`) — and a
+list wears brackets, `[strings]`, `[cuda, hip]`. The separator carries the
+meaning: a slash to pick one of, commas inside brackets to take several of.
+`No parameters.`
 when it declares none. A parameter is read here before it is filled in on the
 Start page, so this is where the description is shown in full, not on hover.
 
@@ -668,8 +670,8 @@ Mesh sweep across the GPU solver
 Parameters
 Name      Values          Description
 mesh      a string        Mesh resolution, cells per side
-gpu       0, 1            Which GPU to pin to
-profile   true or false   Run under nsys
+gpu       0 / 1           Which GPU to pin to
+profile   true / false    Run under nsys
 
 [Start Job]
 
@@ -814,7 +816,7 @@ Last run dispatched 6 runs
 
 Parameters
 Name      Values         Description
-sweep     quick, full    How much of the suite to run
+sweep     quick / full   How much of the suite to run
 
 [Start Bench]
 ```
@@ -828,7 +830,7 @@ Dispatched runs are determined at start
 
 Parameters
 Name      Values         Description
-sweep     quick, full    How much of the suite to run
+sweep     quick / full   How much of the suite to run
 
 [Start Bench]
 ```
@@ -950,15 +952,15 @@ PARAMETERS  (all required)                          [history]
   Nodes to request
   [ required                                               ]
 
-  gpu  0, 1
+  gpu  0 / 1
   Which GPU to pin to
   [ Choose…                                              v ]
 
-  profile  true or false
+  profile  true / false
   Run under the profiler
-  ( ) Yes   ( ) No
+  [ Choose…                                              v ]
 
-  backends  one or more of cuda, hip
+  backends  [cuda, hip]
   Backends to try, in order
   [ ] cuda   [ ] hip
 
@@ -974,14 +976,15 @@ The field is the shape (convention §2.2):
 |------------------|--------------------------------------------------------------------|
 | `string`         | a text field                                                       |
 | `enum`           | a choice, opening on `Choose…` with nothing picked                 |
-| `flag`           | two radio buttons, `Yes` and `No`, neither pressed to begin with   |
 | `string` list    | a text box, one value per line; blank lines are not values         |
 | `enum` list      | one checkbox per value, none ticked to begin with                  |
 
-A flag is not a checkbox. A checkbox that is not ticked says `false` whether
-or not anyone looked at it, and §15.3 needs to tell those apart: a flag left
-untouched has no value, and Start stays disabled for it as for an empty text
-field.
+A yes/no parameter is an enum of two values (convention §2.2) and gets the
+enum's choice like any other — never a lone checkbox for the whole value: a
+checkbox that is not ticked says `false` whether or not anyone looked at it,
+and §15.3 needs "not considered" to be visible. The ticks of an enum *list*
+are different: none ticked is an empty list, which is no value, and Start
+stays disabled for it.
 
 What the user has typed is a draft held outside the route: a route is a place,
 and a half-filled form is not one. Leaving the page discards the draft, and so
@@ -992,9 +995,8 @@ instead of a form whose values are gone.
 ### 15.2 Parameter Semantics
 
 A parameter value is a string with a declared shape (convention §2.2): one
-string, one of a set, a flag, or one or more of the first two. The form checks
-nothing beyond the shape, and the engine checks the same thing again on every
-way in.
+string, one of a set, or one or more of either. The form checks nothing
+beyond the shape, and the engine checks the same thing again on every way in.
 
 The application must not:
 
@@ -1654,8 +1656,8 @@ about that run's parameters:
 - **Refill…** opens the Start page (§15) with this run's values filled in, as
   far as the manifest now allows: a parameter it no longer declares is
   dropped, one it newly declares is left empty, one whose value no longer
-  fits its shape — an enum value since removed, a string where a flag now is
-  — is left empty too, and the message says which. The user still presses
+  fits its shape — an enum value since removed, one string where a list now
+  is — is left empty too, and the message says which. The user still presses
   Start — which is what the ellipsis says: this one opens something, the
   other acts.
 

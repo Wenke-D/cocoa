@@ -3,10 +3,12 @@
 // a start, the renderer when it refills a form from a past run.
 //
 // To coco a value is a string with a shape: one string, one of a declared
-// set, a flag, or one or more of the first two. The scripts read them however
-// they like; the shape is what coco can check and what the form can ask for.
+// set, or one or more of either. There is no boolean: a yes/no parameter is
+// an enum of two values, and its value is the word, a string like any other.
+// The scripts read them however they like; the shape is what coco can check
+// and what the form can ask for.
 
-export type ParamType = 'flag' | 'string' | 'enum'
+export type ParamType = 'string' | 'enum'
 
 export interface ParamSpec {
   name: string
@@ -19,7 +21,7 @@ export interface ParamSpec {
 }
 
 /** A value as coco holds it, records it and hands it on: the JSON is the type. */
-export type ParamValue = string | boolean | string[]
+export type ParamValue = string | string[]
 
 export type Params = Record<string, ParamValue>
 
@@ -28,13 +30,9 @@ const quoted = (values: string[]): string => values.map(quote).join(', ')
 
 /**
  * Why `value` is not a value for `spec`, or `null` when it is. Nothing is
- * coerced: a flag is a boolean, a list is an array, and `"true"` is a string
- * that is no flag at all.
+ * coerced: a list is an array, and JSON's other types are not values at all.
  */
 export function check_value(spec: ParamSpec, value: unknown): string | null {
-  if (spec.type === 'flag') {
-    return typeof value === 'boolean' ? null : 'must be true or false'
-  }
   if (spec.list) {
     if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
       return spec.values === null
@@ -75,29 +73,25 @@ function check_one(spec: ParamSpec, value: string): string | null {
 }
 
 /**
- * What may be put here, for the person about to: `a string`, the values
- * themselves for an enum, `true or false`, `one or more strings`, `one or
- * more of a, b`. Phrased from the filling-in side, not the type system's.
+ * What may be put here, for the person about to: `a string`, `ok / fail` —
+ * and a list wears brackets, `[strings]`, `[cuda, hip]`. The separator
+ * carries the meaning: a slash between values to pick one of, commas inside
+ * brackets to take several of. Phrased from the filling-in side, not the
+ * type system's.
  */
 export function describe_values(spec: ParamSpec): string {
-  if (spec.type === 'flag') {
-    return 'true or false'
-  }
   if (spec.values === null) {
-    return spec.list ? 'one or more strings' : 'a string'
+    return spec.list ? '[strings]' : 'a string'
   }
-  return spec.list ? `one or more of ${spec.values.join(', ')}` : spec.values.join(', ')
+  return spec.list ? `[${spec.values.join(', ')}]` : spec.values.join(' / ')
 }
 
 /**
- * A value on the wire (§6): always `--name value` pairs. A flag is `--name
- * true` or `--name false`, never present-or-absent, so every script parses
- * every parameter the same way; a list is the pair repeated, one per item.
+ * A value on the wire (§6): always `--name value` pairs — a list is the pair
+ * repeated, one per item — so every script parses every parameter the same
+ * way.
  */
 export function argv_of(name: string, value: ParamValue): string[] {
-  if (typeof value === 'boolean') {
-    return [`--${name}`, value ? 'true' : 'false']
-  }
   if (typeof value === 'string') {
     return [`--${name}`, value]
   }

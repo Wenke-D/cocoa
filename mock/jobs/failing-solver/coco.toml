@@ -21,7 +21,8 @@ description = "`fail` makes the run fail at 8 s; `ok` lets it finish"
 
 [[launch.params]]
 name        = "profile"
-type        = "flag"
+type        = "enum"
+values      = ["true", "false"]
 description = "Run under the profiler"
 
 [[launch.params]]

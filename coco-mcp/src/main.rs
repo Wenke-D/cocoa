@@ -144,11 +144,10 @@ fn tools() -> Value {
                     "experiment": { "type": "string", "description": "The experiment's name." },
                     "parameters": {
                         "type": "object",
-                        "description": "One value per declared parameter: a string for `string` and `enum` (one of its `values`), a boolean for `flag`, a non-empty array of strings for a `list` of either. Nothing is coerced.",
+                        "description": "One value per declared parameter: a string for `string` and `enum` (one of its `values`), a non-empty array of strings for a `list` of either. Nothing is coerced; a yes/no parameter is an enum whose value is the word.",
                         "additionalProperties": {
                             "oneOf": [
                                 { "type": "string" },
-                                { "type": "boolean" },
                                 { "type": "array", "items": { "type": "string" }, "minItems": 1 }
                             ]
                         },

@@ -18,7 +18,6 @@ const spec = (over: Partial<ParamSpec>): ParamSpec => ({
 
 const STRING = spec({})
 const ENUM = spec({ type: 'enum', values: ['a', 'b'] })
-const FLAG = spec({ type: 'flag' })
 const STRINGS = spec({ list: true })
 const ENUMS = spec({ type: 'enum', values: ['a', 'b'], list: true })
 
@@ -38,11 +37,14 @@ describe('check_value', () => {
     expect(check_value(ENUM, ['a'])).toBe('must be one of `a`, `b`')
   })
 
-  it('takes a boolean for a flag, never the word', () => {
-    expect(check_value(FLAG, true)).toBeNull()
-    expect(check_value(FLAG, false)).toBeNull()
-    expect(check_value(FLAG, 'true')).toBe('must be true or false')
-    expect(check_value(FLAG, 1)).toBe('must be true or false')
+  // There is no boolean type: a yes/no parameter is an enum of the words,
+  // and a JSON boolean is a wrong shape like any other.
+  it('refuses a JSON boolean everywhere', () => {
+    expect(check_value(STRING, true)).toBe('must be a string')
+    expect(check_value(spec({ type: 'enum', values: ['true', 'false'] }), 'false')).toBeNull()
+    expect(check_value(spec({ type: 'enum', values: ['true', 'false'] }), false)).toBe(
+      'must be one of `true`, `false`'
+    )
   })
 
   it('takes one or more strings for a list, each a value, none twice', () => {
@@ -65,23 +67,21 @@ describe('check_value', () => {
 describe('describe_values', () => {
   it('says what may be put there, from the filling-in side', () => {
     expect(describe_values(STRING)).toBe('a string')
-    expect(describe_values(ENUM)).toBe('a, b')
-    expect(describe_values(FLAG)).toBe('true or false')
-    expect(describe_values(STRINGS)).toBe('one or more strings')
-    expect(describe_values(ENUMS)).toBe('one or more of a, b')
+    expect(describe_values(ENUM)).toBe('a / b')
+    expect(describe_values(spec({ type: 'enum', values: ['true', 'false'] }))).toBe('true / false')
+    expect(describe_values(STRINGS)).toBe('[strings]')
+    expect(describe_values(ENUMS)).toBe('[a, b]')
   })
 })
 
 describe('argv_of', () => {
-  it('is always pairs: a flag as the word, a list as the pair repeated', () => {
+  it('is always pairs, a list as the pair repeated', () => {
     expect(argv_of('mesh', '256')).toEqual(['--mesh', '256'])
-    expect(argv_of('profile', true)).toEqual(['--profile', 'true'])
-    expect(argv_of('profile', false)).toEqual(['--profile', 'false'])
     expect(argv_of('tags', ['a', 'b'])).toEqual(['--tags', 'a', '--tags', 'b'])
   })
 
   it('reads back as the wire form, names sorted', () => {
-    expect(format_params({ tags: ['a', 'b'], gpu: '0', profile: false })).toBe(
+    expect(format_params({ tags: ['a', 'b'], gpu: '0', profile: 'false' })).toBe(
       '--gpu 0 --profile false --tags a --tags b'
     )
     expect(format_params({})).toBe('')
@@ -91,11 +91,11 @@ describe('argv_of', () => {
 describe('param_problems', () => {
   const declared = [
     spec({ name: 'gpu', type: 'enum', values: ['0', '1'] }),
-    spec({ name: 'profile', type: 'flag' })
+    spec({ name: 'profile', type: 'enum', values: ['true', 'false'] })
   ]
 
   it('is silent when the set matches and every value fits', () => {
-    expect(param_problems(declared, { gpu: '1', profile: true })).toEqual([])
+    expect(param_problems(declared, { gpu: '1', profile: 'true' })).toEqual([])
   })
 
   it('names what is missing, what is extra, and what does not fit — all of it', () => {

@@ -87,7 +87,8 @@ description = "Mesh resolution, cells per side"
 
 [[launch.params]]
 name        = "profile"
-type        = "flag"
+type        = "enum"
+values      = ["true", "false"]
 description = "Run under nsys"
 
 [poll]
@@ -139,20 +140,19 @@ Each `[[…params]]` entry declares one parameter:
 ```toml
 [[launch.params]]
 name        = "backends"            # required; unique within the job
-type        = "enum"                # required: "flag", "string" or "enum"
+type        = "enum"                # required: "string" or "enum"
 values      = ["cuda", "hip"]       # enum only, and required there
 list        = true                  # optional; string and enum only
 description = "Backends to build, one build each"   # required
 ```
 
 To coco a value is a string with a **shape**, and the shape is what it can
-check and what the form can ask for. There are five:
+check and what the form can ask for. There are four:
 
 | `type`   | `list`  | A value is…                                  |
 |----------|---------|----------------------------------------------|
 | `string` | —       | one non-blank string                         |
 | `enum`   | —       | one of `values`, exactly (case matters)      |
-| `flag`   | —       | `true` or `false`                            |
 | `string` | `true`  | one or more non-blank strings, none repeated |
 | `enum`   | `true`  | one or more of `values`, none repeated       |
 
@@ -160,16 +160,22 @@ A list is never empty: "no value" is not a value, for a list as for a string.
 A parameter that may legitimately be absent declares an enum with a value that
 says so.
 
+There is no boolean type. A yes/no parameter is an enum of two values —
+`["true", "false"]`, or whatever words fit — and its value is the word, a
+string like any other. One consequence is worth stating: in a template such a
+value is a **string**, and a non-empty string is always truthy, so a branch
+tests the word — `{% if profile == "true" %}` — never the bare name.
+
 `description` is required. The form shows it under the field, and a field
 without one can only be guessed at — which is the thing the form exists to
 prevent.
 
 Where a value goes, its shape goes with it. In JSON — the record (§7.1), a
 plan's instances (§8.1), an agent's request — a `string` or `enum` value is a
-JSON string, a `flag` a JSON boolean, a `list` a JSON array of strings; nothing
-is coerced, so `"true"` is not a flag and `"a,b"` is not a list. On a script's
-command line every value is `--name value` pairs (§6). In a template a flag is a
-boolean and a list an array (§6.1).
+JSON string and a `list` a JSON array of strings; nothing else is a value, and
+nothing is coerced: a JSON boolean is refused, and `"a,b"` is not a list. On a
+script's command line every value is `--name value` pairs (§6). In a template
+a list is an array (§6.1).
 
 A manifest written for the form before 2026-08-23 — `params = ["mesh", "gpu"]`,
 names alone — does not load; the error says what replaced it.
@@ -218,11 +224,11 @@ Rejected at load time:
 - `name` missing, not a string, or empty;
 - unknown keys for the declared kind, at the top level, in a declared table, or
   on a parameter;
-- a `params` entry without a non-empty `name`, a `type` of `flag`, `string` or
+- a `params` entry without a non-empty `name`, a `type` of `string` or
   `enum`, or a non-blank `description` (§2.2); an enum without `values`, or
   with an empty list, an empty value or a repeated one; `values` on anything
-  but an enum; `list` that is not a boolean, or on a flag; a `params` that is
-  the old list of bare names;
+  but an enum; `list` that is not a boolean; a `params` that is the old list
+  of bare names;
 - a name declared twice in one list, or in both `[render].params` and
   `[launch].params` (§2.1);
 - a missing required table or `command`;
@@ -312,9 +318,9 @@ Every script coco invokes:
 - runs with **cwd = the entity folder**, so relative paths in the manifest and
   inside the script resolve against it;
 - receives arguments as `--name value` pairs only, never positionally — a
-  flag is `--name true` or `--name false`, never present-or-absent, and a list
-  is the pair repeated, `--tags a --tags b`, one per item. A script parses
-  every parameter the same way, and a loop that reads pairs never slips;
+  list is the pair repeated, `--tags a --tags b`, one per item. A script
+  parses every parameter the same way, and a loop that reads pairs never
+  slips;
 - receives user-supplied values as **separate argv elements**;
 - receives **only** the arguments this document specifies plus the declared
   params — coco never passes anything ad-hoc. Wanting to pass something else
@@ -430,14 +436,14 @@ The record written at this point holds both parameter sets separately:
   "run_id": 41,
   "submission_id": "5001",
   "render": { "size": "256", "backend": "cuda" },
-  "launch": { "mesh": "256", "profile": false },
+  "launch": { "mesh": "256", "profile": "false" },
   "status": "STARTING",
   "history": [ { "status": "STARTING", "at": "2026-08-17T12:40:11+02:00" } ]
 }
 ```
 
-The values keep their shapes (§2.2): a flag is a JSON boolean, a list a JSON
-array. What the record holds is what a Start over sends again.
+The values keep their shapes (§2.2): a list is a JSON array. What the record
+holds is what a Start over sends again.
 
 ### 7.2 `poll`
 
@@ -517,17 +523,16 @@ Receives the bench's declared params as `--name value` pairs (§6), and prints
 one JSON object per instance to launch:
 
 ```
-COCO_RETURN: {"job": "solver-gpu", "params": {"size": "256", "backend": "cuda", "mesh": "256", "profile": false}}
-COCO_RETURN: {"job": "solver-gpu", "params": {"size": "512", "backend": "cuda", "mesh": "512", "profile": true}}
+COCO_RETURN: {"job": "solver-gpu", "params": {"size": "256", "backend": "cuda", "mesh": "256", "profile": "false"}}
+COCO_RETURN: {"job": "solver-gpu", "params": {"size": "512", "backend": "cuda", "mesh": "512", "profile": "true"}}
 ```
 
 `job` must name a **registered job** — not a bench, not an unregistered folder.
 `params` must supply exactly that job's parameters, render and launch sets
 together: no extras, none missing, each value of its declared shape (§2.2) —
-a JSON string, a JSON boolean for a flag, a JSON array of strings for a list.
-coco rejects numbers, nulls, nested objects and any value of the wrong shape
-rather than coercing it: a plan that prints `"true"` for a flag has printed a
-string.
+a JSON string, or a JSON array of strings for a list. coco rejects numbers,
+booleans, nulls, nested objects and any value of the wrong shape rather than
+coercing it.
 
 Every instance is validated **before anything is submitted**, and every instance
 is validated — checking stops at no first failure. A plan naming an unregistered

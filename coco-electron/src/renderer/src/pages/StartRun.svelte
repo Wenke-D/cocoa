@@ -1,9 +1,9 @@
 <!--
   The Start page (§15): one field per declared parameter, shaped as declared
-  (§17.3) — a text field, a choice, a yes/no, lines, or ticks — each under
-  its name and description. Nothing is chosen for the user: a flag starts
-  with neither button pressed and an enum with nothing picked, because a
-  value the form picked is indistinguishable from one the user did (§15.3).
+  (§17.3) — a text field, a choice, lines, or ticks — each under its name
+  and description. Nothing is chosen for the user: an enum opens with
+  nothing picked, because a value the form picked is indistinguishable from
+  one the user did (§15.3).
 -->
 <script lang="ts">
   import { manifest_blocking_reason } from '@shared/world'
@@ -15,7 +15,6 @@
   import { Checkbox } from '$lib/components/ui/checkbox'
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'
-  import * as RadioGroup from '$lib/components/ui/radio-group'
   import * as Select from '$lib/components/ui/select'
   import { Spinner } from '$lib/components/ui/spinner'
   import { Textarea } from '$lib/components/ui/textarea'
@@ -25,9 +24,9 @@
   const entity = $derived(entity_of(entity_id))
 
   // The draft lives here, not in the route — a route stays an address. Two
-  // maps, by widget: `text` holds what a text field, a choice, a yes/no or a
-  // lines box holds (a flag as 'true'/'false', nothing as ''); `ticked` holds
-  // the values a list of choices has ticked, in the manifest's order.
+  // maps, by widget: `text` holds what a text field, a choice or a lines box
+  // holds (nothing as ''); `ticked` holds the values a list of choices has
+  // ticked, in the manifest's order.
   let text = $state<Record<string, string>>({})
   let ticked = $state<Record<string, string[]>>({})
   let submitting = $state(false)
@@ -47,8 +46,6 @@
           next_ticked[spec.name] = Array.isArray(given) ? [...given] : []
         } else if (spec.list) {
           next_text[spec.name] = Array.isArray(given) ? given.join('\n') : ''
-        } else if (spec.type === 'flag') {
-          next_text[spec.name] = typeof given === 'boolean' ? String(given) : ''
         } else {
           next_text[spec.name] = typeof given === 'string' ? given : ''
         }
@@ -83,10 +80,6 @@
           .filter((line) => line !== '')
         if (lines.length > 0) {
           params[spec.name] = lines
-        }
-      } else if (spec.type === 'flag') {
-        if (raw === 'true' || raw === 'false') {
-          params[spec.name] = raw === 'true'
         }
       } else if (raw.trim() !== '') {
         params[spec.name] = raw
@@ -136,7 +129,7 @@
       {#each entity.parameters as spec (spec.name)}
         {@const id = `param-${spec.name}`}
         <div class="field">
-          {#if spec.type === 'flag' || (spec.list && spec.values !== null)}
+          {#if spec.list && spec.values !== null}
             <div class="name" id={`${id}-name`}>
               {spec.name} <span class="type">{describe_values(spec)}</span>
             </div>
@@ -147,17 +140,7 @@
           {/if}
           <p class="description">{spec.description}</p>
 
-          {#if spec.type === 'flag'}
-            <RadioGroup.Root
-              bind:value={text[spec.name]}
-              disabled={submitting}
-              aria-labelledby={`${id}-name`}
-              class="flex gap-5"
-            >
-              <label class="choice"><RadioGroup.Item value="true" /> Yes</label>
-              <label class="choice"><RadioGroup.Item value="false" /> No</label>
-            </RadioGroup.Root>
-          {:else if spec.list && spec.values !== null}
+          {#if spec.list && spec.values !== null}
             <div class="choices" role="group" aria-labelledby={`${id}-name`}>
               {#each spec.values as value (value)}
                 <label class="choice">

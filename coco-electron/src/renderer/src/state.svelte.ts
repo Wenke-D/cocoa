@@ -702,7 +702,7 @@ export async function start_again(entity_id: string, params: Params): Promise<vo
  * Opens the Start page with a past run's parameters filled in, as far as the
  * manifest as it is now allows: a parameter it no longer declares is dropped,
  * one it newly declares is left empty, one whose value no longer fits its
- * shape — an enum value since removed, a string where a flag now is — is
+ * shape — an enum value since removed, one string where a list now is — is
  * left empty too, and the notice says which.
  */
 export function prefill_start(entity_id: string, run_id: string, params: Params): void {

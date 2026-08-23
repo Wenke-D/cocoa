@@ -130,17 +130,12 @@ command     = "./report.py"
     expect(manifest.plan_params.map((param) => param.name)).toEqual(['mesh'])
   })
 
-  it('loads every shape: flag, string, enum, and lists of the last two', () => {
+  it('loads every shape: string, enum, and lists of both', () => {
     const dir = temp_dir()
     write(
       dir,
       'coco.toml',
       job_with_launch(`
-[[launch.params]]
-name        = "profile"
-type        = "flag"
-description = "Run under the profiler"
-
 [[launch.params]]
 name        = "tags"
 type        = "string"
@@ -161,13 +156,6 @@ description = "Backends to try"
       throw new Error('expected a job')
     }
     expect(manifest.launch_params).toEqual([
-      {
-        name: 'profile',
-        type: 'flag',
-        values: null,
-        list: false,
-        description: 'Run under the profiler'
-      },
       { name: 'tags', type: 'string', values: null, list: true, description: 'Tags, one per line' },
       {
         name: 'backends',
@@ -218,7 +206,7 @@ description = "Backends to try"
       'coco.toml',
       job_with_launch('[[launch.params]]\nname = "mesh"\ntype = "number"\ndescription = "x"\n')
     )
-    expect(refused(dir)).toContain('`flag`, `string` or `enum`')
+    expect(refused(dir)).toContain('`string` or `enum`')
 
     write(dir, 'coco.toml', job_with_launch('[[launch.params]]\nname = "mesh"\ntype = "string"\n'))
     expect(refused(dir)).toContain('`description`')
@@ -279,18 +267,16 @@ description = "Backends to try"
     expect(refused(dir)).toContain('only an enum takes `values`')
   })
 
-  it('refuses a flag that is a list, and a list that is not a boolean', () => {
+  it('refuses a `list` that is not a boolean, and the retired flag type', () => {
     const dir = temp_dir()
     write(dir, 'job.sbatch.tmpl', TEMPLATE)
 
     write(
       dir,
       'coco.toml',
-      job_with_launch(
-        '[[launch.params]]\nname = "profile"\ntype = "flag"\nlist = true\ndescription = "x"\n'
-      )
+      job_with_launch('[[launch.params]]\nname = "profile"\ntype = "flag"\ndescription = "x"\n')
     )
-    expect(refused(dir)).toContain('a flag cannot be a list')
+    expect(refused(dir)).toContain('`string` or `enum`')
 
     write(
       dir,

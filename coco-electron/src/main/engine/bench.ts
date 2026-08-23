@@ -414,12 +414,8 @@ function parse_plan_line(line: string): PlanLine {
   // knows their shapes; here only what no shape allows is refused.
   const params: Record<string, unknown> = {}
   for (const [name, param_value] of Object.entries(raw_params as Record<string, unknown>)) {
-    if (
-      param_value === null ||
-      typeof param_value === 'number' ||
-      (typeof param_value === 'object' && !Array.isArray(param_value))
-    ) {
-      throw new Error(`param \`${name}\` must be a string, true/false, or a list of strings`)
+    if (typeof param_value !== 'string' && !Array.isArray(param_value)) {
+      throw new Error(`param \`${name}\` must be a string or a list of strings`)
     }
     params[name] = param_value
   }

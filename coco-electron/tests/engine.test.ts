@@ -619,10 +619,11 @@ describe('parameters', () => {
     await settle(coco)
   })
 
-  // Every shape, end to end (§2.1, §6): a flag and a list reach the launch
-  // script as `--name value` pairs — the flag as the word, the list as the
-  // pair repeated — and reach the template with their shapes kept, so it can
-  // branch on the one and loop over the other.
+  // Every shape, end to end (§2.1, §6): a list reaches the launch script as
+  // the `--name value` pair repeated, and the template with its shape kept,
+  // so `{% for %}` can walk it. A yes/no is an enum of the words and its
+  // value a string — so a template branches on `== "true"`, never the bare
+  // name, which is a non-empty string and always true.
   it('carries every shape to the script as pairs and to the template as itself', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'shapes')
@@ -634,20 +635,20 @@ describe('parameters', () => {
         .replace(
           '[[launch.params]]\nname        = "gpu"\ntype        = "string"\ndescription = "Which GPU to pin to"\n',
           '[[launch.params]]\nname = "gpu"\ntype = "enum"\nvalues = ["0", "1"]\ndescription = "x"\n' +
-            '[[launch.params]]\nname = "profile"\ntype = "flag"\ndescription = "x"\n' +
+            '[[launch.params]]\nname = "profile"\ntype = "enum"\nvalues = ["true", "false"]\ndescription = "x"\n' +
             '[[launch.params]]\nname = "tags"\ntype = "string"\nlist = true\ndescription = "x"\n'
         )
         .replace(
           '[[render.params]]\nname        = "size"\ntype        = "string"\ndescription = "Nodes to request"\n',
           '[[render.params]]\nname = "size"\ntype = "string"\ndescription = "x"\n' +
-            '[[render.params]]\nname = "fast"\ntype = "flag"\ndescription = "x"\n' +
+            '[[render.params]]\nname = "fast"\ntype = "enum"\nvalues = ["true", "false"]\ndescription = "x"\n' +
             '[[render.params]]\nname = "backends"\ntype = "enum"\nvalues = ["cuda", "hip"]\nlist = true\ndescription = "x"\n'
         )
     )
     write(
       job,
       'job.sbatch.tmpl',
-      '#SBATCH --nodes={{ size }}\n{% if fast %}--fast{% endif %}\n{% for b in backends %}--{{ b }} {% endfor %}\n'
+      '#SBATCH --nodes={{ size }}\n{% if fast == "true" %}--fast{% endif %}\n{% for b in backends %}--{{ b }} {% endfor %}\n'
     )
     write_script(job, 'launch.sh', 'printf \'%s\\n\' "$@" > argv\necho "COCO_RETURN: sub"\n')
     const coco = engine(dir)
@@ -655,8 +656,8 @@ describe('parameters', () => {
 
     const run_id = await coco.start_job(
       job,
-      { size: '2', fast: true, backends: ['hip', 'cuda'] },
-      { gpu: '1', profile: false, tags: ['a', 'b'] },
+      { size: '2', fast: 'true', backends: ['hip', 'cuda'] },
+      { gpu: '1', profile: 'false', tags: ['a', 'b'] },
       'human'
     )
     await settle(coco)
@@ -682,7 +683,7 @@ describe('parameters', () => {
     // The record keeps the shapes too: what a Start over would send again.
     expect(coco.job(job).runs.record(run_id).launch).toEqual({
       gpu: '1',
-      profile: false,
+      profile: 'false',
       tags: ['a', 'b']
     })
 
@@ -690,12 +691,12 @@ describe('parameters', () => {
     const message = await failure(
       coco.start_job(
         job,
-        { size: '2', fast: 'yes', backends: [] },
-        { gpu: '2', profile: false, tags: 'a' },
+        { size: '2', fast: true, backends: [] },
+        { gpu: '2', profile: 'false', tags: 'a' },
         'human'
       )
     )
-    expect(message).toContain('`fast` must be true or false')
+    expect(message).toContain('`fast` must be one of `true`, `false`')
     expect(message).toContain('`backends` must list at least one value')
   })
 })

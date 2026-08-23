@@ -104,7 +104,7 @@ describe('bundled mock library', () => {
     const run_id = await coco.start_job(
       failing,
       { nodes: '4' },
-      { mode: 'fail', profile: false, tags: ['smoke'] },
+      { mode: 'fail', profile: 'false', tags: ['smoke'] },
       'human'
     )
     expect(await settle(coco)).toEqual([])
