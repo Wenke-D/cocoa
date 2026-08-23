@@ -106,6 +106,14 @@ It decides nothing — it is a translator, and the window must still be running
 for it to answer. The MCP subset it needs (initialize, tools/list, tools/call,
 one JSON message per line) is written out by hand rather than taken from an SDK.
 
+Run with `--help-ai`, the binary prints a pointer instead of serving: one
+paragraph on what coco runs, and the URL of the authoring convention
+([authoring.md](authoring.md)) in both page and raw form. The document is
+deliberately not baked in — it is versioned and reviewed in the repository
+beside the code that enforces it, and a copy in the binary would hand an
+agent whichever revision it happened to have installed. Live state still
+comes only from the tools.
+
 The binary is Rust and lives in its own crate, `coco-mcp/` — `cargo build`
 there, and nothing else is needed: its only dependency is `serde_json`, and it
 imports nothing from either workbench.

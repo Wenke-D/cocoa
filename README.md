@@ -40,6 +40,7 @@ Bench are, and what using it looks like.
 | [screens.md](doc/screens.md) | What every page shows and how it behaves. |
 | [architecture.md](doc/architecture.md) | How it is built, and which boundaries are load-bearing. |
 | [convention.md](doc/convention.md) | The folder contract: manifests, records, the poll protocol. |
+| [authoring.md](doc/authoring.md) | Writing a job or a bench: the guide to the contract above. |
 | [agent.md](doc/agent.md) | The agent interface. |
 | [ui-system.md](doc/ui-system.md) | The design system. |
 | [developing.md](doc/developing.md) | Running it, testing it, and what is still outstanding. |

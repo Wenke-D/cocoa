@@ -38,7 +38,27 @@ fn socket_path() -> PathBuf {
     PathBuf::from("coco.sock")
 }
 
+/// What `--help-ai` prints: a pointer, not a document. The authoring
+/// convention lives in the repository, where it is versioned and reviewed
+/// beside the code that enforces it; baking a copy into this binary would
+/// hand agents whichever revision they happened to have installed.
+const HELP_AI: &str = "\
+coco runs experiment folders: jobs (one start = one submission) and benches \
+(a plan fans out over registered jobs). The convention for authoring such a \
+folder — manifest, parameters, scripts, template, reports — is documented at:
+
+  https://gitlab.inria.fr/wendu/coco/-/blob/main/doc/authoring.md
+  (raw: https://gitlab.inria.fr/wendu/coco/-/raw/main/doc/authoring.md)
+
+Live state — registered experiments, their parameters, runs, reports — comes \
+from this server's MCP tools (start with coco_help), not from the document.
+";
+
 fn main() {
+    if std::env::args().any(|argument| argument == "--help-ai") {
+        print!("{HELP_AI}");
+        return;
+    }
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
     for line in stdin.lock().lines() {
