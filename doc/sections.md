@@ -28,7 +28,7 @@ If you are looking for a number, this is where it lives.
 | **9** | Navigation Model | [screens.md](screens.md) |
 | **10** | Domain Types | [screens.md](screens.md) |
 | **11** | Explorer Sidebar | [screens.md](screens.md) |
-| **12** | Empty Explorer Page | [screens.md](screens.md) |
+| **12** | Empty Page | [screens.md](screens.md) |
 | **13** | Job Overview Page | [screens.md](screens.md) |
 | **14** | Bench Overview Page | [screens.md](screens.md) |
 | **15** | Start Page | [screens.md](screens.md) |

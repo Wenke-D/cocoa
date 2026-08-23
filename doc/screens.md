@@ -585,7 +585,7 @@ It must remain selected when viewing:
 
 ### 11.5 Add Folder
 
-`Add Folder` is a secondary action. It is reached from the `+` icon button in the Explorer view's title row (§8.3), and from the Empty Explorer page's button (§12).
+`Add Folder` is a secondary action. It is reached from the `+` icon button in the Explorer view's title row (§8.3), and from the empty page's button (§12).
 
 Clicking it opens the operating system's own folder picker. Nothing stands between the click and the picker, and a path is never typed by hand. Cancelling the picker does nothing at all.
 
@@ -613,21 +613,57 @@ A refusal is an error notice and stays until dismissed (§8.5); the other two fa
 
 ---
 
-## 12. Empty Explorer Page
+## 12. Empty Page
 
-When no entities exist, show:
+The main region's page when no experiment is selected — the front door:
+every launch lands here (architecture §32), so it is seen daily and must
+stay calm at the thousandth viewing.
+
+It is a small, **left-anchored note**, not a centred card: the Explorer is
+where the next action is, and this page acknowledges the state without
+pulling the eye from it. No enclosing panel, no shadow, no decorative
+divider — the page ground stays uninterrupted. Three states share one
+position, one 18px muted lucide icon in a 20px slot, and one text baseline,
+so a state change replaces words without moving anything; there is no
+transition between them.
+
+Type: heading 17px/24 semibold in the strong text colour; body 13px/20 in
+the ordinary text colour.
+
+**Starting** — the backend has not answered yet. Icon `LoaderCircle`,
+turning once per 1600ms (static under reduced motion); the state is a
+polite live region marked busy. Body in the muted colour — transient
+system information, not content.
 
 ```text
-No jobs or benches have been added.
+Starting coco
+Reading registered experiment folders.
+```
 
-Add a folder containing a valid experiment manifest to begin.
+**No experiments registered** — an ordinary absence, never an error: no
+warning treatment, no alert role. The button is the state's only use of
+the accent, and opens the operating system's folder picker (§11.5).
+
+```text
+No experiments are registered
+Add a folder that contains a valid experiment manifest.
 
 [Add Folder]
 ```
 
-The button opens the operating system's folder picker (§11.5).
+**Experiments exist, none selected** — the state seen every day. Icon
+`ListTree`. Below the body, an at-a-glance line: 12px muted, tabular
+numerals, a hairline above, not clickable, no badges or status colours.
+Zero-value segments stay, so the line keeps one shape from launch to
+launch; screen readers hear commas rather than the middle dots. When both
+counts are zero this state never shows — the previous one does.
 
-The empty page must not look like an error.
+```text
+Experiments
+Select a bench or job in the Explorer to view its runs and reports.
+─────────────────────────────
+2 benches · 4 jobs · 1 active run
+```
 
 ---
 
@@ -1915,7 +1951,7 @@ Errors must be shown near the relevant operation.
 
 If a route references a removed entity:
 
-- Return to Empty Explorer or the first available entity.
+- Return to the empty page or the first available entity.
 - Do not panic.
 
 ### Missing Run
