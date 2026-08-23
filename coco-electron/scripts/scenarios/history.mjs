@@ -6,8 +6,8 @@ export async function run({ page, shot, log, wait_text }) {
   await page.locator('aside').getByText('solver-gpu').click()
   await page.locator('button.start').click()
   await page.locator('form').waitFor({ timeout: 10_000 })
-  await page.locator('label:has-text("nodes") input').fill('2')
-  await page.locator('label:has-text("gpu") input').fill('0')
+  await page.locator('#param-nodes').fill('2')
+  await page.locator('#param-gpu').fill('0')
   await page.locator('button[type="submit"]').click()
   await page.locator('button.cancel').waitFor({ timeout: 15_000 })
 
@@ -33,8 +33,8 @@ export async function run({ page, shot, log, wait_text }) {
   await page.locator('table.runs tbody tr').first().click({ button: 'right' })
   await page.getByRole('menuitem', { name: 'Refill…' }).click()
   await page.locator('form').waitFor({ timeout: 5_000 })
-  const nodes = await page.locator('label:has-text("nodes") input').inputValue()
-  const gpu = await page.locator('label:has-text("gpu") input').inputValue()
+  const nodes = await page.locator('#param-nodes').inputValue()
+  const gpu = await page.locator('#param-gpu').inputValue()
   log('prefilled:', { nodes, gpu })
   if (nodes !== '2' || gpu !== '0') {
     throw new Error('the Start page was not filled from the run')

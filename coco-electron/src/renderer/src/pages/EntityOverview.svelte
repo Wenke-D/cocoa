@@ -8,6 +8,7 @@
     trigger_label
   } from '@shared/world'
   import { bench_run, job_run } from '@shared/world'
+  import { describe_values } from '@shared/params'
   import { app, entity_of, navigate } from '../state.svelte'
   import HistoryRow from '../lib/HistoryRow.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
@@ -34,28 +35,44 @@
 </script>
 
 {#if entity !== undefined}
-  <!-- Top to bottom: what it is called, what it is for, what it takes, where
-       it is (§13.1). No kind label: the Start button below says "Job" or
-       "Bench", and so does the Explorer section the row came from. -->
+  <!-- Top to bottom: what it is called, what it is for, where it is; then
+       what it takes, as a table — name, shape, description — since a
+       parameter is read before it is filled in (§13.1). No kind label: the
+       Start button below says "Job" or "Bench", and so does the Explorer
+       section the row came from. -->
   <header>
     <h1>{entity.name}</h1>
     {#if entity.description !== null}
       <p class="description">{entity.description}</p>
-    {/if}
-    {#if blocking === null}
-      <div class="parameters">
-        {#each entity.parameter_names as name (name)}
-          <span class="param mono">{name}</span>
-        {:else}
-          <span class="none">No parameters.</span>
-        {/each}
-      </div>
     {/if}
     <div class="path mono">{entity.path}</div>
     {#if blocking !== null}
       <div class="blocking">{blocking}</div>
     {/if}
   </header>
+
+  {#if blocking === null}
+    <h2>Parameters</h2>
+    {#if entity.parameters.length === 0}
+      <p class="none">No parameters.</p>
+    {:else}
+      <table class="specs">
+        <thead>
+          <tr><th>Name</th><th>Values</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          {#each entity.parameters as spec (spec.name)}
+            <tr>
+              <td class="mono name">{spec.name}</td>
+              <td class="shape">{describe_values(spec)}</td>
+              <td>{spec.description}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    {/if}
+  {/if}
+
   <div class="actions">
     <Button
       disabled={blocking !== null}
@@ -73,13 +90,13 @@
     {:else}
       <table class="runs">
         <!-- Sized for the widest value each column actually holds: the status
-             dot, a run id, `120h 59m 59s`, `59 minutes ago`. Parameters is the
+             dot, a run id, `120h 59m 59s`, `59 minutes ago`. Arguments is the
              one column with no bound — a sweep is what varies them — so it is
              the one left unsized and takes what is left, right after the id,
              since it is what tells runs apart (§22.2). -->
         <colgroup>
           <col style="width: 22px" />
-          <col style="width: 44px" />
+          <col style="width: 54px" />
           <col />
           <col style="width: 100px" />
           <col style="width: 116px" />
@@ -88,7 +105,7 @@
         <thead>
           <tr>
             <th aria-label="Status"></th><th class="num">Run</th><th class="over-params"
-              >Parameters</th
+              >Arguments</th
             >
             <th>Duration</th><th>Started</th><th>By</th>
           </tr>
@@ -122,7 +139,7 @@
     <table class="runs">
       <colgroup>
         <col style="width: 22px" />
-        <col style="width: 44px" />
+        <col style="width: 54px" />
         <col />
         <col style="width: 100px" />
         <col style="width: 116px" />
@@ -130,8 +147,7 @@
       </colgroup>
       <thead>
         <tr>
-          <th aria-label="Status"></th><th class="num">Run</th><th class="over-params"
-            >Parameters</th
+          <th aria-label="Status"></th><th class="num">Run</th><th class="over-params">Arguments</th
           >
           <th>Duration</th><th>Started</th><th>By</th>
         </tr>
@@ -181,17 +197,39 @@
     max-width: 640px;
   }
 
-  .parameters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+  /* One row per parameter: its name, what may be put there, what it is
+     for. Not a
+     `.runs` table — nothing here is a row to click or a column that must
+     not jitter — but it borrows the heading look, so the three columns are
+     named and the last one is known to be the description. Name and type
+     take their widest value, the description what is left. */
+  .specs {
+    border-collapse: collapse;
+    max-width: 720px;
   }
 
-  /* A declared parameter's name, on inline code's ground like a run's values (§22.2). */
-  .param {
-    background: var(--code-inline-bg);
-    border-radius: 3px;
-    padding: 1px 6px;
+  .specs th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 11px;
+    color: var(--description);
+    border-bottom: 1px solid var(--border);
+    padding: 4px 20px 4px 0;
+  }
+
+  .specs td {
+    padding: 5px 20px 5px 0;
+    vertical-align: top;
+  }
+
+  .specs .name {
+    color: var(--strong-foreground);
+    white-space: nowrap;
+  }
+
+  .specs .shape {
+    color: var(--description);
+    white-space: nowrap;
   }
 
   .path {

@@ -81,8 +81,8 @@ export class Engine extends Memory {
 
   async start_job(
     folder: string,
-    render: Record<string, string>,
-    launch: Record<string, string>,
+    render: Record<string, unknown>,
+    launch: Record<string, unknown>,
     by: Trigger
   ): Promise<number> {
     const origin: RunOrigin = by === 'human' ? { by: 'human' } : { by: 'agent' }
@@ -105,13 +105,13 @@ export class Engine extends Memory {
   // Bench operations — bench.ts
   // ------------------------------------------------------------------
 
-  async plan_bench(folder: string, params: Record<string, string>): Promise<PlanInstance[]> {
+  async plan_bench(folder: string, params: Record<string, unknown>): Promise<PlanInstance[]> {
     return bench.plan_bench(this, this.bench(folder), params)
   }
 
   async start_bench(
     folder: string,
-    params: Record<string, string>,
+    params: Record<string, unknown>,
     by: Trigger
   ): Promise<BenchStart> {
     return bench.start_bench(this, this.bench(folder), params, by)

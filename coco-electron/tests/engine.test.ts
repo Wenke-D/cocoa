@@ -618,4 +618,84 @@ describe('parameters', () => {
     await coco.start_job(job, { size: '256' }, { gpu: '0' }, 'human')
     await settle(coco)
   })
+
+  // Every shape, end to end (§2.1, §6): a flag and a list reach the launch
+  // script as `--name value` pairs — the flag as the word, the list as the
+  // pair repeated — and reach the template with their shapes kept, so it can
+  // branch on the one and loop over the other.
+  it('carries every shape to the script as pairs and to the template as itself', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'shapes')
+    write(
+      job,
+      'coco.toml',
+      fs
+        .readFileSync(path.join(job, 'coco.toml'), 'utf8')
+        .replace(
+          '[[launch.params]]\nname        = "gpu"\ntype        = "string"\ndescription = "Which GPU to pin to"\n',
+          '[[launch.params]]\nname = "gpu"\ntype = "enum"\nvalues = ["0", "1"]\ndescription = "x"\n' +
+            '[[launch.params]]\nname = "profile"\ntype = "flag"\ndescription = "x"\n' +
+            '[[launch.params]]\nname = "tags"\ntype = "string"\nlist = true\ndescription = "x"\n'
+        )
+        .replace(
+          '[[render.params]]\nname        = "size"\ntype        = "string"\ndescription = "Nodes to request"\n',
+          '[[render.params]]\nname = "size"\ntype = "string"\ndescription = "x"\n' +
+            '[[render.params]]\nname = "fast"\ntype = "flag"\ndescription = "x"\n' +
+            '[[render.params]]\nname = "backends"\ntype = "enum"\nvalues = ["cuda", "hip"]\nlist = true\ndescription = "x"\n'
+        )
+    )
+    write(
+      job,
+      'job.sbatch.tmpl',
+      '#SBATCH --nodes={{ size }}\n{% if fast %}--fast{% endif %}\n{% for b in backends %}--{{ b }} {% endfor %}\n'
+    )
+    write_script(job, 'launch.sh', 'printf \'%s\\n\' "$@" > argv\necho "COCO_RETURN: sub"\n')
+    const coco = engine(dir)
+    coco.register(job)
+
+    const run_id = await coco.start_job(
+      job,
+      { size: '2', fast: true, backends: ['hip', 'cuda'] },
+      { gpu: '1', profile: false, tags: ['a', 'b'] },
+      'human'
+    )
+    await settle(coco)
+
+    const argv = fs.readFileSync(path.join(job, 'argv'), 'utf8').trimEnd().split('\n')
+    expect(argv).toEqual([
+      '--script',
+      `runs/${run_id}/job.sbatch`,
+      '--run',
+      String(run_id),
+      '--gpu',
+      '1',
+      '--profile',
+      'false',
+      '--tags',
+      'a',
+      '--tags',
+      'b'
+    ])
+    expect(fs.readFileSync(path.join(job, 'runs', String(run_id), 'job.sbatch'), 'utf8')).toBe(
+      '#SBATCH --nodes=2\n--fast\n--hip --cuda \n'
+    )
+    // The record keeps the shapes too: what a Start over would send again.
+    expect(coco.job(job).runs.record(run_id).launch).toEqual({
+      gpu: '1',
+      profile: false,
+      tags: ['a', 'b']
+    })
+
+    // A wrong shape is refused with every fault named, nothing launched.
+    const message = await failure(
+      coco.start_job(
+        job,
+        { size: '2', fast: 'yes', backends: [] },
+        { gpu: '2', profile: false, tags: 'a' },
+        'human'
+      )
+    )
+    expect(message).toContain('`fast` must be true or false')
+    expect(message).toContain('`backends` must list at least one value')
+  })
 })

@@ -31,7 +31,7 @@ const MAX_REPORT_BYTES = 16 * 1024 * 1024
 export async function start_run(
   engine: Engine,
   name: string,
-  parameters: Record<string, string>,
+  parameters: Record<string, unknown>,
   trigger: 'human' | 'agent' = 'human'
 ): Promise<StartResult> {
   try {
@@ -40,10 +40,11 @@ export async function start_run(
     let run_id: number
     if (job !== null) {
       const manifest = job.usable_manifest()
-      const render: Record<string, string> = {}
-      const launch: Record<string, string> = {}
+      const render_names = new Set(manifest.render_params.map((param) => param.name))
+      const render: Record<string, unknown> = {}
+      const launch: Record<string, unknown> = {}
       for (const [key, value] of Object.entries(parameters)) {
-        if (manifest.render_params.includes(key)) {
+        if (render_names.has(key)) {
           render[key] = value
         } else {
           launch[key] = value

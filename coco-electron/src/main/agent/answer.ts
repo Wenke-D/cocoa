@@ -8,7 +8,7 @@ export interface AgentDeps {
   /** The world the window is rendering from, as it last saw it. */
   current_world: () => World
   /** Starts an experiment by name, stamped as the agent's (§43). */
-  start(name: string, parameters: Record<string, string>): Promise<StartResult>
+  start(name: string, parameters: Record<string, unknown>): Promise<StartResult>
 }
 
 /** A finished answer: the status, and the JSON already serialised. */

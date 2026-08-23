@@ -31,7 +31,7 @@ export function list_entities(world: World, kind: 'Job' | 'Bench'): AgentRespons
         name: entity.name,
         folder: entity.id,
         manifest: entity.manifest,
-        parameters: entity.parameter_names,
+        parameters: entity.parameters,
         runs: ids.length,
         active
       }
@@ -95,7 +95,7 @@ export function job_detail(world: World, name: string): AgentResponse {
     kind: 'job',
     folder,
     manifest: entity.manifest,
-    parameters: entity.parameter_names,
+    parameters: entity.parameters,
     runs
   })
 }
@@ -147,7 +147,7 @@ export function bench_detail(world: World, name: string): AgentResponse {
     kind: 'bench',
     folder,
     manifest: entity.manifest,
-    parameters: entity.parameter_names,
+    parameters: entity.parameters,
     runs
   })
 }

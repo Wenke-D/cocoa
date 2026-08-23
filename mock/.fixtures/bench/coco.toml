@@ -4,7 +4,11 @@ description = "Test fixture: a bench that plans whatever `plan-lines` holds"
 
 [plan]
 command     = "./plan.sh"
-params      = ["mesh"]
+
+[[plan.params]]
+name        = "mesh"
+type        = "string"
+description = "Mesh family to sweep"
 
 [report]
 command     = "./report.sh"

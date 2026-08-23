@@ -4,11 +4,27 @@ description = "Mock solver whose poll reports UNREACHABLE between 5-10 s, then r
 
 [render]
 template    = "job.sbatch.tmpl"
-params      = ["nodes"]
+
+[[render.params]]
+name        = "nodes"
+type        = "string"
+description = "Nodes to request"
 
 [launch]
 command     = "./launch.sh"
-params      = ["gpu"]
+
+[[launch.params]]
+name        = "gpu"
+type        = "enum"
+values      = ["0", "1"]
+description = "Which GPU to pin to"
+
+[[launch.params]]
+name        = "backends"
+type        = "enum"
+values      = ["cuda", "hip"]
+list        = true
+description = "Backends to try, in order, until one runs"
 
 [poll]
 command     = "python3 poll.py"

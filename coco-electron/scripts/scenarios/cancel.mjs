@@ -11,8 +11,8 @@ export async function run({ page, shot, log, wait_text }) {
 
   await page.locator('button.start').click()
   await page.locator('form').waitFor({ timeout: 10_000 })
-  await page.locator('label:has-text("nodes") input').fill('4')
-  await page.locator('label:has-text("gpu") input').fill('0')
+  await page.locator('#param-nodes').fill('4')
+  await page.locator('#param-gpu').fill('0')
   await shot('start-form')
 
   await page.locator('button[type="submit"]').click()

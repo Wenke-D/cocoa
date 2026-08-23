@@ -16,7 +16,9 @@ function entity(id: string, extra: Partial<Entity> = {}): Entity {
     description: null,
     path: `~/exp/${id}`,
     manifest: 'Valid',
-    parameter_names: ['size'],
+    parameters: [
+      { name: 'size', type: 'string', values: null, list: false, description: 'the size' }
+    ],
     ...extra
   }
 }
@@ -168,7 +170,12 @@ describe('sentences_of', () => {
       'solver · - · manifest usable again · good'
     ])
     // A change that is not one a person reads: silence.
-    const renamed_params = entity('solver', { parameter_names: ['size', 'mesh'] })
+    const renamed_params = entity('solver', {
+      parameters: [
+        { name: 'size', type: 'string', values: null, list: false, description: 'the size' },
+        { name: 'mesh', type: 'string', values: null, list: false, description: 'the mesh' }
+      ]
+    })
     expect(told(listed, { kind: 'entity-upserted', entity: renamed_params })).toEqual([])
   })
 

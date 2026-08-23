@@ -36,7 +36,22 @@ describe('build_world', () => {
       name: 'solver-gpu',
       description: 'Test fixture: a job whose scripts answer from state files',
       manifest: 'Valid',
-      parameter_names: ['size', 'gpu']
+      parameters: [
+        {
+          name: 'size',
+          type: 'string',
+          values: null,
+          list: false,
+          description: 'Nodes to request'
+        },
+        {
+          name: 'gpu',
+          type: 'string',
+          values: null,
+          list: false,
+          description: 'Which GPU to pin to'
+        }
+      ]
     })
 
     expect(Object.keys(world.job_runs[job])).toEqual(['0'])
@@ -128,7 +143,7 @@ describe('build_world', () => {
     expect(world.entities[0].manifest).toMatchObject({
       Invalid: { message: expect.stringContaining('kind') as string }
     })
-    expect(world.entities[0].parameter_names).toEqual([])
+    expect(world.entities[0].parameters).toEqual([])
   })
 
   it('describes a bench run, its plan and the runs it dispatched', async () => {

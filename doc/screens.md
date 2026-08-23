@@ -636,27 +636,40 @@ The Job overview is the default page after selecting a Job.
 
 ### 13.1 Header
 
-Top to bottom — what it is called, what it is for, what it takes, where it is:
+Top to bottom — what it is called, what it is for, where it is:
 
 - Job display name.
 - The manifest's `description`, when it gives one.
-- The declared parameters, each name on inline code's ground (§22.2); `No
-  parameters.` when it declares none.
 - Folder path.
 - Manifest validity.
 
-Below the header, at the left, the `Start Job` primary button; the history
-follows it. There is no `JOB` type label: the button says it, and so does the
-Explorer section the row came from — a third statement next to the name was
-the one too many.
+Then, under a `Parameters` heading, what it takes: a table with one row per
+declared parameter, in declaration order, and three named columns — `Name`,
+`Values`, `Description` (convention §2.2). The heading row is what says which
+column is the description; without it the last column is just the longest
+text. `Values` is phrased from the filling-in side, not the type system's: `a
+string`, an enum's values themselves (`ok, fail`), `true or false` for a
+flag, `one or more strings`, `one or more of cuda, hip`. `No parameters.`
+when it declares none. A parameter is read here before it is filled in on the
+Start page, so this is where the description is shown in full, not on hover.
+
+Below that, at the left, the `Start Job` primary button; the history follows
+it. There is no `JOB` type label: the button says it, and so does the Explorer
+section the row came from — a third statement next to the name was the one
+too many.
 
 Example:
 
 ```text
 Solver GPU
 Mesh sweep across the GPU solver
- mesh   gpu
 ~/Experiments/solver-gpu
+
+Parameters
+Name      Values          Description
+mesh      a string        Mesh resolution, cells per side
+gpu       0, 1            Which GPU to pin to
+profile   true or false   Run under nsys
 
 [Start Job]
 
@@ -665,7 +678,8 @@ History
 
 When the manifest is invalid:
 
-- Show the validation message, in place of the parameters.
+- Show the validation message; the parameter list is not shown, since coco
+  does not know them (convention §4).
 - Disable Start.
 - Explain why Start is disabled.
 
@@ -780,14 +794,14 @@ The Bench overview follows the same hierarchy as the Job overview.
 
 ### 14.1 Header
 
-As §13.1, with the bench's own parameters — what its plan takes — and the
-`Start Bench` button below:
+As §13.1, with the bench's own parameters — what its plan takes — under the
+same `Parameters` heading, and the `Start Bench` button below:
 
 - Bench display name.
 - The manifest's `description`, when it gives one.
-- The declared parameters, each name on inline code's ground.
 - Folder path.
 - Manifest validity.
+- The declared parameters, one row each: name, shape, description.
 
 A Bench has no static job list, so the header cannot state how many Jobs it will
 dispatch. Show the size of the most recent run instead, and say so:
@@ -795,9 +809,12 @@ dispatch. Show the size of the most recent run instead, and say so:
 ```text
 Nightly Benchmark
 Two solver instances and one flaky solver, nightly
- sweep
 ~/Experiments/nightly-benchmark
 Last run dispatched 6 runs
+
+Parameters
+Name      Values         Description
+sweep     quick, full    How much of the suite to run
 
 [Start Bench]
 ```
@@ -808,6 +825,10 @@ For a Bench that has never run:
 Smoke Test
 ~/Experiments/smoke-test
 Dispatched runs are determined at start
+
+Parameters
+Name      Values         Description
+sweep     quick, full    How much of the suite to run
 
 [Start Bench]
 ```
@@ -900,7 +921,9 @@ The Start page contains:
   the workbench, so an accented title would read as a link.
 - For a Bench, a note that the runs to dispatch are decided at start.
 - A `PARAMETERS` section, marked `(all required)`, holding one field per
-  declared parameter.
+  declared parameter, in declaration order, each under its name, what may be
+  put there (the `Values` wording of §13.1), and its description (convention
+  §2.2).
 - The last-used shortcut as the section's one icon action, at the right of the
   `PARAMETERS` row — the shape the sidebar's title row already uses.
 - Active-run notice when applicable, informational only and never blocking.
@@ -923,14 +946,42 @@ solver-gpu
 
 PARAMETERS  (all required)                          [history]
 
-  nodes  [ required                                        ]
-  gpu    [ required                                        ]
+  nodes  a string
+  Nodes to request
+  [ required                                               ]
+
+  gpu  0, 1
+  Which GPU to pin to
+  [ Choose…                                              v ]
+
+  profile  true or false
+  Run under the profiler
+  ( ) Yes   ( ) No
+
+  backends  one or more of cuda, hip
+  Backends to try, in order
+  [ ] cuda   [ ] hip
 
 Cancel                                            Start Job
 ```
 
-Every field opens empty and stays that way until a person types in it (§15.3).
+Every field opens empty and stays that way until a person touches it (§15.3).
 Start stays disabled until each one has a value.
+
+The field is the shape (convention §2.2):
+
+| Shape            | Field                                                              |
+|------------------|--------------------------------------------------------------------|
+| `string`         | a text field                                                       |
+| `enum`           | a choice, opening on `Choose…` with nothing picked                 |
+| `flag`           | two radio buttons, `Yes` and `No`, neither pressed to begin with   |
+| `string` list    | a text box, one value per line; blank lines are not values         |
+| `enum` list      | one checkbox per value, none ticked to begin with                  |
+
+A flag is not a checkbox. A checkbox that is not ticked says `false` whether
+or not anyone looked at it, and §15.3 needs to tell those apart: a flag left
+untouched has no value, and Start stays disabled for it as for an empty text
+field.
 
 What the user has typed is a draft held outside the route: a route is a place,
 and a half-filled form is not one. Leaving the page discards the draft, and so
@@ -940,7 +991,10 @@ instead of a form whose values are gone.
 
 ### 15.2 Parameter Semantics
 
-Each parameter value is a free-form UTF-8 string.
+A parameter value is a string with a declared shape (convention §2.2): one
+string, one of a set, a flag, or one or more of the first two. The form checks
+nothing beyond the shape, and the engine checks the same thing again on every
+way in.
 
 The application must not:
 
@@ -1135,9 +1189,16 @@ Source    Nightly Benchmark · Run 2026-08-15 10:24 · call 4
 
 Do not show an end time for an active run.
 
-### 17.3 Parameters
+### 17.3 Arguments
 
-Show the complete parameter string in a selectable, monospace block.
+Show the run's complete arguments in a selectable, monospace block, in the
+wire form the scripts were given (convention §6), names sorted: `--gpu 0
+--profile false --tags a --tags b`. What is read is what ran.
+
+The word is deliberate. A *parameter* is what an experiment declares — a name,
+a type, a description (§13.1) — and an *argument* is the value one run was
+given for it. The overview lists parameters; a run, and every row of a
+history, shows arguments.
 
 Do not truncate parameters on this page.
 
@@ -1490,7 +1551,7 @@ hover text (§22.3, §36).
 
 Each column is sized for the widest value it can actually hold — a dot, a
 run id, a duration, `59 minutes ago`, `CANCELLING` with its dot — except one,
-which is left unsized and takes what is left. Parameters is the one column
+which is left unsized and takes what is left. Arguments is the one column
 whose content has no bound — a sweep is what varies them — so in every table
 it is the one worth the leftover width.
 
@@ -1498,8 +1559,8 @@ Job history:
 
 ```text
             22    the status dot (§23), under no heading
-Run         44    a run id, flush right, so the digits line up
-Parameters   —    remainder; the run's parameters, as given, on code's ground
+Run         54    a run id, flush right, so the digits line up, with room after it
+Arguments    —    remainder; the run's arguments, as given, on code's ground
 Duration   100    `HH:MM:SS` while it runs, `1h 12m 33s` once it ended
 Started    116    `2 days ago`; the locale date and time on hover
 By          80    `you`, `agent`, or a bench name and call number, truncated
@@ -1509,8 +1570,8 @@ Bench history:
 
 ```text
             22
-Run         44
-Parameters   —    remainder
+Run         54
+Arguments    —    remainder
 Duration   100
 Started    116
 By          80
@@ -1523,16 +1584,16 @@ in a row of facts.
 Bench dispatch:
 
 ```text
-#          44    the call index
+#          54    the call index, flush right, with room after it
 Job       180    an experiment name
 Status    116
-Parameters  —    remainder
+Arguments   —    remainder
 ```
 
-In a history the parameters come second, right after the id: they are what
+In a history the arguments come second, right after the id: they are what
 tells one run of an experiment from the next, and the history is read to
 find a run. The dispatch table keeps them last — its rows are told apart by
-the call index and the job, and the parameters are what a sweep varied.
+the call index and the job, and the arguments are what a sweep varied.
 
 A duration is a clock while the run is live — `HH:MM:SS`, ticking — and a
 length once it has ended: `1h 12m 33s`, `2m 0s`, `5s`, the empty leading
@@ -1545,12 +1606,12 @@ ago`, `3 months ago` — in the largest unit that fits, whole; the locale date
 and time is the cell's hover text, and the run's page prints it. A history is
 read for how long ago, and a timestamp makes the reader subtract.
 
-Parameters are the string as given — `--mesh 1024 --gpu 0` — on inline
-code's ground, as the run's page shows them (§17.3): a chip that ends where
+Arguments are the string as given — `--gpu 0 --mesh 1024` (§17.3) — on
+inline code's ground, as the run's page shows them: a chip that ends where
 the text does, and truncates inside itself. The heading over it is set in
 by the chip's padding, so it sits over the text rather than the ground.
 
-### 22.3 Long Parameters
+### 22.3 Long Arguments
 
 In tables:
 
@@ -1592,9 +1653,11 @@ about that run's parameters:
   names it; the page does not move.
 - **Refill…** opens the Start page (§15) with this run's values filled in, as
   far as the manifest now allows: a parameter it no longer declares is
-  dropped, one it newly declares is left empty, and the message says which.
-  The user still presses Start — which is what the ellipsis says: this one
-  opens something, the other acts.
+  dropped, one it newly declares is left empty, one whose value no longer
+  fits its shape — an enum value since removed, a string where a flag now is
+  — is left empty too, and the message says which. The user still presses
+  Start — which is what the ellipsis says: this one opens something, the
+  other acts.
 
 ## 23. Status Presentation
 

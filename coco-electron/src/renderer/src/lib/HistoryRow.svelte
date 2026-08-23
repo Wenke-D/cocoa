@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte'
+  import type { Params } from '@shared/params'
   import { navigate, prefill_start, start_again } from '../state.svelte'
   import type { Route } from '../state.svelte'
   import * as ContextMenu from '$lib/components/ui/context-menu'
@@ -19,7 +20,7 @@
   }: {
     entity_id: string
     run_id: string
-    params: Record<string, string>
+    params: Params
     route: Route
     children: Snippet
   } = $props()

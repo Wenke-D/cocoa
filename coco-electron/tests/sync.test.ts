@@ -15,7 +15,9 @@ function entity(id: string, extra: Partial<Entity> = {}): Entity {
     description: null,
     path: `~/exp/${id}`,
     manifest: 'Valid',
-    parameter_names: ['size'],
+    parameters: [
+      { name: 'size', type: 'string', values: null, list: false, description: 'the size' }
+    ],
     ...extra
   }
 }
@@ -134,7 +136,12 @@ describe('diff_worlds', () => {
 
   it('upserts and removes entities', () => {
     const before = world_of({ entities: [entity('solver'), entity('mesher')] })
-    const changed = entity('solver', { parameter_names: ['size', 'mesh'] })
+    const changed = entity('solver', {
+      parameters: [
+        { name: 'size', type: 'string', values: null, list: false, description: 'the size' },
+        { name: 'mesh', type: 'string', values: null, list: false, description: 'the mesh' }
+      ]
+    })
     const added = entity('bench-1', { kind: 'Bench' })
     const events = diff_worlds(before, world_of({ entities: [changed, added] }))
     expect(events).toEqual([

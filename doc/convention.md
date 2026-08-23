@@ -65,11 +65,30 @@ description = "GPU solver sweep"    # optional
 
 [render]
 template    = "job.sbatch.tmpl"     # rendered by coco, see §6
-params      = ["size", "backend"]   # ALL required; must match the template exactly
+
+[[render.params]]                   # ALL required; must match the template exactly
+name        = "size"
+type        = "string"
+description = "Nodes to request"
+
+[[render.params]]
+name        = "backend"
+type        = "enum"
+values      = ["cuda", "hip"]
+description = "Which backend the solver is built against"
 
 [launch]
 command     = "./launch.sh"         # gets --script and --run
-params      = ["mesh", "gpu"]       # ALL required; passed as --mesh v --gpu v
+
+[[launch.params]]                   # ALL required; passed as --mesh v --gpu v
+name        = "mesh"
+type        = "string"
+description = "Mesh resolution, cells per side"
+
+[[launch.params]]
+name        = "profile"
+type        = "flag"
+description = "Run under nsys"
 
 [poll]
 command     = "./poll.py"           # gets --submission
@@ -88,7 +107,7 @@ dead end in a monitoring tool, and a run that cannot be stopped is worse.
 cannot be registered at all. Such a folder needs a `cancel` script even if all
 it does is exit 0.*
 
-Either `params` list may be empty (`[]`).
+Either `params` list may be empty (`params = []`).
 
 `command` values are split with shell-style word rules, so a prefix with
 arguments is fine (`command = "python3 tools/report.py --strict"`). The split
@@ -106,12 +125,54 @@ list.
 **A name may not appear in both lists.** A manifest that declares one in both
 fails to load, so that every field in the start form has exactly one meaning.
 
-The start form shows both sets together as one list of fields; the record
-stores them as two maps (§7.1).
+The start form shows both sets together as one list of fields, in declaration
+order; the record stores them as two maps (§7.1).
 
 **Every declared param must be given a value at start.** A value that is empty
 or only whitespace is not a value: coco refuses the start, whether it came from
 the start form or from a bench plan dispatching a member.
+
+### 2.2 A parameter's shape
+
+Each `[[…params]]` entry declares one parameter:
+
+```toml
+[[launch.params]]
+name        = "backends"            # required; unique within the job
+type        = "enum"                # required: "flag", "string" or "enum"
+values      = ["cuda", "hip"]       # enum only, and required there
+list        = true                  # optional; string and enum only
+description = "Backends to build, one build each"   # required
+```
+
+To coco a value is a string with a **shape**, and the shape is what it can
+check and what the form can ask for. There are five:
+
+| `type`   | `list`  | A value is…                                  |
+|----------|---------|----------------------------------------------|
+| `string` | —       | one non-blank string                         |
+| `enum`   | —       | one of `values`, exactly (case matters)      |
+| `flag`   | —       | `true` or `false`                            |
+| `string` | `true`  | one or more non-blank strings, none repeated |
+| `enum`   | `true`  | one or more of `values`, none repeated       |
+
+A list is never empty: "no value" is not a value, for a list as for a string.
+A parameter that may legitimately be absent declares an enum with a value that
+says so.
+
+`description` is required. The form shows it under the field, and a field
+without one can only be guessed at — which is the thing the form exists to
+prevent.
+
+Where a value goes, its shape goes with it. In JSON — the record (§7.1), a
+plan's instances (§8.1), an agent's request — a `string` or `enum` value is a
+JSON string, a `flag` a JSON boolean, a `list` a JSON array of strings; nothing
+is coerced, so `"true"` is not a flag and `"a,b"` is not a list. On a script's
+command line every value is `--name value` pairs (§6). In a template a flag is a
+boolean and a list an array (§6.1).
+
+A manifest written for the form before 2026-08-23 — `params = ["mesh", "gpu"]`,
+names alone — does not load; the error says what replaced it.
 
 ## 3. `coco.toml` — a bench
 
@@ -126,7 +187,12 @@ description = "Mesh sweep across the GPU solver"
 
 [plan]
 command     = "./plan.sh"           # gets the bench's params
-params      = ["mesh", "gpu"]       # ALL required at start
+
+[[plan.params]]                     # ALL required at start; shaped as §2.2
+name        = "mesh"
+type        = "enum"
+values      = ["coarse", "fine"]
+description = "Which mesh family to sweep"
 
 [report]
 command     = "./report.py"         # gets --run and --members
@@ -150,9 +216,15 @@ Rejected at load time:
 
 - `kind` missing or other than `job` / `bench`;
 - `name` missing, not a string, or empty;
-- unknown keys for the declared kind, at the top level or in a declared table;
-- a `params` entry that is not a non-empty string;
-- a name declared in both `[render].params` and `[launch].params` (§2.1);
+- unknown keys for the declared kind, at the top level, in a declared table, or
+  on a parameter;
+- a `params` entry without a non-empty `name`, a `type` of `flag`, `string` or
+  `enum`, or a non-blank `description` (§2.2); an enum without `values`, or
+  with an empty list, an empty value or a repeated one; `values` on anything
+  but an enum; `list` that is not a boolean, or on a flag; a `params` that is
+  the old list of bare names;
+- a name declared twice in one list, or in both `[render].params` and
+  `[launch].params` (§2.1);
 - a missing required table or `command`;
 - a `command` string that does not word-split (unclosed quote, bad escape);
 - a `[render].template` that is not a file in the folder;
@@ -239,7 +311,10 @@ Every script coco invokes:
 
 - runs with **cwd = the entity folder**, so relative paths in the manifest and
   inside the script resolve against it;
-- receives arguments as `--name value` pairs only, never positionally;
+- receives arguments as `--name value` pairs only, never positionally — a
+  flag is `--name true` or `--name false`, never present-or-absent, and a list
+  is the pair repeated, `--tags a --tags b`, one per item. A script parses
+  every parameter the same way, and a loop that reads pairs never slips;
 - receives user-supplied values as **separate argv elements**;
 - receives **only** the arguments this document specifies plus the declared
   params — coco never passes anything ad-hoc. Wanting to pass something else
@@ -323,11 +398,11 @@ Two other consequences of checking statically, both intentional:
 ### 7.1 `launch`
 
 ```
-./launch.sh --script runs/41/job.sbatch --run 41 --mesh 256 --gpu 0
+./launch.sh --script runs/41/job.sbatch --run 41 --mesh 256 --profile false
 ```
 
 Receives the entity-relative path of the rendered artifact, the run id, and the
-launch params. It submits however it likes — ssh, sbatch, a local process — and
+launch params as pairs (§6). It submits however it likes — ssh, sbatch, a local process — and
 must print the identifier coco will track it by:
 
 ```
@@ -355,11 +430,14 @@ The record written at this point holds both parameter sets separately:
   "run_id": 41,
   "submission_id": "5001",
   "render": { "size": "256", "backend": "cuda" },
-  "launch": { "mesh": "256", "gpu": "0" },
+  "launch": { "mesh": "256", "profile": false },
   "status": "STARTING",
   "history": [ { "status": "STARTING", "at": "2026-08-17T12:40:11+02:00" } ]
 }
 ```
+
+The values keep their shapes (§2.2): a flag is a JSON boolean, a list a JSON
+array. What the record holds is what a Start over sends again.
 
 ### 7.2 `poll`
 
@@ -432,22 +510,24 @@ error.
 ### 8.1 `plan`
 
 ```
-./plan.sh --mesh 256 --gpu 0
+./plan.sh --mesh fine
 ```
 
-Receives the bench's declared params as `--name value`, and prints one JSON
-object per instance to launch:
+Receives the bench's declared params as `--name value` pairs (§6), and prints
+one JSON object per instance to launch:
 
 ```
-COCO_RETURN: {"job": "solver-gpu", "params": {"mesh": "256", "gpu": "0"}}
-COCO_RETURN: {"job": "solver-gpu", "params": {"mesh": "512", "gpu": "0"}}
+COCO_RETURN: {"job": "solver-gpu", "params": {"size": "256", "backend": "cuda", "mesh": "256", "profile": false}}
+COCO_RETURN: {"job": "solver-gpu", "params": {"size": "512", "backend": "cuda", "mesh": "512", "profile": true}}
 ```
 
 `job` must name a **registered job** — not a bench, not an unregistered folder.
 `params` must supply exactly that job's parameters, render and launch sets
-together: no extras, none missing. Every value must be a **string**; coco
-rejects numbers, booleans, nulls and nested structures rather than coercing
-them.
+together: no extras, none missing, each value of its declared shape (§2.2) —
+a JSON string, a JSON boolean for a flag, a JSON array of strings for a list.
+coco rejects numbers, nulls, nested objects and any value of the wrong shape
+rather than coercing it: a plan that prints `"true"` for a flag has printed a
+string.
 
 Every instance is validated **before anything is submitted**, and every instance
 is validated — checking stops at no first failure. A plan naming an unregistered

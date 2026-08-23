@@ -101,7 +101,12 @@ describe('bundled mock library', () => {
     const failing = path.join(root, 'jobs/failing-solver')
     coco.register(failing)
 
-    const run_id = await coco.start_job(failing, { nodes: '4' }, { mode: 'fail' }, 'human')
+    const run_id = await coco.start_job(
+      failing,
+      { nodes: '4' },
+      { mode: 'fail', profile: false, tags: ['smoke'] },
+      'human'
+    )
     expect(await settle(coco)).toEqual([])
 
     // The mock reports FAILED once the run is 8 s old, and it reads the age

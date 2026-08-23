@@ -33,10 +33,10 @@ export async function start_run(
   body: string,
   deps: AgentDeps
 ): Promise<AgentResponse> {
-  let parameters: Record<string, string> = {}
+  let parameters: Record<string, unknown> = {}
   if (body.trim() !== '') {
     try {
-      const parsed = JSON.parse(body) as { parameters?: Record<string, string> }
+      const parsed = JSON.parse(body) as { parameters?: Record<string, unknown> }
       parameters = parsed.parameters ?? {}
     } catch (error) {
       return failure(400, (error as Error).message)

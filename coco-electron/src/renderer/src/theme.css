@@ -172,16 +172,18 @@ table.runs td {
 }
 
 /* A number that names the row — a run id, a call index — sits flush right
-   under a heading that does too, so the digits line up on the ones. */
+   under a heading that does too, so the digits line up on the ones; with
+   room after it, so the id and what follows read as two things. */
 table.runs .num {
   text-align: right;
+  padding-right: 20px;
 }
 
 table.runs tbody tr {
   cursor: pointer;
 }
 
-/* A parameter string as it was given — `--mesh 1024 --gpu 0` — on inline
+/* A run's parameters as given — `--gpu 0 --mesh 1024` — on inline
    code's ground, wherever a run's parameters are shown: the facts of a run, a
    row of a history or a dispatch (§17.3, §22.3). Global once it was on its
    third copy, like the table. A chip: the ground ends where the text does,

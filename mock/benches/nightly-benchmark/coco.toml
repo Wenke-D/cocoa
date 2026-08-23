@@ -4,7 +4,11 @@ description = "Mock nightly sweep: two solver-gpu instances and one flaky-solver
 
 [plan]
 command     = "./plan.sh"
-params      = ["sweep"]
+
+[[plan.params]]
+name        = "sweep"
+type        = "string"
+description = "Which sweep to plan"
 
 [report]
 command     = "python3 report.py"

@@ -23,8 +23,8 @@ export async function run({ page, shot, log, wait_text, library }) {
   await page.locator('aside').getByText('solver-gpu').click()
   await page.locator('button.start').click()
   await page.locator('form').waitFor({ timeout: 10_000 })
-  await page.locator('label:has-text("nodes") input').fill('2')
-  await page.locator('label:has-text("gpu") input').fill('1')
+  await page.locator('#param-nodes').fill('2')
+  await page.locator('#param-gpu').fill('1')
   await page.locator('button[type="submit"]').click()
 
   // The poll can only fail once there is something to poll: a run whose

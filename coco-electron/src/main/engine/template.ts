@@ -7,6 +7,7 @@
 
 import { createRequire } from 'node:module'
 import nunjucks from 'nunjucks'
+import type { Params } from '@shared/params'
 
 // nunjucks ships its compiler as an undocumented-but-stable internal API.
 // createRequire keeps this working whether the bundle lands as ESM or CJS.
@@ -259,8 +260,10 @@ const strict_environment = new nunjucks.Environment(null, {
  * Renders a template with strict undefined-variable behavior. The caller
  * re-runs `analyze` before rendering, so a template edited between one
  * refresh and the next can never produce a half-rendered submission (§6.1).
+ * The values keep their shape: a flag is a boolean `{% if %}` can test, a
+ * list an array `{% for %}` can walk.
  */
-export function render(source: string, params: Record<string, string>): string {
+export function render(source: string, params: Params): string {
   try {
     return strict_environment.renderString(source, params)
   } catch (cause) {

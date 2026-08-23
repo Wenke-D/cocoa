@@ -9,6 +9,9 @@ import { EngineError } from './errors'
 import * as invoke from './invoke'
 import type { Invocation, Running } from './invoke'
 import type { Job } from './memory'
+import type { Params } from '@shared/params'
+import { argv_of } from '@shared/params'
+import { validate_params } from './params'
 import { apply_status, new_run_record, now_stamp, sorted } from './record'
 import type { RunOrigin, RunRecord } from './record'
 import { from_poll_word, is_cancellable, is_terminal } from './status'
@@ -32,13 +35,13 @@ export type ReportMode = 'auto' | 'manual'
 export async function start_job(
   engine: Engine,
   job: Job,
-  render: Record<string, string>,
-  launch: Record<string, string>,
+  render_given: Record<string, unknown>,
+  launch_given: Record<string, unknown>,
   origin: RunOrigin
 ): Promise<number> {
   const manifest = job.usable_manifest()
-  validate_params(manifest.render_params, render, 'render')
-  validate_params(manifest.launch_params, launch, 'launch')
+  const render: Params = validate_params(manifest.render_params, render_given, 'render')
+  const launch: Params = validate_params(manifest.launch_params, launch_given, 'launch')
 
   // The template is read from disk at the moment of use — it is authored
   // content, not engine state, and must be as fresh as the start.
@@ -50,7 +53,10 @@ export async function start_job(
     throw EngineError.io(template_path, cause)
   }
   try {
-    template.analyze(source, manifest.render_params)
+    template.analyze(
+      source,
+      manifest.render_params.map((param) => param.name)
+    )
   } catch (cause) {
     throw EngineError.template(template_path, (cause as Error).message)
   }
@@ -80,7 +86,7 @@ export async function start_job(
   argv.push('--script', `runs/${run_id}/${artifact}`)
   argv.push('--run', String(run_id))
   for (const name of Object.keys(launch).sort()) {
-    argv.push(`--${name}`, launch[name])
+    argv.push(...argv_of(name, launch[name]))
   }
 
   // The record is written before the spawn's await: the id was picked in
@@ -326,31 +332,3 @@ function artifact_name(template_rel: string): string {
 }
 
 /** Declared params and provided values must be exactly the same set (§2). */
-export function validate_params(
-  declared: string[],
-  provided: Record<string, string>,
-  set: string
-): void {
-  const declared_set = new Set(declared)
-  const provided_set = new Set(Object.keys(provided))
-  const missing = [...declared_set].filter((name) => !provided_set.has(name)).sort()
-  const extra = [...provided_set].filter((name) => !declared_set.has(name)).sort()
-  // A key carrying a blank value was never supplied (§2.1).
-  const blank = [...declared_set]
-    .filter((name) => provided[name] !== undefined && provided[name].trim() === '')
-    .sort()
-  if (missing.length === 0 && extra.length === 0 && blank.length === 0) {
-    return
-  }
-  throw EngineError.validation(
-    `${set} parameters must match the manifest exactly and each one needs a value; ` +
-      `missing ${describe_names(missing)}, extra ${describe_names(extra)}, empty ${describe_names(blank)}`
-  )
-}
-
-export function describe_names(names: string[]): string {
-  if (names.length === 0) {
-    return 'none'
-  }
-  return names.map((name) => `\`${name}\``).join(', ')
-}

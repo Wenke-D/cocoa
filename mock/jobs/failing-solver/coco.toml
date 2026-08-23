@@ -4,11 +4,31 @@ description = "Mock solver that fails at 8 s when launched with mode=fail"
 
 [render]
 template    = "job.sbatch.tmpl"
-params      = ["nodes"]
+
+[[render.params]]
+name        = "nodes"
+type        = "string"
+description = "Nodes to request"
 
 [launch]
 command     = "./launch.sh"
-params      = ["mode"]
+
+[[launch.params]]
+name        = "mode"
+type        = "enum"
+values      = ["ok", "fail"]
+description = "`fail` makes the run fail at 8 s; `ok` lets it finish"
+
+[[launch.params]]
+name        = "profile"
+type        = "flag"
+description = "Run under the profiler"
+
+[[launch.params]]
+name        = "tags"
+type        = "string"
+list        = true
+description = "Tags for the report, one per line"
 
 [poll]
 command     = "python3 poll.py"

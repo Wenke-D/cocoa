@@ -51,7 +51,9 @@ export function help(): AgentResponse {
         body: { parameters: { '<declared name>': '<value>' } },
         answers:
           'starts the Job or Bench; 201 with {run_id}. Every declared parameter must be ' +
-          'supplied — GET /jobs/{name} lists them. The run appears STARTING at once; its ' +
+          'supplied, shaped as declared — GET /jobs/{name} lists them with type, values and ' +
+          'description: a string, a boolean for a flag, a list of strings for a list, each ' +
+          'enum value one of its `values`. The run appears STARTING at once; its ' +
           'submission id and status advance in /jobs/{name} as the scripts answer.'
       }
     ]

@@ -2,6 +2,8 @@
 // Serde's externally-tagged enum convention: a unit variant is a bare string,
 // a struct variant is `{ VariantName: { ...fields } }`.
 
+import type { ParamSpec, Params } from './params'
+
 export type EntityKind = 'Job' | 'Bench'
 
 export type ManifestState = 'Valid' | 'Missing' | { Invalid: { message: string } }
@@ -51,7 +53,8 @@ export interface Entity {
   description: string | null
   path: string
   manifest: ManifestState
-  parameter_names: string[]
+  /** What a start must supply, in the order the form shows them (§17.3). */
+  parameters: ParamSpec[]
 }
 
 export interface JobRun {
@@ -62,7 +65,7 @@ export interface JobRun {
   ended_at: string | null
   parameters: string
   /** The same, as given: what a new run from this one would be started with. */
-  params: Record<string, string>
+  params: Params
   status: RunStatus
   query_health: QueryHealth
   last_successful_query: string
@@ -84,7 +87,7 @@ export interface BenchRun {
   started_at: string
   ended_at: string | null
   parameters: string
-  params: Record<string, string>
+  params: Params
   plan: { steps: BenchPlanStep[] }
   status: RunStatus
   query_health: QueryHealth

@@ -13,8 +13,8 @@ export async function run({ page, shot, log, wait_text }) {
   await page.locator('aside').getByText('solver-gpu').click()
   await page.locator('button.start').click()
   await page.locator('form').waitFor({ timeout: 10_000 })
-  await page.locator('label:has-text("nodes") input').fill('2')
-  await page.locator('label:has-text("gpu") input').fill('0')
+  await page.locator('#param-nodes').fill('2')
+  await page.locator('#param-gpu').fill('0')
   await page.locator('button[type="submit"]').click()
   await page.locator('button.cancel').waitFor({ timeout: 15_000 })
 

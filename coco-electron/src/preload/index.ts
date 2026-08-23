@@ -6,7 +6,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   bootstrap: (): Promise<unknown> => ipcRenderer.invoke('coco:bootstrap'),
 
-  start_run: (name: string, parameters: Record<string, string>): Promise<unknown> =>
+  start_run: (name: string, parameters: Record<string, unknown>): Promise<unknown> =>
     ipcRenderer.invoke('coco:start', name, parameters),
 
   cancel: (target: unknown): Promise<unknown> => ipcRenderer.invoke('coco:cancel', target),

@@ -35,7 +35,7 @@ export function register_ipc(): void {
   // renderer learns the run id, it has already applied the run.
   ipcMain.handle(
     'coco:start',
-    async (_event, name: string, parameters: Record<string, string>): Promise<StartResult> => {
+    async (_event, name: string, parameters: Record<string, unknown>): Promise<StartResult> => {
       const result = await operations.start_run(engine, name, parameters)
       publish_cycle(empty())
       return result

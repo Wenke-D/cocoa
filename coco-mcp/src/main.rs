@@ -137,15 +137,21 @@ fn tools() -> Value {
         },
         {
             "name": "coco_start",
-            "description": "Start a Job or Bench by name. Every declared parameter must be supplied (coco_job lists them). Returns the run id; the run appears STARTING at once and advances as its scripts answer.",
+            "description": "Start a Job or Bench by name. Every declared parameter must be supplied, shaped as declared (coco_job lists them with type, values and description). Returns the run id; the run appears STARTING at once and advances as its scripts answer.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "experiment": { "type": "string", "description": "The experiment's name." },
                     "parameters": {
                         "type": "object",
-                        "description": "One value per declared parameter, all strings.",
-                        "additionalProperties": { "type": "string" },
+                        "description": "One value per declared parameter: a string for `string` and `enum` (one of its `values`), a boolean for `flag`, a non-empty array of strings for a `list` of either. Nothing is coerced.",
+                        "additionalProperties": {
+                            "oneOf": [
+                                { "type": "string" },
+                                { "type": "boolean" },
+                                { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+                            ]
+                        },
                     },
                 },
                 "required": ["experiment"],

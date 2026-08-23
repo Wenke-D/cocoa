@@ -9,7 +9,7 @@ export async function run({ page, shot, log, wait_text }) {
   await page.locator('aside').getByText('nightly-benchmark').click()
   await page.locator('button.start').click()
   await page.locator('form').waitFor({ timeout: 10_000 })
-  await page.locator('label:has-text("sweep") input').fill('nightly')
+  await page.locator('#param-sweep').fill('nightly')
   await page.locator('button[type="submit"]').click()
 
   // The bench run detail lists what it dispatched.

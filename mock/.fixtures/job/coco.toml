@@ -4,11 +4,19 @@ description = "Test fixture: a job whose scripts answer from state files"
 
 [render]
 template    = "job.sbatch.tmpl"
-params      = ["size"]
+
+[[render.params]]
+name        = "size"
+type        = "string"
+description = "Nodes to request"
 
 [launch]
 command     = "./launch.sh"
-params      = ["gpu"]
+
+[[launch.params]]
+name        = "gpu"
+type        = "string"
+description = "Which GPU to pin to"
 
 [poll]
 command     = "./poll.sh"

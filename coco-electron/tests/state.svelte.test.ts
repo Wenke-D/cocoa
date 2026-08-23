@@ -37,7 +37,7 @@ function entity(id: string, kind: 'Job' | 'Bench' = 'Job'): Entity {
     description: null,
     path: `~/exp/${id}`,
     manifest: 'Valid',
-    parameter_names: []
+    parameters: []
   }
 }
 
@@ -382,7 +382,13 @@ describe('a run started again', () => {
     vi.stubGlobal('window', { coco: { start_run } })
     send({
       kind: 'entity-upserted',
-      entity: { ...entity('solver'), parameter_names: ['nodes', 'gpu'] }
+      entity: {
+        ...entity('solver'),
+        parameters: [
+          { name: 'nodes', type: 'string', values: null, list: false, description: 'the nodes' },
+          { name: 'gpu', type: 'string', values: null, list: false, description: 'the gpu' }
+        ]
+      }
     })
   })
 
@@ -416,10 +422,18 @@ describe('a run started again', () => {
     expect(app.notice?.text).toBe('Parameters of run 3 filled in.')
 
     prefill_start('solver', '3', { nodes: '4', size: '256' })
-    expect(take_prefill('solver')).toEqual({ nodes: '4', gpu: '' })
+    expect(take_prefill('solver')).toEqual({ nodes: '4' })
     expect(app.notice).toMatchObject({ level: 'error' })
     expect(app.notice?.text).toBe(
       'Filled what run 3 had; `gpu` is new and left empty; `size` is no longer taken.'
+    )
+
+    // A value that no longer fits its shape — here a string where the run had
+    // a list — is dropped too, and said.
+    prefill_start('solver', '3', { nodes: ['4', '8'], gpu: '1' })
+    expect(take_prefill('solver')).toEqual({ gpu: '1' })
+    expect(app.notice?.text).toBe(
+      'Filled what run 3 had; `nodes` no longer fits and is left empty.'
     )
   })
 

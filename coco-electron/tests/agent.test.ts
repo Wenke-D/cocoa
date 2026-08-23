@@ -26,7 +26,10 @@ function world(): World {
       description: null,
       path: FOLDER,
       manifest: 'Valid',
-      parameter_names: ['nodes', 'gpu']
+      parameters: [
+        { name: 'nodes', type: 'string', values: null, list: false, description: 'the nodes' },
+        { name: 'gpu', type: 'string', values: null, list: false, description: 'the gpu' }
+      ]
     },
     {
       id: BENCH_FOLDER,
@@ -35,7 +38,9 @@ function world(): World {
       description: null,
       path: BENCH_FOLDER,
       manifest: 'Valid',
-      parameter_names: ['sweep']
+      parameters: [
+        { name: 'sweep', type: 'string', values: null, list: false, description: 'the sweep' }
+      ]
     }
   ]
   base.job_runs = {
@@ -219,7 +224,10 @@ describe('reads', () => {
         name: 'solver-gpu',
         folder: FOLDER,
         manifest: 'Valid',
-        parameters: ['nodes', 'gpu'],
+        parameters: [
+          { name: 'nodes', type: 'string', values: null, list: false, description: 'the nodes' },
+          { name: 'gpu', type: 'string', values: null, list: false, description: 'the gpu' }
+        ],
         runs: 2,
         active: 1
       }
@@ -293,7 +301,7 @@ describe('reads', () => {
 
 describe('starting a run', () => {
   it('starts by name and answers with the run id', async () => {
-    let asked: [string, Record<string, string>] | null = null
+    let asked: [string, Record<string, unknown>] | null = null
     const { status, json } = await ask(
       'POST',
       '/experiments/solver-gpu/runs',

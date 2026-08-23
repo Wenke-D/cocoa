@@ -10,7 +10,10 @@ import { EngineError } from './errors'
 import * as invoke from './invoke'
 import type { Invocation } from './invoke'
 import type { Bench } from './memory'
-import { cancel_run, describe_names, report_on_disk, start_job, validate_params } from './job'
+import type { Params } from '@shared/params'
+import { argv_of } from '@shared/params'
+import { cancel_run, report_on_disk, start_job } from './job'
+import { param_problems, validate_params } from './params'
 import { all_params, now_stamp, sorted } from './record'
 import type {
   BenchMember,
@@ -27,8 +30,8 @@ import { write_atomic } from './store'
 export interface PlanInstance {
   job_path: string
   job_name: string
-  render: Record<string, string>
-  launch: Record<string, string>
+  render: Params
+  launch: Params
 }
 
 export interface BenchStart {
@@ -57,21 +60,22 @@ export interface MemberCancel {
 
 interface PlanLine {
   job: string
-  params: Record<string, string>
+  /** As the plan wrote them: JSON values, checked against the job's manifest below. */
+  params: Record<string, unknown>
 }
 
 /** Runs `plan` and validates every instance before anything is submitted (§8.1). */
 export async function plan_bench(
   engine: Engine,
   bench: Bench,
-  params: Record<string, string>
+  params_given: Record<string, unknown>
 ): Promise<PlanInstance[]> {
   const manifest = bench.usable_manifest()
-  validate_params(manifest.plan_params, params, 'plan')
+  const params = validate_params(manifest.plan_params, params_given, 'plan')
 
   const argv = [...manifest.plan.words]
   for (const name of Object.keys(params).sort()) {
-    argv.push(`--${name}`, params[name])
+    argv.push(...argv_of(name, params[name]))
   }
   let invocation: Invocation
   try {
@@ -111,25 +115,19 @@ export async function plan_bench(
       continue
     }
     const job_manifest = job.usable_manifest()
-    const expected = new Set([...job_manifest.render_params, ...job_manifest.launch_params])
-    const provided = new Set(Object.keys(planned.params))
-    const missing = [...expected].filter((name) => !provided.has(name)).sort()
-    const extra = [...provided].filter((name) => !expected.has(name)).sort()
-    if (missing.length > 0 || extra.length > 0) {
-      const wrong: string[] = []
-      if (missing.length > 0) {
-        wrong.push(`missing ${describe_names(missing)}`)
-      }
-      if (extra.length > 0) {
-        wrong.push(`extra ${describe_names(extra)}`)
-      }
-      problems.push(`call ${call}: job \`${planned.job}\` — ${wrong.join(', ')}`)
+    const wrong = param_problems(
+      [...job_manifest.render_params, ...job_manifest.launch_params],
+      planned.params
+    )
+    if (wrong.length > 0) {
+      problems.push(`call ${call}: job \`${planned.job}\` — ${wrong.join('; ')}`)
       continue
     }
-    const render: Record<string, string> = {}
-    const launch: Record<string, string> = {}
-    for (const [name, value] of Object.entries(planned.params)) {
-      if (job_manifest.render_params.includes(name)) {
+    const render: Params = {}
+    const launch: Params = {}
+    const render_names = new Set(job_manifest.render_params.map((param) => param.name))
+    for (const [name, value] of Object.entries(planned.params as Params)) {
+      if (render_names.has(name)) {
         render[name] = value
       } else {
         launch[name] = value
@@ -148,10 +146,11 @@ export async function plan_bench(
 export async function start_bench(
   engine: Engine,
   bench: Bench,
-  params: Record<string, string>,
+  params_given: Record<string, unknown>,
   by: Trigger
 ): Promise<BenchStart> {
   const manifest = bench.usable_manifest()
+  const params = validate_params(manifest.plan_params, params_given, 'plan')
   const instances = await plan_bench(engine, bench, params)
   const bench_run_id = bench.runs.next_id()
 
@@ -411,10 +410,16 @@ function parse_plan_line(line: string): PlanLine {
   if (typeof raw_params !== 'object' || raw_params === null || Array.isArray(raw_params)) {
     throw new Error('missing object field `params`')
   }
-  const params: Record<string, string> = {}
+  // The values are checked against the job's manifest by the caller, which
+  // knows their shapes; here only what no shape allows is refused.
+  const params: Record<string, unknown> = {}
   for (const [name, param_value] of Object.entries(raw_params as Record<string, unknown>)) {
-    if (typeof param_value !== 'string') {
-      throw new Error(`param \`${name}\` must be a string`)
+    if (
+      param_value === null ||
+      typeof param_value === 'number' ||
+      (typeof param_value === 'object' && !Array.isArray(param_value))
+    ) {
+      throw new Error(`param \`${name}\` must be a string, true/false, or a list of strings`)
     }
     params[name] = param_value
   }

@@ -2,6 +2,7 @@
 // spellings are the convention's, so a run.json written by an earlier coco
 // still reads.
 
+import type { Params } from '@shared/params'
 import type { Status } from './status'
 import { is_terminal } from './status'
 
@@ -19,8 +20,8 @@ export type RunOrigin =
 export interface RunRecord {
   run_id: number
   submission_id: string
-  render: Record<string, string>
-  launch: Record<string, string>
+  render: Params
+  launch: Params
   status: Status
   history: StatusChange[]
   reason?: string
@@ -35,7 +36,7 @@ export interface BenchMember {
 
 export interface LaunchFailure {
   job: string
-  params: Record<string, string>
+  params: Params
   error: string
 }
 
@@ -54,7 +55,7 @@ export interface BenchRecord {
   bench: string
   by: Trigger
   started_at: string
-  params: Record<string, string>
+  params: Params
   planned: number
   members: BenchMember[]
   launch_failures: LaunchFailure[]
@@ -64,7 +65,7 @@ export interface BenchRecord {
 export interface BenchMembersFileMember {
   run_id: number
   job: string
-  params: Record<string, string>
+  params: Params
   submission_id: string
   report: string
 }
@@ -72,7 +73,7 @@ export interface BenchMembersFileMember {
 export interface BenchMembersFile {
   run_id: number
   bench: string
-  params: Record<string, string>
+  params: Params
   members: BenchMembersFileMember[]
 }
 
@@ -97,8 +98,8 @@ export function now_stamp(date = new Date()): string {
 export function new_run_record(
   run_id: number,
   submission_id: string,
-  render: Record<string, string>,
-  launch: Record<string, string>,
+  render: Params,
+  launch: Params,
   origin: RunOrigin,
   at: string
 ): RunRecord {
@@ -138,13 +139,13 @@ export function apply_status(record: RunRecord, status: Status, at: string, reas
 }
 
 /** Combined render + launch params; unambiguous because names never overlap. */
-export function all_params(record: RunRecord): Record<string, string> {
+export function all_params(record: RunRecord): Params {
   return { ...record.render, ...record.launch }
 }
 
 /** BTreeMap parity: object keys in sorted order, so JSON output is stable. */
-export function sorted(map: Record<string, string>): Record<string, string> {
-  const result: Record<string, string> = {}
+export function sorted(map: Params): Params {
+  const result: Params = {}
   for (const key of Object.keys(map).sort()) {
     result[key] = map[key]
   }

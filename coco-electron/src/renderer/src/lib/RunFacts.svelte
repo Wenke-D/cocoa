@@ -36,7 +36,7 @@
   <dd>{format_started_at(run.started_at)}</dd>
   <dt>Duration</dt>
   <dd class="mono">{format_duration(run.started_at, run.ended_at, app.now_ms)}</dd>
-  <dt>Parameters</dt>
+  <dt>Arguments</dt>
   <dd class="mono params">{run.parameters === '' ? '(none)' : run.parameters}</dd>
   <dt>Report</dt>
   <dd>

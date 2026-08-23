@@ -5,6 +5,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { parse as parseToml } from 'smol-toml'
+import type { ParamSpec, ParamType } from '@shared/params'
 import { EngineError } from './errors'
 import * as template from './template'
 import { split_command } from './words'
@@ -24,9 +25,9 @@ export interface JobManifest {
   description?: string
   /** Relative path of the template inside the folder. */
   template: string
-  render_params: string[]
+  render_params: ParamSpec[]
   launch: Command
-  launch_params: string[]
+  launch_params: ParamSpec[]
   poll: Command
   report: Command
   cancel: Command
@@ -37,7 +38,7 @@ export interface BenchManifest {
   name: string
   description?: string
   plan: Command
-  plan_params: string[]
+  plan_params: ParamSpec[]
   report: Command
 }
 
@@ -89,25 +90,102 @@ function require_string(value: unknown, manifest_path: string, key: string): str
   return value
 }
 
-function require_params(value: unknown, manifest_path: string, key: string): string[] {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
+const PARAM_TYPES: readonly ParamType[] = ['flag', 'string', 'enum']
+
+/**
+ * A `params` list: one table per parameter (convention §2.1), in the order the
+ * form will show them. A list of bare names — the form before 2026-08-23 — is
+ * refused with the new shape spelled out, since that is the one mistake every
+ * older manifest makes.
+ */
+function require_params(value: unknown, manifest_path: string, key: string): ParamSpec[] {
+  if (value === undefined) {
     throw EngineError.manifest(manifest_path, `missing required key \`${key}\``)
   }
-  const params = value as string[]
+  if (!Array.isArray(value)) {
+    throw EngineError.manifest(manifest_path, `\`${key}\` must be a list of tables`)
+  }
+  if (value.some((item) => typeof item === 'string')) {
+    throw EngineError.manifest(
+      manifest_path,
+      `\`${key}\` is a list of tables now: one \`[[${key.slice(1).replace('].', '.')}]]\` per ` +
+        'parameter, with `name`, `type` and `description` (convention §2.1)'
+    )
+  }
+  const specs: ParamSpec[] = []
   const seen = new Set<string>()
-  for (const name of params) {
-    if (name === '') {
-      throw EngineError.manifest(manifest_path, `\`${key}\` contains an empty parameter name`)
+  for (const [index, item] of value.entries()) {
+    const table = as_table(item)
+    if (table === null) {
+      throw EngineError.manifest(manifest_path, `\`${key}\` entry ${index + 1} is not a table`)
     }
-    if (seen.has(name)) {
+    const spec = require_param(table, manifest_path, `${key}[${index + 1}]`)
+    if (seen.has(spec.name)) {
       throw EngineError.manifest(
         manifest_path,
-        `\`${key}\` declares duplicate parameter \`${name}\``
+        `\`${key}\` declares duplicate parameter \`${spec.name}\``
       )
     }
-    seen.add(name)
+    seen.add(spec.name)
+    specs.push(spec)
   }
-  return params
+  return specs
+}
+
+function require_param(table: TomlTable, manifest_path: string, where: string): ParamSpec {
+  reject_unknown_keys(table, ['name', 'type', 'values', 'list', 'description'], manifest_path)
+  const name = table.name
+  if (typeof name !== 'string' || name === '') {
+    throw EngineError.manifest(manifest_path, `${where} needs a non-empty \`name\``)
+  }
+  const at = `parameter \`${name}\``
+  const type = table.type
+  if (typeof type !== 'string' || !PARAM_TYPES.includes(type as ParamType)) {
+    throw EngineError.manifest(
+      manifest_path,
+      `${at} needs a \`type\` of \`flag\`, \`string\` or \`enum\``
+    )
+  }
+  const description = table.description
+  if (typeof description !== 'string' || description.trim() === '') {
+    throw EngineError.manifest(manifest_path, `${at} needs a \`description\``)
+  }
+  const list = table.list
+  if (list !== undefined && typeof list !== 'boolean') {
+    throw EngineError.manifest(manifest_path, `${at}: \`list\` must be true or false`)
+  }
+  if (type === 'flag' && list === true) {
+    throw EngineError.manifest(manifest_path, `${at}: a flag cannot be a list`)
+  }
+  const values = table.values
+  if (type === 'enum') {
+    if (
+      !Array.isArray(values) ||
+      values.length === 0 ||
+      values.some((item) => typeof item !== 'string' || item.trim() === '')
+    ) {
+      throw EngineError.manifest(
+        manifest_path,
+        `${at} is an enum and needs \`values\`, a non-empty list of non-empty strings`
+      )
+    }
+    const seen = new Set<string>()
+    for (const item of values as string[]) {
+      if (seen.has(item)) {
+        throw EngineError.manifest(manifest_path, `${at} lists the value \`${item}\` twice`)
+      }
+      seen.add(item)
+    }
+  } else if (values !== undefined) {
+    throw EngineError.manifest(manifest_path, `${at}: only an enum takes \`values\``)
+  }
+  return {
+    name,
+    type: type as ParamType,
+    values: type === 'enum' ? [...(values as string[])] : null,
+    list: list === true,
+    description
+  }
 }
 
 function require_table(value: unknown, manifest_path: string, name: string): TomlTable {
@@ -217,11 +295,12 @@ function load_job(folder: string, manifest_path: string, raw: TomlTable): JobMan
   const render_params = require_params(render.params, manifest_path, '[render].params')
   const launch_params = require_params(launch.params, manifest_path, '[launch].params')
 
-  const overlap = render_params.filter((param) => launch_params.includes(param))
+  const launch_names = new Set(launch_params.map((param) => param.name))
+  const overlap = render_params.filter((param) => launch_names.has(param.name))
   if (overlap.length > 0) {
     throw EngineError.manifest(
       manifest_path,
-      `parameter \`${overlap[0]}\` appears in both \`[render].params\` and \`[launch].params\``
+      `parameter \`${overlap[0].name}\` appears in both \`[render].params\` and \`[launch].params\``
     )
   }
 
@@ -233,7 +312,10 @@ function load_job(folder: string, manifest_path: string, raw: TomlTable): JobMan
     throw EngineError.io(template_abs, cause)
   }
   try {
-    template.analyze(source, render_params)
+    template.analyze(
+      source,
+      render_params.map((param) => param.name)
+    )
   } catch (cause) {
     throw EngineError.manifest(
       template_abs,

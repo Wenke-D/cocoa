@@ -9,6 +9,32 @@ import { cleanup_temp_dirs, temp_dir, write } from './support'
 
 afterEach(cleanup_temp_dirs)
 
+const RENDER_PARAMS = `
+[[render.params]]
+name        = "size"
+type        = "string"
+description = "Nodes to request"
+
+[[render.params]]
+name        = "backend"
+type        = "enum"
+values      = ["cuda", "hip"]
+description = "Which backend to build"
+`
+
+const LAUNCH_PARAMS = `
+[[launch.params]]
+name        = "mesh"
+type        = "string"
+description = "Mesh resolution"
+
+[[launch.params]]
+name        = "gpu"
+type        = "enum"
+values      = ["0", "1"]
+description = "Which GPU to pin to"
+`
+
 const VALID_JOB = `
 kind        = "job"
 name        = "solver-gpu"
@@ -16,12 +42,10 @@ description = "GPU solver sweep"
 
 [render]
 template    = "job.sbatch.tmpl"
-params      = ["size", "backend"]
-
+${RENDER_PARAMS}
 [launch]
 command     = "./launch.sh"
-params      = ["mesh", "gpu"]
-
+${LAUNCH_PARAMS}
 [poll]
 command     = "./poll.py"
 
@@ -31,6 +55,13 @@ command     = "./report.py"
 [cancel]
 command     = "./cancel.sh"
 `
+
+const TEMPLATE = '#SBATCH --nodes={{ size }}\n./solver --backend {{ backend }}\n'
+
+/** `VALID_JOB` with its launch params replaced by `params` — TOML, or nothing. */
+function job_with_launch(params: string): string {
+  return VALID_JOB.replace(LAUNCH_PARAMS, params)
+}
 
 /** The message of a refused load; fails loudly if the manifest loads. */
 function refused(folder: string): string {
@@ -43,10 +74,10 @@ function refused(folder: string): string {
 }
 
 describe('load_manifest', () => {
-  it('loads a valid job', () => {
+  it('loads a valid job, its parameters typed and in order', () => {
     const dir = temp_dir()
     write(dir, 'coco.toml', VALID_JOB)
-    write(dir, 'job.sbatch.tmpl', '#SBATCH --nodes={{ size }}\n./solver --backend {{ backend }}\n')
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
 
     const manifest = load_manifest(dir)
     expect(manifest.kind).toBe('job')
@@ -54,8 +85,17 @@ describe('load_manifest', () => {
       return
     }
     expect(manifest.name).toBe('solver-gpu')
-    expect(manifest.render_params).toEqual(['size', 'backend'])
-    expect(manifest.launch_params).toEqual(['mesh', 'gpu'])
+    expect(manifest.render_params).toEqual([
+      { name: 'size', type: 'string', values: null, list: false, description: 'Nodes to request' },
+      {
+        name: 'backend',
+        type: 'enum',
+        values: ['cuda', 'hip'],
+        list: false,
+        description: 'Which backend to build'
+      }
+    ])
+    expect(manifest.launch_params.map((param) => param.name)).toEqual(['mesh', 'gpu'])
     expect(manifest.launch.words).toEqual(['./launch.sh'])
     expect(manifest.description).toBe('GPU solver sweep')
   })
@@ -71,7 +111,11 @@ name        = "nightly-benchmark"
 
 [plan]
 command     = "./plan.sh"
-params      = ["mesh"]
+
+[[plan.params]]
+name        = "mesh"
+type        = "string"
+description = "Mesh family"
 
 [report]
 command     = "./report.py"
@@ -83,18 +127,192 @@ command     = "./report.py"
       return
     }
     expect(manifest.name).toBe('nightly-benchmark')
-    expect(manifest.plan_params).toEqual(['mesh'])
+    expect(manifest.plan_params.map((param) => param.name)).toEqual(['mesh'])
   })
 
-  it('accepts empty params lists', () => {
+  it('loads every shape: flag, string, enum, and lists of the last two', () => {
     const dir = temp_dir()
     write(
       dir,
       'coco.toml',
-      VALID_JOB.replace('params      = ["size", "backend"]', 'params      = []')
+      job_with_launch(`
+[[launch.params]]
+name        = "profile"
+type        = "flag"
+description = "Run under the profiler"
+
+[[launch.params]]
+name        = "tags"
+type        = "string"
+list        = true
+description = "Tags, one per line"
+
+[[launch.params]]
+name        = "backends"
+type        = "enum"
+values      = ["cuda", "hip"]
+list        = true
+description = "Backends to try"
+`)
     )
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
+    const manifest = load_manifest(dir)
+    if (manifest.kind !== 'job') {
+      throw new Error('expected a job')
+    }
+    expect(manifest.launch_params).toEqual([
+      {
+        name: 'profile',
+        type: 'flag',
+        values: null,
+        list: false,
+        description: 'Run under the profiler'
+      },
+      { name: 'tags', type: 'string', values: null, list: true, description: 'Tags, one per line' },
+      {
+        name: 'backends',
+        type: 'enum',
+        values: ['cuda', 'hip'],
+        list: true,
+        description: 'Backends to try'
+      }
+    ])
+  })
+
+  it('accepts empty params lists', () => {
+    const dir = temp_dir()
+    write(dir, 'coco.toml', VALID_JOB.replace(RENDER_PARAMS, 'params = []\n'))
     write(dir, 'job.sbatch.tmpl', '#SBATCH --nodes=4\n')
     expect(() => load_manifest(dir)).not.toThrow()
+  })
+
+  it('refuses the old list of bare names, and says what replaced it', () => {
+    const dir = temp_dir()
+    write(dir, 'coco.toml', job_with_launch('params = ["mesh", "gpu"]\n'))
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
+    const message = refused(dir)
+    expect(message).toContain('[[launch.params]]')
+    expect(message).toContain('§2.1')
+  })
+
+  it('requires a name, a known type and a description of every parameter', () => {
+    const dir = temp_dir()
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
+
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch('[[launch.params]]\ntype = "string"\ndescription = "x"\n')
+    )
+    expect(refused(dir)).toContain('`name`')
+
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch('[[launch.params]]\nname = "mesh"\ndescription = "x"\n')
+    )
+    expect(refused(dir)).toContain('`type`')
+
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch('[[launch.params]]\nname = "mesh"\ntype = "number"\ndescription = "x"\n')
+    )
+    expect(refused(dir)).toContain('`flag`, `string` or `enum`')
+
+    write(dir, 'coco.toml', job_with_launch('[[launch.params]]\nname = "mesh"\ntype = "string"\n'))
+    expect(refused(dir)).toContain('`description`')
+
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch('[[launch.params]]\nname = "mesh"\ntype = "string"\ndescription = "  "\n')
+    )
+    expect(refused(dir)).toContain('`description`')
+  })
+
+  it('ties values to enums: required there, refused elsewhere, never empty or repeated', () => {
+    const dir = temp_dir()
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
+
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch('[[launch.params]]\nname = "gpu"\ntype = "enum"\ndescription = "x"\n')
+    )
+    expect(refused(dir)).toContain('needs `values`')
+
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch(
+        '[[launch.params]]\nname = "gpu"\ntype = "enum"\nvalues = []\ndescription = "x"\n'
+      )
+    )
+    expect(refused(dir)).toContain('needs `values`')
+
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch(
+        '[[launch.params]]\nname = "gpu"\ntype = "enum"\nvalues = ["0", ""]\ndescription = "x"\n'
+      )
+    )
+    expect(refused(dir)).toContain('needs `values`')
+
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch(
+        '[[launch.params]]\nname = "gpu"\ntype = "enum"\nvalues = ["0", "0"]\ndescription = "x"\n'
+      )
+    )
+    expect(refused(dir)).toContain('twice')
+
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch(
+        '[[launch.params]]\nname = "mesh"\ntype = "string"\nvalues = ["a"]\ndescription = "x"\n'
+      )
+    )
+    expect(refused(dir)).toContain('only an enum takes `values`')
+  })
+
+  it('refuses a flag that is a list, and a list that is not a boolean', () => {
+    const dir = temp_dir()
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
+
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch(
+        '[[launch.params]]\nname = "profile"\ntype = "flag"\nlist = true\ndescription = "x"\n'
+      )
+    )
+    expect(refused(dir)).toContain('a flag cannot be a list')
+
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch(
+        '[[launch.params]]\nname = "tags"\ntype = "string"\nlist = "yes"\ndescription = "x"\n'
+      )
+    )
+    expect(refused(dir)).toContain('`list` must be true or false')
+  })
+
+  it('rejects an unknown key on a parameter', () => {
+    const dir = temp_dir()
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
+    write(
+      dir,
+      'coco.toml',
+      job_with_launch(
+        '[[launch.params]]\nname = "mesh"\ntype = "string"\ndefault = "1"\ndescription = "x"\n'
+      )
+    )
+    expect(refused(dir)).toContain('unknown field `default`')
   })
 
   it('rejects a missing or unknown kind', () => {
@@ -180,7 +398,7 @@ params = []
       'coco.toml',
       VALID_JOB.replace('command     = "./poll.py"', `command     = "./poll.py 'oops"`)
     )
-    write(dir, 'job.sbatch.tmpl', '{{ size }} {{ backend }}\n')
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
     expect(refused(dir)).toContain('unclosed')
   })
 
@@ -189,9 +407,9 @@ params = []
     write(
       dir,
       'coco.toml',
-      VALID_JOB.replace('params      = ["mesh", "gpu"]', 'params      = ["size", "backend"]')
+      job_with_launch('[[launch.params]]\nname = "size"\ntype = "string"\ndescription = "x"\n')
     )
-    write(dir, 'job.sbatch.tmpl', '{{ size }} {{ backend }}\n')
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
     expect(refused(dir)).toContain('both')
   })
 
@@ -200,9 +418,12 @@ params = []
     write(
       dir,
       'coco.toml',
-      VALID_JOB.replace('params      = ["mesh", "gpu"]', 'params      = ["mesh", "mesh"]')
+      job_with_launch(
+        '[[launch.params]]\nname = "mesh"\ntype = "string"\ndescription = "x"\n' +
+          '[[launch.params]]\nname = "mesh"\ntype = "string"\ndescription = "y"\n'
+      )
     )
-    write(dir, 'job.sbatch.tmpl', '{{ size }} {{ backend }}\n')
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
     expect(refused(dir)).toContain('duplicate')
   })
 
@@ -241,7 +462,7 @@ params = []
       VALID_JOB.replace(
         'template    = "job.sbatch.tmpl"',
         'template    = "../outside.tmpl"'
-      ).replace('params      = ["size", "backend"]', 'params      = []')
+      ).replace(RENDER_PARAMS, 'params = []\n')
     )
     expect(refused(folder)).toContain('inside the folder')
   })

@@ -4,11 +4,19 @@ description = "Mock GPU solver — healthy ~30 s lifecycle"
 
 [render]
 template    = "job.sbatch.tmpl"
-params      = ["nodes"]
+
+[[render.params]]
+name        = "nodes"
+type        = "string"
+description = "Nodes to request"
 
 [launch]
 command     = "./launch.sh"
-params      = ["gpu"]
+
+[[launch.params]]
+name        = "gpu"
+type        = "string"
+description = "Which GPU to pin to"
 
 [poll]
 command     = "python3 poll.py"

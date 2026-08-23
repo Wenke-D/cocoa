@@ -21,6 +21,8 @@ import { all_params, ended_at, started_at } from './record'
 import type { BenchRecord, RunRecord } from './record'
 import { is_terminal } from './status'
 import type { Status } from './status'
+import type { ParamSpec } from '@shared/params'
+import { format_params } from '@shared/params'
 
 export function build_world(engine: Engine, last_refresh: string | null): World {
   const world: World = {
@@ -117,7 +119,7 @@ function broken_entity(
     description: null,
     path: display_path(broken.path),
     manifest: { Invalid: { message: broken.manifest_error?.message ?? 'manifest error' } },
-    parameter_names: []
+    parameters: []
   }
 }
 
@@ -125,7 +127,7 @@ function entity_for(
   folder: string,
   manifest: { name: string; description?: string },
   kind: 'Job' | 'Bench',
-  parameter_names: string[]
+  parameters: ParamSpec[]
 ): Entity {
   return {
     id: folder,
@@ -134,7 +136,7 @@ function entity_for(
     description: manifest.description ?? null,
     path: display_path(folder),
     manifest: 'Valid',
-    parameter_names: parameter_names
+    parameters
   }
 }
 
@@ -302,13 +304,6 @@ function size_of(file: string, format: 'PlainText' | 'Html'): ReportState {
   } catch (cause) {
     return { ReadError: { message: (cause as Error).message } }
   }
-}
-
-function format_params(params: Record<string, string>): string {
-  return Object.keys(params)
-    .sort()
-    .map((name) => `--${name} ${params[name]}`)
-    .join(' ')
 }
 
 /** `~`-folds paths under home, component-wise (specification §24.4). */

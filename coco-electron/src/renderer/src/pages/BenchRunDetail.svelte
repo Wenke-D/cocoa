@@ -60,7 +60,7 @@
     <dd>{format_started_at(run.started_at)}</dd>
     <dt>Duration</dt>
     <dd class="mono">{format_duration(run.started_at, run.ended_at, app.now_ms)}</dd>
-    <dt>Input</dt>
+    <dt>Arguments</dt>
     <dd class="mono params">{run.parameters === '' ? '(none)' : run.parameters}</dd>
     <dt>Report</dt>
     <dd>
@@ -87,15 +87,14 @@
          no bound — a sweep is what varies it — so it gets the leftover width,
          and the leftover width belongs to the last column (§22.2). -->
     <colgroup>
-      <col style="width: 44px" />
+      <col style="width: 54px" />
       <col style="width: 180px" />
       <col style="width: 116px" />
       <col />
     </colgroup>
     <thead>
       <tr
-        ><th class="num">#</th><th>Job</th><th>Status</th><th class="over-params">Parameters</th
-        ></tr
+        ><th class="num">#</th><th>Job</th><th>Status</th><th class="over-params">Arguments</th></tr
       >
     </thead>
     <tbody>

@@ -494,6 +494,7 @@ coco-electron/
 ├── src/
 │   ├── shared/                    # both sides import these; one definition
 │   │   ├── world.ts               #   domain types + the IPC protocol (§10, §26.3)
+│   │   ├── params.ts              #   a parameter's shape, the one value check, the wire form
 │   │   └── ui.ts                  #   Route, UiState, sanitize (§9, §32)
 │   │
 │   ├── main/                      # the server: owns everything
@@ -505,6 +506,7 @@ coco-electron/
 │   │   │   ├── bench.ts           #     plan / start / report / cancel / status (§8, §9)
 │   │   │   ├── in_flight.ts       #     launch scripts not yet answered (§7.1)
 │   │   │   ├── manifest.ts        #     coco.toml, fully validated
+│   │   │   ├── params.ts          #     what a start must supply, checked the same on every way in
 │   │   │   ├── template.ts        #     analyze / render (§15.2)
 │   │   │   ├── invoke.ts          #     lexical command split, spawn
 │   │   │   ├── record.ts          #     run.json, byte-compatible
@@ -544,7 +546,8 @@ coco-electron/
 │           │   │                  #   RunFacts
 │           │   ├── utils.ts       #   `cn()` and the prop types the components import
 │           │   └── components/ui/ #   shadcn-svelte: Button, Dialog, ContextMenu,
-│           │                      #   Input, Label, Spinner — copied-in, owned source
+│           │                      #   Input, Label, Spinner, Select, RadioGroup,
+│           │                      #   Checkbox, Textarea — copied-in, owned source
 │           └── pages/             #   Empty, EntityOverview, StartRun,
 │                                  #   JobRunDetail, BenchRunDetail,
 │                                  #   BenchChildRunDetail, ReportViewer

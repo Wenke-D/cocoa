@@ -1,6 +1,7 @@
 /// <reference types="svelte" />
 /// <reference types="vite/client" />
 
+import type { Params } from '@shared/params'
 import type {
   AddFolderResult,
   BootstrapPayload,
@@ -17,7 +18,7 @@ declare global {
   interface Window {
     coco: {
       bootstrap(): Promise<BootstrapPayload>
-      start_run(name: string, parameters: Record<string, string>): Promise<StartResult>
+      start_run(name: string, parameters: Params): Promise<StartResult>
       cancel(target: CancelTarget): Promise<CancelResult>
       report(target: ReportTarget): Promise<ReportResult>
       add_folder(): Promise<AddFolderResult>
