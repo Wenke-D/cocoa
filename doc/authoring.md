@@ -252,7 +252,7 @@ them. Output rules are the job report's: `report/7.txt` required.
 - Records in `runs/` are readable JSON and safe to read from scripts; they
   are written atomically. Never write them.
 - Timeouts (defaults): launch, poll, cancel 60 s; plan 120 s; report 600 s.
-- A run coco deletes takes `runs/<id>/` and `report/<id>.*` with it and
-  nothing else (§12.1); run ids otherwise never repeat.
+- A run coco deletes takes `runs/<id>/` and `report/<id>.*` with it — for a
+  bench run, its dispatched runs too (§12.1); run ids otherwise never repeat.
 - Nothing else in the folder is coco's business: keep source, data and
   scratch wherever suits the scripts.

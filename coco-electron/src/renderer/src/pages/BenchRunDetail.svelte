@@ -13,6 +13,8 @@
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
   import { Button } from '$lib/components/ui/button'
+  import SquareIcon from '@lucide/svelte/icons/square'
+  import Trash2Icon from '@lucide/svelte/icons/trash-2'
 
   let { bench_id, run_id }: { bench_id: string; run_id: string } = $props()
 
@@ -44,19 +46,25 @@
     <span class="progress">{finished} / {run.plan.steps.length} finished</span>
     {#if is_cancellable(run.status)}
       <Button
+        size="icon-sm"
         variant="secondary"
         class="cancel ml-auto"
+        title="Cancel Bench"
+        aria-label="Cancel Bench"
         onclick={() => request_cancel({ kind: 'bench_run', bench_id, run_id: run.id })}
       >
-        Cancel Bench
+        <SquareIcon />
       </Button>
     {:else if is_terminal(run.status)}
       <Button
+        size="icon-sm"
         variant="destructive"
         class="ml-auto"
+        title="Delete Run…"
+        aria-label="Delete Run"
         onclick={() => request_delete({ kind: 'bench_run', bench_id, run_id: run.id })}
       >
-        Delete Run…
+        <Trash2Icon />
       </Button>
     {/if}
   </header>

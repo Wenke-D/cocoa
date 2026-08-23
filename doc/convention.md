@@ -818,15 +818,23 @@ coco never edits a script, a template, or a report.
 
 Deletion is the one operation that removes what coco wrote, and it is exact:
 `runs/<run_id>/` goes whole — record, rendered artifact, `members.json` —
-and so do `report/<run_id>.txt` and `report/<run_id>.html`. Nothing else is
-touched: the folder's other runs stay, and a bench run's members belong to
-their own jobs' folders and stay there, each still carrying the bench in its
-`origin`. The bench side then has members it cannot resolve, which §9.2
-already keeps survivable in the other direction.
+and so do `report/<run_id>.txt` and `report/<run_id>.html`. The folder's
+other runs stay.
+
+A fan-out is deleted whole, from the bench's side. A run a bench dispatched
+cannot be deleted through its job — the refusal points at the bench run —
+and deleting the bench run removes every member run it dispatched, each
+from its own job's folder, along with the bench's own files. A member that
+cannot be resolved (§9.2) has nothing left to delete and does not block the
+rest. Deletion therefore never leaves half a fan-out behind: no bench
+pointing at members that are gone, no member naming a bench that is.
 
 Only a finished run can be deleted. An active run is refused — cancel is how
 work stops — and so is `UNREACHABLE`: a run coco cannot see may still be
-running, and deleting its record would be the one way to never find out.
+running, and deleting its record would be the one way to never find out. A
+bench run must be settled **and** every resolvable member finished: a bench
+settles when one member fails (§9.1) while another may still be running,
+and a running record is never deleted.
 
 Because a run id is derived from the folder's own runs (§5), deleting the
 newest run hands its id, and every id above what remains, back to the next

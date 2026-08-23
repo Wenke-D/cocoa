@@ -365,18 +365,27 @@ describe('deletion', () => {
     expect(is_file(job, 'runs', String(run_id), 'run.json')).toBe(true)
   })
 
-  it('deletes a settled bench run and leaves its members in their jobs', async () => {
+  it('deletes a settled bench run whole, members included, and only whole', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'member-job')
     const bench = bench_folder(dir, 'sweep', [])
     const coco = engine(dir)
     coco.register(job)
     coco.register(bench)
-    plan_lines(bench, ['{"job": "member-job", "params": {"size": "1", "gpu": "0"}}'])
+    plan_lines(bench, [
+      '{"job": "member-job", "params": {"size": "1", "gpu": "0"}}',
+      '{"job": "member-job", "params": {"size": "2", "gpu": "0"}}'
+    ])
 
     const start = await coco.start_bench(bench, { mesh: 'fine' }, 'human')
     await settle(coco)
     const member = start.members[0]
+
+    // A dispatched run is never deleted from the job's side, whatever its
+    // status: the fan-out goes whole, from the bench.
+    expect(
+      await failure(Promise.resolve().then(() => coco.delete_run(job, member.run_id)))
+    ).toContain('delete that bench run instead')
 
     // Still dispatching members: refused.
     expect(
@@ -388,9 +397,11 @@ describe('deletion', () => {
 
     coco.delete_bench_run(bench, start.run_id)
     expect(exists(bench, 'runs', String(start.run_id))).toBe(false)
-    // The member run belongs to its job and stays, origin intact.
-    const record = coco.job(job).runs.record(member.run_id)
-    expect(record.origin).toMatchObject({ by: 'bench', name: 'sweep' })
+    // The members went with it: no record, no files, in their own job.
+    for (const gone of start.members) {
+      expect(exists(job, 'runs', String(gone.run_id))).toBe(false)
+      expect(() => coco.job(job).runs.record(gone.run_id)).toThrow()
+    }
   })
 })
 

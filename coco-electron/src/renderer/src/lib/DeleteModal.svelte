@@ -5,7 +5,7 @@
   confirm wears the destructive colour.
 -->
 <script lang="ts">
-  import { bench_run, job_run, origin_label } from '@shared/world'
+  import { bench_run, job_run } from '@shared/world'
   import { app, close_overlay, confirm_delete, entity_of } from '../state.svelte'
   import type { Overlay } from '../state.svelte'
   import ModalFrame from './ModalFrame.svelte'
@@ -21,21 +21,13 @@
       if (run === undefined) {
         return null
       }
-      const lines = [
-        `The record and rendered artifact under runs/${run.id}/ and the report files`,
-        'will be removed from the folder on disk. This cannot be undone.'
-      ]
-      if (typeof run.origin === 'object' && 'Bench' in run.origin) {
-        lines.push(
-          '',
-          `This run was dispatched by ${origin_label(run.origin)}; that bench run will ` +
-            'show a member it can no longer resolve.'
-        )
-      }
       return {
         title: `Delete run ${run.id} for good?`,
         subject: entity_of(target.job_id)?.name ?? '(removed)',
-        lines
+        lines: [
+          'It disappears from the history forever, and its report goes with it.',
+          'This cannot be undone.'
+        ]
       }
     }
     const run = bench_run(app.world, target.bench_id, target.run_id)
@@ -46,11 +38,9 @@
       title: `Delete bench run ${run.id} for good?`,
       subject: entity_of(target.bench_id)?.name ?? '(removed)',
       lines: [
-        `The record, members.json and the bench's own report under the folder`,
-        'will be removed from disk. This cannot be undone.',
-        '',
-        'The runs it dispatched belong to their jobs and stay, each still naming',
-        'this bench as where it came from.'
+        `This bench run and the ${run.plan.steps.length} runs it dispatched disappear`,
+        'from their histories forever, reports included.',
+        'This cannot be undone.'
       ]
     }
   })

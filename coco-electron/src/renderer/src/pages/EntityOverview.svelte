@@ -14,6 +14,8 @@
   import HistoryRow from '../lib/HistoryRow.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
   import { Button } from '$lib/components/ui/button'
+  import FolderMinusIcon from '@lucide/svelte/icons/folder-minus'
+  import PlayIcon from '@lucide/svelte/icons/play'
 
   let { entity_id }: { entity_id: string } = $props()
 
@@ -78,16 +80,25 @@
        stays available when the manifest is broken — a folder that cannot
        start is exactly one someone may want out of the Explorer. -->
   <h2>Actions</h2>
+  {@const start_label = entity.kind === 'Job' ? 'Start Job' : 'Start Bench'}
   <div class="actions">
     <Button
+      size="icon-sm"
       disabled={blocking !== null}
-      title={blocking ?? ''}
+      title={blocking ?? start_label}
+      aria-label={start_label}
       onclick={() => navigate({ page: 'start', entity_id })}
     >
-      {entity.kind === 'Job' ? 'Start Job' : 'Start Bench'}
+      <PlayIcon />
     </Button>
-    <Button variant="secondary" onclick={() => request_remove(entity_id)}>
-      Remove from Explorer
+    <Button
+      size="icon-sm"
+      variant="secondary"
+      title="Remove from Explorer"
+      aria-label="Remove from Explorer"
+      onclick={() => request_remove(entity_id)}
+    >
+      <FolderMinusIcon />
     </Button>
   </div>
 
@@ -124,7 +135,7 @@
               {entity_id}
               run_id={run.id}
               params={run.params}
-              deletable={is_terminal(run.status)}
+              deletable={is_terminal(run.status) && typeof run.origin === 'string'}
               route={{ page: 'job_run', job_id: entity_id, run_id: run.id }}
             >
               <td><StatusPill status={run.status} health={run.query_health} compact /></td>

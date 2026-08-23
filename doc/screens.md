@@ -656,12 +656,13 @@ when it declares none. A parameter is read here before it is filled in on the
 Start page, so this is where the description is shown in full, not on hover.
 
 Below that, under an `Actions` heading, every action on the experiment
-itself, as one row at the left: the `Start Job` primary button, then `Remove
-from Explorer` (§36) as a secondary — the same removal the Explorer's row
-menu offers, one modal behind both. Remove stays available when the manifest
-is invalid; Start does not. The history follows. There is no `JOB` type
-label: the Start button says it, and so does the Explorer section the row
-came from — a third statement next to the name was the one too many.
+itself, as one row of icon buttons at the left, each with its tooltip: Start
+(the play icon, primary), then `Remove from Explorer` (§36; a folder-minus,
+secondary) — the same removal the Explorer's row menu offers, one modal
+behind both. Remove stays available when the manifest is invalid; Start does
+not, and its tooltip then carries the reason. The history follows. There is
+no `JOB` type label: the Explorer section the row came from says it, as does
+the Start tooltip — a statement next to the name was one too many.
 
 Example:
 
@@ -677,7 +678,7 @@ gpu       0 / 1           Which GPU to pin to
 profile   true / false    Run under nsys
 
 Actions
-[Start Job]  [Remove from Explorer]
+[▶] [⊟]
 
 History
 ```
@@ -822,7 +823,7 @@ Parameters
 Name      Values         Description
 sweep     quick / full   How much of the suite to run
 
-[Start Bench]  [Remove from Explorer]
+[▶] [⊟]
 ```
 
 For a Bench that has never run:
@@ -836,7 +837,7 @@ Parameters
 Name      Values         Description
 sweep     quick / full   How much of the suite to run
 
-[Start Bench]  [Remove from Explorer]
+[▶] [⊟]
 ```
 
 Never display a fixed job count as if it were a property of the Bench.
@@ -1157,24 +1158,30 @@ files — and nothing else (convention §12.1).
 Where it is offered:
 
 - On a run's detail page, in the place Cancel occupies while the run is
-  active: a run is either stoppable or deletable, never both.
+  active — the stop icon becomes the trash icon; a run is either stoppable
+  or deletable, never both.
 - In the history's row menu (§22.6), as `Delete…` after a separator, in the
-  destructive colour, disabled while the run is active.
+  destructive colour, disabled where deletion is not allowed.
 
 Only a **finished** run can be deleted. An active run must be cancelled
 first, and the cancellation must land; `UNREACHABLE` is refused too — a run
 coco cannot see may still be running, and deleting its record would be the
 one way to never find out.
 
-The click asks first, always — that modal is the second confirmation. Its
-copy names the run and the experiment, lists exactly what will be removed
-from disk, and says `This cannot be undone.`; the confirm button wears the
-destructive colour and never a neutral one. Two cases add a line:
+**A fan-out is deleted whole, from the bench's side.** A run a bench
+dispatched offers no Delete anywhere — not on its page, not in the job's
+history row — and the engine refuses it whatever the UI shows, pointing at
+the bench run. Deleting the bench run takes every run it dispatched with
+it, and requires each resolvable member to be finished itself, since a
+bench can settle while a member still runs (§9.1 of the convention). So
+deletion never leaves half a fan-out: no bench pointing at members that
+are gone, no member naming a bench that is.
 
-- A run dispatched by a bench: the bench run will show a member it can no
-  longer resolve (§9.2 of the convention keeps that survivable).
-- A bench run: the runs it dispatched belong to their jobs and stay, each
-  still naming this bench as where it came from.
+The click asks first, always — that modal is the second confirmation. Its
+copy speaks the user's language, never coco's file names: the run
+disappears from the history forever, its report goes with it — for a bench
+run, the runs it dispatched too — and `This cannot be undone.` The confirm
+button wears the destructive colour and never a neutral one.
 
 On success the run is gone from every table before the modal closes (the
 events ride the same answer), the transient message says `Run N deleted.`,

@@ -6,6 +6,8 @@
   import RunFacts from '../lib/RunFacts.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
   import { Button } from '$lib/components/ui/button'
+  import SquareIcon from '@lucide/svelte/icons/square'
+  import Trash2Icon from '@lucide/svelte/icons/trash-2'
 
   let { job_id, run_id }: { job_id: string; run_id: string } = $props()
 
@@ -26,19 +28,27 @@
     <StatusPill status={run.status} health={run.query_health} />
     {#if is_cancellable(run.status)}
       <Button
+        size="icon-sm"
         variant="secondary"
         class="cancel ml-auto"
+        title="Cancel Run"
+        aria-label="Cancel Run"
         onclick={() => request_cancel({ kind: 'job_run', job_id, run_id: run.id })}
       >
-        Cancel Run
+        <SquareIcon />
       </Button>
-    {:else if is_terminal(run.status)}
+    {:else if is_terminal(run.status) && typeof run.origin === 'string'}
+      <!-- A bench-dispatched run has no Delete here: the fan-out is deleted
+           whole, from the bench run's page (§16.4). -->
       <Button
+        size="icon-sm"
         variant="destructive"
         class="ml-auto"
+        title="Delete Run…"
+        aria-label="Delete Run"
         onclick={() => request_delete({ kind: 'job_run', job_id, run_id: run.id })}
       >
-        Delete Run…
+        <Trash2Icon />
       </Button>
     {/if}
   </header>
