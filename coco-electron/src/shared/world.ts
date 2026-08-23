@@ -192,6 +192,13 @@ export type CancelTarget =
 
 export type CancelResult = { ok: true } | { ok: false; message: string }
 
+/** The run to delete for good (§16.4): same two addresses a cancel uses. */
+export type DeleteTarget =
+  | { kind: 'job_run'; job_id: string; run_id: string }
+  | { kind: 'bench_run'; bench_id: string; run_id: string }
+
+export type DeleteResult = { ok: true } | { ok: false; message: string }
+
 /** Which run's report to read. The entity id is the folder it lives in. */
 export interface ReportTarget {
   entity_id: string

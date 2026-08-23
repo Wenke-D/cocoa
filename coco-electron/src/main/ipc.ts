@@ -12,7 +12,9 @@ import type {
   RemoveFolderResult,
   ReportResult,
   ReportTarget,
-  StartResult
+  StartResult,
+  DeleteTarget,
+  DeleteResult
 } from '@shared/world'
 import { empty } from '@shared/maybe'
 import * as operations from './operations'
@@ -47,6 +49,15 @@ export function register_ipc(): void {
   // the page behind the modal would still read `RUNNING`.
   ipcMain.handle('coco:cancel', async (_event, target: CancelTarget): Promise<CancelResult> => {
     const result = await operations.cancel(engine, target)
+    publish_cycle(empty())
+    return result
+  })
+
+  // Deletion is synchronous — files and memory — and the events go out
+  // before the modal closes, so the page behind it never shows the run it
+  // just deleted.
+  ipcMain.handle('coco:delete_run', (_event, target: DeleteTarget): DeleteResult => {
+    const result = operations.delete_run(engine, target)
     publish_cycle(empty())
     return result
   })

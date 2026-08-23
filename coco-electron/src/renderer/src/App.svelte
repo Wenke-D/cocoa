@@ -5,6 +5,7 @@
   import { app, apply_events, bootstrap, dismiss_notice, flush_ui } from './state.svelte'
   import ActivityBar from './lib/ActivityBar.svelte'
   import CancelModal from './lib/CancelModal.svelte'
+  import DeleteModal from './lib/DeleteModal.svelte'
   import RefusedModal from './lib/RefusedModal.svelte'
   import RemoveModal from './lib/RemoveModal.svelte'
   import Sidebar from './lib/Sidebar.svelte'
@@ -116,6 +117,8 @@
 
   {#if app.overlay?.kind === 'confirm_cancel'}
     <CancelModal overlay={app.overlay} />
+  {:else if app.overlay?.kind === 'confirm_delete'}
+    <DeleteModal overlay={app.overlay} />
   {:else if app.overlay?.kind === 'confirm_remove'}
     <RemoveModal overlay={app.overlay} />
   {:else if app.overlay?.kind === 'refused'}

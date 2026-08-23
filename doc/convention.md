@@ -813,3 +813,22 @@ carrying its error. It does not blank the folder's history — one corrupt file
 must not hide hundreds of good runs.
 
 coco never edits a script, a template, or a report.
+
+### 12.1 Deleting a run
+
+Deletion is the one operation that removes what coco wrote, and it is exact:
+`runs/<run_id>/` goes whole — record, rendered artifact, `members.json` —
+and so do `report/<run_id>.txt` and `report/<run_id>.html`. Nothing else is
+touched: the folder's other runs stay, and a bench run's members belong to
+their own jobs' folders and stay there, each still carrying the bench in its
+`origin`. The bench side then has members it cannot resolve, which §9.2
+already keeps survivable in the other direction.
+
+Only a finished run can be deleted. An active run is refused — cancel is how
+work stops — and so is `UNREACHABLE`: a run coco cannot see may still be
+running, and deleting its record would be the one way to never find out.
+
+Because a run id is derived from the folder's own runs (§5), deleting the
+newest run hands its id, and every id above what remains, back to the next
+start. That is the deliberate consequence of having no counter beside the
+disk; deleting from the middle frees nothing.

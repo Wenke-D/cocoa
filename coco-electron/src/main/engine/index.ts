@@ -18,6 +18,7 @@ import type { BenchStart, BenchStatusView, MemberCancel, PlanInstance } from './
 import { as_engine_error } from './errors'
 import type { EngineError } from './errors'
 import { InFlight } from './in_flight'
+import * as del from './delete'
 import * as job from './job'
 import type { PollReport, ReportMode } from './job'
 import { Memory } from './memory'
@@ -99,6 +100,14 @@ export class Engine extends Memory {
 
   async cancel_run(folder: string, run_id: number): Promise<void> {
     return job.cancel_run(this, this.job(folder), run_id)
+  }
+
+  delete_run(folder: string, run_id: number): void {
+    del.delete_run(this.job(folder), run_id)
+  }
+
+  delete_bench_run(folder: string, run_id: number): void {
+    del.delete_bench_run(this, this.bench(folder), run_id)
   }
 
   // ------------------------------------------------------------------

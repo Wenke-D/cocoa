@@ -1096,7 +1096,7 @@ Do not use plain Enter when focus behavior could cause accidental launches.
 
 ---
 
-## 16. Cancel Confirmation Modal
+## 16. Cancel and Delete Confirmation Modals
 
 Cancel is destructive and requires confirmation.
 
@@ -1142,6 +1142,46 @@ After confirmation:
 5. If the mock operation fails, restore the prior status and display an error.
 
 Never immediately label a run `Cancelled` before the cancellation transition completes.
+
+### 16.4 Deleting a Run
+
+Deletion is the one operation that cannot be taken back: cancel stops work,
+remove forgets a folder, delete destroys the record. It removes from disk
+everything the run left behind — `runs/<id>/` whole, and its `report/<id>.*`
+files — and nothing else (convention §12.1).
+
+Where it is offered:
+
+- On a run's detail page, in the place Cancel occupies while the run is
+  active: a run is either stoppable or deletable, never both.
+- In the history's row menu (§22.6), as `Delete…` after a separator, in the
+  destructive colour, disabled while the run is active.
+
+Only a **finished** run can be deleted. An active run must be cancelled
+first, and the cancellation must land; `UNREACHABLE` is refused too — a run
+coco cannot see may still be running, and deleting its record would be the
+one way to never find out.
+
+The click asks first, always — that modal is the second confirmation. Its
+copy names the run and the experiment, lists exactly what will be removed
+from disk, and says `This cannot be undone.`; the confirm button wears the
+destructive colour and never a neutral one. Two cases add a line:
+
+- A run dispatched by a bench: the bench run will show a member it can no
+  longer resolve (§9.2 of the convention keeps that survivable).
+- A bench run: the runs it dispatched belong to their jobs and stay, each
+  still naming this bench as where it came from.
+
+On success the run is gone from every table before the modal closes (the
+events ride the same answer), the transient message says `Run N deleted.`,
+and a page that was looking at that run — its detail page, or its report —
+steps back to the experiment's overview. A refusal keeps the modal open with
+the reason.
+
+One consequence is stated rather than hidden: a run id is derived from what
+is on disk (convention §5), so deleting the newest run hands its id — and
+every id above what remains — back to the next start. Deleting from the
+middle frees nothing.
 
 ---
 

@@ -11,7 +11,9 @@ import type {
   RemoveFolderResult,
   ReportResult,
   ReportTarget,
-  StartResult
+  StartResult,
+  DeleteTarget,
+  DeleteResult
 } from '@shared/world'
 
 declare global {
@@ -20,6 +22,7 @@ declare global {
       bootstrap(): Promise<BootstrapPayload>
       start_run(name: string, parameters: Params): Promise<StartResult>
       cancel(target: CancelTarget): Promise<CancelResult>
+      delete_run(target: DeleteTarget): Promise<DeleteResult>
       report(target: ReportTarget): Promise<ReportResult>
       add_folder(): Promise<AddFolderResult>
       remove_folder(entity_id: string): Promise<RemoveFolderResult>

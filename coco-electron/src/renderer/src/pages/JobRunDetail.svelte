@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { is_cancellable, job_run } from '@shared/world'
+  import { is_cancellable, is_terminal, job_run } from '@shared/world'
   import type { Crumb } from '../ui_state'
-  import { app, entity_of, request_cancel } from '../state.svelte'
+  import { app, entity_of, request_cancel, request_delete } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import RunFacts from '../lib/RunFacts.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
@@ -31,6 +31,14 @@
         onclick={() => request_cancel({ kind: 'job_run', job_id, run_id: run.id })}
       >
         Cancel Run
+      </Button>
+    {:else if is_terminal(run.status)}
+      <Button
+        variant="destructive"
+        class="ml-auto"
+        onclick={() => request_delete({ kind: 'job_run', job_id, run_id: run.id })}
+      >
+        Delete Run…
       </Button>
     {/if}
   </header>

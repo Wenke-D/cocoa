@@ -15,7 +15,9 @@ import type {
   RemoveFolderResult,
   ReportResult,
   ReportTarget,
-  StartResult
+  StartResult,
+  DeleteTarget,
+  DeleteResult
 } from '@shared/world'
 import type { Engine } from './engine'
 
@@ -58,6 +60,24 @@ export async function start_run(
       return { ok: false, message: `no experiment named \`${name}\` is registered` }
     }
     return { ok: true, run_id: String(run_id) }
+  } catch (error) {
+    return { ok: false, message: (error as Error).message }
+  }
+}
+
+/**
+ * Deletes a finished run for good (§16.4): everything it left on disk, and
+ * nothing else. The engine refuses anything still moving; here that refusal
+ * is answered, never thrown, like every other operation.
+ */
+export function delete_run(engine: Engine, target: DeleteTarget): DeleteResult {
+  try {
+    if (target.kind === 'job_run') {
+      engine.delete_run(target.job_id, Number(target.run_id))
+    } else {
+      engine.delete_bench_run(target.bench_id, Number(target.run_id))
+    }
+    return { ok: true }
   } catch (error) {
     return { ok: false, message: (error as Error).message }
   }

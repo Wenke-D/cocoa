@@ -5,7 +5,14 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { add_folder, cancel, read_report, remove_folder, start_run } from '../src/main/operations'
+import {
+  add_folder,
+  cancel,
+  read_report,
+  remove_folder,
+  start_run,
+  delete_run
+} from '../src/main/operations'
 import {
   bench_folder,
   cleanup_temp_dirs,
@@ -69,6 +76,36 @@ describe('start_run', () => {
     expect(result.ok === false && result.message).toContain('size')
     // A refused start burns nothing.
     expect(fs.existsSync(path.join(job, 'runs'))).toBe(false)
+  })
+})
+
+describe('delete', () => {
+  it('answers a delete, and a refusal, never throwing', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'solver')
+    const coco = engine(dir)
+    coco.register(job)
+    const run_id = await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(coco)
+    write(job, 'poll-state', 'RUNNING')
+    await coco.poll_job(job)
+
+    // Active: refused with the reason, answered.
+    const refused = delete_run(coco, { kind: 'job_run', job_id: job, run_id: String(run_id) })
+    expect(refused.ok).toBe(false)
+    if (!refused.ok) {
+      expect(refused.message).toContain('cancel it first')
+    }
+
+    write(job, 'poll-state', 'COMPLETED')
+    await coco.poll_job(job)
+    await coco.report_run(job, run_id, 'auto')
+    expect(delete_run(coco, { kind: 'job_run', job_id: job, run_id: String(run_id) })).toEqual({
+      ok: true
+    })
+
+    // A run id that is not one, answered.
+    expect(delete_run(coco, { kind: 'job_run', job_id: job, run_id: '99' }).ok).toBe(false)
   })
 })
 

@@ -304,6 +304,96 @@ describe('cancel', () => {
   })
 })
 
+describe('deletion', () => {
+  /** Starts a run and walks it to SUCCEEDED, report on disk. */
+  async function finished_run(coco: ReturnType<typeof engine>, job: string): Promise<number> {
+    const run_id = await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(coco)
+    write(job, 'poll-state', 'COMPLETED')
+    await coco.poll_job(job)
+    await coco.report_run(job, run_id, 'auto')
+    return run_id
+  }
+
+  it('deletes a finished run: record, artifact and report gone, others untouched', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'solver')
+    const coco = engine(dir)
+    coco.register(job)
+    const kept = await finished_run(coco, job)
+    const doomed = await finished_run(coco, job)
+    const newest = await finished_run(coco, job)
+
+    coco.delete_run(job, doomed)
+
+    expect(exists(job, 'runs', String(doomed))).toBe(false)
+    expect(is_file(job, 'report', `${doomed}.txt`)).toBe(false)
+    expect(() => coco.job(job).runs.record(doomed)).toThrow()
+    expect(is_file(job, 'runs', String(kept), 'run.json')).toBe(true)
+    expect(is_file(job, 'report', `${kept}.txt`)).toBe(true)
+
+    // A deleted middle run frees nothing: ids keep counting from the top.
+    expect(coco.job(job).runs.next_id()).toBe(newest + 1)
+
+    // Deleting the newest hands back every id above what remains — the id
+    // is derived from what is on disk (§5), and the disk no longer knows
+    // them. Stated deliberately, not an accident to fix.
+    coco.delete_run(job, newest)
+    expect(coco.job(job).runs.next_id()).toBe(kept + 1)
+  })
+
+  it('refuses an active run, and UNREACHABLE, which may still be running', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'busy')
+    const coco = engine(dir)
+    coco.register(job)
+    const run_id = await coco.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(coco)
+    write(job, 'poll-state', 'RUNNING')
+    await coco.poll_job(job)
+
+    expect(await failure(Promise.resolve().then(() => coco.delete_run(job, run_id)))).toContain(
+      'cancel it first'
+    )
+
+    write_script(job, 'poll.sh', "echo 'oops' >&2\nexit 3\n")
+    await coco.poll_job(job).catch(() => undefined)
+    expect(coco.job(job).runs.record(run_id).status).toBe('UNREACHABLE')
+    expect(await failure(Promise.resolve().then(() => coco.delete_run(job, run_id)))).toContain(
+      'not finished'
+    )
+    expect(is_file(job, 'runs', String(run_id), 'run.json')).toBe(true)
+  })
+
+  it('deletes a settled bench run and leaves its members in their jobs', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'member-job')
+    const bench = bench_folder(dir, 'sweep', [])
+    const coco = engine(dir)
+    coco.register(job)
+    coco.register(bench)
+    plan_lines(bench, ['{"job": "member-job", "params": {"size": "1", "gpu": "0"}}'])
+
+    const start = await coco.start_bench(bench, { mesh: 'fine' }, 'human')
+    await settle(coco)
+    const member = start.members[0]
+
+    // Still dispatching members: refused.
+    expect(
+      await failure(Promise.resolve().then(() => coco.delete_bench_run(bench, start.run_id)))
+    ).toContain('cancel it first')
+
+    write(job, 'poll-state', 'FAILED broke')
+    await coco.poll_job(job)
+
+    coco.delete_bench_run(bench, start.run_id)
+    expect(exists(bench, 'runs', String(start.run_id))).toBe(false)
+    // The member run belongs to its job and stays, origin intact.
+    const record = coco.job(job).runs.record(member.run_id)
+    expect(record.origin).toMatchObject({ by: 'bench', name: 'sweep' })
+  })
+})
+
 describe('registration', () => {
   // The entity is one the user knows and has run, so a manifest that breaks
   // later stays listed carrying the error (§11.5). Memory is the truth here,

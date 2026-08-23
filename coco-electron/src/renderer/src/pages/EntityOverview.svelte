@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     format_duration,
+    is_terminal,
     format_relative,
     format_started_at,
     manifest_blocking_reason,
@@ -116,6 +117,7 @@
               {entity_id}
               run_id={run.id}
               params={run.params}
+              deletable={is_terminal(run.status)}
               route={{ page: 'job_run', job_id: entity_id, run_id: run.id }}
             >
               <td><StatusPill status={run.status} health={run.query_health} compact /></td>
@@ -158,6 +160,7 @@
             {entity_id}
             run_id={run.id}
             params={run.params}
+            deletable={is_terminal(run.status)}
             route={{ page: 'bench_run', bench_id: entity_id, run_id: run.id }}
           >
             <td><StatusPill status={run.status} health={run.query_health} compact /></td>

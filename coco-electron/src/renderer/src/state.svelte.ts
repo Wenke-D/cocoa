@@ -21,7 +21,9 @@ import type {
   NoticeLevel,
   RunsByEntity,
   StartResult,
-  World
+  World,
+  DeleteTarget,
+  DeleteResult
 } from '@shared/world'
 
 // Re-exported because this module is where the renderer reaches for
@@ -36,6 +38,7 @@ export type { JournalEntry, JournalTarget } from './journal'
 export type Overlay =
   | ({ error: string | null; busy: boolean } & (
       | { kind: 'confirm_cancel'; target: CancelTarget }
+      | { kind: 'confirm_delete'; target: DeleteTarget }
       | { kind: 'confirm_remove'; entity_id: string }
     ))
   /** A refusal that has to be read before anything else happens (§22.6). */
@@ -141,6 +144,68 @@ export async function add_folder(): Promise<void> {
 
 export function request_cancel(target: CancelTarget): void {
   app.overlay = { kind: 'confirm_cancel', target, error: null, busy: false }
+}
+
+/** Opens the delete confirmation (§16.4); the modal is the second look. */
+export function request_delete(target: DeleteTarget): void {
+  app.overlay = { kind: 'confirm_delete', target, error: null, busy: false }
+}
+
+/**
+ * Deletes the run the open modal points at. On success the run is gone from
+ * the world before the modal closes (the events ride the same answer), and
+ * a page that was looking at that run steps back to the experiment.
+ */
+export async function confirm_delete(): Promise<void> {
+  const overlay = app.overlay
+  if (overlay === null || overlay.kind !== 'confirm_delete' || overlay.busy) {
+    return
+  }
+  overlay.busy = true
+  overlay.error = null
+  let result: DeleteResult
+  try {
+    result = await window.coco.delete_run($state.snapshot(overlay.target))
+  } catch (error) {
+    result = { ok: false, message: (error as Error).message }
+  }
+  if (app.overlay !== overlay) {
+    return
+  }
+  if (result.ok) {
+    const target = overlay.target
+    app.overlay = null
+    const entity_id = target.kind === 'job_run' ? target.job_id : target.bench_id
+    if (route_shows_run(app.route, target)) {
+      navigate({ page: 'entity', entity_id })
+    }
+    notify(`Run ${target.run_id} deleted.`)
+    return
+  }
+  overlay.busy = false
+  overlay.error = result.message
+  notify(result.message, 'error')
+}
+
+/**
+ * Whether `route` is looking at the deleted run — its page, or its report.
+ * A run has two addresses (§19): a deleted job run may be on screen as a
+ * bench's child, where the route names the bench, so that page steps back
+ * on the run id alone; a same-id run of another job is a near miss this
+ * accepts, since stepping back from a page is cheap and a page showing a
+ * deleted run is not.
+ */
+function route_shows_run(route: Route, target: DeleteTarget): boolean {
+  if (route.page === 'job_run' && target.kind === 'job_run') {
+    return route.job_id === target.job_id && route.run_id === target.run_id
+  }
+  if (route.page === 'bench_run' && target.kind === 'bench_run') {
+    return route.bench_id === target.bench_id && route.run_id === target.run_id
+  }
+  if (route.page === 'bench_child' || route.page === 'report') {
+    return route.run_id === target.run_id
+  }
+  return false
 }
 
 export function request_remove(entity_id: string): void {
@@ -502,11 +567,11 @@ export function recover(): void {
   const overlay = app.overlay
   if (overlay !== null && overlay.kind !== 'refused' && !overlay.busy) {
     const gone =
-      overlay.kind === 'confirm_cancel'
-        ? overlay.target.kind === 'job_run'
+      overlay.kind === 'confirm_remove'
+        ? entity_gone(overlay.entity_id)
+        : overlay.target.kind === 'job_run'
           ? job_run(world, overlay.target.job_id, overlay.target.run_id) === undefined
           : bench_run(world, overlay.target.bench_id, overlay.target.run_id) === undefined
-        : entity_gone(overlay.entity_id)
     if (gone) {
       app.overlay = null
     }

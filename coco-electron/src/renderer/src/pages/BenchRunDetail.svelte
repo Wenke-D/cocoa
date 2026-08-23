@@ -9,7 +9,7 @@
   } from '@shared/world'
   import { bench_run, job_run } from '@shared/world'
   import type { Crumb } from '../ui_state'
-  import { app, entity_of, navigate, request_cancel } from '../state.svelte'
+  import { app, entity_of, navigate, request_cancel, request_delete } from '../state.svelte'
   import Breadcrumbs from '../lib/Breadcrumbs.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
   import { Button } from '$lib/components/ui/button'
@@ -49,6 +49,14 @@
         onclick={() => request_cancel({ kind: 'bench_run', bench_id, run_id: run.id })}
       >
         Cancel Bench
+      </Button>
+    {:else if is_terminal(run.status)}
+      <Button
+        variant="destructive"
+        class="ml-auto"
+        onclick={() => request_delete({ kind: 'bench_run', bench_id, run_id: run.id })}
+      >
+        Delete Run…
       </Button>
     {/if}
   </header>

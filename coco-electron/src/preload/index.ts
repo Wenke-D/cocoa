@@ -11,6 +11,8 @@ const api = {
 
   cancel: (target: unknown): Promise<unknown> => ipcRenderer.invoke('coco:cancel', target),
 
+  delete_run: (target: unknown): Promise<unknown> => ipcRenderer.invoke('coco:delete_run', target),
+
   add_folder: (): Promise<unknown> => ipcRenderer.invoke('coco:add_folder'),
 
   remove_folder: (entity_id: string): Promise<unknown> =>
