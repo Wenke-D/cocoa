@@ -10,7 +10,7 @@
   } from '@shared/world'
   import { bench_run, job_run } from '@shared/world'
   import { describe_values } from '@shared/params'
-  import { app, entity_of, navigate } from '../state.svelte'
+  import { app, entity_of, navigate, request_remove } from '../state.svelte'
   import HistoryRow from '../lib/HistoryRow.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
   import { Button } from '$lib/components/ui/button'
@@ -74,6 +74,10 @@
     {/if}
   {/if}
 
+  <!-- Every action on the experiment itself, in one place (§13.1). Remove
+       stays available when the manifest is broken — a folder that cannot
+       start is exactly one someone may want out of the Explorer. -->
+  <h2>Actions</h2>
   <div class="actions">
     <Button
       disabled={blocking !== null}
@@ -81,6 +85,9 @@
       onclick={() => navigate({ page: 'start', entity_id })}
     >
       {entity.kind === 'Job' ? 'Start Job' : 'Start Bench'}
+    </Button>
+    <Button variant="secondary" onclick={() => request_remove(entity_id)}>
+      Remove from Explorer
     </Button>
   </div>
 
@@ -245,7 +252,8 @@
   }
 
   .actions {
-    margin-top: 14px;
+    display: flex;
+    gap: 8px;
   }
 
   h2 {

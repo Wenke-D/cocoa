@@ -3,7 +3,9 @@
 A desktop workbench for experiments that live on your own machine.
 
 An experiment, to coco, is a **folder**: a `coco.toml` manifest and the scripts
-it names. The manifest says how to launch a run, how to ask whether it is still
+it names. Experiments come in two kinds — **jobs**, launched one run at a time,
+and **benches**, whose plan fans out over jobs — and *experiment* is the word
+for either, here and everywhere coco speaks. The manifest says how to launch a run, how to ask whether it is still
 going, how to produce a report, and how to cancel it. coco runs those scripts.
 It does not know what a cluster is, whether you use Slurm, or how you reach it —
 your `launch.sh` knows, and coco knows only what your script printed.

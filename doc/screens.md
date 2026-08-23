@@ -655,10 +655,13 @@ meaning: a slash to pick one of, commas inside brackets to take several of.
 when it declares none. A parameter is read here before it is filled in on the
 Start page, so this is where the description is shown in full, not on hover.
 
-Below that, at the left, the `Start Job` primary button; the history follows
-it. There is no `JOB` type label: the button says it, and so does the Explorer
-section the row came from — a third statement next to the name was the one
-too many.
+Below that, under an `Actions` heading, every action on the experiment
+itself, as one row at the left: the `Start Job` primary button, then `Remove
+from Explorer` (§36) as a secondary — the same removal the Explorer's row
+menu offers, one modal behind both. Remove stays available when the manifest
+is invalid; Start does not. The history follows. There is no `JOB` type
+label: the Start button says it, and so does the Explorer section the row
+came from — a third statement next to the name was the one too many.
 
 Example:
 
@@ -673,7 +676,8 @@ mesh      a string        Mesh resolution, cells per side
 gpu       0 / 1           Which GPU to pin to
 profile   true / false    Run under nsys
 
-[Start Job]
+Actions
+[Start Job]  [Remove from Explorer]
 
 History
 ```
@@ -797,7 +801,7 @@ The Bench overview follows the same hierarchy as the Job overview.
 ### 14.1 Header
 
 As §13.1, with the bench's own parameters — what its plan takes — under the
-same `Parameters` heading, and the `Start Bench` button below:
+same `Parameters` heading, and the same `Actions` row below:
 
 - Bench display name.
 - The manifest's `description`, when it gives one.
@@ -818,7 +822,7 @@ Parameters
 Name      Values         Description
 sweep     quick / full   How much of the suite to run
 
-[Start Bench]
+[Start Bench]  [Remove from Explorer]
 ```
 
 For a Bench that has never run:
@@ -832,7 +836,7 @@ Parameters
 Name      Values         Description
 sweep     quick / full   How much of the suite to run
 
-[Start Bench]
+[Start Bench]  [Remove from Explorer]
 ```
 
 Never display a fixed job count as if it were a property of the Bench.
