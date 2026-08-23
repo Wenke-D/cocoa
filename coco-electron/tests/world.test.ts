@@ -175,4 +175,56 @@ describe('build_world', () => {
       }
     })
   })
+
+  // A bench has no history of its own (§9.1): it ends when its last member
+  // does, and until then its clock runs.
+  it("dates a bench run's end by its last member's", async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'member-job')
+    const bench = bench_folder(dir, 'sweep', ['member-job', 'member-job'])
+    const coco = engine(dir)
+    coco.register(job)
+    coco.register(bench)
+    const start = await coco.start_bench(bench, { mesh: 'fine' }, 'human')
+    await settle(coco)
+    expect(build_world(coco, null).bench_runs[bench][String(start.run_id)].ended_at).toBeNull()
+
+    write(job, 'poll-state', 'FAILED no convergence')
+    await coco.poll_job(job)
+
+    const world = build_world(coco, null)
+    const ends = start.members.map((member) => world.job_runs[job][String(member.run_id)].ended_at)
+    expect(ends.every((at) => at !== null)).toBe(true)
+    const latest = ends.reduce((a, b) =>
+      Date.parse(b as string) > Date.parse(a as string) ? b : a
+    )
+    expect(world.bench_runs[bench][String(start.run_id)]).toMatchObject({
+      status: 'Failed',
+      ended_at: latest
+    })
+  })
+
+  // End to end, a bench that succeeds ends when its own report lands — not
+  // when its last member did (§8.2).
+  it('ends at its own report when it has one', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'member-job')
+    const bench = bench_folder(dir, 'sweep', ['member-job'])
+    const coco = engine(dir)
+    coco.register(job)
+    coco.register(bench)
+    const start = await coco.start_bench(bench, { mesh: 'fine' }, 'human')
+    await settle(coco)
+
+    write(job, 'poll-state', 'COMPLETED')
+    // One tick reports the member, the next reports the bench over it.
+    await coco.refresh()
+    await coco.refresh()
+
+    const record = coco.bench(bench).runs.record(start.run_id)
+    expect(record.report?.at).toBeDefined()
+    const run = build_world(coco, null).bench_runs[bench][String(start.run_id)]
+    expect(run.status).toBe('Succeeded')
+    expect(run.ended_at).toBe(record.report?.at)
+  })
 })

@@ -39,8 +39,13 @@ export interface LaunchFailure {
   error: string
 }
 
+/**
+ * The bench's own report, once attempted (§8.3). `at` is when — the moment the
+ * bench ended, for a person reading its history (§8.2).
+ */
 export interface BenchReport {
   attempted: boolean
+  at?: string
   error?: string
 }
 

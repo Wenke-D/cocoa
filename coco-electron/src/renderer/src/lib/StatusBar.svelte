@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { format_relative } from '@shared/world'
-  import { active_run_count, app, refresh_now } from '../state.svelte'
+  import { format_clock } from '@shared/world'
+  import { active_run_count, app, last_change, refresh_now, select_view } from '../state.svelte'
   import { Button } from '$lib/components/ui/button'
   import { Spinner } from '$lib/components/ui/spinner'
   import RefreshIcon from '@lucide/svelte/icons/refresh-cw'
 
   const active = $derived(active_run_count())
+  const last = $derived(last_change())
 
   // A refresh the user asks for is never the tick that gets dropped, and it
   // always answers — the backend sends a notice either way, so the button
@@ -32,9 +33,13 @@
     <span>coco engine</span>
     <span class="sep">·</span>
     <span>{active} active {active === 1 ? 'run' : 'runs'}</span>
-    {#if app.world.last_refresh !== null}
+    {#if last !== null}
       <span class="sep">·</span>
-      <span>refreshed {format_relative(app.world.last_refresh, app.now_ms)}</span>
+      <!-- A clock time, not a count that ticks: it changes only when something
+           does, and it is always the same width (§8.5). -->
+      <button class="change" title="Open Events" onclick={() => select_view('events')}>
+        last change <span class="clock">{format_clock(last.at)}</span>
+      </button>
     {/if}
     <Button
       variant="ghost"
@@ -83,5 +88,22 @@
 
   .sep {
     opacity: 0.5;
+  }
+
+  .change {
+    border: none;
+    background: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .change:hover {
+    color: var(--strong-foreground);
+  }
+
+  .clock {
+    font-variant-numeric: tabular-nums;
   }
 </style>

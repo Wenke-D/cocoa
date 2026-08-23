@@ -8,19 +8,25 @@
 // perfectly correct underneath — and it is caught where it shows: the
 // `.active-dot` assertion in `scripts/scenarios/remove-folder.mjs`.
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BenchPlanStep, BenchRun, CocoEvent, Entity, JobRun } from '@shared/world'
 import { empty_world } from '@shared/world'
 import {
   app,
   apply_events,
   dismiss_notice,
+  go_to,
   has_active_run,
+  last_change,
   navigate,
   notify,
+  prefill_start,
   recover,
   report_owner_id,
-  selected_entity_id
+  select_view,
+  selected_entity_id,
+  start_again,
+  take_prefill
 } from '../src/renderer/src/state.svelte'
 
 function entity(id: string, kind: 'Job' | 'Bench' = 'Job'): Entity {
@@ -42,6 +48,7 @@ function job_run(id: string, job_id: string, extra: Partial<JobRun> = {}): JobRu
     started_at: `2026-08-19T10:0${id}:00.000+02:00`,
     ended_at: null,
     parameters: '',
+    params: {},
     status: 'Running',
     query_health: 'Healthy',
     last_successful_query: '2026-08-19T10:00:03.000+02:00',
@@ -64,6 +71,7 @@ function bench_run(id: string, bench_id: string, steps: BenchPlanStep[] = []): B
     started_at: '2026-08-19T10:00:00.000+02:00',
     ended_at: null,
     parameters: '',
+    params: {},
     plan: { steps },
     status: 'Running',
     query_health: 'Healthy',
@@ -77,7 +85,11 @@ function reset(): void {
   app.world = empty_world()
   app.route = { page: 'empty' }
   app.overlay = null
+  app.prefill = null
   app.notice = null
+  app.journal = []
+  app.sidebar_view = 'explorer'
+  app.sidebar_open = true
 }
 
 afterEach(reset)
@@ -288,5 +300,131 @@ describe('a dispatched run seen through its bench', () => {
 
     send({ kind: 'job-run-removed', job_id: 'solver', id: '8' })
     expect(app.route).toEqual({ page: 'entity', entity_id: 'nightly' })
+  })
+})
+
+// What happened, written from the events as they land, and the views the
+// activity bar switches between (§8.2, §11.1).
+describe('the journal and the views', () => {
+  function failure(text: string): CocoEvent {
+    return { kind: 'notice', level: 'error', text }
+  }
+
+  it('writes a line from an event before the event lands, newest last', () => {
+    send({ kind: 'entity-upserted', entity: entity('solver') })
+    send({ kind: 'job-run-upserted', run: job_run('0', 'solver') })
+    send({ kind: 'job-run-upserted', run: job_run('0', 'solver', { status: 'Succeeded' }) })
+    expect(
+      app.journal.map((entry) => [entry.name, entry.run, entry.what].filter(Boolean).join(' '))
+    ).toEqual(['solver added', 'solver 0 started by you', 'solver 0 Succeeded'])
+  })
+
+  it('keeps no more than a hundred', () => {
+    for (let i = 0; i < 120; i += 1) {
+      send(failure(`entry ${i}`))
+    }
+    expect(app.journal).toHaveLength(100)
+    expect(app.journal[0].what).toBe('entry 20')
+    expect(app.journal[99].what).toBe('entry 119')
+  })
+
+  it('dates the last change by the newest entry', () => {
+    expect(last_change()).toBeNull()
+    send(failure('first'), failure('second'))
+    expect(last_change()?.what).toBe('second')
+  })
+
+  it('opens a view from the activity bar, and collapses the sidebar on the open one', () => {
+    select_view('events')
+    expect([app.sidebar_view, app.sidebar_open]).toEqual(['events', true])
+    select_view('events')
+    expect([app.sidebar_view, app.sidebar_open]).toEqual(['events', false])
+    select_view('runs')
+    expect([app.sidebar_view, app.sidebar_open]).toEqual(['runs', true])
+  })
+
+  it('takes the page to what an entry is about, and says so when it is gone', () => {
+    send({ kind: 'entity-upserted', entity: entity('solver') })
+    send({
+      kind: 'job-run-upserted',
+      run: {
+        id: '0',
+        job_id: 'solver',
+        origin: 'Human',
+        started_at: '2026-08-22T22:00:00.000+02:00',
+        ended_at: null,
+        parameters: '',
+        params: {},
+        status: 'Running',
+        query_health: 'Healthy',
+        last_successful_query: '2026-08-22T22:00:03.000+02:00',
+        report: 'Missing',
+        error: null
+      }
+    })
+    go_to({ kind: 'job_run', job_id: 'solver', run_id: '0' })
+    expect(app.route).toEqual({ page: 'job_run', job_id: 'solver', run_id: '0' })
+
+    go_to({ kind: 'job_run', job_id: 'solver', run_id: '9' })
+    expect(app.route).toEqual({ page: 'job_run', job_id: 'solver', run_id: '0' })
+    expect(app.notice?.text).toContain('no longer listed')
+  })
+})
+
+// The history's row menu (§22.6): a run's parameters, used again — at once,
+// or as a draft on the Start page.
+describe('a run started again', () => {
+  const start_run = vi.fn<(name: string, params: Record<string, string>) => Promise<unknown>>()
+
+  beforeEach(() => {
+    start_run.mockReset()
+    vi.stubGlobal('window', { coco: { start_run } })
+    send({
+      kind: 'entity-upserted',
+      entity: { ...entity('solver'), parameter_names: ['nodes', 'gpu'] }
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('starts with exactly the parameters it had, and says which run that made', async () => {
+    start_run.mockResolvedValue({ ok: true, run_id: '7' })
+    await start_again('solver', { nodes: '4', gpu: '1' })
+    expect(start_run).toHaveBeenCalledWith('solver', { nodes: '4', gpu: '1' })
+    expect(app.notice?.text).toBe('Run 7 started.')
+    expect(app.overlay).toBeNull()
+  })
+
+  it('puts a refusal in a modal, since it has to be read', async () => {
+    start_run.mockResolvedValue({ ok: false, message: 'render parameters must match the manifest' })
+    await start_again('solver', { nodes: '4' })
+    expect(app.overlay).toEqual({
+      kind: 'refused',
+      title: 'Could not start',
+      message: 'render parameters must match the manifest'
+    })
+  })
+
+  it('fills the Start page with what the manifest still takes, and says the rest', () => {
+    prefill_start('solver', '3', { nodes: '4', gpu: '1' })
+    expect(app.route).toEqual({ page: 'start', entity_id: 'solver' })
+    expect(take_prefill('solver')).toEqual({ nodes: '4', gpu: '1' })
+    expect(take_prefill('solver')).toBeNull()
+    expect(app.notice?.text).toBe('Parameters of run 3 filled in.')
+
+    prefill_start('solver', '3', { nodes: '4', size: '256' })
+    expect(take_prefill('solver')).toEqual({ nodes: '4', gpu: '' })
+    expect(app.notice).toMatchObject({ level: 'error' })
+    expect(app.notice?.text).toBe(
+      'Filled what run 3 had; `gpu` is new and left empty; `size` is no longer taken.'
+    )
+  })
+
+  it('hands a prefill only to the page it was meant for', () => {
+    prefill_start('solver', '3', { nodes: '4', gpu: '1' })
+    expect(take_prefill('elsewhere')).toBeNull()
+    expect(take_prefill('solver')).toEqual({ nodes: '4', gpu: '1' })
   })
 })

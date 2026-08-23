@@ -1,6 +1,7 @@
 <script lang="ts">
   import { manifest_blocking_reason } from '@shared/world'
-  import { entity_of, navigate, notify } from '../state.svelte'
+  import { untrack } from 'svelte'
+  import { entity_of, navigate, notify, take_prefill } from '../state.svelte'
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
   import { Label } from '$lib/components/ui/label'
@@ -15,13 +16,17 @@
   let submitting = $state(false)
   let error = $state<string | null>(null)
 
+  // Empty, unless a run in the history was asked to fill it (§22.6). The
+  // prefill is read untracked: taking it clears it, and the effect must not
+  // run again for that.
   $effect(() => {
     if (entity !== undefined) {
       const draft: Record<string, string> = {}
       for (const name of entity.parameter_names) {
         draft[name] = ''
       }
-      values = draft
+      const prefill = untrack(() => take_prefill(entity_id))
+      values = prefill ?? draft
     }
   })
 

@@ -19,6 +19,7 @@ import type { Engine } from './index'
 import { report_on_disk } from './job'
 import { all_params, ended_at, started_at } from './record'
 import type { BenchRecord, RunRecord } from './record'
+import { is_terminal } from './status'
 import type { Status } from './status'
 
 export function build_world(engine: Engine, last_refresh: string | null): World {
@@ -147,6 +148,7 @@ function job_run_of(engine: Engine, job_path: string, record: RunRecord, now_iso
     started_at: started_at(record),
     ended_at: ended_at(record),
     parameters: format_params(all_params(record)),
+    params: all_params(record),
     status,
     query_health: query_health,
     last_successful_query: now_iso,
@@ -180,8 +182,11 @@ function bench_run_of(
   now_iso: string
 ): BenchRun {
   let status: RunStatus = 'Error'
+  let ended: string | null = null
   try {
-    status = map_status(engine.bench_status(bench_path, record.run_id).status)
+    const derived = engine.bench_status(bench_path, record.run_id)
+    status = map_status(derived.status)
+    ended = bench_ended_at(engine, record, derived.status)
   } catch {
     // Fall through to Error, as the Rust adapter does.
   }
@@ -190,8 +195,9 @@ function bench_run_of(
     bench_id: bench_path,
     by: record.by === 'agent' ? 'Agent' : 'Human',
     started_at: record.started_at,
-    ended_at: null,
+    ended_at: ended,
     parameters: format_params(record.params),
+    params: record.params,
     plan: {
       steps: record.members.map((member, index) => {
         const job = engine.find_job_by_name(member.job)
@@ -210,6 +216,32 @@ function bench_run_of(
     report: report_state_of(bench_path, record.run_id),
     error: null
   }
+}
+
+/**
+ * When a bench run ended, if it has — end to end, as a person sees it (§8.2):
+ * at its own report, when there was one (landed or failed); otherwise, having
+ * settled without one (§9.1: a member failed or was cancelled), when its last
+ * member ended; and a bench that ended without members ending (every launch
+ * failed, a member coco cannot resolve) is dated by its start, so that its
+ * clock at least stops. Records written before `report.at` existed fall
+ * through to the members.
+ */
+function bench_ended_at(engine: Engine, record: BenchRecord, status: Status): string | null {
+  if (record.report?.attempted === true && record.report.at !== undefined) {
+    return record.report.at
+  }
+  if (!is_terminal(status)) {
+    return null
+  }
+  const members = engine.resolve_members(record)
+  const ends = members
+    .map((member) => (member.record === null ? null : ended_at(member.record)))
+    .filter((at): at is string => at !== null)
+  if (members.length > 0 && ends.length === members.length) {
+    return ends.reduce((latest, at) => (Date.parse(at) > Date.parse(latest) ? at : latest))
+  }
+  return record.started_at
 }
 
 /** UNREACHABLE shows the last known status plus unavailable query health. */

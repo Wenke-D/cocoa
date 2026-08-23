@@ -3,7 +3,9 @@
   import { fade } from 'svelte/transition'
   import { SIDEBAR_MAX_WIDTH, SIDEBAR_MIN_WIDTH } from './ui_state'
   import { app, apply_events, bootstrap, dismiss_notice, flush_ui } from './state.svelte'
+  import ActivityBar from './lib/ActivityBar.svelte'
   import CancelModal from './lib/CancelModal.svelte'
+  import RefusedModal from './lib/RefusedModal.svelte'
   import RemoveModal from './lib/RemoveModal.svelte'
   import Sidebar from './lib/Sidebar.svelte'
   import StatusBar from './lib/StatusBar.svelte'
@@ -71,16 +73,19 @@
 
 <div class="shell">
   <div class="content">
-    <aside style="width: {app.sidebar_width}px">
-      <Sidebar />
-    </aside>
-    <div
-      class="divider"
-      class:dragging
-      role="separator"
-      aria-orientation="vertical"
-      onpointerdown={start_drag}
-    ></div>
+    <ActivityBar />
+    {#if app.sidebar_open}
+      <aside style="width: {app.sidebar_width}px">
+        <Sidebar />
+      </aside>
+      <div
+        class="divider"
+        class:dragging
+        role="separator"
+        aria-orientation="vertical"
+        onpointerdown={start_drag}
+      ></div>
+    {/if}
     <main>
       {#key page_key}
         <div class="page" in:fade={{ duration: 120 }}>
@@ -113,6 +118,8 @@
     <CancelModal overlay={app.overlay} />
   {:else if app.overlay?.kind === 'confirm_remove'}
     <RemoveModal overlay={app.overlay} />
+  {:else if app.overlay?.kind === 'refused'}
+    <RefusedModal overlay={app.overlay} />
   {/if}
 
   {#if app.notice !== null}
@@ -147,7 +154,8 @@
   aside {
     background: var(--side-bar-bg);
     border-right: 1px solid var(--border);
-    overflow-y: auto;
+    /* Each view scrolls its own list; the sidebar itself never does. */
+    overflow: hidden;
     flex-shrink: 0;
   }
 

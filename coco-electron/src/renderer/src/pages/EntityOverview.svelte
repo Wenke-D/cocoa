@@ -8,6 +8,7 @@
   } from '@shared/world'
   import { bench_run, job_run } from '@shared/world'
   import { app, entity_of, navigate } from '../state.svelte'
+  import HistoryRow from '../lib/HistoryRow.svelte'
   import StatusPill from '../lib/StatusPill.svelte'
   import { Button } from '$lib/components/ui/button'
 
@@ -56,29 +57,39 @@
     {:else}
       <table class="runs">
         <!-- Sized for the widest value each column actually holds: `CANCELLING`
-             with its dot, a bench name and call number, a locale timestamp.
-             The slack goes to the *last* column, so on a wide window the empty
-             space collects at the table's edge instead of opening a gap in the
-             middle of every row. Duration only ever needs `HH:MM:SS`. -->
+             with its dot, a locale timestamp, `HH:MM:SS`. Parameters is the one
+             column with no bound — a sweep is what varies them — so it takes
+             what is left, and goes last so the slack collects at the table's
+             edge rather than opening a gap in the middle of every row (§22.2). -->
         <colgroup>
           <col style="width: 72px" />
           <col style="width: 116px" />
-          <col style="width: 240px" />
+          <col style="width: 80px" />
           <col style="width: 190px" />
+          <col style="width: 84px" />
           <col />
         </colgroup>
         <thead>
-          <tr><th>Run</th><th>Status</th><th>By</th><th>Started</th><th>Duration</th></tr>
+          <tr>
+            <th>Run</th><th>Status</th><th>By</th><th>Started</th><th>Duration</th>
+            <th>Parameters</th>
+          </tr>
         </thead>
         <tbody>
           {#each job_runs as run (run.id)}
-            <tr onclick={() => navigate({ page: 'job_run', job_id: entity_id, run_id: run.id })}>
+            <HistoryRow
+              {entity_id}
+              run_id={run.id}
+              params={run.params}
+              route={{ page: 'job_run', job_id: entity_id, run_id: run.id }}
+            >
               <td class="mono">{run.id}</td>
               <td><StatusPill status={run.status} health={run.query_health} /></td>
               <td title={origin_label(run.origin)}>{origin_label(run.origin)}</td>
               <td title={format_started_at(run.started_at)}>{format_started_at(run.started_at)}</td>
               <td class="mono">{format_duration(run.started_at, run.ended_at, app.now_ms)}</td>
-            </tr>
+              <td class="mono" title={run.parameters}>{run.parameters}</td>
+            </HistoryRow>
           {/each}
         </tbody>
       </table>
@@ -90,26 +101,34 @@
       <colgroup>
         <col style="width: 72px" />
         <col style="width: 116px" />
-        <col style="width: 240px" />
+        <col style="width: 80px" />
         <col style="width: 60px" />
         <col style="width: 190px" />
+        <col style="width: 84px" />
         <col />
       </colgroup>
       <thead>
-        <tr
-          ><th>Run</th><th>Status</th><th>By</th><th>Calls</th><th>Started</th><th>Duration</th></tr
-        >
+        <tr>
+          <th>Run</th><th>Status</th><th>By</th><th>Calls</th><th>Started</th><th>Duration</th>
+          <th>Parameters</th>
+        </tr>
       </thead>
       <tbody>
         {#each bench_runs as run (run.id)}
-          <tr onclick={() => navigate({ page: 'bench_run', bench_id: entity_id, run_id: run.id })}>
+          <HistoryRow
+            {entity_id}
+            run_id={run.id}
+            params={run.params}
+            route={{ page: 'bench_run', bench_id: entity_id, run_id: run.id }}
+          >
             <td class="mono">{run.id}</td>
             <td><StatusPill status={run.status} health={run.query_health} /></td>
             <td title={trigger_label(run.by)}>{trigger_label(run.by)}</td>
             <td>{run.plan.steps.length}</td>
             <td title={format_started_at(run.started_at)}>{format_started_at(run.started_at)}</td>
             <td class="mono">{format_duration(run.started_at, run.ended_at, app.now_ms)}</td>
-          </tr>
+            <td class="mono" title={run.parameters}>{run.parameters}</td>
+          </HistoryRow>
         {/each}
       </tbody>
     </table>

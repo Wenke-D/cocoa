@@ -59,6 +59,8 @@ export interface JobRun {
   started_at: string
   ended_at: string | null
   parameters: string
+  /** The same, as given: what a new run from this one would be started with. */
+  params: Record<string, string>
   status: RunStatus
   query_health: QueryHealth
   last_successful_query: string
@@ -80,6 +82,7 @@ export interface BenchRun {
   started_at: string
   ended_at: string | null
   parameters: string
+  params: Record<string, string>
   plan: { steps: BenchPlanStep[] }
   status: RunStatus
   query_health: QueryHealth

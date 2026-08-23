@@ -6,6 +6,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { UiState } from '../src/renderer/src/ui_state'
 import {
+  EXPLORER_DEFAULT_SPLIT,
+  EXPLORER_MAX_SPLIT,
+  EXPLORER_MIN_SPLIT,
   SIDEBAR_DEFAULT_WIDTH,
   default_ui_state,
   load_ui_state,
@@ -34,6 +37,9 @@ describe('sanitize', () => {
     const state: UiState = {
       route: { page: 'job_run', job_id: 'solver', run_id: '3' },
       sidebar_width: 260,
+      sidebar_view: 'events',
+      sidebar_open: false,
+      explorer_split: 0.5,
       report_wrap_lines: true
     }
     expect(sanitize(state)).toEqual(state)
@@ -66,6 +72,18 @@ describe('sanitize', () => {
       run_id: '8'
     } as const
     expect(sanitize({ ...default_ui_state(), route }).route).toEqual(route)
+  })
+
+  it('falls back to the Explorer, open, for a view it does not know', () => {
+    const restored = sanitize({ sidebar_view: 'nope' as never })
+    expect([restored.sidebar_view, restored.sidebar_open]).toEqual(['explorer', true])
+    expect(sanitize({ sidebar_view: 'runs', sidebar_open: false }).sidebar_open).toBe(false)
+  })
+
+  it('keeps the Explorer divider inside the sidebar', () => {
+    expect(sanitize({ explorer_split: 0.02 }).explorer_split).toBe(EXPLORER_MIN_SPLIT)
+    expect(sanitize({ explorer_split: 2 }).explorer_split).toBe(EXPLORER_MAX_SPLIT)
+    expect(sanitize({ explorer_split: Number.NaN }).explorer_split).toBe(EXPLORER_DEFAULT_SPLIT)
   })
 
   it('clamps a sidebar that was dragged or edited out of range', () => {
@@ -106,6 +124,9 @@ describe('storage', () => {
     const state: UiState = {
       route: { page: 'bench_run', bench_id: 'nightly', run_id: '2' },
       sidebar_width: 300,
+      sidebar_view: 'events',
+      sidebar_open: false,
+      explorer_split: 0.5,
       report_wrap_lines: true
     }
     store_ui_state(state)

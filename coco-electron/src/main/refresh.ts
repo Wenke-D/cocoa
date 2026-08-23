@@ -29,7 +29,9 @@ let manual_pending = false
  * already pending, in which case this one is ignored.
  */
 export async function refresh_and_publish(manual = false): Promise<void> {
+  // auto refresh
   if (!manual) {
+    // canceled
     if (current !== null) {
       return
     }

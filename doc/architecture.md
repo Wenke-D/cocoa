@@ -342,6 +342,10 @@ Rules that make this safe:
   every rebuild, so including it would mark every entry changed on every tick.
   When query health actually flips, other fields change with it.
 - A fresh page owns nothing, which is why bootstrap is irreducible.
+- The Events view (§11.1) is the renderer's alone: it holds every entry as
+  it was, so when an upsert arrives it can say what moved, in a sentence
+  (`journal.ts`). The backend sends nothing for it and keeps nothing; a fresh
+  page starts with an empty journal.
 
 ### 26.4 Notices
 
@@ -531,10 +535,13 @@ coco-electron/
 │           ├── main.ts
 │           ├── App.svelte
 │           ├── state.svelte.ts    #   the one rune (§34)
+│           ├── journal.ts         #   what happened, in a sentence, from each event (§11.1)
 │           ├── theme.css          #   the palette and coco's chrome (ui-system.md)
 │           ├── app.css            #   Tailwind; shadcn's names for theme.css's tokens
-│           ├── lib/               #   Sidebar, StatusBar, StatusPill, Breadcrumbs,
-│           │   │                  #   ModalFrame, CancelModal, RemoveModal, RunFacts
+│           ├── lib/               #   ActivityBar; Sidebar hosting Explorer, ActiveRuns,
+│           │   │                  #   Events under a ViewTitle; StatusBar, StatusPill,
+│           │   │                  #   Breadcrumbs, ModalFrame, CancelModal, RemoveModal,
+│           │   │                  #   RunFacts
 │           │   ├── utils.ts       #   `cn()` and the prop types the components import
 │           │   └── components/ui/ #   shadcn-svelte: Button, Dialog, ContextMenu,
 │           │                      #   Input, Label, Spinner — copied-in, owned source
@@ -584,7 +591,9 @@ export const app = $state({
   route: { page: 'empty' } as Route,
   overlay: null as Overlay | null,  // never persisted (§9)
   notice: null as Notice | null,
+  journal: [] as JournalEntry[],    // what happened, as this side phrased it (§11.1)
   sidebar_width: ...,                // arrangement, persisted (§32)
+  sidebar_view: ..., sidebar_open: ...,
   report_wrap: ...,
   now_ms: Date.now()                 // the clock durations tick off
 })

@@ -83,13 +83,13 @@ It is laid out as a workbench, in the order the panels claim space: activity bar
 │    │ EXPLORER         + │                                                │
 │ Li │                   │                                                │
 │ Ru²│ v BENCHES         │                 Main Content                   │
-│    │   Nightly Bench 1 │                                                │
+│ Ev │   Nightly Bench 1 │                                                │
 │    │ v JOBS            │  Entity overview, run detail, dispatch, or     │
 │    │   Solver GPU      │  report                                        │
 │    │   Post Process    │                                                │
 │ Mg │                   │                                                │
 ├────┴───────────────────┴────────────────────────────────────────────────┤
-│ 2 active runs   Last refresh 1 second ago   (refresh)                   │
+│ 2 active runs   last change 22:35:13   (refresh)                        │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -114,7 +114,8 @@ It contains, top to bottom:
 
 1. `Explorer` view icon.
 2. `Active Runs` view icon, carrying the active-run count as a badge.
-3. `Manage` gear, pinned to the foot of the strip.
+3. `Events` view icon.
+4. `Manage` gear, pinned to the foot of the strip.
 
 Behavior:
 
@@ -155,7 +156,13 @@ The `Explorer` view contains:
 
 Both sections are collapsible, and their collapsed state persists.
 
+The two sections are panes, `BENCHES` above `JOBS`, each scrolling on its own, with a horizontal divider between them that drags; where it sits persists with the sidebar's width.
+
 The `Active Runs` view contains a title row with no actions, followed by its rows (§11.1).
+
+The `Events` view contains a title row with no actions, followed by the last hundred things that happened, newest first (§11.1).
+
+Which view is open, and whether the sidebar is, persist with its width.
 
 The sidebar remains visible on all normal pages unless the user collapses it from the activity bar.
 
@@ -177,7 +184,7 @@ It must support:
 Three standing items:
 
 - Number of active runs.
-- Last refresh time.
+- The time of the last change: the moment of the newest Events entry, as a clock time — `last change 22:35:13` — never a count that ticks, and never the refresh tick, which says nothing at three seconds. It opens the Events view.
 - Refresh action, as an icon.
 
 Two conditional items, shown only when they apply:
@@ -512,11 +519,13 @@ Identity within a plan is `index`, never `job_id`.
 
 ### 11.1 Views
 
-The sidebar hosts two views, selected from the activity bar (§8.2).
+The sidebar hosts three views, selected from the activity bar (§8.2).
 
 **Explorer.** The Benches and Jobs the user has added, grouped by kind (§11.2). This is the only persistent navigation surface. It carries no filter field: the Explorer is a short, fully visible list of folders the user added themselves. The run-history filters of §22.4 and the report search of §20.2 are unaffected.
 
-**Active Runs.** Everything started and not yet finished. Top-level runs only: a Bench run appears once, never once per dispatched child, matching the count of §21. Rows show the entity name and the run's status badge, and navigate to that run's detail page, where Cancel lives. When nothing is running, show a subtle `Nothing is running.` note rather than an error.
+**Active Runs.** Everything started and not yet finished. Top-level runs only: a Bench run appears once, never once per dispatched child, matching the count of §21. The members a Bench run still has running are listed beneath it, indented, as what it is made of — not counted, and leading to the child seen through its bench (§19). Rows show the entity name and the run's status badge, and navigate to that run's detail page, where Cancel lives. When nothing is running, show a subtle `Nothing is running.` note rather than an error.
+
+**Events.** What happened, newest first: a run that started and by whom, a status that moved, a report that landed, a run coco lost sight of or found again, a folder that was added or removed, a manifest that broke or healed, and any failure the status bar reported. Each entry is the moment, the experiment, the run, and what happened — the last coloured by what it means: green for a report landing, a success or a run found again; red for a failure; amber for a run coco cannot see; blue for news; grey for the rest. Entries are kept apart by a rule. The backend only says what changed, as it always has (§26.3); the renderer, which holds the entry as it was, says what moved — the backend knows nothing of this view. The last hundred are kept, in the page's memory only: a reload or a relaunch starts empty. An entry about something still listed navigates to it. When nothing has happened, show a subtle `Nothing has happened yet.` note.
 
 ### 11.2 Grouping
 
@@ -936,21 +945,27 @@ The engine refuses a blank value exactly as it refuses a missing one, so a start
 reaching it by any other route — a Bench dispatching a member, say — is refused
 the same way.
 
-### 15.3 No Prefill
+### 15.3 No Prefill by Default
 
 The page opens with every field empty. It does not prefill from the last run,
-from the manifest, or from anything else — every declared parameter is supplied
-by hand, deliberately, each time (convention §2).
+from the manifest, or from anything else on its own — every declared parameter
+is supplied by hand, deliberately, each time (convention §2).
 
 A prefilled field is indistinguishable from one the user filled, and a start is
 a job on a cluster. Restarting *last night's* sweep because the form remembered
 it is a mistake this application must not be able to make for you.
 
+The one way in with values is the history's row menu (§22.6): *Start with
+these parameters…* opens this page with one particular run's values filled in.
+That is an explicit act on a run the user is looking at, never a memory of
+what was typed last, and the page says what it filled — and what it could not.
+
 > There used to be a **Fill from last run** action here, and a `last_args` map
 > in the store behind it: an explicit button, never a default, that filled the
 > fields and stopped there. Both are gone as of 2026-08-20. It was the one
-> thing coco remembered about what a person had typed, and the rule above reads
-> better without a qualifier on it. What replaces it is not decided yet.
+> thing coco remembered about what a person had typed. The row menu is what
+> replaced it: the values come from a run's record, not from a memory of the
+> form.
 
 ### 15.4 Submission
 
@@ -1458,28 +1473,31 @@ hover text (§22.3, §36).
 ### 22.2 Suggested Column Behavior
 
 Each column is sized for the widest value it can actually hold — `CANCELLING`
-with its dot, a bench name and call number, a locale timestamp — and the last
-one takes what is left.
+with its dot, a locale timestamp, `HH:MM:SS` — and the last one takes what is
+left. Parameters is the one column whose content has no bound, so in every
+table it is the one worth the leftover width, and it goes last.
 
 Job history:
 
 ```text
-Run        72    a run id
-Status    116    the longest status word, plus its dot
-By        240    `you`, `agent`, or a bench name and call number
-Started   190    a locale date and time
-Duration    —    remainder; only ever needs `HH:MM:SS`
+Run         72    a run id
+Status     116    the longest status word, plus its dot
+By          80    `you`, `agent`, or a bench name and call number, truncated
+Started    190    a locale date and time
+Duration    84    only ever needs `HH:MM:SS`
+Parameters   —    remainder; the run's parameters, as given
 ```
 
 Bench history:
 
 ```text
-Run        72
-Status    116
-By        240
-Calls      60    a count
-Started   190
-Duration    —    remainder
+Run         72
+Status     116
+By          80
+Calls       60    a count
+Started    190
+Duration    84
+Parameters   —    remainder
 ```
 
 Bench dispatch:
@@ -1491,11 +1509,9 @@ Status    116
 Parameters  —    remainder
 ```
 
-Dispatch puts Status before Parameters, which is not the reading order the
-other two suggest. Parameters is the one column here whose content has no
-bound — a sweep is what varies them — so it is the one worth spending the
-leftover width on, and the rule above says the remainder goes last. The order
-follows from that.
+Parameters last is not the reading order, but it is the one the width rule
+gives — a sweep is what varies them, so they are the column with no bound —
+and all three tables keep to it.
 
 ### 22.3 Long Parameters
 
@@ -1525,6 +1541,22 @@ the primary use case. The dispatch table must stay usable at that size.
 A drive scenario (§28) may start a larger dataset to check this.
 
 ---
+
+### 22.6 Row Menu
+
+Every row of a job or bench history has a context menu with two actions, both
+about that run's parameters:
+
+- **Start again with these parameters** starts a new run at once, with exactly
+  the values this run had. The backend validates them against the manifest as
+  it is now; if they no longer match — a parameter added, removed or renamed —
+  nothing starts, and the refusal is shown in a modal with one `OK`, because
+  it has to be read. On success the new run appears in the table and the
+  transient message names it; the page does not move.
+- **Start with these parameters…** opens the Start page (§15) with this run's
+  values filled in, as far as the manifest now allows: a parameter it no
+  longer declares is dropped, one it newly declares is left empty, and the
+  message says which. The user still presses Start.
 
 ## 23. Status Presentation
 

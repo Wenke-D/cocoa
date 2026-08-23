@@ -91,7 +91,7 @@ driving — it runs `out/`, not the dev server.
 
 Scenarios that exist today: `cancel.mjs`, `cancel-bench.mjs`, `report.mjs`,
 `add-folder.mjs`, `remove-folder.mjs`, `notice.mjs`, `persistence.mjs`,
-`bench-child.mjs`, `agent.mjs`. A scenario may
+`bench-child.mjs`, `agent.mjs`, `events.mjs`, `history.mjs`. A scenario may
 also call `relaunch()` — quit and start again against the same store and
 ui-state file, the only way to drive what is supposed to survive a launch —
 and `DRIVE_PACKAGED=1` runs any of them against the packaged `.app` instead of
@@ -358,7 +358,8 @@ scripts into a temp directory and lets the engine spawn them.
 | `tests/sync.test.ts`                                                                                                                        | `diffWorlds`: silence when nothing moved, the `last_successful_query` exclusion, upserts/removals for all three entry kinds, one batch for a member and its bench.                                                                                                                                                                                                                                                                                                                            |
 | `tests/operations.test.ts`                                                                                                                  | What the renderer can ask for (`src/main/operations.ts`): start by name with the manifest's parameter split, cancel a run, cancel a bench, read a report (including the plain-text-wins rule the world builder also follows, an unregistered folder, and a run id that is not one), add a folder (including that a folder of experiments is _not_ searched), remove one (and that the disk is untouched) — each answered, never thrown.                                                       |
 | `tests/races.test.ts`                                                                                                                       | The engine's write guards under real interleaving: a cancel during an in-flight poll survives it (below), and two concurrent starts get distinct run ids.                                                                                                                                                                                                                                                                                                                                     |
-| `tests/state.svelte.test.ts`                                                                                                                | The renderer's state, compiled as runes: event application, the run index, every `recover()` rule, the notice (an error waits to be dismissed, anything else fades, an older timer never clears a newer message), and the two-addresses rules for a dispatched run (§19) — the bench stays selected, the fallbacks step back through the bench run, and a report reads from the job's folder. It covers what the state _holds_, not what it _notifies_ — see the note at the top of the file. |
+| `tests/state.svelte.test.ts`                                                                                                                | The renderer's state, compiled as runes: event application, the run index, every `recover()` rule, the notice (an error waits to be dismissed, anything else fades, an older timer never clears a newer message), and the two-addresses rules for a dispatched run (§19) — the bench stays selected, the fallbacks step back through the bench run, and a report reads from the job's folder. It covers what the state _holds_, not what it _notifies_ — see the note at the top of the file.; the journal (newest last, a hundred at most), the last change, the activity bar's view gesture, and an entry taking the page to its run.; the history's row menu — a run started again, its refusal in a modal, and a prefill with what could not be filled said. |
+| `tests/journal.test.ts`                                                                                                                     | `sentences_of`: the line an event earns, judged against the entry as it was — a run that started and by whom, a status that moved (with the reason for an error), a report that landed, a run lost and found, a folder that came or went, a manifest that broke or healed, a failure the user was told about — and silence for a field moving on its own.                                                                                                   |
 | `tests/manifest.test.ts` `tests/template.test.ts` `tests/words.test.ts` `tests/status.test.ts` `tests/store.test.ts` `tests/invoke.test.ts` | Ports of the corresponding Rust inline `#[cfg(test)]` modules, plus a few cases for the async spawn/harvest seam this port introduces.                                                                                                                                                                                                                                                                                                                                                        |
 
 The fixture experiment folders are **real folders in the repository**:
@@ -509,7 +510,8 @@ the poll protocol, auto and manual reports with ERROR healing, cancel, bench
 plan and fan-out, derived bench status, orphan detection, abandonment at close.
 Memory as the truth with write-through; records read once, manifests re-read
 each tick (§26.1); guarded writes, no queue (§26.2). Event-driven
-sync (§26.3). Notices (§26.4). The agent socket and the MCP binary (§43). The
+sync (§26.3). Notices (§26.4). The journal and the Events view, the
+activity bar with Explorer and Active Runs (§8, §11.1). The agent socket and the MCP binary (§43). The
 persisted arrangement (§32). Explorer, overview, start, run detail, bench run
 detail, bench child detail, report viewer for both formats, add and remove
 folder, cancel with confirmation. An electron-builder package.
@@ -526,7 +528,7 @@ folder, cancel with confirmation. An electron-builder package.
   a per-run retry.
 - Explorer and run filtering, search, the in-app theme toggle, Settings.
 - Open a report externally; report-viewer virtualisation.
-- `--dump-state`; the activity bar and view headers (§8).
+- `--dump-state`.
 - Linux has not been exercised: neither the build nor the rendering comparison
   §5.1 flags as the one measurement that could revise its own record.
 - Packaging is unsigned; no notarization, no auto-update (§4.2).
@@ -744,7 +746,7 @@ that date.
 | **Theme setting**                | in-app Light/Dark toggle (Settings overlay), persisted    | Electron follows the system only; `theme.css` already has both palettes.                                                                                                                                                                                                                                      |
 | **Overlays**                     | `ConfirmCancel`, `AddFolderReport`, `Settings`            | `ConfirmCancel` is ported, and `confirmRemove` joins it on the same `ModalFrame`; `AddFolderReport` and `Settings` are not. As in coco, overlay state is deliberately outside `Route` (§9) and never persisted.                                                                                               |
 | **`--dump-state`**               | prints the exact world as JSON                            | trivial: a `node` entry point or `npm run dump` calling `buildWorld`.                                                                                                                                                                                                                                         |
-| **Activity bar / view headers**  | shell chrome (§8)                                         | Electron shell is minimal: sidebar + page + status bar. Breadcrumbs exist per page (`Breadcrumbs.svelte`), not as a shell-level bar.                                                                                                                                                                          |
+| **Activity bar / view headers**  | shell chrome (§8)                                         | Built 2026-08-22: Explorer, Active Runs with its badge, and an Events view the egui shell never had (§11.1), each under its own title row; the gear is not there, since there is no theme toggle yet. Breadcrumbs stay per page (`Breadcrumbs.svelte`), not a shell-level bar.                                   |
 | **Shortcuts beyond the menu**    | n/a (egui)                                                | The app menu is the platform's minimum for now (Edit roles + Quit on macOS, none elsewhere), so no Cmd+O/Cmd+R; nor an in-page keyboard surface (report search, sidebar focus, run filtering).                                                                                                                 |
 | **Signed / notarised packaging** | n/a                                                       | `npm run package` builds an unsigned `coco.app` (`identity: null`) plus dmg/zip; Gatekeeper will object. mac targets are exercised, linux/win are configured but unbuilt.                                                                                                                                     |
 | **Renderer tests**               | `Backend::Local` sync test seam drives the UI in-process  | The engine, world builder and sync layer are covered (see Tests); nothing exercises the Svelte components or the IPC handlers in `index.ts`. Needs a component runner (vitest browser mode or @testing-library/svelte) and an `index.ts` refactor that lets the handlers be called without `app.whenReady()`. |
@@ -909,7 +911,7 @@ convention for display.
   per-run retry.
 - Open a report externally; report-viewer virtualisation.
 - Explorer/run filtering and search; the in-app theme toggle; Settings.
-- `--dump-state`; activity bar / view headers.
+- `--dump-state`.
 - Renderer component tests (see the gap table) — still the biggest hole: the
   Svelte components and the IPC handlers in `index.ts` are covered only by the
   drive scenarios.

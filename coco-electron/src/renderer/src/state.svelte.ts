@@ -3,7 +3,9 @@
 // something the world no longer contains, with a message.
 
 import { load_ui_state, store_ui_state } from './ui_state'
-import type { Route, ReportContext } from './ui_state'
+import type { Route, ReportContext, SidebarView } from './ui_state'
+import { JOURNAL_LENGTH, sentences_of, stamp } from './journal'
+import type { JournalEntry, JournalTarget } from './journal'
 import { bench_run, empty_world, is_active, job_run } from '@shared/world'
 import type {
   AddFolderResult,
@@ -16,20 +18,35 @@ import type {
   JobRun,
   NoticeLevel,
   RunsByEntity,
+  StartResult,
   World
 } from '@shared/world'
 
 // Re-exported because this module is where the renderer reaches for
 // everything about where it is.
-export type { ReportContext, Route } from './ui_state'
+export type { ReportContext, Route, SidebarView } from './ui_state'
+export type { JournalEntry, JournalTarget } from './journal'
 
 /**
  * A modal is a temporary action, not a place (specification §9), so it is
  * kept out of `Route` — it is never persisted and never restored.
  */
-export type Overlay = { error: string | null; busy: boolean } & (
-  { kind: 'confirm_cancel'; target: CancelTarget } | { kind: 'confirm_remove'; entity_id: string }
-)
+export type Overlay =
+  | ({ error: string | null; busy: boolean } & (
+      | { kind: 'confirm_cancel'; target: CancelTarget }
+      | { kind: 'confirm_remove'; entity_id: string }
+    ))
+  /** A refusal that has to be read before anything else happens (§22.6). */
+  | { kind: 'refused'; title: string; message: string }
+
+/**
+ * Values for the Start page to open with, from a run in the history (§22.6).
+ * Handed over once and consumed: the draft then lives in the page, as always.
+ */
+export interface Prefill {
+  entity_id: string
+  values: Record<string, string>
+}
 
 /**
  * The transient message — coco's `TransientMessage`, shown here as the toast
@@ -54,9 +71,16 @@ export interface AppState {
   world: World
   route: Route
   overlay: Overlay | null
+  prefill: Prefill | null
   notice: Notice | null
+  /** What happened, oldest first, as this side phrased it (`journal.ts`). */
+  journal: JournalEntry[]
   // Arrangement, not content: persisted across launches (see `flush_ui`).
   sidebar_width: number
+  sidebar_view: SidebarView
+  sidebar_open: boolean
+  /** The Explorer's BENCHES pane, as a share of its height. */
+  explorer_split: number
   report_wrap: boolean
   /** The one clock every duration on screen is computed from. */
   now_ms: number
@@ -73,8 +97,13 @@ export const app: AppState = $state({
   world: empty_world(),
   route: arranged.route,
   overlay: null,
+  prefill: null,
   notice: null,
+  journal: [],
   sidebar_width: arranged.sidebar_width,
+  sidebar_view: arranged.sidebar_view,
+  sidebar_open: arranged.sidebar_open,
+  explorer_split: arranged.explorer_split,
   report_wrap: arranged.report_wrap_lines,
   now_ms: Date.now()
 })
@@ -251,6 +280,9 @@ export async function refresh_now(): Promise<void> {
 export async function bootstrap(): Promise<void> {
   const payload = await window.coco.bootstrap()
   app.world = payload.world
+  // A fresh page owns nothing, the journal included: what happened before
+  // this page existed is not something it saw.
+  app.journal = []
   app.connected = true
   // The route was restored before the world arrived (`load_ui_state`); what
   // only the world can answer — an address pointing at an experiment that
@@ -267,6 +299,9 @@ export function flush_ui(): void {
   store_ui_state({
     route: $state.snapshot(app.route),
     sidebar_width: app.sidebar_width,
+    sidebar_view: app.sidebar_view,
+    sidebar_open: app.sidebar_open,
+    explorer_split: app.explorer_split,
     report_wrap_lines: app.report_wrap
   })
 }
@@ -277,7 +312,13 @@ export function flush_ui(): void {
  */
 export function apply_events(events: CocoEvent[]): void {
   const world = app.world
+  const at = stamp()
   for (const event of events) {
+    // The sentence is judged against the entry as it was, so before the
+    // event lands.
+    for (const entry of sentences_of(world, event, at)) {
+      remember(entry)
+    }
     switch (event.kind) {
       case 'entity-upserted': {
         const at = world.entities.findIndex((entity) => entity.id === event.entity.id)
@@ -456,7 +497,7 @@ export function recover(): void {
   // answer for itself, and closing it here would throw that answer away —
   // including the confirmation for a removal that has just succeeded.
   const overlay = app.overlay
-  if (overlay !== null && !overlay.busy) {
+  if (overlay !== null && overlay.kind !== 'refused' && !overlay.busy) {
     const gone =
       overlay.kind === 'confirm_cancel'
         ? overlay.target.kind === 'job_run'
@@ -568,4 +609,147 @@ export function active_run_count(): number {
     .flatMap((runs) => Object.values(runs))
     .filter((run) => is_active(run.status)).length
   return direct + benches
+}
+
+// ---------------------------------------------------------------------------
+// The journal, and the sidebar's views (§8.2, §11.1).
+
+/** Keeps the newest `JOURNAL_LENGTH`. */
+function remember(entry: JournalEntry): void {
+  app.journal.push(entry)
+  if (app.journal.length > JOURNAL_LENGTH) {
+    app.journal.splice(0, app.journal.length - JOURNAL_LENGTH)
+  }
+}
+
+/** The newest thing that happened — what the status bar dates itself by. */
+export function last_change(): JournalEntry | null {
+  return app.journal.length === 0 ? null : app.journal[app.journal.length - 1]
+}
+
+/**
+ * The activity bar's one gesture (§8.2): a view that is not open opens, and
+ * clicking the open one collapses the sidebar.
+ */
+export function select_view(view: SidebarView): void {
+  if (app.sidebar_open && app.sidebar_view === view) {
+    app.sidebar_open = false
+    return
+  }
+  app.sidebar_view = view
+  app.sidebar_open = true
+}
+
+/** Takes the page to what a journal entry is about, if it is still there. */
+export function go_to(target: JournalTarget): void {
+  switch (target.kind) {
+    case 'entity':
+      if (entity_of(target.entity_id) === undefined) {
+        notify('That experiment is no longer in the Explorer.')
+        return
+      }
+      navigate({ page: 'entity', entity_id: target.entity_id })
+      return
+    case 'job_run':
+      if (job_run(app.world, target.job_id, target.run_id) === undefined) {
+        notify('That run is no longer listed.')
+        return
+      }
+      navigate({ page: 'job_run', job_id: target.job_id, run_id: target.run_id })
+      return
+    case 'bench_run':
+      if (bench_run(app.world, target.bench_id, target.run_id) === undefined) {
+        notify('That run is no longer listed.')
+        return
+      }
+      navigate({ page: 'bench_run', bench_id: target.bench_id, run_id: target.run_id })
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The history's row menu (§22.6): a run's parameters, used again.
+
+/**
+ * Starts a new run with exactly a past run's parameters. The backend validates
+ * them against the manifest as it is now; a refusal — the manifest changed —
+ * is put in a modal, because it has to be read, not one that fades.
+ */
+export async function start_again(
+  entity_id: string,
+  params: Record<string, string>
+): Promise<void> {
+  const entity = entity_of(entity_id)
+  if (entity === undefined) {
+    notify('That experiment is no longer in the Explorer.')
+    return
+  }
+  let result: StartResult
+  try {
+    // The params come off a run in the world, a `$state` proxy: the bridge
+    // clones what it is handed, and a proxy does not clone.
+    result = await window.coco.start_run(entity.name, $state.snapshot(params))
+  } catch (error) {
+    result = { ok: false, message: (error as Error).message }
+  }
+  if (result.ok) {
+    notify(`Run ${result.run_id} started.`)
+    return
+  }
+  app.overlay = { kind: 'refused', title: 'Could not start', message: result.message }
+}
+
+/**
+ * Opens the Start page with a past run's parameters filled in, as far as the
+ * manifest as it is now allows: a parameter it no longer declares is dropped,
+ * one it newly declares is left empty, and the notice says which.
+ */
+export function prefill_start(
+  entity_id: string,
+  run_id: string,
+  params: Record<string, string>
+): void {
+  const entity = entity_of(entity_id)
+  if (entity === undefined) {
+    notify('That experiment is no longer in the Explorer.')
+    return
+  }
+  const values: Record<string, string> = {}
+  const missing: string[] = []
+  for (const name of entity.parameter_names) {
+    if (name in params) {
+      values[name] = params[name]
+    } else {
+      values[name] = ''
+      missing.push(name)
+    }
+  }
+  const extra = Object.keys(params).filter((name) => !entity.parameter_names.includes(name))
+  app.prefill = { entity_id, values }
+  navigate({ page: 'start', entity_id })
+  if (missing.length === 0 && extra.length === 0) {
+    notify(`Parameters of run ${run_id} filled in.`)
+    return
+  }
+  const problems: string[] = []
+  if (missing.length > 0) {
+    problems.push(`${quoted(missing)} ${missing.length === 1 ? 'is' : 'are'} new and left empty`)
+  }
+  if (extra.length > 0) {
+    problems.push(`${quoted(extra)} ${extra.length === 1 ? 'is' : 'are'} no longer taken`)
+  }
+  notify(`Filled what run ${run_id} had; ${problems.join('; ')}.`, 'error')
+}
+
+/** The Start page takes the prefill meant for it, once. */
+export function take_prefill(entity_id: string): Record<string, string> | null {
+  const prefill = app.prefill
+  if (prefill === null || prefill.entity_id !== entity_id) {
+    return null
+  }
+  app.prefill = null
+  return prefill.values
+}
+
+function quoted(names: string[]): string {
+  return names.map((name) => `\`${name}\``).join(', ')
 }

@@ -48,11 +48,21 @@ export interface Crumb {
   mono?: boolean
 }
 
+/** Which view the sidebar shows, chosen from the activity bar (§8.2). */
+export type SidebarView = 'explorer' | 'runs' | 'events'
+
+const SIDEBAR_VIEWS: readonly SidebarView[] = ['explorer', 'runs', 'events']
+
 /** What the renderer arranges and remembers, and nobody else. */
 export interface UiState {
   /** Which page is open. */
   route: Route
   sidebar_width: number
+  sidebar_view: SidebarView
+  /** Collapsed from the activity bar, or not (§8.2). */
+  sidebar_open: boolean
+  /** Where the Explorer's horizontal divider sits: BENCHES' share of the height (§8.3). */
+  explorer_split: number
   /** Whether the report's plain-text view wraps long lines instead of scrolling. */
   report_wrap_lines: boolean
 }
@@ -61,10 +71,17 @@ export const SIDEBAR_DEFAULT_WIDTH = 240
 export const SIDEBAR_MIN_WIDTH = 180
 export const SIDEBAR_MAX_WIDTH = 400
 
+export const EXPLORER_DEFAULT_SPLIT = 0.35
+export const EXPLORER_MIN_SPLIT = 0.15
+export const EXPLORER_MAX_SPLIT = 0.85
+
 export function default_ui_state(): UiState {
   return {
     route: { page: 'empty' },
     sidebar_width: SIDEBAR_DEFAULT_WIDTH,
+    sidebar_view: 'explorer',
+    sidebar_open: true,
+    explorer_split: EXPLORER_DEFAULT_SPLIT,
     report_wrap_lines: false
   }
 }
@@ -124,6 +141,16 @@ export function sanitize(state: Partial<UiState> | null | undefined): UiState {
     SIDEBAR_MIN_WIDTH,
     SIDEBAR_MAX_WIDTH,
     SIDEBAR_DEFAULT_WIDTH
+  )
+  restored.sidebar_view = SIDEBAR_VIEWS.includes(restored.sidebar_view)
+    ? restored.sidebar_view
+    : 'explorer'
+  restored.sidebar_open = restored.sidebar_open !== false
+  restored.explorer_split = clamp(
+    restored.explorer_split,
+    EXPLORER_MIN_SPLIT,
+    EXPLORER_MAX_SPLIT,
+    EXPLORER_DEFAULT_SPLIT
   )
   restored.report_wrap_lines = restored.report_wrap_lines === true
   restored.route = sanitize_route(restored.route)

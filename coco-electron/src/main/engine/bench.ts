@@ -265,7 +265,7 @@ export async function bench_report(engine: Engine, bench: Bench, run_id: number)
     : invoke.invocation_ok(invocation)
       ? `report script exited 0 but produced no report/${run_id}.txt`
       : invoke.invocation_output(invocation)
-  record.report = { attempted: true, ...(error !== undefined ? { error } : {}) }
+  record.report = { attempted: true, at: now_stamp(), ...(error !== undefined ? { error } : {}) }
   bench.runs.write(record)
 
   if (!ok) {

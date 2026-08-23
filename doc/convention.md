@@ -497,9 +497,16 @@ The bench's own record lists what it planned and what it got:
     { "job": "solver-cpu",
       "params": { "mesh": "1024", "gpu": "0" },
       "error": "launch exited 1: ssh: connect to host cluster: timed out" }
-  ]
+  ],
+  "report": { "attempted": true, "at": "2026-08-17T13:02:40+02:00" }
 }
 ```
+
+`report` appears once the bench's own report has been attempted (§8.3):
+`attempted`, the moment `at`, and `error` when the script failed. `at` is the
+bench's end, for a person reading its history — a bench that succeeded ended
+when its report landed, not when its last member did. A bench that settles
+without a report (§9.1, step 4) ended with its last member.
 
 Note what is **not** in it: a status. A bench's status is derived on every read
 (§9.1) and is never stored.
