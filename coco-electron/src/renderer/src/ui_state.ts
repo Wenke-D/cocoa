@@ -1,17 +1,18 @@
-// Where the user was, and how they had things arranged — the renderer's own
-// domain, owned end to end: held in `state.svelte.ts` while the page runs,
-// written to localStorage as the page unloads (`flush_ui`), read back at the
-// next launch. The main process never sees any of it; the window's geometry
-// is the main process's own record (`main/window_state.ts`), and the two
-// never meet in one object.
+// How the user had things arranged — the renderer's own domain, owned end to
+// end: held in `state.svelte.ts` while the page runs, written to localStorage
+// as the page unloads (`flush_ui`), read back at the next launch. The main
+// process never sees any of it; the window's geometry is the main process's
+// own record (`main/window_state.ts`), and the two never meet in one object.
+//
+// Deliberately *not* here: where the user was. A launch always opens on the
+// Explorer with nothing selected (§32) — a day later nobody remembers where
+// they were, and the page that helps is the list of experiments, not
+// yesterday's run. So the route, the sidebar's view and whether it was open
+// are session state, gone at quit; what persists is the layout a hand tuned:
+// widths, the divider, the report wrap.
 //
 // `sanitize` is what a stored state has to survive before it is trusted:
-// values out of range fall back to their defaults, and routes that make no
-// sense to *restore* — a report, a Start draft — become the page they
-// belonged to. Routes pointing at something the world no longer contains are
-// not its business: whether an experiment still exists is a question only
-// the world can answer, and `recover()` asks it once the bootstrap has
-// landed.
+// values out of range fall back to their defaults.
 
 import { from_nullable } from '@shared/maybe'
 
@@ -51,16 +52,9 @@ export interface Crumb {
 /** Which view the sidebar shows, chosen from the activity bar (§8.2). */
 export type SidebarView = 'explorer' | 'runs' | 'events'
 
-const SIDEBAR_VIEWS: readonly SidebarView[] = ['explorer', 'runs', 'events']
-
 /** What the renderer arranges and remembers, and nobody else. */
 export interface UiState {
-  /** Which page is open. */
-  route: Route
   sidebar_width: number
-  sidebar_view: SidebarView
-  /** Collapsed from the activity bar, or not (§8.2). */
-  sidebar_open: boolean
   /** Where the Explorer's horizontal divider sits: BENCHES' share of the height (§8.3). */
   explorer_split: number
   /** Whether the report's plain-text view wraps long lines instead of scrolling. */
@@ -77,10 +71,7 @@ export const EXPLORER_MAX_SPLIT = 0.85
 
 export function default_ui_state(): UiState {
   return {
-    route: { page: 'empty' },
     sidebar_width: SIDEBAR_DEFAULT_WIDTH,
-    sidebar_view: 'explorer',
-    sidebar_open: true,
     explorer_split: EXPLORER_DEFAULT_SPLIT,
     report_wrap_lines: false
   }
@@ -128,70 +119,25 @@ function clamp(value: number, low: number, high: number, fallback: number): numb
 }
 
 /**
- * What a stored `UiState` becomes before it is used — the port of
- * `UiState::sanitize`. Two kinds of repair happen here and nowhere else:
- * values that are simply out of range, and routes that make no sense to
- * *restore* even though they were fine to visit.
+ * What a stored `UiState` becomes before it is used: values out of range
+ * fall back to their defaults. An older file may carry fields this build no
+ * longer keeps — a route, a sidebar view — and they are simply not read.
  */
 export function sanitize(state: Partial<UiState> | null | undefined): UiState {
-  const restored = { ...default_ui_state(), ...(state ?? {}) }
-
-  restored.sidebar_width = clamp(
-    restored.sidebar_width,
-    SIDEBAR_MIN_WIDTH,
-    SIDEBAR_MAX_WIDTH,
-    SIDEBAR_DEFAULT_WIDTH
-  )
-  restored.sidebar_view = SIDEBAR_VIEWS.includes(restored.sidebar_view)
-    ? restored.sidebar_view
-    : 'explorer'
-  restored.sidebar_open = restored.sidebar_open !== false
-  restored.explorer_split = clamp(
-    restored.explorer_split,
-    EXPLORER_MIN_SPLIT,
-    EXPLORER_MAX_SPLIT,
-    EXPLORER_DEFAULT_SPLIT
-  )
-  restored.report_wrap_lines = restored.report_wrap_lines === true
-  restored.route = sanitize_route(restored.route)
-  return restored
-}
-
-function sanitize_route(route: Route | null | undefined): Route {
-  const empty: Route = { page: 'empty' }
-  if (route === null || route === undefined || typeof route !== 'object') {
-    return empty
-  }
-  switch (route.page) {
-    case 'empty':
-      return empty
-    case 'entity':
-      return typeof route.entity_id === 'string' ? route : empty
-    // A report is read from disk when it is opened, and the file may be gone,
-    // rewritten, or enormous by now. Restoring the address would make the
-    // first thing a relaunch does a disk read nobody asked for.
-    case 'report':
-      return empty
-    // A route is restored and a Start draft is not, so restoring the page
-    // would open an empty form nobody asked for. Land on the experiment it
-    // belonged to instead (§15).
-    case 'start':
-      return typeof route.entity_id === 'string'
-        ? { page: 'entity', entity_id: route.entity_id }
-        : empty
-    case 'job_run':
-      return typeof route.job_id === 'string' && typeof route.run_id === 'string' ? route : empty
-    case 'bench_run':
-      return typeof route.bench_id === 'string' && typeof route.run_id === 'string' ? route : empty
-    case 'bench_child':
-      return typeof route.bench_id === 'string' &&
-        typeof route.bench_run_id === 'string' &&
-        typeof route.run_id === 'string'
-        ? route
-        : empty
-    default:
-      // A page name this build does not know: an older or newer file, or one
-      // edited by hand.
-      return empty
+  const restored = { ...(state ?? {}) }
+  return {
+    sidebar_width: clamp(
+      restored.sidebar_width ?? SIDEBAR_DEFAULT_WIDTH,
+      SIDEBAR_MIN_WIDTH,
+      SIDEBAR_MAX_WIDTH,
+      SIDEBAR_DEFAULT_WIDTH
+    ),
+    explorer_split: clamp(
+      restored.explorer_split ?? EXPLORER_DEFAULT_SPLIT,
+      EXPLORER_MIN_SPLIT,
+      EXPLORER_MAX_SPLIT,
+      EXPLORER_DEFAULT_SPLIT
+    ),
+    report_wrap_lines: restored.report_wrap_lines === true
   }
 }

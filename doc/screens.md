@@ -241,7 +241,8 @@ export type Overlay = { error: string | null; busy: boolean } & (
 §11.5's refusal-report modal is not in this union; see the gap noted there.
 
 Do not encode modal state inside `Route`. A modal is an action, not a place: it
-does not survive a relaunch (§32) and it is not a breadcrumb.
+does not survive a relaunch and it is not a breadcrumb. (No route does —
+every launch opens on the Explorer with nothing selected; architecture §32.)
 
 ### 9.1 Sidebar Navigation
 
@@ -994,8 +995,8 @@ stays disabled for it.
 What the user has typed is a draft held outside the route: a route is a place,
 and a half-filled form is not one. Leaving the page discards the draft, and so
 does a start that succeeds — coming back to Start opens the empty form §15.3
-asks for. A restored route on relaunch lands on the experiment's overview
-instead of a form whose values are gone.
+asks for. (Routes are not restored at all: a launch opens on the Explorer
+with nothing selected, per architecture §32.)
 
 ### 15.2 Parameter Semantics
 

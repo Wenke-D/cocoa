@@ -431,18 +431,17 @@ cause a request.
 
 ## 32. Persistence
 
-The window's own arrangement lives in `ui-state.json` in Electron's `userData`
-directory, written by `src/main/ui_state_file.ts`. It is a **second, smaller file**
-next to the engine's `store.json`: the store is the *experiments'* memory
-(convention §5) and has no business holding which page was open.
-
-`COCO_UI_STATE_PATH` overrides the location, which is what lets a drive run
-(§28) keep its hands off the user's real window.
+The arrangement lives in two places, and the two never meet in one object:
+the renderer keeps its layout in its own localStorage (`ui_state.ts`,
+written once as the page unloads), and the main process keeps the window's
+geometry in `window-state.json` in Electron's `userData` directory
+(`src/main/window_state_file.ts`). Neither is the engine's `store.json`: the
+store is the *experiments'* memory (convention §5) and has no business
+holding how a window was arranged.
 
 Persist:
 
-- Route, when it is a place worth returning to.
-- Sidebar width.
+- Sidebar width, and the Explorer's divider.
 - Report wrap setting.
 - Window geometry.
 
@@ -452,29 +451,25 @@ the last word — nothing tracks resizes as they happen.
 
 Do not persist:
 
-- Anything about runs. The experiment folders hold their own records, and the
-  engine's store holds the run counter and the values each experiment last used
-  (convention §5) — the UI keeps no copy of either.
+- **Where the user was.** Every launch opens on the Explorer with nothing
+  selected — the empty page. A day later nobody remembers where they were,
+  and the page that helps is the list of experiments, not yesterday's run;
+  so the route, the sidebar's view and whether it was open are session
+  state, gone at quit. (Routes used to be restored, with rules for the ones
+  that could not be — a report, a Start draft; dropping restoration retired
+  those rules whole, 2026-08-23.)
+- Anything about runs. The experiment folders hold their own records — the
+  UI keeps no copy.
 - Overlays. A modal is an action, not a place (§9).
 - Transient notices.
 - Parameter drafts. A draft survives a failed submission (§31) and nothing
   longer.
 
 **What comes back is untrusted.** The file may be older or newer than this
-build, or edited by hand. Everything loaded goes through `sanitize()` in
-`src/shared/ui.ts`, which clamps the sidebar width and the window box and
-repairs the route:
-
-- A `report` route is **never** restored. A report is something you opened, not
-  somewhere you live, and the file may be gone.
-- A `start` route comes back as its experiment. Half a filled-in form is not a
-  place either.
-- A route naming an entity or run the world no longer contains is recovered to
-  the nearest valid ancestor, with a message (`recover`, mirroring the Rust
-  `Route::recover`).
-
-A file that fails to parse is not an error worth stopping for. The worst case is
-a window that opens where it always opens.
+build, or edited by hand. Everything loaded goes through `sanitize()`, which
+clamps what it keeps and does not read what this build no longer stores. A
+file that fails to parse is not an error worth stopping for: the worst case
+is a window that opens the way it always opens.
 
 ---
 
@@ -595,8 +590,8 @@ export const app = $state({
   overlay: null as Overlay | null,  // never persisted (§9)
   notice: null as Notice | null,
   journal: [] as JournalEntry[],    // what happened, as this side phrased it (§11.1)
-  sidebar_width: ...,                // arrangement, persisted (§32)
-  sidebar_view: ..., sidebar_open: ...,
+  sidebar_width: ...,                // layout, persisted (§32)
+  sidebar_view: ..., sidebar_open: ..., // session only: a launch opens on the Explorer
   report_wrap: ...,
   now_ms: Date.now()                 // the clock durations tick off
 })

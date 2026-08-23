@@ -93,22 +93,23 @@ export interface AppState {
 }
 
 // The arrangement from the last session, read synchronously — localStorage
-// is the renderer's own, so nothing about where the user was waits on the
-// bootstrap. Whether the route still points at anything is `recover()`'s
-// question, once the world has arrived.
+// is the renderer's own. It is layout only: where the user *was* is
+// deliberately not restored — a day later nobody remembers where that was,
+// and what helps is the Explorer with nothing selected (§32) — so every
+// launch opens there.
 const arranged = load_ui_state()
 
 export const app: AppState = $state({
   connected: false,
   world: empty_world(),
-  route: arranged.route,
+  route: { page: 'empty' },
   overlay: null,
   prefill: null,
   notice: null,
   journal: [],
   sidebar_width: arranged.sidebar_width,
-  sidebar_view: arranged.sidebar_view,
-  sidebar_open: arranged.sidebar_open,
+  sidebar_view: 'explorer',
+  sidebar_open: true,
   explorer_split: arranged.explorer_split,
   report_wrap: arranged.report_wrap_lines,
   now_ms: Date.now()
@@ -352,9 +353,9 @@ export async function bootstrap(): Promise<void> {
   // this page existed is not something it saw.
   app.journal = []
   app.connected = true
-  // The route was restored before the world arrived (`load_ui_state`); what
-  // only the world can answer — an address pointing at an experiment that
-  // has since been removed — is repaired now.
+  // The route is the empty page until someone navigates, but a reconnecting
+  // page may be mid-session: an address pointing at something the world no
+  // longer contains is repaired now.
   recover()
 }
 
@@ -365,10 +366,7 @@ export async function bootstrap(): Promise<void> {
  */
 export function flush_ui(): void {
   store_ui_state({
-    route: $state.snapshot(app.route),
     sidebar_width: app.sidebar_width,
-    sidebar_view: app.sidebar_view,
-    sidebar_open: app.sidebar_open,
     explorer_split: app.explorer_split,
     report_wrap_lines: app.report_wrap
   })

@@ -84,6 +84,7 @@
   <div class="actions">
     <Button
       size="icon-sm"
+      class="start"
       disabled={blocking !== null}
       title={blocking ?? start_label}
       aria-label={start_label}

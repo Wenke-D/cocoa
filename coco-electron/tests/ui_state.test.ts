@@ -35,49 +35,24 @@ beforeEach(() => {
 describe('sanitize', () => {
   it('keeps an ordinary arrangement as it is', () => {
     const state: UiState = {
-      route: { page: 'job_run', job_id: 'solver', run_id: '3' },
       sidebar_width: 260,
-      sidebar_view: 'events',
-      sidebar_open: false,
       explorer_split: 0.5,
       report_wrap_lines: true
     }
     expect(sanitize(state)).toEqual(state)
   })
 
-  // A report is read from disk when it is opened; restoring the address would
-  // make the first thing a launch does a disk read nobody asked for.
-  it('never restores a report', () => {
+  // Where the user was is not the arrangement's business: a launch always
+  // opens on the Explorer with nothing selected (§32), so a route stored by
+  // an older build is simply not read.
+  it('ignores fields this build no longer keeps', () => {
     const restored = sanitize({
-      ...default_ui_state(),
-      route: { page: 'report', context: { kind: 'job_run', job_id: 'solver' }, run_id: '3' }
-    })
-    expect(restored.route).toEqual({ page: 'empty' })
-  })
-
-  // The draft is not persisted, so the page would come back empty (§15).
-  it('turns a start page into the experiment it belonged to', () => {
-    const restored = sanitize({
-      ...default_ui_state(),
-      route: { page: 'start', entity_id: 'solver' }
-    })
-    expect(restored.route).toEqual({ page: 'entity', entity_id: 'solver' })
-  })
-
-  it('restores a bench child run, context and all', () => {
-    const route = {
-      page: 'bench_child',
-      bench_id: 'nightly',
-      bench_run_id: '7',
-      run_id: '8'
-    } as const
-    expect(sanitize({ ...default_ui_state(), route }).route).toEqual(route)
-  })
-
-  it('falls back to the Explorer, open, for a view it does not know', () => {
-    const restored = sanitize({ sidebar_view: 'nope' as never })
-    expect([restored.sidebar_view, restored.sidebar_open]).toEqual(['explorer', true])
-    expect(sanitize({ sidebar_view: 'runs', sidebar_open: false }).sidebar_open).toBe(false)
+      route: { page: 'job_run', job_id: 'solver', run_id: '3' },
+      sidebar_view: 'events',
+      sidebar_open: false,
+      sidebar_width: 260
+    } as never)
+    expect(restored).toEqual({ ...default_ui_state(), sidebar_width: 260 })
   })
 
   it('keeps the Explorer divider inside the sidebar', () => {
@@ -90,12 +65,6 @@ describe('sanitize', () => {
     expect(sanitize({ sidebar_width: 10_000 }).sidebar_width).toBe(400)
     expect(sanitize({ sidebar_width: 5 }).sidebar_width).toBe(180)
     expect(sanitize({ sidebar_width: Number.NaN }).sidebar_width).toBe(SIDEBAR_DEFAULT_WIDTH)
-  })
-
-  it('drops a route this build cannot answer for', () => {
-    expect(sanitize({ route: { page: 'nowhere' } as never }).route).toEqual({ page: 'empty' })
-    expect(sanitize({ route: { page: 'entity' } as never }).route).toEqual({ page: 'empty' })
-    expect(sanitize({ route: null as never }).route).toEqual({ page: 'empty' })
   })
 })
 
@@ -116,16 +85,12 @@ describe('storage', () => {
       JSON.stringify({ route: { page: 'start', entity_id: 'solver' }, sidebar_width: 9999 })
     )
     const restored = load_ui_state()
-    expect(restored.route).toEqual({ page: 'entity', entity_id: 'solver' })
-    expect(restored.sidebar_width).toBe(400)
+    expect(restored).toEqual({ ...default_ui_state(), sidebar_width: 400 })
   })
 
   it('round-trips an arrangement', () => {
     const state: UiState = {
-      route: { page: 'bench_run', bench_id: 'nightly', run_id: '2' },
       sidebar_width: 300,
-      sidebar_view: 'events',
-      sidebar_open: false,
       explorer_split: 0.5,
       report_wrap_lines: true
     }
