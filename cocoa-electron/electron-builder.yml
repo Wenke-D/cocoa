@@ -32,6 +32,11 @@ mac:
 
 linux:
   category: Development
+  # A directory, not `build/icon.png`: given one file electron-builder installs
+  # exactly that one size (1024) into hicolor, and every dock and panel then
+  # squeezes it down to ~24px in a single step, which loses the bean's seam.
+  # Named `<size>x<size>.png`, they are installed as the sizes they are.
+  icon: build/icons
   # The command is `cocoa`, not the package name: without this the binary is
   # `cocoa-electron`, which is the repository's name for the folder, not the
   # app's name for itself.

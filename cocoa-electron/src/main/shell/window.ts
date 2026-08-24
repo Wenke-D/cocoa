@@ -13,12 +13,14 @@ import { some } from '@shared/maybe'
 import { throw_cocoa } from '@shared/error'
 import { env_var } from '../env'
 import { boot } from '../boot'
-// The same PNG electron-builder installs as the app icon, bundled into `out/`
-// so the window can carry it too. A packaged app gets its dock icon from the
-// bundle (mac) or the installed `.desktop` (linux) — but a window only gets
-// one in the task bar from `_NET_WM_ICON`, which is this option, and a raw
-// AppImage run never installs a `.desktop` at all.
-import icon from '../../../build/icon.png?asset'
+// The app icon, bundled into `out/` so the window can carry it too. A packaged
+// app gets its dock icon from the bundle (mac) or the installed `.desktop`
+// (linux) — but a window only gets one in the task bar from `_NET_WM_ICON`,
+// which is this option, and a raw AppImage run never installs a `.desktop`.
+//
+// 256 rather than the 1024: `_NET_WM_ICON` carries a single size, whatever is
+// given, and a panel drawing it at 24px has less to throw away.
+import icon from '../../../build/icons/256x256.png?asset'
 
 export function create_window(old_win: WindowState, on_closing: () => void): void {
   const size = old_win.size
