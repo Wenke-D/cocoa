@@ -1,5 +1,6 @@
 {
   "name": "cocoa-electron",
+  "productName": "cocoa",
   "version": "0.1.0",
   "description": "Electron + Svelte 5 workbench for cocoa, with a TypeScript port of the engine in its main process",
   "author": "Wenke",

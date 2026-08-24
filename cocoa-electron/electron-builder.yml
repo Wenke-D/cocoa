@@ -36,9 +36,12 @@ linux:
   # `cocoa-electron`, which is the repository's name for the folder, not the
   # app's name for itself.
   executableName: cocoa
-  # Names the installed `.desktop` after the executable, so it matches
-  # `StartupWMClass` and Electron's app_id. Without that a running window is not
-  # linked to its launcher and the desktop shows a generic icon instead of ours.
+  # Names the installed `.desktop` after the executable, so `StartupWMClass` is
+  # `cocoa`. The other half of that match is `productName` in package.json:
+  # Electron's WM_CLASS comes from `app.getName()`, which falls back to `name`
+  # — `cocoa-electron` — and a window whose class does not match the launcher's
+  # `StartupWMClass` is not linked to it, so the dock shows a generic icon and
+  # a second, ungrouped entry.
   syncDesktopName: true
   target: [AppImage]
 
