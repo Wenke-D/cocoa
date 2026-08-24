@@ -20,7 +20,7 @@ different, and the drift is invisible until both are on screen at once.
 | `src/renderer/src/theme.css` | The palette, both schemes — the one place a colour is chosen — and coco's own chrome: body type, `table.runs`, `code` |
 | `src/renderer/src/app.css` | Tailwind, and the shadcn names for coco's tokens: `bg-primary` *is* `--accent`, `bg-popover` *is* `--widget-bg`. No second palette |
 | `src/renderer/src/lib/components/ui/` | shadcn-svelte's components — Button, Dialog, ContextMenu, Input, Label, Spinner, and for the Start form's shapes Select, Checkbox, Textarea (Separator rides along with Select). Copied-in source, owned and edited here, not a package |
-| `src/renderer/src/lib/` | coco's own widgets: `ModalFrame`, `StatusPill`, `Breadcrumbs`, `RunFacts`, `Sidebar`, `StatusBar` |
+| `src/renderer/src/lib/components/` | coco's own widgets: `ModalFrame`, `StatusPill`, `Breadcrumbs`, `RunFacts`, `Sidebar`, `StatusBar` |
 | `src/renderer/src/pages/` | One component per page of the specification |
 
 ## Colour

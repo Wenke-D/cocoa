@@ -1,6 +1,6 @@
 <script lang="ts">
   import { format_clock } from '@shared/world'
-  import { active_run_count, app, last_change, refresh_now, select_view } from '../state.svelte'
+  import { active_run_count, app, last_change, refresh_now, select_view } from '../../state.svelte'
   import { Button } from '$lib/components/ui/button'
   import { Spinner } from '$lib/components/ui/spinner'
   import RefreshIcon from '@lucide/svelte/icons/refresh-cw'

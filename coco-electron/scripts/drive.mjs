@@ -38,10 +38,9 @@ const SOCKET_PATH = process.env.COCO_SOCKET_PATH ?? path.join(RUN_DIR, 'coco.soc
  * relative to the library for a scenario that wants exactly those.
  */
 function seed_library(seed) {
-  const library = path.join(RUN_DIR, 'mock')
+  const library = path.join(RUN_DIR, 'examples')
   fs.rmSync(library, { recursive: true, force: true })
-  fs.cpSync(path.join(REPO_ROOT, 'mock'), library, { recursive: true })
-  fs.rmSync(path.join(library, '.fixtures'), { recursive: true, force: true })
+  fs.cpSync(path.join(REPO_ROOT, 'examples'), library, { recursive: true })
 
   const folders = []
   for (const group of ['jobs', 'benches']) {
@@ -223,7 +222,7 @@ try {
     log,
     wait_text,
     relaunch,
-    library: path.join(RUN_DIR, 'mock'),
+    library: path.join(RUN_DIR, 'examples'),
     window_state_path: WINDOW_STATE_PATH,
     socket_path: SOCKET_PATH
   })

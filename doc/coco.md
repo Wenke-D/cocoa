@@ -367,7 +367,7 @@ The workbench must include:
 - Bench dispatch table.
 - Breadcrumb navigation.
 - Real manifests, templates, and process execution ([convention.md](convention.md)).
-- The demonstration library in `mock/` registering and running unchanged.
+- The demonstration library in `examples/` registering and running unchanged.
 - Query failure shown without overwriting the last known status.
 - Automatic and manual report retrieval.
 - Active Runs sidebar view.

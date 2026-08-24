@@ -40,7 +40,7 @@ export async function run({ app, page, shot, log, wait_text, library }) {
   await wait_text('already in the Explorer', 10_000)
   log('second pick:', (await page.locator('aside').innerText()).replace(/\n/g, ' | '))
 
-  // The picked folder is the pick: `mock/` itself holds no manifest, so it is
+  // The picked folder is the pick: `examples/` itself holds no manifest, so it is
   // refused rather than adding everything beneath it.
   await pick(app, library)
   await page.locator('aside button.add').click()

@@ -18,7 +18,7 @@ if (user_data_override.is_present()) {
   app.setPath('userData', user_data_override.value)
 }
 
-export const launch = Object.freeze({
+export const boot = Object.freeze({
   /**
    * The per-user directory: the store, the window state, the renderer's
    * localStorage. Electron's default, unless `COCO_USER_DATA_DIR` moved it.

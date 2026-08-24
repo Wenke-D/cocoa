@@ -12,7 +12,7 @@ import {
   remove_folder,
   start_run,
   delete_run
-} from '../src/main/operations'
+} from '../src/main/bridge/operations'
 import {
   bench_folder,
   cleanup_temp_dirs,

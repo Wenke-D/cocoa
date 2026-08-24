@@ -19,7 +19,7 @@ import type {
   DeleteTarget,
   DeleteResult
 } from '@shared/world'
-import type { Engine } from './engine'
+import type { Engine } from '../engine'
 
 /** Reports larger than this are refused rather than sent over IPC whole. */
 const MAX_REPORT_BYTES = 16 * 1024 * 1024

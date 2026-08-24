@@ -7,27 +7,34 @@
 // app is ready, and what has to finish before it may quit. Each piece of state
 // lives with the module that owns it —
 //
+//   boot.ts           what this launch is: its profile, window, platform
 //   runtime.ts        the engine, its queue, the notice gate
-//   window.ts         the window: making it, sending to it, its geometry
-//   window_state.ts   how the window was left, and when it is written back
-//   publish.ts        the model, and turning its changes into events
-//   refresh.ts        the tick
-//   ipc.ts            what the renderer may ask for
 //   log.ts            how the process prints
-//   launch.ts         what this launch is: its profile, window, platform
+//
+//   shell/            the desktop app around it
+//     window.ts       the window: making it, sending to it, its geometry
+//     window_state.ts how the window was left, and when it is written back
+//     menu.ts         the application menu
+//
+//   bridge/           everything the renderer is told or may ask for
+//     publish.ts      the model, and turning its changes into events
+//     sync.ts         the diff that decides what changed
+//     refresh.ts      the tick
+//     ipc.ts          what the renderer may ask for
+//     notices.ts      which failures are worth saying out loud
 
 import { app } from 'electron'
-import { restore_window_state, persist_window_state } from './window_state'
+import { restore_window_state, persist_window_state } from './shell/window_state'
 import { serve, socket_path } from './agent/serve'
-import * as operations from './operations'
-import { current_world, message_of, publish_cycle } from './publish'
-import { REFRESH_INTERVAL_MS, refresh_and_publish } from './refresh'
+import * as operations from './bridge/operations'
+import { current_world, message_of, publish_cycle } from './bridge/publish'
+import { REFRESH_INTERVAL_MS, refresh_and_publish } from './bridge/refresh'
 import { engine } from './runtime'
-import { register_ipc } from './ipc'
-import { launch } from './launch'
-import { build_menu } from './menu'
+import { register_ipc } from './bridge/ipc'
+import { boot } from './boot'
+import { build_menu } from './shell/menu'
 import { empty } from '@shared/maybe'
-import { create_window, focus_window, window_bounds } from './window'
+import { create_window, focus_window, window_bounds } from './shell/window'
 import { AgentDeps } from './agent/answer'
 import { log_for } from './log'
 
@@ -115,7 +122,7 @@ void app.whenReady().then(() => {
   }
 
   // also hide dock for mac
-  if (launch.hide_window && launch.is_mac) {
+  if (boot.hide_window && boot.is_mac) {
     app.dock?.hide()
   }
 
@@ -123,7 +130,7 @@ void app.whenReady().then(() => {
 
   build_menu()
 
-  launch_window(launch.user_data)
+  launch_window(boot.user_data)
 
   void refresh_and_publish()
   setInterval(() => void refresh_and_publish(), REFRESH_INTERVAL_MS)

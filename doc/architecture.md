@@ -242,7 +242,7 @@ The renderer reads a snapshot and asks for operations by name. It must not
 mutate domain state, and there must be no path by which it could.
 
 ```ts
-// src/main/operations.ts — plain functions over the engine, so they can be
+// src/main/bridge/operations.ts — plain functions over the engine, so they can be
 // exercised without an Electron app around them. The ipcMain handlers in
 // index.ts are wiring: call one of these, publish, answer.
 start(engine, name, parameters, trigger): StartResult
@@ -320,7 +320,7 @@ moment it is asked, never behind a slow poll.
 The renderer is told conclusions, never asked to work them out.
 
 The main process keeps its own model of the world, rebuilds it each cycle, and
-turns the difference into events (`diffWorlds` in `src/main/sync.ts`):
+turns the difference into events (`diff_worlds` in `src/main/bridge/sync.ts`):
 
 ```text
 coco:bootstrap   once, on load — the one full-state message
@@ -352,7 +352,7 @@ Rules that make this safe:
 A refresh that fails sends a `notice` event. The engine refreshes every three
 seconds, so a cluster answering badly answers badly on every tick: the question
 worth putting on screen is never "did this pass fail" but "is this a new
-failure". `src/main/notices.ts` announces a failure once and then holds still
+failure". `src/main/bridge/notices.ts` announces a failure once and then holds still
 while it repeats.
 
 A refresh the user asked for always answers, including `Refreshed.` when there
@@ -435,7 +435,7 @@ The arrangement lives in two places, and the two never meet in one object:
 the renderer keeps its layout in its own localStorage (`ui_state.ts`,
 written once as the page unloads), and the main process keeps the window's
 geometry in `window-state.json` in Electron's `userData` directory
-(`src/main/window_state_file.ts`). Neither is the engine's `store.json`: the
+(`src/main/shell/window_state_file.ts`). Neither is the engine's `store.json`: the
 store is the *experiments'* memory (convention §5) and has no business
 holding how a window was arranged.
 
@@ -490,10 +490,16 @@ coco-electron/
 │   ├── shared/                    # both sides import these; one definition
 │   │   ├── world.ts               #   domain types + the IPC protocol (§10, §26.3)
 │   │   ├── params.ts              #   a parameter's shape, the one value check, the wire form
-│   │   └── ui.ts                  #   Route, UiState, sanitize (§9, §32)
+│   │   ├── maybe.ts               #   present-or-absent, so nothing turns on `undefined`
+│   │   └── error.ts               #   what a failure looks like on the wire
 │   │
 │   ├── main/                      # the server: owns everything
-│   │   ├── index.ts               #   window, IPC handlers, refresh tick
+│   │   ├── index.ts               #   the process's lifetime: ready, quit, and nothing else
+│   │   ├── boot.ts                #   what this launch is: its profile, window, platform
+│   │   ├── runtime.ts             #   the engine and the notice gate — the two singletons
+│   │   ├── store_path.ts          #   where store.json lives, and the move that got it there
+│   │   ├── env.ts                 #   env vars: set-but-empty is absent
+│   │   ├── log.ts                 #   how the process prints
 │   │   ├── engine/                #   the domain — no Electron import anywhere
 │   │   │   ├── index.ts           #     the engine proper: Engine, and the refresh tick
 │   │   │   ├── memory.ts          #     the in-memory truth, written through to folders
@@ -509,13 +515,20 @@ coco-electron/
 │   │   │   ├── store.ts           #     store.json, atomic writes
 │   │   │   ├── words.ts           #     the protocol's vocabulary
 │   │   │   ├── world.ts           #     folders → World
+│   │   │   ├── delete.ts          #     removing a run, and what that may not touch
 │   │   │   └── errors.ts
-│   │   ├── operations.ts          #   what the renderer may ask for (§26)
-│   │   ├── env.ts                 #   env vars: set-but-empty is absent
-│   │   ├── sync.ts                #   diffWorlds — the backend judges change (§26.3)
-│   │   ├── notices.ts             #   announce once, then hold still (§26.4)
-│   │   ├── ui_state_file.ts             #   ui-state.json (§32)
-│   │   ├── menu.ts                #   the platform's minimum: Edit roles + Quit
+│   │   ├── bridge/                #   everything the renderer is told or may ask for
+│   │   │   ├── ipc.ts             #     the handlers: call an operation, publish, answer
+│   │   │   ├── operations.ts      #     the asks as plain functions over the engine (§26)
+│   │   │   ├── publish.ts         #     the model, and turning its changes into events
+│   │   │   ├── sync.ts            #     diff_worlds — the backend judges change (§26.3)
+│   │   │   ├── refresh.ts         #     the tick
+│   │   │   └── notices.ts         #     announce once, then hold still (§26.4)
+│   │   ├── shell/                 #   the desktop app around the server
+│   │   │   ├── window.ts          #     the window: making it, sending to it, its geometry
+│   │   │   ├── window_state.ts    #     how the window was left (§32)
+│   │   │   ├── window_state_file.ts #   that state's trip through disk
+│   │   │   └── menu.ts            #     the platform's minimum: Edit roles + Quit
 │   │   └── agent/                 #   the unix socket (§43)
 │   │       ├── serve.ts           #     the socket's lifecycle
 │   │       ├── app.ts             #     the Express route table
@@ -532,15 +545,17 @@ coco-electron/
 │           ├── main.ts
 │           ├── App.svelte
 │           ├── state.svelte.ts    #   the one rune (§34)
+│           ├── ui_state.ts        #   Route, UiState, sanitize (§9, §32)
 │           ├── journal.ts         #   what happened, in a sentence, from each event (§11.1)
 │           ├── theme.css          #   the palette and coco's chrome (ui-system.md)
 │           ├── app.css            #   Tailwind; shadcn's names for theme.css's tokens
-│           ├── lib/               #   ActivityBar; Sidebar hosting Explorer, ActiveRuns,
-│           │   │                  #   Events under a ViewTitle; StatusBar, StatusPill,
-│           │   │                  #   Breadcrumbs, ModalFrame, CancelModal, RemoveModal,
-│           │   │                  #   RunFacts
+│           ├── lib/
 │           │   ├── utils.ts       #   `cn()` and the prop types the components import
-│           │   └── components/ui/ #   shadcn-svelte: Button, Dialog, ContextMenu,
+│           │   └── components/    #   ActivityBar; Sidebar hosting Explorer, ActiveRuns,
+│           │       │              #   Events under a ViewTitle; StatusBar, StatusPill,
+│           │       │              #   Breadcrumbs, ModalFrame, CancelModal, RemoveModal,
+│           │       │              #   RunFacts
+│           │       └── ui/        #   shadcn-svelte: Button, Dialog, ContextMenu,
 │           │                      #   Input, Label, Spinner, Select, Checkbox,
 │           │                      #   Textarea — copied-in, owned source
 │           └── pages/             #   Empty, EntityOverview, StartRun,
@@ -549,13 +564,14 @@ coco-electron/
 │
 ├── scripts/drive.mjs + scenarios/ # drive the built app (§28)
 └── tests/                         # vitest (§37)
+    └── fixtures/                  #   the two folders the suites copy and drive
 ```
 
 Beside it in the repository:
 
 ```text
 coco-mcp/         the MCP server (§43.5) — one binary, serde_json, nothing else
-mock/             the demonstration library, shared; .fixtures/ for the suites
+examples/         the demonstration library: real experiments, no cluster needed
 doc/              this documentation
 ```
 

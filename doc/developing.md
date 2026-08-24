@@ -24,7 +24,7 @@ how to work on this).
 | `coco-electron/` | the workbench. The only implementation under development. |
 | `coco-mcp/` | the MCP server. Its own crate, in continued use; `serde_json` its only dependency. |
 
-Beside them: `mock/` is the demonstration library, `doc/` is this
+Beside them: `examples/` is the demonstration library, `doc/` is this
 documentation.
 
 ---
@@ -82,7 +82,7 @@ convenience over the commands above, never a second definition of them — the
 ## Driving the built app
 
 `npm run drive` launches the **built** app under Playwright, against a scratch
-copy of `mock/` in `.drive/` with a store of its own — never the real store, so
+copy of `examples/` in `.drive/` with a store of its own — never the real store, so
 it cannot disturb the real Explorer. Screenshots land in
 `.drive/shots/`; renderer console errors are reported at the end, including
 when the scenario fails. Scenarios live in `scripts/scenarios/` and are plain
@@ -133,7 +133,7 @@ COCO_UI_STATE_PATH   a scratch layout   — a drive run must not move the user's
 COCO_SOCKET_PATH     a scratch socket   — must not take the socket a real coco answers on
 ```
 
-The library is seeded as a private copy of `mock/`, never the user's own.
+The library is seeded as a private copy of `examples/`, never the user's own.
 
 Scenarios cover: add-folder, remove-folder, cancel, cancel-bench, bench-child,
 report, notice, persistence, agent.
@@ -251,15 +251,15 @@ exercised without touching the developer controls.
 
 Tests run under vitest against **real temp folders and real executable
 scripts** — never mocks of the filesystem or of a process. The shared fixtures
-live in `mock/.fixtures/` (see its README); a suite copies one, points it at a
-scratch store, and drives it.
+live in `coco-electron/tests/fixtures/` (see its README); a suite copies one,
+points it at a scratch store, and drives it.
 
 The end-to-end scenarios began as ports of the first implementation's suite;
 the questions outlived it.
 
 Current coverage: 195 cases across 18 files — `engine`, `manifest`, `template`,
 `invoke`, `status`, `store`, `words`, `world`, `operations`, `races`, `sync`,
-`notices`, `uiState`, `agent`, `state.svelte`, `mock-library`.
+`notices`, `uiState`, `agent`, `state.svelte`, `example-library`.
 
 ### 37.1 Engine Tests
 
@@ -345,21 +345,21 @@ that does not await yet is not a defect.
 
 ### 37.5 What the suites actually cover
 
-`npm test` — vitest, 190 cases, ~10 s, no mocks of the filesystem or of
+`npm test` — vitest, 247 cases, a few seconds, no mocks of the filesystem or of
 `child_process`: every scenario writes real folders and real executable
 scripts into a temp directory and lets the engine spawn them.
 
 | File                                                                                                                                        | Covers                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `tests/engine.test.ts`                                                                                                                      | All 20 end-to-end scenarios of `coco-egui/tests/coco_engine.rs`, plus registration idempotence + unregister and the records-read-once rule the Rust engine has no equivalent of: a corrupt `run.json` fails only its own run at the next open, and an outside edit is ignored until then. A manifest broken at the next open leaves its folder on the side it registered on; one that changes kind moves it across. Deletion (§12.1): a finished run's files go and its neighbours' stay, an active or UNREACHABLE run is refused, a dispatched member is refused toward its bench, a settled bench run takes its members with it, and the ids above what remains are handed back.                                                                                                                                                                                                     |
-| `tests/mock-library.test.ts`                                                                                                                | The bundled `mock/` library end to end — port of `coco-egui/tests/coco_mock_library.rs`, but over a **copy** in a temp dir, so a test run leaves no `runs/`/`report/` in the repo.                                                                                                                                                                                                                                                                                                            |
+| `tests/example-library.test.ts`                                                                                                             | The bundled `examples/` library end to end — port of `coco-egui/tests/coco_mock_library.rs`, but over a **copy** in a temp dir, so a test run leaves no `runs/`/`report/` in the repo.                                                                                                                                                                                                                                                                                                            |
 | `tests/world.test.ts`                                                                                                                       | `buildWorld`: entity shape, run shape, report state, UNREACHABLE display (last known status + unavailable query health), bench plan steps, bench-origin members, history ordering.                                                                                                                                                                                                                                                                                                            |
 | `tests/agent.test.ts`                                                                                                                       | The agent interface (§43): every route as a function of a world and a start, then the same routes over a **real unix socket** with a real HTTP client — a start crossing the wire, an oversize body refused, a socket a live coco is answering on left alone, a stale one replaced, the file removed on stop, and every reply framed with a `Content-Length` (see below).                                                                                                                     |
 | `tests/uiState.test.ts`                                                                                                                     | What a relaunch restores: `sanitize` (a report never comes back, a Start page becomes its experiment, widths clamped, unknown routes dropped, a window position taken only as a pair) and the file round trip, including one that does not parse.                                                                                                                                                                                                                                             |
 | `tests/notices.test.ts`                                                                                                                     | `refreshSummary` (one error in full, the rest as a count) and the `NoticeGate`: a repeating failure announced once, a changed one announced again, a clean pass re-arming it, and a manual refresh that always answers and counts as said.                                                                                                                                                                                                                                                    |
 | `tests/refresh.test.ts`                                                                                                                     | The refresh gate over a hand-resolved engine: the clock's tick dropped while a pass is under way and taken once idle; a person's refresh queued behind the pass, never alongside it, keeping the clock out while it waits; a second person's refresh ignored while one is queued or running.                                                                                                                                                                                                    |
 | `tests/sync.test.ts`                                                                                                                        | `diffWorlds`: silence when nothing moved, the `last_successful_query` exclusion, upserts/removals for all three entry kinds, one batch for a member and its bench.                                                                                                                                                                                                                                                                                                                            |
-| `tests/operations.test.ts`                                                                                                                  | What the renderer can ask for (`src/main/operations.ts`): start by name with the manifest's parameter split, cancel a run, cancel a bench, delete a finished run (and be refused an active one), read a report (including the plain-text-wins rule the world builder also follows, an unregistered folder, and a run id that is not one), add a folder (including that a folder of experiments is _not_ searched), remove one (and that the disk is untouched) — each answered, never thrown.                                                       |
+| `tests/operations.test.ts`                                                                                                                  | What the renderer can ask for (`src/main/bridge/operations.ts`): start by name with the manifest's parameter split, cancel a run, cancel a bench, delete a finished run (and be refused an active one), read a report (including the plain-text-wins rule the world builder also follows, an unregistered folder, and a run id that is not one), add a folder (including that a folder of experiments is _not_ searched), remove one (and that the disk is untouched) — each answered, never thrown.                                                       |
 | `tests/races.test.ts`                                                                                                                       | The engine's write guards under real interleaving: a cancel during an in-flight poll survives it (below), and two concurrent starts get distinct run ids.                                                                                                                                                                                                                                                                                                                                     |
 | `tests/state.svelte.test.ts`                                                                                                                | The renderer's state, compiled as runes: event application, the run index, every `recover()` rule, the notice (an error waits to be dismissed, anything else fades, an older timer never clears a newer message), and the two-addresses rules for a dispatched run (§19) — the bench stays selected, the fallbacks step back through the bench run, and a report reads from the job's folder. It covers what the state _holds_, not what it _notifies_ — see the note at the top of the file.; the journal (newest last, a hundred at most), the last change, the activity bar's view gesture, and an entry taking the page to its run.; the history's row menu — a run started again, its refusal in a modal, and a prefill with what could not be filled said. |
 | `tests/journal.test.ts`                                                                                                                     | `sentences_of`: the line an event earns, judged against the entry as it was — a run that started and by whom, a status that moved (with the reason for an error), a report that landed, a run lost and found, a folder that came or went, a manifest that broke or healed, a failure the user was told about — and silence for a field moving on its own.                                                                                                   |
@@ -368,15 +368,15 @@ scripts into a temp directory and lets the engine spawn them.
 | `tests/manifest.test.ts` `tests/template.test.ts` `tests/words.test.ts` `tests/status.test.ts` `tests/store.test.ts` `tests/invoke.test.ts` | Ports of the corresponding Rust inline `#[cfg(test)]` modules, plus a few cases for the async spawn/harvest seam this port introduces.                                                                                                                                                                                                                                                                                                                                                        |
 
 The fixture experiment folders are **real folders in the repository**:
-`mock/.fixtures/job` and `mock/.fixtures/bench` (see their README). Tests copy
+`tests/fixtures/job` and `tests/fixtures/bench` (see their README). Tests copy
 one per scenario and rename it in the copy, so one folder serves twenty-odd
 cases. The `job` fixture answers from a `poll-state`/`report-state` file and
 the `bench` fixture plans from a `plan-lines` file, so most tests change
 behaviour by writing data, not by rewriting a script; a test whose _subject_
-is a broken script still overwrites that one script in its copy. The directory
-is hidden so that `tests/mock-library.test.ts`, which walks the library skipping
-hidden names, sees the four demonstration experiments and none of the
-fixtures.
+is a broken script still overwrites that one script in its copy. They sit
+beside the suites rather than in `examples/`, which is a library to be shown,
+not apparatus: `tests/example-library.test.ts` walks `examples/` expecting the
+four demonstration experiments.
 
 `tests/support.ts` holds the helpers (`jobFolder`, `benchFolder`, `planLines`,
 `settle`, `handEdit`). Two things it is careful about, both of which bite
@@ -478,7 +478,7 @@ own write in the same millisecond.
 1. Reset to an empty Explorer.
 2. Click Add Folder and confirm the operating system's folder picker opens.
 3. Cancel it, and confirm the Explorer is unchanged.
-4. Click Add Folder again and pick the bundled `mock/` directory.
+4. Click Add Folder again and pick the bundled `examples/` directory.
 5. Confirm its three Jobs appear in the Jobs group and its Bench in the Benches group.
 6. Confirm the status bar reports how many folders were added.
 7. Pick the same directory again, and confirm nothing is duplicated and the status bar says they are already in the Explorer.
@@ -549,7 +549,8 @@ A delivery must include:
 
 1. Complete TypeScript source for main, preload, and renderer.
 2. `package.json` and a committed `package-lock.json`.
-3. The demonstration library in `mock/` and the fixtures in `mock/.fixtures/`.
+3. The demonstration library in `examples/` and the fixtures in
+   `coco-electron/tests/fixtures/`.
 4. Tests (§37).
 5. README (§39).
 6. macOS run verification.
@@ -576,7 +577,7 @@ A change is done when all of the following hold.
 
 - It launches as a macOS desktop application.
 - It builds as a Linux desktop application.
-- The Explorer registers the demonstration library in `mock/` and runs it.
+- The Explorer registers the demonstration library in `examples/` and runs it.
 - Selecting an entity shows its status and history.
 - Start is a page under the experiment, not a modal over it (§15).
 - Starting spawns the real launch script and the run is visible immediately (§3).
@@ -713,7 +714,7 @@ re-argue it.
   a cluster that fails answers on every three-second tick — and it costs more
   than it saves: a poll script that will not run at all is invisible until
   somebody happens to press refresh, and no run row can carry it, because the
-  failure is that there is no answer. `src/main/notices.ts` keeps the quiet and
+  failure is that there is no answer. `src/main/bridge/notices.ts` keeps the quiet and
   the first sentence both: a failure is announced once, repeats say nothing,
   and a pass that works re-arms it.
 

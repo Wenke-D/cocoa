@@ -7,14 +7,14 @@
 // renderer only ever hears its conclusions, as events.
 
 import type { CocoEvent, World } from '@shared/world'
-import { engine, notices } from './runtime'
-import { now_stamp } from './engine/record'
-import { build_world } from './engine/world'
+import { engine, notices } from '../runtime'
+import { now_stamp } from '../engine/record'
+import { build_world } from '../engine/world'
 import { diff_worlds } from './sync'
 import type { Maybe } from '@shared/maybe'
 import { empty, some } from '@shared/maybe'
-import { send } from './window'
-import { log_for } from './log'
+import { send } from '../shell/window'
+import { log_for } from '../log'
 
 const log = log_for('publish')
 

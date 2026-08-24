@@ -1,11 +1,11 @@
 // The refresh loop: one tick, and what the user hears about it.
 
 import { some } from '@shared/maybe'
-import { engine, notices } from './runtime'
+import { engine, notices } from '../runtime'
 import { refresh_summary } from './notices'
 import { announce, message_of, publish_refreshed } from './publish'
-import { send } from './window'
-import { log_for } from './log'
+import { send } from '../shell/window'
+import { log_for } from '../log'
 
 const log = log_for('refresh')
 

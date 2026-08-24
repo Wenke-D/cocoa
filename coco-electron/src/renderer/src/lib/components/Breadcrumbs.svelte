@@ -3,8 +3,8 @@
   and the trailing crumb — the page you are on — is never a link (§8.4, §19).
 -->
 <script lang="ts">
-  import type { Crumb } from '../ui_state'
-  import { navigate } from '../state.svelte'
+  import type { Crumb } from '../../ui_state'
+  import { navigate } from '../../state.svelte'
 
   let { crumbs }: { crumbs: Crumb[] } = $props()
 </script>

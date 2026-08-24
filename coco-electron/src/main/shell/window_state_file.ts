@@ -14,7 +14,7 @@ import path from 'node:path'
 import type { Maybe } from '@shared/maybe'
 import { empty, some } from '@shared/maybe'
 import type { WindowState } from './window_state'
-import { log_for } from './log'
+import { log_for } from '../log'
 
 const log = log_for('window_state_file')
 

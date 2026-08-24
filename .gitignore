@@ -17,11 +17,11 @@
 /switch-codex.sh
 /switch-claude.sh
 
-# Bundled mock experiments: generated state stays out of the repo
-/mock/**/runs/
-/mock/**/report/
+# Bundled example experiments: generated state stays out of the repo
+/examples/**/runs/
+/examples/**/report/
 
-# Python bytecode from the mock scripts
+# Python bytecode from the example scripts
 __pycache__/
 *.py[cod]
 

@@ -7,8 +7,8 @@
 <script lang="ts">
   import { is_active, job_run } from '@shared/world'
   import type { QueryHealth, RunStatus } from '@shared/world'
-  import { app, entity_of, navigate } from '../state.svelte'
-  import type { Route } from '../state.svelte'
+  import { app, entity_of, navigate } from '../../state.svelte'
+  import type { Route } from '../../state.svelte'
   import StatusPill from './StatusPill.svelte'
   import ViewTitle from './ViewTitle.svelte'
 

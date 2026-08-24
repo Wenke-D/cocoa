@@ -11,8 +11,8 @@ import type { WindowState } from './window_state'
 import { WINDOW_MIN_SIZE } from './window_state'
 import { some } from '@shared/maybe'
 import { throw_coco } from '@shared/error'
-import { env_var } from './env'
-import { launch } from './launch'
+import { env_var } from '../env'
+import { boot } from '../boot'
 
 export function create_window(old_win: WindowState, on_closing: () => void): void {
   const size = old_win.size
@@ -20,7 +20,7 @@ export function create_window(old_win: WindowState, on_closing: () => void): voi
   // in case position empty, leave OS to pick a place
   const position = old_win.position.or({})
   const opened = new BrowserWindow({
-    show: !launch.hide_window,
+    show: !boot.hide_window,
     width: size.width,
     height: size.height,
     ...position,

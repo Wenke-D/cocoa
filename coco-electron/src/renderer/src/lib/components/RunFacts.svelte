@@ -18,8 +18,8 @@
     report_summary
   } from '@shared/world'
   import type { JobRun } from '@shared/world'
-  import type { ReportContext } from '../ui_state'
-  import { app, navigate } from '../state.svelte'
+  import type { ReportContext } from '../../ui_state'
+  import { app, navigate } from '../../state.svelte'
 
   let {
     run,

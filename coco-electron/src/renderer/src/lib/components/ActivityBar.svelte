@@ -4,8 +4,8 @@
   the count as a badge.
 -->
 <script lang="ts">
-  import { active_run_count, app, select_view } from '../state.svelte'
-  import type { SidebarView } from '../state.svelte'
+  import { active_run_count, app, select_view } from '../../state.svelte'
+  import type { SidebarView } from '../../state.svelte'
   import FilesIcon from '@lucide/svelte/icons/files'
   import ActivityIcon from '@lucide/svelte/icons/activity'
   import ScrollTextIcon from '@lucide/svelte/icons/scroll-text'

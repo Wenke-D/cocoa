@@ -12,7 +12,7 @@ import {
   write,
   write_script
 } from './support'
-import { cancel } from '../src/main/operations'
+import { cancel } from '../src/main/bridge/operations'
 
 afterEach(cleanup_temp_dirs)
 

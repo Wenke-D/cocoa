@@ -17,11 +17,11 @@ import type {
   DeleteResult
 } from '@shared/world'
 import { empty } from '@shared/maybe'
-import { launch } from './launch'
+import { boot } from '../boot'
 import * as operations from './operations'
 import { current_world, publish_cycle } from './publish'
 import { refresh_and_publish } from './refresh'
-import { engine } from './runtime'
+import { engine } from '../runtime'
 
 /**
  * Define message between main process and render process
@@ -33,8 +33,8 @@ export function register_ipc(): void {
   ipcMain.handle('coco:bootstrap', async (): Promise<BootstrapPayload> => {
     // A development control (§28): the Starting state is sub-second and
     // cannot be seen, let alone driven, unless the answer is held.
-    if (launch.bootstrap_delay_ms > 0) {
-      await new Promise((resolve) => setTimeout(resolve, launch.bootstrap_delay_ms))
+    if (boot.bootstrap_delay_ms > 0) {
+      await new Promise((resolve) => setTimeout(resolve, boot.bootstrap_delay_ms))
     }
     return { world: current_world() }
   })

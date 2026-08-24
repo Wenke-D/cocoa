@@ -1,4 +1,4 @@
-# Bundled mock experiments
+# Bundled example experiments
 
 These folders are real coco experiments in miniature: each one has a
 `coco.toml` manifest and its own scripts, and the app runs them exactly like
@@ -16,8 +16,8 @@ In the Explorer, click the **+** button and pick an experiment folder — one of
 the directories listed below, the one holding the `coco.toml`. Repeat for each
 one you want.
 
-> One pick is one folder ([doc/screens.md](../doc/screens.md) §11.5). Picking this `mock/`
-> directory itself is refused — it has no manifest of its own.
+> One pick is one folder ([doc/screens.md](../doc/screens.md) §11.5). Picking this
+> `examples/` directory itself is refused — it has no manifest of its own.
 
 The scripts simulate a scheduler with timers, so statuses advance on their own
 while the app polls every few seconds.

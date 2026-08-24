@@ -5,7 +5,7 @@
 -->
 <script lang="ts">
   import { format_clock } from '@shared/world'
-  import { app, go_to } from '../state.svelte'
+  import { app, go_to } from '../../state.svelte'
   import ViewTitle from './ViewTitle.svelte'
 
   const entries = $derived([...app.journal].reverse())

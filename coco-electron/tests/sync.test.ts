@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest'
 import { empty_world } from '@shared/world'
 import type { BenchRun, Entity, JobRun, RunsByEntity, World } from '@shared/world'
-import { diff_worlds } from '../src/main/sync'
+import { diff_worlds } from '../src/main/bridge/sync'
 
 function entity(id: string, extra: Partial<Entity> = {}): Entity {
   return {

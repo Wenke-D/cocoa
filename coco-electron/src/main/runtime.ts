@@ -5,15 +5,15 @@
 // Everything else in `main/` owns its own state and exports functions over it;
 // these two are genuinely process-wide singletons.
 
-import { launch } from './launch'
+import { boot } from './boot'
 import { Engine } from './engine'
-import { NoticeGate } from './notices'
+import { NoticeGate } from './bridge/notices'
 import { resolve_store_path } from './store_path'
 
 /**
  * The engine. Constructed here, at import: `store.json` is read exactly once.
  *
- * Before `ready`, which is fine — `launch.user_data` is settled at import,
+ * Before `ready`, which is fine — `boot.user_data` is settled at import,
  * override included, so the store goes where this launch's profile is. Where
  * the store lives is this side's decision, not the engine's: the engine takes
  * a path and knows nothing about the machine it is on.
@@ -23,7 +23,7 @@ import { resolve_store_path } from './store_path'
  * itself against the world having moved (`poll_job`'s history check,
  * `cancel_run`'s recheck, `start_job`'s reservation).
  */
-export const engine = new Engine(resolve_store_path(launch.user_data))
+export const engine = new Engine(resolve_store_path(boot.user_data))
 
-/** What the user hears about a refresh, and how often; see `notices.ts`. */
+/** What the user hears about a refresh, and how often; see `bridge/notices.ts`. */
 export const notices = new NoticeGate()

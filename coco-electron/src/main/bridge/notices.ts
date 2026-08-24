@@ -15,7 +15,7 @@
 // silence with the first sentence kept.
 
 import type { CocoEvent } from '@shared/world'
-import type { RefreshReport } from './engine'
+import type { RefreshReport } from '../engine'
 import type { Maybe } from '@shared/maybe'
 import { empty, some } from '@shared/maybe'
 

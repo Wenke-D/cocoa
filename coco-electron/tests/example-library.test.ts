@@ -1,7 +1,7 @@
-// End-to-end check of the bundled `mock/` library: registering the folders
+// End-to-end check of the bundled `examples/` library: registering the folders
 // and driving the engine through the mock scripts (launch, poll, bench plan,
 // fan-out). No cluster needed — the same folders the user adds by picking
-// `mock/` in the Add Folder picker.
+// `examples/` in the Add Folder picker.
 //
 // The folders are copied into a temp directory rather than driven in place,
 // so a test run leaves no `runs/` or `report/` behind in the repository.
@@ -11,7 +11,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { now_stamp } from '../src/main/engine/record'
 import {
-  MOCK_ROOT,
+  EXAMPLES_ROOT,
   cleanup_temp_dirs,
   engine,
   hand_edit,
@@ -23,9 +23,9 @@ import {
 afterEach(cleanup_temp_dirs)
 
 /** A private copy of the bundled library, with any generated state dropped. */
-function mock_library(): string {
-  const root = path.join(temp_dir(), 'mock')
-  fs.cpSync(MOCK_ROOT, root, { recursive: true })
+function example_library(): string {
+  const root = path.join(temp_dir(), 'examples')
+  fs.cpSync(EXAMPLES_ROOT, root, { recursive: true })
   for (const folder of walk_folders(root)) {
     for (const generated of ['runs', 'report']) {
       fs.rmSync(path.join(folder, generated), { recursive: true, force: true })
@@ -37,8 +37,8 @@ function mock_library(): string {
 function walk_folders(root: string): string[] {
   const found: string[] = []
   for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-    // The picker's scan skips hidden directories, and so does this: the
-    // fixtures under `.fixtures` are not part of the demonstration library.
+    // The picker's scan skips hidden directories, and so does this, so that
+    // what the suite walks is what a user picking the folder would get.
     if (!entry.isDirectory() || entry.name.startsWith('.')) {
       continue
     }
@@ -52,9 +52,9 @@ function walk_folders(root: string): string[] {
   return found
 }
 
-describe('bundled mock library', () => {
+describe('bundled example library', () => {
   it('registers, launches, polls and fans out', async () => {
-    const root = mock_library()
+    const root = example_library()
     const coco = engine(path.dirname(root))
 
     const solver = path.join(root, 'jobs/solver-gpu')
@@ -93,10 +93,10 @@ describe('bundled mock library', () => {
     expect(start.launch_failures).toEqual([])
   })
 
-  // The failing mock is the other half of the library's point: a run that
+  // The failing example is the other half of the library's point: a run that
   // ends FAILED, carrying the cluster's reason, and never gets a report.
   it('carries a failing job to FAILED with the cluster reason', async () => {
-    const root = mock_library()
+    const root = example_library()
     const coco = engine(path.dirname(root))
     const failing = path.join(root, 'jobs/failing-solver')
     coco.register(failing)

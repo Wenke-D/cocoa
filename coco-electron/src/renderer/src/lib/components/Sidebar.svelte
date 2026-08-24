@@ -1,6 +1,6 @@
 <!-- The sidebar hosts exactly one view at a time, chosen by the activity bar (§8.3). -->
 <script lang="ts">
-  import { app } from '../state.svelte'
+  import { app } from '../../state.svelte'
   import ActiveRuns from './ActiveRuns.svelte'
   import Events from './Events.svelte'
   import Explorer from './Explorer.svelte'

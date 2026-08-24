@@ -1,20 +1,20 @@
 // What a relaunch does with the window state the last session left behind:
 // what `sanitize_window_state` makes of a restored record, what
 // `parse_window_state` makes of a file's text, and what survives the round
-// trip through disk (`src/main/window_state_file.ts`).
+// trip through disk (`src/main/shell/window_state_file.ts`).
 
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { empty, some } from '../src/shared/maybe'
-import type { WindowState } from '../src/main/window_state'
+import type { WindowState } from '../src/main/shell/window_state'
 import {
   default_window_state,
   parse_window_state,
   sanitize_window_state
-} from '../src/main/window_state'
-import { read_window_state_file, write_window_state } from '../src/main/window_state_file'
+} from '../src/main/shell/window_state'
+import { read_window_state_file, write_window_state } from '../src/main/shell/window_state_file'
 
 const temps: string[] = []
 

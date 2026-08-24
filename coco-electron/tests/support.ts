@@ -1,5 +1,5 @@
 // Fixtures for the engine tests: real folders, real executable scripts, the
-// whole convention. The folders themselves live in `mock/.fixtures` and are
+// whole convention. The folders themselves live in `tests/fixtures` and are
 // copied per test.
 
 import fs from 'node:fs'
@@ -11,11 +11,11 @@ import type { Config } from '../src/main/engine'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 
-/** The bundled demonstration library, `mock/`. */
-export const MOCK_ROOT = path.join(REPO_ROOT, 'mock')
+/** The bundled demonstration library, `examples/`. */
+export const EXAMPLES_ROOT = path.join(REPO_ROOT, 'examples')
 
-/** The shared experiment folders the suites copy and drive, `mock/.fixtures`. */
-const FIXTURES = path.join(MOCK_ROOT, '.fixtures')
+/** The shared experiment folders the suites copy and drive, `tests/fixtures`. */
+const FIXTURES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'fixtures')
 
 const created: string[] = []
 
@@ -100,7 +100,7 @@ export function read_text(...parts: string[]): string {
 }
 
 /**
- * A copy of the shared job fixture (`mock/.fixtures/job`), registered under
+ * A copy of the shared job fixture (`tests/fixtures/job`), registered under
  * `name`. The scripts are real files in the repository; see the fixture
  * README for the state files that drive them.
  */

@@ -11,8 +11,8 @@
     is_terminal,
     job_run
   } from '@shared/world'
-  import { app, close_overlay, confirm_cancel, entity_of } from '../state.svelte'
-  import type { Overlay } from '../state.svelte'
+  import { app, close_overlay, confirm_cancel, entity_of } from '../../state.svelte'
+  import type { Overlay } from '../../state.svelte'
   import ModalFrame from './ModalFrame.svelte'
   import { Button } from '$lib/components/ui/button'
   import { Spinner } from '$lib/components/ui/spinner'

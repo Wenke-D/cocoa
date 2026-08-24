@@ -4,8 +4,8 @@
   no longer takes — and a notice that fades is not enough. One button.
 -->
 <script lang="ts">
-  import { close_overlay } from '../state.svelte'
-  import type { Overlay } from '../state.svelte'
+  import { close_overlay } from '../../state.svelte'
+  import type { Overlay } from '../../state.svelte'
   import ModalFrame from './ModalFrame.svelte'
   import { Button } from '$lib/components/ui/button'
 

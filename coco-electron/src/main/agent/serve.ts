@@ -3,7 +3,7 @@
 //
 // An agent asks coco to do things; it never runs an experiment's scripts
 // itself. Everything it can ask for arrives here and takes exactly the path a
-// click takes: the same `operations.ts`, the same engine queue, the same
+// click takes: the same `bridge/operations.ts`, the same engine queue, the same
 // screen update. There is no second way into the engine to keep in step with
 // the first — the difference between a click and a call is one word, the
 // trigger stamped on the run.
@@ -12,7 +12,7 @@
 // speaks and the bundled `coco_mcp_server` binary talks to. Express speaks
 // the protocol — routing, decoding, the body cap, framing are a library's,
 // audited by its million users rather than by ours — so this stays a
-// transport adapter over `operations.ts`, not a second implementation.
+// transport adapter over `bridge/operations.ts`, not a second implementation.
 // `curl --unix-socket` debugs it either way.
 //
 // The module, file by file: this one owns the socket's lifecycle; `app.ts`
@@ -38,7 +38,7 @@ export function socket_path(): string {
   if (override.is_present()) {
     return override.value
   }
-  // The dev-server URL is electron-vite's mark on a dev run (`window.ts`).
+  // The dev-server URL is electron-vite's mark on a dev run (`shell/window.ts`).
   const file = env_var('ELECTRON_RENDERER_URL').is_present() ? 'coco-dev.sock' : 'coco.sock'
   const home = env_var('HOME')
   if (home.is_present()) {

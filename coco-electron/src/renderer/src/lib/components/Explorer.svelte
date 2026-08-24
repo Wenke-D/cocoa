@@ -11,8 +11,8 @@
     navigate,
     request_remove,
     selected_entity_id
-  } from '../state.svelte'
-  import { EXPLORER_MAX_SPLIT, EXPLORER_MIN_SPLIT } from '../ui_state'
+  } from '../../state.svelte'
+  import { EXPLORER_MAX_SPLIT, EXPLORER_MIN_SPLIT } from '../../ui_state'
   import type { Entity } from '@shared/world'
   import * as ContextMenu from '$lib/components/ui/context-menu'
   import ViewTitle from './ViewTitle.svelte'
