@@ -1,10 +1,15 @@
 <!--
   The main region's empty page (§12) — the front door: every launch lands
-  here (architecture §32). A centred brand moment: the wordmark sits at the
-  optical centre of the region and one line of state hangs beneath it. The
-  Explorer still holds the next action — the line points there — but the
-  daily open earns a moment of identity first. The wordmark never moves
+  here (architecture §32). A centred brand moment: the mark and the wordmark
+  sit at the optical centre of the region and one line of state hangs beneath
+  them. The Explorer still holds the next action — the line points there —
+  but the daily open earns a moment of identity first. The brand never moves
   between states; only the line under it changes, with no transition.
+
+  The mark is the app's own icon (`build/icon.svg`), inline rather than an
+  asset so it is one file to theme and none to load, and drawn from
+  `--mark-*` because a hex at a call site belongs to no palette
+  (ui-system.md).
 -->
 <script lang="ts">
   import { active_run_count, add_folder, app } from '../state.svelte'
@@ -29,7 +34,22 @@
 </script>
 
 <div class="empty">
-  <h1 class="wordmark">cocoa</h1>
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 1024 1024" width="76" height="76" aria-hidden="true">
+      <rect width="1024" height="1024" rx="232" fill="var(--mark-tile)" />
+      <g transform="rotate(-28 512 512)">
+        <ellipse cx="512" cy="512" rx="330" ry="216" fill="var(--mark-bean)" />
+        <path
+          d="M 241 512 Q 512 404 783 512"
+          fill="none"
+          stroke="var(--mark-tile)"
+          stroke-width="37"
+          stroke-linecap="round"
+        />
+      </g>
+    </svg>
+    <h1 class="wordmark">cocoa</h1>
+  </div>
   {#if !app.connected}
     <section class="state" role="status" aria-live="polite" aria-busy="true">
       <p class="line">
@@ -56,7 +76,7 @@
 </div>
 
 <style>
-  /* The middle row pins the wordmark at the golden section (~38% down:
+  /* The middle row pins the brand at the golden section (~38% down:
      1 / 2.618), so a state's height changes what hangs below, never the
      mark. */
   .empty {
@@ -66,14 +86,26 @@
     justify-items: center;
   }
 
-  .wordmark {
+  .brand {
     grid-row: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .mark {
+    display: block;
+    user-select: none;
+  }
+
+  .wordmark {
     margin: 0;
     font-size: 42px;
     line-height: 1;
     font-weight: 600;
     letter-spacing: -0.02em;
-    color: var(--accent);
+    color: var(--foreground);
     user-select: none;
   }
 

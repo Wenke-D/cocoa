@@ -44,6 +44,13 @@
 
   --search-match: #f8e3a1;
   --search-match-current: #f6b73c;
+
+  /* The product mark (§12): the tile and the bean of `build/icon.svg`. The
+     one pair that is identical in both schemes — an app's icon is the same
+     object wherever it is shown, and re-tinting it per theme would make it a
+     different mark. */
+  --mark-tile: #f0e4d6;
+  --mark-bean: #6f4426;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -86,6 +93,13 @@
 
     --search-match: #623315;
     --search-match-current: #9e6a03;
+
+    /* The product mark (§12): the tile and the bean of `build/icon.svg`. The
+       one pair that is identical in both schemes — an app's icon is the same
+       object wherever it is shown, and re-tinting it per theme would make it a
+       different mark. */
+    --mark-tile: #f0e4d6;
+    --mark-bean: #6f4426;
   }
 }
 
