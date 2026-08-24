@@ -53,10 +53,44 @@ build:
     cd {{electron}}
     npm run build
 
-# An installable cocoa.app in cocoa-electron/release/. Unsigned.
+# An installable build in cocoa-electron/release/. Unsigned.
 package:
     cd {{electron}}
     npm run package
+
+# Put the packaged app where this desktop can find it, for this user only —
+# no root, nothing outside $HOME.
+#
+# The point is the icon. GNOME does not ask a window what icon it has if it
+# can match the window's WM_CLASS to an installed .desktop; it then resolves
+# `Icon=cocoa` through the icon theme and takes whichever size fits the
+# surface it is drawing. Without that match it falls back to _NET_WM_ICON,
+# which carries one size whatever it is handed, and every dock scales it
+# itself. That fallback is the blurry one.
+#
+# So: the AppImage onto PATH, every size into the theme, and the .desktop
+# whose StartupWMClass matches what the window reports (see the executableName
+# and productName notes in electron-builder.yml).
+#
+# To undo it:
+#     rm ~/.local/bin/cocoa ~/.local/share/applications/cocoa.desktop
+#     rm ~/.local/share/icons/hicolor/*/apps/cocoa.png
+install: package
+    appimage=$(ls -1 {{electron}}/release/*.AppImage | head -1)
+    test -n "$appimage" || { echo "no AppImage in {{electron}}/release/"; exit 1; }
+    mkdir -p "$HOME/.local/bin"
+    cp "$appimage" "$HOME/.local/bin/cocoa"
+    chmod +x "$HOME/.local/bin/cocoa"
+    for png in {{electron}}/build/icons/*x*.png; do
+        dir="$HOME/.local/share/icons/hicolor/$(basename "$png" .png)/apps"
+        mkdir -p "$dir"
+        cp "$png" "$dir/cocoa.png"
+    done
+    mkdir -p "$HOME/.local/share/applications"
+    printf '[Desktop Entry]\nType=Application\nName=cocoa\nComment=A desktop workbench for experiments that live on your own machine\nExec=%s/.local/bin/cocoa %%U\nIcon=cocoa\nTerminal=false\nCategories=Development;\nStartupWMClass=cocoa\n' "$HOME" > "$HOME/.local/share/applications/cocoa.desktop"
+    update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+    gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+    echo "installed $HOME/.local/bin/cocoa — run it as 'cocoa', or find it in Activities"
 
 # Drive the built app under Playwright and watch it work — the path a test
 # cannot take. Scenario is a name from cocoa-electron/scripts/scenarios/:

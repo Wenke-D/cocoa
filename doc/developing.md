@@ -49,6 +49,15 @@ npm run package:dir                         # unpacked .app only, for driving
 DRIVE_PACKAGED=1 npm run drive scripts/scenarios/agent.mjs    # drive the packaged app
 ```
 
+From the repository root, `alors install` packages and then puts the build
+where the desktop can find it, for this user and without root: the AppImage as
+`~/.local/bin/cocoa`, every icon size into `~/.local/share/icons/hicolor/`, and
+a `.desktop` whose `StartupWMClass` matches what the window reports. That match
+is what lets a desktop environment resolve the icon through the theme and draw
+it at the size it wants; without it the fallback is `_NET_WM_ICON`, which
+carries one size and is scaled by whatever is drawing it. The task's comment
+says how to undo it.
+
 `npm run gate` is the one command that has to pass. It runs cheapest-failure
 first.
 
