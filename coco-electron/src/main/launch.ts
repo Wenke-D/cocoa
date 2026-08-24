@@ -36,6 +36,15 @@ export const launch = Object.freeze({
    */
   hide_window: env_var('COCO_HIDE_WINDOW').or('') === '1',
 
+  /**
+   * `COCO_BOOTSTRAP_DELAY_MS=<n>` holds the bootstrap answer for n ms.
+   *
+   * The renderer's Starting state (§12) lives only until that answer lands —
+   * well under a second on any real machine — so without this there is no way
+   * to look at it, screenshot it, or drive it. Never set in normal use.
+   */
+  bootstrap_delay_ms: Number(env_var('COCO_BOOTSTRAP_DELAY_MS').or('0')) || 0,
+
   /** macOS: the platform with a dock, and a menu bar of its own. */
   is_mac: process.platform === 'darwin'
 })

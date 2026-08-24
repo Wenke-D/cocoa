@@ -17,6 +17,7 @@ import type {
   DeleteResult
 } from '@shared/world'
 import { empty } from '@shared/maybe'
+import { launch } from './launch'
 import * as operations from './operations'
 import { current_world, publish_cycle } from './publish'
 import { refresh_and_publish } from './refresh'
@@ -29,7 +30,12 @@ export function register_ipc(): void {
   // The renderer pulls its starting world; a reload is its own resync. Events
   // sent before the bootstrap answer are applied to the old page state and then
   // overwritten by the (newer) bootstrap — order-safe either way.
-  ipcMain.handle('coco:bootstrap', (): BootstrapPayload => {
+  ipcMain.handle('coco:bootstrap', async (): Promise<BootstrapPayload> => {
+    // A development control (§28): the Starting state is sub-second and
+    // cannot be seen, let alone driven, unless the answer is held.
+    if (launch.bootstrap_delay_ms > 0) {
+      await new Promise((resolve) => setTimeout(resolve, launch.bootstrap_delay_ms))
+    }
     return { world: current_world() }
   })
 

@@ -100,6 +100,9 @@ against a store with nothing registered — the engine reads `store.json` exactl
 once, at construction, so an empty store is a launch-time decision, not
 something a scenario can arrange afterwards.
 
+`COCO_BOOTSTRAP_DELAY_MS=<n>` holds the bootstrap answer for n ms — the only
+way the renderer's sub-second Starting state (§12) can be seen or driven.
+
 `DRIVE_HEADLESS=1` opens the window without showing it (`COCO_HIDE_WINDOW` on
 the app side). Playwright drives the page over CDP and screenshots it the same
 way, so nothing is lost but the view — and sweeping every scenario stops taking
