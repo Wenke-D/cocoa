@@ -67,7 +67,7 @@ export async function run({ page, shot, log, wait_text, relaunch, window_state_p
   if (selected !== 0) {
     throw new Error('a launch restored a selection; it must open with none')
   }
-  const prompt = await page.getByText('Select an experiment in the Explorer.').isVisible()
+  const prompt = await page.getByText('Select an experiment in the Explorer to begin.').isVisible()
   if (!prompt) {
     throw new Error('a launch did not open on the empty page')
   }

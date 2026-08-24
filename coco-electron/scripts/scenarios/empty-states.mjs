@@ -8,13 +8,13 @@ import path from 'node:path'
 
 export async function run({ page, shot, log, wait_text, relaunch }) {
   // 1. Starting: the bootstrap answer is held by the delay.
-  await page.getByText('Starting coco').waitFor({ timeout: 10_000 })
+  await page.getByText('Reading registered experiment folders').waitFor({ timeout: 10_000 })
   await shot('empty-1-starting')
   log('starting state captured')
 
   // 2. The daily state: experiments registered, none selected.
   await wait_text('solver-gpu', 20_000)
-  await page.getByText('Select a bench or job in the Explorer').waitFor({ timeout: 10_000 })
+  await page.getByText('Select an experiment in the Explorer').waitFor({ timeout: 10_000 })
   await shot('empty-3-experiments')
   log('daily state captured:', await page.locator('.glance').innerText())
 

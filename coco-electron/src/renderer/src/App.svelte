@@ -89,7 +89,7 @@
     {/if}
     <main>
       {#key page_key}
-        <div class="page" in:fade={{ duration: 120 }}>
+        <div class="page" class:centered={app.route.page === 'empty'} in:fade={{ duration: 120 }}>
           {#if app.route.page === 'empty'}
             <Empty />
           {:else if app.route.page === 'entity'}
@@ -185,6 +185,15 @@
   .page {
     padding: 20px;
     max-width: 900px;
+  }
+
+  /* The empty page (§12) centres its wordmark in the whole visible region,
+     so its wrapper fills the region instead of hugging the reading column. */
+  .page.centered {
+    max-width: none;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   .notice {

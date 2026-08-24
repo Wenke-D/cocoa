@@ -619,50 +619,57 @@ The main region's page when no experiment is selected — the front door:
 every launch lands here (architecture §32), so it is seen daily and must
 stay calm at the thousandth viewing.
 
-It is a small, **left-anchored note**, not a centred card: the Explorer is
-where the next action is, and this page acknowledges the state without
-pulling the eye from it. No enclosing panel, no shadow, no decorative
-divider — the page ground stays uninterrupted. Three states share one
-position, one 18px muted lucide icon in a 20px slot, and one text baseline,
-so a state change replaces words without moving anything; there is no
-transition between them.
+It is a **centred brand moment**, not a note in a corner: the wordmark
+`coco` sits at the optical centre of the main region, and one line of
+state hangs beneath it. The Explorer still holds the next action — the
+line points there — but the daily open earns a moment of identity before
+the work starts. Everything else about the page's restraint stands: no
+enclosing panel, no shadow, no illustration, no decorative divider — the
+ritual is type on the uninterrupted page ground.
 
-Type: heading 17px/24 semibold in the strong text colour; body 13px/20 in
-the ordinary text colour.
+The wordmark is the constant: lowercase `coco`, 42px/1 semibold,
+letter-spacing −0.02em, in the **accent colour** — the one place the
+brand wears its own colour, each theme's accent so it holds in both —
+and not selectable. It sits in the middle row of a 1fr / auto / 1.618fr
+grid, the golden section (~38% down), and does not move between states;
+only the line under it changes, with no transition. State lines are
+14px/22 in the muted colour, centred, max-width 460px, 18px below the
+mark. This page alone escapes the 900px reading column: it centres in
+the whole visible region.
 
-**Starting** — the backend has not answered yet. Icon `LoaderCircle`,
-turning once per 1600ms (static under reduced motion); the state is a
-polite live region marked busy. Body in the muted colour — transient
-system information, not content.
+**Starting** — the backend has not answered yet. An inline 14px
+`LoaderCircle` leads the line, turning once per 1600ms (static under
+reduced motion); the state is a polite live region marked busy.
 
 ```text
-Starting coco
-Reading registered experiment folders.
+            coco
+⟳ Reading registered experiment folders.
 ```
 
 **No experiments registered** — an ordinary absence, never an error: no
-warning treatment, no alert role. The button is the state's only use of
-the accent, and opens the operating system's folder picker (§11.5).
+warning treatment, no alert role. The button is the only accent besides
+the wordmark, and opens the operating system's folder picker (§11.5).
 
 ```text
-No experiments are registered
-Add a folder that contains a valid experiment manifest.
+                        coco
+No experiments are registered. Add a folder that contains
+              a valid experiment manifest.
 
-[Add Folder]
+                    [Add Folder]
 ```
 
-**Experiments exist, none selected** — the state seen every day. Icon
-`ListTree`. Below the body, an at-a-glance line: 12px muted, tabular
-numerals, a hairline above, not clickable, no badges or status colours.
-Zero-value segments stay, so the line keeps one shape from launch to
-launch; screen readers hear commas rather than the middle dots. When both
-counts are zero this state never shows — the previous one does.
+**Experiments exist, none selected** — the state seen every day. Below
+the line, at a distance (28px), an at-a-glance line: 12px muted, tabular
+numerals, not clickable, no badges or status colours. Zero-value segments
+stay, so the line keeps one shape from launch to launch; screen readers
+hear commas rather than the middle dots. When both counts are zero this
+state never shows — the previous one does.
 
 ```text
-Experiments
-Select a bench or job in the Explorer to view its runs and reports.
-─────────────────────────────
-2 benches · 4 jobs · 1 active run
+                  coco
+Select an experiment in the Explorer to begin.
+
+       2 benches · 4 jobs · 1 active run
 ```
 
 ---
