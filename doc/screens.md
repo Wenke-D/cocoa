@@ -207,7 +207,7 @@ what to show, and every fact on the page is looked up from the world by that
 address at render time. A route must never carry a copy of a run.
 
 ```ts
-// coco-electron/src/shared/ui.ts
+// cocoa-electron/src/shared/ui.ts
 export type ReportContext =
   | { kind: 'job_run'; job_id: string }
   | { kind: 'bench_run'; bench_id: string }
@@ -349,7 +349,7 @@ translation layer.
 
 ### 10.1 Entity Kind### 10.1 Entity Kind
 
-An entity is a folder holding a `coco.toml`; the manifest's own `kind` decides
+An entity is a folder holding a `cocoa.toml`; the manifest's own `kind` decides
 which of the two it is.
 
 ### 10.2 Execution Status
@@ -365,14 +365,14 @@ export type RunStatus =
   | 'Failed'
   | 'Cancelling'
   | 'Cancelled'
-  | 'Error'       // coco could not carry out its own side of the protocol
+  | 'Error'       // cocoa could not carry out its own side of the protocol
 ```
 
 `Completed` and `Analyzing` are the report's half of the lifecycle: a run whose
 work is done but whose report has not been produced is not yet `Succeeded`,
 because the user opens the report to find out what happened (§7.1).
 
-`Error` is coco's own failure, not the experiment's — a poll that cannot be
+`Error` is cocoa's own failure, not the experiment's — a poll that cannot be
 spawned, a launch whose output never arrived, a report script that exits
 non-zero. It must be told apart from `Failed`, which is the experiment's verdict.
 
@@ -528,7 +528,7 @@ The sidebar hosts three views, selected from the activity bar (§8.2).
 
 **Active Runs.** Everything started and not yet finished. Top-level runs only: a Bench run appears once, never once per dispatched child, matching the count of §21. The members a Bench run still has running are listed beneath it, indented, as what it is made of — not counted, and leading to the child seen through its bench (§19). Rows show the entity name and the run's status badge, and navigate to that run's detail page, where Cancel lives. When nothing is running, show a subtle `Nothing is running.` note rather than an error.
 
-**Events.** What happened, newest first: a run that started and by whom, a status that moved, a report that landed, a run coco lost sight of or found again, a folder that was added or removed, a manifest that broke or healed, and any failure the status bar reported. Each entry is the moment, the experiment, the run, and what happened — the last coloured by what it means: green for a report landing, a success or a run found again; red for a failure; amber for a run coco cannot see; blue for news; grey for the rest. Entries are kept apart by a rule. The backend only says what changed, as it always has (§26.3); the renderer, which holds the entry as it was, says what moved — the backend knows nothing of this view. The last hundred are kept, in the page's memory only: a reload or a relaunch starts empty. An entry about something still listed navigates to it. When nothing has happened, show a subtle `Nothing has happened yet.` note.
+**Events.** What happened, newest first: a run that started and by whom, a status that moved, a report that landed, a run cocoa lost sight of or found again, a folder that was added or removed, a manifest that broke or healed, and any failure the status bar reported. Each entry is the moment, the experiment, the run, and what happened — the last coloured by what it means: green for a report landing, a success or a run found again; red for a failure; amber for a run cocoa cannot see; blue for news; grey for the rest. Entries are kept apart by a rule. The backend only says what changed, as it always has (§26.3); the renderer, which holds the entry as it was, says what moved — the backend knows nothing of this view. The last hundred are kept, in the page's memory only: a reload or a relaunch starts empty. An entry about something still listed navigates to it. When nothing has happened, show a subtle `Nothing has happened yet.` note.
 
 ### 11.2 Grouping
 
@@ -589,7 +589,7 @@ It must remain selected when viewing:
 
 Clicking it opens the operating system's own folder picker. Nothing stands between the click and the picker, and a path is never typed by hand. Cancelling the picker does nothing at all.
 
-**One pick is one folder.** The chosen directory registers if it carries a `coco.toml` of its own, and is refused if it does not. coco does not search inside it for experiments.
+**One pick is one folder.** The chosen directory registers if it carries a `cocoa.toml` of its own, and is refused if it does not. cocoa does not search inside it for experiments.
 
 This is a decision, not a shortfall. A scan has to guess how deep to look and what to skip, and it answers a pick with a list the user did not choose — several folders registered at once, some refused, each for its own reason, none of it visible until afterwards. Picking the folder you mean is one more click and no guessing. `coco-egui/` searched three levels down and needed a modal to report what it had done; that modal is what the rule below replaces.
 
@@ -606,7 +606,7 @@ One pick has one outcome, so it needs one sentence, not a modal:
 ```text
 Folder added.                                 registered
 That folder is already in the Explorer.       a no-op, and says so
-coco.toml: missing required table `[launch]`  refused, with the reason
+cocoa.toml: missing required table `[launch]`  refused, with the reason
 ```
 
 A refusal is an error notice and stays until dismissed (§8.5); the other two fade. The reason is the engine's own sentence, unchanged — the user picked this folder, so the answer is about this folder.
@@ -620,14 +620,14 @@ every launch lands here (architecture §32), so it is seen daily and must
 stay calm at the thousandth viewing.
 
 It is a **centred brand moment**, not a note in a corner: the wordmark
-`coco` sits at the optical centre of the main region, and one line of
+`cocoa` sits at the optical centre of the main region, and one line of
 state hangs beneath it. The Explorer still holds the next action — the
 line points there — but the daily open earns a moment of identity before
 the work starts. Everything else about the page's restraint stands: no
 enclosing panel, no shadow, no illustration, no decorative divider — the
 ritual is type on the uninterrupted page ground.
 
-The wordmark is the constant: lowercase `coco`, 42px/1 semibold,
+The wordmark is the constant: lowercase `cocoa`, 42px/1 semibold,
 letter-spacing −0.02em, in the **accent colour** — the one place the
 brand wears its own colour, each theme's accent so it holds in both —
 and not selectable. It sits in the middle row of a 1fr / auto / 1.618fr
@@ -642,7 +642,7 @@ the whole visible region.
 reduced motion); the state is a polite live region marked busy.
 
 ```text
-            coco
+            cocoa
 ⟳ Reading registered experiment folders.
 ```
 
@@ -651,7 +651,7 @@ warning treatment, no alert role. The button is the only accent besides
 the wordmark, and opens the operating system's folder picker (§11.5).
 
 ```text
-                        coco
+                        cocoa
 No experiments are registered. Add a folder that contains
               a valid experiment manifest.
 
@@ -666,7 +666,7 @@ hear commas rather than the middle dots. When both counts are zero this
 state never shows — the previous one does.
 
 ```text
-                  coco
+                  cocoa
 Select an experiment in the Explorer to begin.
 
        2 benches · 4 jobs · 1 active run
@@ -729,7 +729,7 @@ History
 
 When the manifest is invalid:
 
-- Show the validation message; the parameter list is not shown, since coco
+- Show the validation message; the parameter list is not shown, since cocoa
   does not know them (convention §4).
 - Disable Start.
 - Explain why Start is disabled.
@@ -1084,7 +1084,7 @@ what was typed last, and the page says what it filled — and what it could not.
 > There used to be a **Fill from last run** action here, and a `last_args` map
 > in the store behind it: an explicit button, never a default, that filled the
 > fields and stopped there. Both are gone as of 2026-08-20. It was the one
-> thing coco remembered about what a person had typed. The row menu is what
+> thing cocoa remembered about what a person had typed. The row menu is what
 > replaced it: the values come from a run's record, not from a memory of the
 > form.
 
@@ -1209,7 +1209,7 @@ Where it is offered:
 
 Only a **finished** run can be deleted. An active run must be cancelled
 first, and the cancellation must land; `UNREACHABLE` is refused too — a run
-coco cannot see may still be running, and deleting its record would be the
+cocoa cannot see may still be running, and deleting its record would be the
 one way to never find out.
 
 **A fan-out is deleted whole, from the bench's side.** A run a bench
@@ -1222,7 +1222,7 @@ deletion never leaves half a fan-out: no bench pointing at members that
 are gone, no member naming a bench that is.
 
 The click asks first, always — that modal is the second confirmation. Its
-copy speaks the user's language, never coco's file names: the run
+copy speaks the user's language, never cocoa's file names: the run
 disappears from the history forever, its report goes with it — for a bench
 run, the runs it dispatched too — and `This cannot be undone.` The confirm
 button wears the destructive colour and never a neutral one.
@@ -1503,7 +1503,7 @@ HTML         rendered in-app, in a sandboxed frame
 
 An experiment writes whatever report it writes. Two HTML reports from two
 experiments may share no styling at all, and any in-app approximation of them
-would misrepresent them — so coco does not approximate. It renders the file.
+would misrepresent them — so cocoa does not approximate. It renders the file.
 
 The renderer is a browser engine, which is what makes this possible; the egui
 implementation had to hand an HTML report to the system browser instead, and
@@ -1514,7 +1514,7 @@ It did.
 with `sandbox="allow-scripts"` and nothing else. `allow-scripts` is granted so
 that a charting report — the common case for a benchmark — works at all.
 `allow-same-origin` is deliberately withheld: without it the frame is an opaque
-origin, so the report cannot reach coco's storage, its DOM, or `window.coco`.
+origin, so the report cannot reach cocoa's storage, its DOM, or `window.cocoa`.
 A report is a file some experiment's script wrote, and it is treated as
 untrusted input, not as part of the application.
 

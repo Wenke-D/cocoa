@@ -17,10 +17,10 @@ different, and the drift is invisible until both are on screen at once.
 
 | Place | Owns |
 |---|---|
-| `src/renderer/src/theme.css` | The palette, both schemes — the one place a colour is chosen — and coco's own chrome: body type, `table.runs`, `code` |
-| `src/renderer/src/app.css` | Tailwind, and the shadcn names for coco's tokens: `bg-primary` *is* `--accent`, `bg-popover` *is* `--widget-bg`. No second palette |
+| `src/renderer/src/theme.css` | The palette, both schemes — the one place a colour is chosen — and cocoa's own chrome: body type, `table.runs`, `code` |
+| `src/renderer/src/app.css` | Tailwind, and the shadcn names for cocoa's tokens: `bg-primary` *is* `--accent`, `bg-popover` *is* `--widget-bg`. No second palette |
 | `src/renderer/src/lib/components/ui/` | shadcn-svelte's components — Button, Dialog, ContextMenu, Input, Label, Spinner, and for the Start form's shapes Select, Checkbox, Textarea (Separator rides along with Select). Copied-in source, owned and edited here, not a package |
-| `src/renderer/src/lib/components/` | coco's own widgets: `ModalFrame`, `StatusPill`, `Breadcrumbs`, `RunFacts`, `Sidebar`, `StatusBar` |
+| `src/renderer/src/lib/components/` | cocoa's own widgets: `ModalFrame`, `StatusPill`, `Breadcrumbs`, `RunFacts`, `Sidebar`, `StatusBar` |
 | `src/renderer/src/pages/` | One component per page of the specification |
 
 ## Colour
@@ -45,7 +45,7 @@ chosen for something else. A list's hover wash on a toolbar button, a chart's
 amber as a warning: both look plausible, and both break the moment the theme
 moves. `app.css` is where that discipline meets Tailwind: the components say
 `bg-accent` and mean a hover tint, so `--color-accent` is mapped to
-`--row-hover`, not to coco's `--accent`.
+`--row-hover`, not to cocoa's `--accent`.
 
 **Adding a colour** means adding a purpose in `theme.css`, in both palettes,
 and saying what it means — then, if a utility class needs it, a line in
@@ -72,7 +72,7 @@ mean different things, so that either can change alone:
 ## Controls
 
 Buttons, inputs, dialogs and menus are the shadcn-svelte components. They own
-their look, sized to coco's controls (28px buttons, 26px fields — edited in the
+their look, sized to cocoa's controls (28px buttons, 26px fields — edited in the
 owned sources, noted at the top of each file).
 
 ```svelte
@@ -122,7 +122,7 @@ carry a comment saying why.
    spacing.
 
 Then look at it: `npm run drive scripts/scenarios/<name>.mjs` in
-`coco-electron/` runs the built app and leaves screenshots in `.drive/shots/`
+`cocoa-electron/` runs the built app and leaves screenshots in `.drive/shots/`
 (developing.md, "Driving the built app"). Add a scenario there rather than
 checking a new screen by eye.
 

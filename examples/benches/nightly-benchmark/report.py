@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mock bench report: summarizes the members coco wrote to members.json."""
+"""Mock bench report: summarizes the members cocoa wrote to members.json."""
 import json
 import os
 import sys

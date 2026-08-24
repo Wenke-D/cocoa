@@ -1,0 +1,59 @@
+// Where the engine's store lives, and the one-time move that got it there.
+//
+// It used to be `~/.local/share/coco/store.json` — the app was called coco
+// then — hardcoded identically in both implementations so a folder registered
+// in one appeared in the other. That was the point while there were two; there
+// is one now, and the path was the only reason two of them could race each
+// other.
+//
+// It lives in Electron's `userData` instead — the per-app, per-user directory
+// the platform already has an answer for, next to `ui-state.json`.
+
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { env_var } from './env'
+import { log_for } from './log'
+
+const log = log_for('store_path')
+
+/** Where it lived until 2026-08-20, under the old name. */
+export function legacy_store_path(): string {
+  return path.join(os.homedir(), '.local', 'share', 'coco', 'store.json')
+}
+
+/**
+ * The store's path, having moved anything that was at the old one.
+ *
+ * `COCOA_STORE_PATH` wins outright and skips the move: a drive run points at a
+ * scratch store, and must not touch the real one on the way past.
+ */
+export function resolve_store_path(user_data_dir: string, legacy = legacy_store_path()): string {
+  const override = env_var('COCOA_STORE_PATH')
+  if (override.is_present()) {
+    return override.value
+  }
+
+  const target = path.join(user_data_dir, 'store.json')
+  carry_over(legacy, target)
+  return target
+}
+
+/**
+ * Copies the old store to the new place, if there is one and nothing is there
+ * yet. Copies rather than moves; the old file is left where it was.
+ *
+ * A failure is logged and swallowed: it is not worth stopping a launch for.
+ */
+function carry_over(legacy: string, target: string): void {
+  try {
+    if (fs.existsSync(target) || !fs.existsSync(legacy)) {
+      return
+    }
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.copyFileSync(legacy, target)
+    log.info('carried over from', legacy)
+  } catch (error) {
+    log.error('could not carry over from', legacy, error)
+  }
+}

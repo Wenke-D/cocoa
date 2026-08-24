@@ -1,6 +1,6 @@
 # The agent interface
 
-coco can be driven by an agent as well as by a person: the same operations,
+cocoa can be driven by an agent as well as by a person: the same operations,
 the same guarded engine, the same screen, with one word on the record saying
 who asked.
 
@@ -10,17 +10,17 @@ Covered here: §43.
 
 ## 43. Agent Interface
 
-An agent asks coco to do things. It never runs an experiment's scripts itself,
-and it never touches the store: coco is the one owner, and the owner is the
+An agent asks cocoa to do things. It never runs an experiment's scripts itself,
+and it never touches the store: cocoa is the one owner, and the owner is the
 window (§9).
 
 ### 43.1 Availability
 
-The interface exists only while coco is running. That is a decision, not a
+The interface exists only while cocoa is running. That is a decision, not a
 limitation to be worked around. A run started through it belongs to the store
 the user is looking at, and appears there exactly as a click's run does.
 
-An agent therefore cannot act while coco is closed. What coco must do instead is
+An agent therefore cannot act while cocoa is closed. What cocoa must do instead is
 catch up on the way back up: a run in flight when the window closed is polled on
 the first refresh, and if the cluster finished it, the stage that follows runs
 (§10).
@@ -28,9 +28,9 @@ the first refresh, and if the cluster finished it, the stage that follows runs
 ### 43.2 Transport
 
 A Unix domain socket at a fixed path per build —
-`$HOME/.local/share/coco/coco.sock`, with `coco-dev.sock` beside it for the
-dev build, overridable with `COCO_SOCKET_PATH`. The dev build's own file keeps
-hacking on coco from stealing the packaged coco's socket; the single-instance
+`$HOME/.local/share/cocoa/cocoa.sock`, with `cocoa-dev.sock` beside it for the
+dev build, overridable with `COCOA_SOCKET_PATH`. The dev build's own file keeps
+hacking on cocoa from stealing the packaged cocoa's socket; the single-instance
 lock cannot referee across builds.
 
 A socket rather than a TCP port: there is no port to discover, publish, or
@@ -41,16 +41,16 @@ a filesystem's path limit, so a failure to bind is reported with the path in it.
 The wire format is HTTP/1.1, so `curl --unix-socket` is the whole client
 library. Both ends speak it through libraries a reviewer never has to audit:
 the workbench serves through Express on Node's `http` server, and the bundled
-`coco-mcp-server` asks through libcurl — routing, decoding, framing, and the
-body cap are theirs. What stays coco's is what no library decides — who may
+`cocoa-mcp-server` asks through libcurl — routing, decoding, framing, and the
+body cap are theirs. What stays cocoa's is what no library decides — who may
 bind the socket, when the file goes away, and where a request's answer comes
 from. Request bodies are capped at 64 KiB; a larger declared length is
 answered `413` before a byte of it is read.
 
-Failing to bind is fatal: no agent interface, no coco. A socket file already
+Failing to bind is fatal: no agent interface, no cocoa. A socket file already
 at the path is deleted outright, not probed: a Unix socket cannot listen where
 a file sits, dead or not, and nothing alive can own it — the single-instance
-lock keeps each build to one coco, and each build listens on its own path.
+lock keeps each build to one cocoa, and each build listens on its own path.
 
 ### 43.3 Path through the application
 
@@ -92,14 +92,14 @@ and never becomes a file server.
 A refusal carries the workbench's own text, unchanged — an agent reading it sees
 what a person would have been shown — under the status that says who can act:
 `404` for something that is not there, `400` for a request that was refused,
-`503` when coco did not answer. A name asked for as the wrong kind is pointed at
+`503` when cocoa did not answer. A name asked for as the wrong kind is pointed at
 the right route rather than flatly refused.
 
 ### 43.5 The MCP binary
 
-`coco-mcp-server` serves this same surface as MCP tools (`coco_help`,
-`coco_list_jobs`, `coco_job`, `coco_start`, …) so an agent runtime speaks to
-coco through its own tool protocol instead of raw HTTP. An agent's MCP client
+`cocoa-mcp-server` serves this same surface as MCP tools (`cocoa_help`,
+`cocoa_list_jobs`, `cocoa_job`, `cocoa_start`, …) so an agent runtime speaks to
+cocoa through its own tool protocol instead of raw HTTP. An agent's MCP client
 launches the binary and speaks JSON-RPC over stdio; every tool call becomes
 one request over the socket, and the socket's answers pass through verbatim.
 It decides nothing — it is a translator, and the window must still be running
@@ -107,20 +107,20 @@ for it to answer. The MCP subset it needs (initialize, tools/list, tools/call,
 one JSON message per line) is written out by hand rather than taken from an SDK.
 
 Run with `--help-ai`, the binary prints a pointer instead of serving: one
-paragraph on what coco runs, and the URL of the authoring convention
+paragraph on what cocoa runs, and the URL of the authoring convention
 ([authoring.md](authoring.md)) in both page and raw form. The document is
 deliberately not baked in — it is versioned and reviewed in the repository
 beside the code that enforces it, and a copy in the binary would hand an
 agent whichever revision it happened to have installed. Live state still
 comes only from the tools.
 
-The binary is Rust and lives in its own crate, `coco-mcp/` — `cargo build`
+The binary is Rust and lives in its own crate, `cocoa-mcp/` — `cargo build`
 there, and nothing else is needed: its only dependency is `serde_json`, and it
 imports nothing from either workbench.
 
 That independence is the design, not an accident of packaging. It speaks the
 socket protocol of §43.2 and nothing else, and both implementations serve that
-protocol identically, so it never had to know which coco was listening — it
+protocol identically, so it never had to know which cocoa was listening — it
 drives the Electron workbench **unchanged**, which is why it outlived the
 implementation it was written in. Its tests answer the socket with a stub for
 the same reason: the boundary this crate owns is whether a tool call becomes the
@@ -136,7 +136,7 @@ requires that.
 
 No approval step and no separate notification: a run records who asked (§10.6),
 and that record is where the question is answered. No authentication: the socket
-is reachable only by processes that can open the file, and coco runs on the
+is reachable only by processes that can open the file, and cocoa runs on the
 user's own workstation. No cancel, no registration, and no event stream yet —
 each is one route, one request variant, and one worker arm away when a real
 agent needs it.

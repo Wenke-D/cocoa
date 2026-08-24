@@ -7,4 +7,4 @@ while [ $# -gt 0 ]; do
   esac
 done
 echo "mock: submitting run $run"
-echo "COCO_RETURN: slurm-$run"
+echo "COCOA_RETURN: slurm-$run"

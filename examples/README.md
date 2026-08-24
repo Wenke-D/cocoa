@@ -1,7 +1,7 @@
 # Bundled example experiments
 
-These folders are real coco experiments in miniature: each one has a
-`coco.toml` manifest and its own scripts, and the app runs them exactly like
+These folders are real cocoa experiments in miniature: each one has a
+`cocoa.toml` manifest and its own scripts, and the app runs them exactly like
 any other folder — no cluster needed. Registering them lets you watch the
 engine's true behaviour end to end: launches, polls, reports, cancellations,
 UNREACHABLE recovery, and bench fan-out.
@@ -9,11 +9,11 @@ UNREACHABLE recovery, and bench fan-out.
 ## Using them
 
 ```bash
-cd coco-electron && npm run dev
+cd cocoa-electron && npm run dev
 ```
 
 In the Explorer, click the **+** button and pick an experiment folder — one of
-the directories listed below, the one holding the `coco.toml`. Repeat for each
+the directories listed below, the one holding the `cocoa.toml`. Repeat for each
 one you want.
 
 > One pick is one folder ([doc/screens.md](../doc/screens.md) §11.5). Picking this

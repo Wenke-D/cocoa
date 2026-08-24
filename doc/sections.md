@@ -17,10 +17,10 @@ If you are looking for a number, this is where it lives.
 
 | § | | |
 |---|---|---|
-| **1** | Mission | [coco.md](coco.md) |
-| **2** | Product Model | [coco.md](coco.md) |
-| **3** | Core Backend Operations | [coco.md](coco.md) |
-| **4** | Scope | [coco.md](coco.md) |
+| **1** | Mission | [cocoa.md](cocoa.md) |
+| **2** | Product Model | [cocoa.md](cocoa.md) |
+| **3** | Core Backend Operations | [cocoa.md](cocoa.md) |
+| **4** | Scope | [cocoa.md](cocoa.md) |
 | **5** | Technology Baseline | [architecture.md](architecture.md) |
 | **6** | Supported Platforms | [architecture.md](architecture.md) |
 | **7** | Fundamental UX Decisions | [screens.md](screens.md) |
@@ -60,7 +60,7 @@ If you are looking for a number, this is where it lives.
 | **42** | Deliverables | [developing.md](developing.md) |
 | **43** | Agent Interface | [agent.md](agent.md) |
 | **44** | Definition of Done | [developing.md](developing.md) |
-| **45** | Working on coco | [developing.md](developing.md) |
+| **45** | Working on cocoa | [developing.md](developing.md) |
 
 ## Retired numbers
 

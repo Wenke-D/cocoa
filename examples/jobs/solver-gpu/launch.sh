@@ -1,5 +1,5 @@
 #!/bin/sh
-# Mock launch: prints the submission id coco will track.
+# Mock launch: prints the submission id cocoa will track.
 run=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -8,4 +8,4 @@ while [ $# -gt 0 ]; do
   esac
 done
 echo "mock: submitting run $run"
-echo "COCO_RETURN: slurm-$run"
+echo "COCOA_RETURN: slurm-$run"

@@ -41,13 +41,13 @@ Invoking this skill means: find them all, do them, clean them up.
    the comments. If a requirement is ambiguous, or big enough that the user
    should decide direction first: leave its markers in place, skip it, and
    put the question in the report instead of guessing.
-5. **Gate.** Run `npm run gate` in `coco-electron/` (or `alors gate` from the
+5. **Gate.** Run `npm run gate` in `cocoa-electron/` (or `alors gate` from the
    repository root; `alors gate::all` when a change crossed trees). The exit
    code is the verdict, not the output text. When a change touches behavior a
    drive scenario covers, run that scenario too.
 6. **Report per requirement**: where it was, what it asked, what was done —
    or the question that blocked it. Every place the report mentions is a
-   clickable markdown link (`[window.ts:96](coco-electron/src/main/window.ts#L96)`,
+   clickable markdown link (`[window.ts:96](cocoa-electron/src/main/shell/window.ts#L96)`,
    repo-relative path, `#L` ranges for spans), so the user can jump straight
    back. Link to where the change now sits — the marker is gone and lines
    have shifted, so give the line the edited file actually has, not the line

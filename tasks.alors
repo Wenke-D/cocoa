@@ -1,17 +1,17 @@
-# coco tasks. `alors` with no arguments lists them.
+# cocoa tasks. `alors` with no arguments lists them.
 #
 # Run it from the repository root — alors reads the tasks.alors in the current
 # directory and never looks upward, so this file is the whole surface.
 #
-# Bare tasks act on `coco-electron/`, because that is coco (doc/coco.md). The
+# Bare tasks act on `cocoa-electron/`, because that is cocoa (doc/cocoa.md). The
 # MCP server lives under its own namespace: `alors mcp ...`.
 #
 # The exit code is the verdict for every task here — read that, not the output.
 # A summary line like "13 passed; 1 failed" still contains the word "passed",
 # and a run that greps for it will call a red suite green.
 
-electron := coco-electron
-mcp := coco-mcp
+electron := cocoa-electron
+mcp := cocoa-mcp
 
 
 # --- the workbench -----------------------------------------------------------
@@ -53,18 +53,18 @@ build:
     cd {{electron}}
     npm run build
 
-# An installable coco.app in coco-electron/release/. Unsigned.
+# An installable cocoa.app in cocoa-electron/release/. Unsigned.
 package:
     cd {{electron}}
     npm run package
 
 # Drive the built app under Playwright and watch it work — the path a test
-# cannot take. Scenario is a name from coco-electron/scripts/scenarios/:
+# cannot take. Scenario is a name from cocoa-electron/scripts/scenarios/:
 #
 #     alors drive cancel
 #     alors drive bench-child
 #
-# Screenshots land in coco-electron/.drive/shots/.
+# Screenshots land in cocoa-electron/.drive/shots/.
 drive scenario:
     cd {{electron}}
     npm run build

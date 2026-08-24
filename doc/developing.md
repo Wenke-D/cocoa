@@ -1,8 +1,8 @@
-# Developing coco
+# Developing cocoa
 
 This is the working record: how to run the trees, what is covered, what is
 known to be missing, and which questions are already settled. It is the merge
-of what used to be `coco-electron/HANDOFF.md` and the process half of the
+of what used to be `cocoa-electron/HANDOFF.md` and the process half of the
 old `SPECIFICATION.md`.
 
 Read it before changing anything here. Several of the entries below are the
@@ -21,8 +21,8 @@ how to work on this).
 
 | | |
 |---|---|
-| `coco-electron/` | the workbench. The only implementation under development. |
-| `coco-mcp/` | the MCP server. Its own crate, in continued use; `serde_json` its only dependency. |
+| `cocoa-electron/` | the workbench. The only implementation under development. |
+| `cocoa-mcp/` | the MCP server. Its own crate, in continued use; `serde_json` its only dependency. |
 
 Beside them: `examples/` is the demonstration library, `doc/` is this
 documentation.
@@ -32,7 +32,7 @@ documentation.
 ## Running it
 
 ```bash
-cd coco-electron
+cd cocoa-electron
 env -u ELECTRON_RUN_AS_NODE npm run dev     # VSCode terminals leak ELECTRON_RUN_AS_NODE; it breaks Electron
 
 npm run gate                                # format:check → lint → check → test
@@ -55,7 +55,7 @@ first.
 The other tree:
 
 ```bash
-cd coco-mcp  && cargo build && cargo test   # the MCP server; serde_json only
+cd cocoa-mcp  && cargo build && cargo test   # the MCP server; serde_json only
 ```
 
 ### Or through alors
@@ -100,10 +100,10 @@ against a store with nothing registered — the engine reads `store.json` exactl
 once, at construction, so an empty store is a launch-time decision, not
 something a scenario can arrange afterwards.
 
-`COCO_BOOTSTRAP_DELAY_MS=<n>` holds the bootstrap answer for n ms — the only
+`COCOA_BOOTSTRAP_DELAY_MS=<n>` holds the bootstrap answer for n ms — the only
 way the renderer's sub-second Starting state (§12) can be seen or driven.
 
-`DRIVE_HEADLESS=1` opens the window without showing it (`COCO_HIDE_WINDOW` on
+`DRIVE_HEADLESS=1` opens the window without showing it (`COCOA_HIDE_WINDOW` on
 the app side). Playwright drives the page over CDP and screenshots it the same
 way, so nothing is lost but the view — and sweeping every scenario stops taking
 the focus eleven times in a row, which made the machine unusable while it ran.
@@ -128,9 +128,9 @@ Playwright over Electron's own binary and runs a scenario against it — the
 A drive run is fully isolated from the real one, and must stay that way:
 
 ```text
-COCO_STORE_PATH      a scratch store    — a drive run registers folders; not in the real one
-COCO_UI_STATE_PATH   a scratch layout   — a drive run must not move the user's window
-COCO_SOCKET_PATH     a scratch socket   — must not take the socket a real coco answers on
+COCOA_STORE_PATH      a scratch store    — a drive run registers folders; not in the real one
+COCOA_UI_STATE_PATH   a scratch layout   — a drive run must not move the user's window
+COCOA_SOCKET_PATH     a scratch socket   — must not take the socket a real cocoa answers on
 ```
 
 The library is seeded as a private copy of `examples/`, never the user's own.
@@ -251,7 +251,7 @@ exercised without touching the developer controls.
 
 Tests run under vitest against **real temp folders and real executable
 scripts** — never mocks of the filesystem or of a process. The shared fixtures
-live in `coco-electron/tests/fixtures/` (see its README); a suite copies one,
+live in `cocoa-electron/tests/fixtures/` (see its README); a suite copies one,
 points it at a scratch store, and drives it.
 
 The end-to-end scenarios began as ports of the first implementation's suite;
@@ -354,7 +354,7 @@ scripts into a temp directory and lets the engine spawn them.
 | `tests/engine.test.ts`                                                                                                                      | All 20 end-to-end scenarios of `coco-egui/tests/coco_engine.rs`, plus registration idempotence + unregister and the records-read-once rule the Rust engine has no equivalent of: a corrupt `run.json` fails only its own run at the next open, and an outside edit is ignored until then. A manifest broken at the next open leaves its folder on the side it registered on; one that changes kind moves it across. Deletion (§12.1): a finished run's files go and its neighbours' stay, an active or UNREACHABLE run is refused, a dispatched member is refused toward its bench, a settled bench run takes its members with it, and the ids above what remains are handed back.                                                                                                                                                                                                     |
 | `tests/example-library.test.ts`                                                                                                             | The bundled `examples/` library end to end — port of `coco-egui/tests/coco_mock_library.rs`, but over a **copy** in a temp dir, so a test run leaves no `runs/`/`report/` in the repo.                                                                                                                                                                                                                                                                                                            |
 | `tests/world.test.ts`                                                                                                                       | `buildWorld`: entity shape, run shape, report state, UNREACHABLE display (last known status + unavailable query health), bench plan steps, bench-origin members, history ordering.                                                                                                                                                                                                                                                                                                            |
-| `tests/agent.test.ts`                                                                                                                       | The agent interface (§43): every route as a function of a world and a start, then the same routes over a **real unix socket** with a real HTTP client — a start crossing the wire, an oversize body refused, a socket a live coco is answering on left alone, a stale one replaced, the file removed on stop, and every reply framed with a `Content-Length` (see below).                                                                                                                     |
+| `tests/agent.test.ts`                                                                                                                       | The agent interface (§43): every route as a function of a world and a start, then the same routes over a **real unix socket** with a real HTTP client — a start crossing the wire, an oversize body refused, a socket a live cocoa is answering on left alone, a stale one replaced, the file removed on stop, and every reply framed with a `Content-Length` (see below).                                                                                                                     |
 | `tests/uiState.test.ts`                                                                                                                     | What a relaunch restores: `sanitize` (a report never comes back, a Start page becomes its experiment, widths clamped, unknown routes dropped, a window position taken only as a pair) and the file round trip, including one that does not parse.                                                                                                                                                                                                                                             |
 | `tests/notices.test.ts`                                                                                                                     | `refreshSummary` (one error in full, the rest as a count) and the `NoticeGate`: a repeating failure announced once, a changed one announced again, a clean pass re-arming it, and a manual refresh that always answers and counts as said.                                                                                                                                                                                                                                                    |
 | `tests/refresh.test.ts`                                                                                                                     | The refresh gate over a hand-resolved engine: the clock's tick dropped while a pass is under way and taken once idle; a person's refresh queued behind the pass, never alongside it, keeping the clock out while it waits; a second person's refresh ignored while one is queued or running.                                                                                                                                                                                                    |
@@ -550,7 +550,7 @@ A delivery must include:
 1. Complete TypeScript source for main, preload, and renderer.
 2. `package.json` and a committed `package-lock.json`.
 3. The demonstration library in `examples/` and the fixtures in
-   `coco-electron/tests/fixtures/`.
+   `cocoa-electron/tests/fixtures/`.
 4. Tests (§37).
 5. README (§39).
 6. macOS run verification.
@@ -584,7 +584,7 @@ A change is done when all of the following hold.
 - A new run opens in full-page detail.
 - Active status updates are visible without a manual action.
 - Cancel uses a confirmation modal.
-- Query failure is visually distinct from execution failure, and coco's `Error`
+- Query failure is visually distinct from execution failure, and cocoa's `Error`
   from the experiment's `Failed` (§10.2).
 - Clicking any history row opens a full run-detail page.
 - Bench runs display a full-width dispatch table of every run they started.
@@ -604,7 +604,7 @@ A change is done when all of the following hold.
 - `src/renderer/` imports nothing from `src/main/`.
 - The preload bridge gained no general-purpose channel.
 - The renderer judged no change and mutated no world entry.
-- Records stay readable across versions: a folder an earlier coco wrote still
+- Records stay readable across versions: a folder an earlier cocoa wrote still
   loads (`convention.md`).
 
 **Checks**
@@ -615,15 +615,15 @@ A change is done when all of the following hold.
 
 ---
 
-## 45. Working on coco
+## 45. Working on cocoa
 
 This document describes a workbench that exists. Read it as the standing
-description of what coco is and why, not as a build order — §40 carries what is
+description of what cocoa is and why, not as a build order — §40 carries what is
 outstanding.
 
 Two things are worth knowing before changing anything.
 
-**The folder is the record.** coco keeps no database. An experiment folder holds
+**The folder is the record.** cocoa keeps no database. An experiment folder holds
 its own manifest, its own runs, and its own reports ([convention.md](convention.md)), and
 both implementations write them identically. A change that makes a folder less
 portable between them is a regression even when every test passes.
@@ -653,16 +653,16 @@ re-argue it.
   `webContents.send`. The unification that actually pays is at the operation
   layer, and that already exists: `operations.ts` is what both callers use, so
   a second transport is a thin adapter, not a second implementation. Keeping
-  the socket also means the Rust `coco_mcp_server` binary connects unchanged,
+  the socket also means the Rust `cocoa_mcp_server` binary connects unchanged,
   and `curl --unix-socket` debugs it just as well.
-  What would re-open it: wanting coco in a browser, or across machines — the
+  What would re-open it: wanting cocoa in a browser, or across machines — the
   network trigger. The IPC layer is thin enough that the swap stays cheap.
   As built, the socket adapter is a set of routes over `operations.ts`,
   driving the same engine as the IPC handlers, which is what keeps the two
   transports from being two implementations.
 - **A launch that lost the single-instance lock still needs the `ready` guard
   in `index.ts`** (asked and answered 2026-08-22, by reading Electron 43.4.1
-  and Chromium, and by instrumented launches on macOS). coco's platforms are
+  and Chromium, and by instrumented launches on macOS). cocoa's platforms are
   macOS and Linux (architecture.md §6), and they differ here.
   `app.quit()` before `ready` does not cancel `ready`: `Browser::Shutdown`
   finds no message loop yet and waits — "exiting now would leave defunct
@@ -726,7 +726,7 @@ re-argue it.
   from it. `coco-egui/` shelled out, and could not do otherwise.
   The part that stays load-bearing: report HTML is written by experiment
   scripts and is not trusted. It loads in a sandboxed frame without
-  `allow-same-origin`, so a report can never reach `window.coco`.
+  `allow-same-origin`, so a report can never reach `window.cocoa`.
 ---
 
 ## Feature gaps against the egui implementation
@@ -750,11 +750,11 @@ that date.
 | **Report viewer virtualisation** | rows laid out only when visible (§35)                     | The viewer renders every line. Fine for the reports seen so far; a report of tens of thousands of lines wants windowing. Wrapping is off by default precisely so rows stay uniform height, which is what makes windowing possible later.                                                                      |
 | **Explorer/run filtering**       | `status_filter` (persisted), `run_search`, sidebar search | None. The arrangement file has a place to keep the filter when it exists.                                                                                                                                                                                                                                     |
 | **Theme setting**                | in-app Light/Dark toggle (Settings overlay), persisted    | Electron follows the system only; `theme.css` already has both palettes.                                                                                                                                                                                                                                      |
-| **Overlays**                     | `ConfirmCancel`, `AddFolderReport`, `Settings`            | `ConfirmCancel` is ported, and `confirmRemove` joins it on the same `ModalFrame`; `AddFolderReport` and `Settings` are not. As in coco, overlay state is deliberately outside `Route` (§9) and never persisted.                                                                                               |
+| **Overlays**                     | `ConfirmCancel`, `AddFolderReport`, `Settings`            | `ConfirmCancel` is ported, and `confirmRemove` joins it on the same `ModalFrame`; `AddFolderReport` and `Settings` are not. As in cocoa, overlay state is deliberately outside `Route` (§9) and never persisted.                                                                                               |
 | **`--dump-state`**               | prints the exact world as JSON                            | trivial: a `node` entry point or `npm run dump` calling `buildWorld`.                                                                                                                                                                                                                                         |
 | **Activity bar / view headers**  | shell chrome (§8)                                         | Built 2026-08-22: Explorer, Active Runs with its badge, and an Events view the egui shell never had (§11.1), each under its own title row; the gear is not there, since there is no theme toggle yet. Breadcrumbs stay per page (`Breadcrumbs.svelte`), not a shell-level bar.                                   |
 | **Shortcuts beyond the menu**    | n/a (egui)                                                | The app menu is the platform's minimum for now (Edit roles + Quit on macOS, none elsewhere), so no Cmd+O/Cmd+R; nor an in-page keyboard surface (report search, sidebar focus, run filtering).                                                                                                                 |
-| **Signed / notarised packaging** | n/a                                                       | `npm run package` builds an unsigned `coco.app` (`identity: null`) plus dmg/zip; Gatekeeper will object. mac targets are exercised, linux/win are configured but unbuilt.                                                                                                                                     |
+| **Signed / notarised packaging** | n/a                                                       | `npm run package` builds an unsigned `cocoa.app` (`identity: null`) plus dmg/zip; Gatekeeper will object. mac and linux targets are both built; win is configured but unbuilt. The Linux AppImage carries the executable as `cocoa` and a `.desktop` whose `StartupWMClass` matches it, so the window links to its launcher and its icon.                                                                                                                                     |
 | **Renderer tests**               | `Backend::Local` sync test seam drives the UI in-process  | The engine, world builder and sync layer are covered (see Tests); nothing exercises the Svelte components or the IPC handlers in `index.ts`. Needs a component runner (vitest browser mode or @testing-library/svelte) and an `index.ts` refactor that lets the handlers be called without `app.whenReady()`. |
 ---
 
@@ -798,7 +798,7 @@ Neither of these could have been found by a green test suite; both came from
   overlapping. First fixed by a serializing queue; now by the write guards of
   §26.2 — `poll_job` versions each run by its history length and drops a
   stale answer. `tests/races.test.ts` reproduces the stomp and holds the fix.
-- **A `$state` proxy cannot cross IPC.** `window.coco.cancel(overlay.target)`
+- **A `$state` proxy cannot cross IPC.** `window.cocoa.cancel(overlay.target)`
   passed a Svelte proxy to `ipcRenderer.invoke`, structured clone refused it,
   and the rejected promise left the modal on "Cancelling…" for ever with no
   error anywhere. Now `$state.snapshot` (the pattern `StartRun.svelte`
@@ -836,7 +836,7 @@ open.
   quit the app (the platform convention, which `index.ts` followed at the
   time), so Playwright's `app.close()` waited for an exit that never came — a
   run took over ten minutes and had to be killed. It now asks nicely, waits
-  three seconds, and insists. (Coco has since dropped that convention — the
+  three seconds, and insists. (Cocoa has since dropped that convention — the
   last window's close quits the app on every platform — but the driver keeps
   its insistence.)
 
@@ -844,8 +844,8 @@ open.
 
 - **The agent socket was answering in chunks.** Node uses
   `Transfer-Encoding: chunked` when no `Content-Length` is set, and the bundled
-  `coco-mcp-server` reads a reply as "everything after the blank line" — the
-  minimal HTTP a client on a private socket is entitled to. Its `coco_start`
+  `cocoa-mcp-server` reads a reply as "everything after the blank line" — the
+  minimal HTTP a client on a private socket is entitled to. Its `cocoa_start`
   came back as `e\r\n{"run_id":"1"}\r\n0\r\n\r\n`: the run id was in there,
   which is exactly why a `contains` assertion would have passed. Fixed by
   framing every reply with a `Content-Length`; the test now parses the body
@@ -866,7 +866,7 @@ open.
   a refused socket was announced to a window that could not yet hear it, and
   the message vanished. Notices raised before the first bootstrap were then
   held and delivered just after it. (That machinery is gone again: a refused
-  socket now crashes the app — no agent interface, no coco — so there is no
+  socket now crashes the app — no agent interface, no cocoa — so there is no
   startup notice left to hold, and `agent-busy.mjs` went with it.)
 - **A window nobody moves has no geometry to remember.** Geometry was read on
   `resize`/`move` only, so it was never recorded for exactly the people who
@@ -901,7 +901,7 @@ convention for display.
   before opening it. Only the mac targets have been built; linux/win are
   configured and untried.
 - The agent socket serves whoever can open the file. That is the Unix-socket
-  model and the same one the Rust coco has: file permissions are the access
+  model and the same one the Rust cocoa has: file permissions are the access
   control, and every caller is already on this machine (§43).
 - The dev CDP scripts once used for manual verification were lost with their
   session scratchpad. `scripts/drive.mjs` replaces them and lives in the repo

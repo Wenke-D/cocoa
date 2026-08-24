@@ -1,9 +1,9 @@
-# The coco convention
+# The cocoa convention
 
-The contract between coco and an experiment folder.
+The contract between cocoa and an experiment folder.
 
-coco does not run experiments. It renders templates, invokes the folder's own
-scripts, and maintains that folder's records. Everything coco knows about what
+cocoa does not run experiments. It renders templates, invokes the folder's own
+scripts, and maintains that folder's records. Everything cocoa knows about what
 an experiment is doing on a cluster, a script told it.
 
 Three rules hold everywhere:
@@ -11,11 +11,11 @@ Three rules hold everywhere:
 1. **Scripts are invoked as argv, never through a shell.** Values the user
    typed are argv elements, never text spliced into a command line.
 2. **No defaults, and no prefill.** Every declared parameter must be supplied
-   at start, by hand, every time. coco remembers nothing about what you typed
+   at start, by hand, every time. cocoa remembers nothing about what you typed
    last time — a value on screen is one a person put there.
-3. **coco never invents a cluster state.** `PENDING`, `RUNNING`, `COMPLETED`,
+3. **cocoa never invents a cluster state.** `PENDING`, `RUNNING`, `COMPLETED`,
    `FAILED`, `CANCELLED` and `UNREACHABLE` come from the poll script and from
-   nowhere else. The states coco sets itself describe coco's *own* pending
+   nowhere else. The states cocoa sets itself describe cocoa's *own* pending
    operations, never the experiment's (§9).
 
 ---
@@ -23,14 +23,14 @@ Three rules hold everywhere:
 ## 1. Folder layout
 
 An experiment folder is a directory containing a manifest, the scripts and
-template it declares, and — once coco has been used on it — its own records.
+template it declares, and — once cocoa has been used on it — its own records.
 
 ```
 <entity folder>/
-  coco.toml              # the manifest: the interface to coco
+  cocoa.toml              # the manifest: the interface to cocoa
   job.sbatch.tmpl        # the template; the middle name is yours to choose
   launch.sh  poll.py  report.py  cancel.sh
-  runs/                  # maintained by coco: this folder's history
+  runs/                  # maintained by cocoa: this folder's history
     <run_id>/
       run.json           # record: args, submission id, status history
       job.sbatch         # the rendered template (jobs)
@@ -41,19 +41,19 @@ template it declares, and — once coco has been used on it — its own records.
 ```
 
 A folder carries its full history and results with it: copy the folder and the
-runs come along. coco touches nothing else inside it (§12).
+runs come along. cocoa touches nothing else inside it (§12).
 
 Registration is by path. A folder does not need to be registered for its
 records to make sense — `runs/` is readable on its own.
 
-**coco does not guess an interpreter.** Either a script is executable and
+**cocoa does not guess an interpreter.** Either a script is executable and
 carries a shebang (`./poll.py`), or the manifest names the interpreter itself
 (`command = "python3 poll.py"`). There is no extension-to-executor table, and
 no shell is involved in either case.
 
 ---
 
-## 2. `coco.toml` — a job
+## 2. `cocoa.toml` — a job
 
 A **job** is an independently launchable experiment. One start = one run = one
 submission.
@@ -64,7 +64,7 @@ name        = "solver-gpu"          # platform-wide unique
 description = "GPU solver sweep"    # optional
 
 [render]
-template    = "job.sbatch.tmpl"     # rendered by coco, see §6
+template    = "job.sbatch.tmpl"     # rendered by cocoa, see §6
 
 [[render.params]]                   # ALL required; must match the template exactly
 name        = "size"
@@ -130,7 +130,7 @@ The start form shows both sets together as one list of fields, in declaration
 order; the record stores them as two maps (§7.1).
 
 **Every declared param must be given a value at start.** A value that is empty
-or only whitespace is not a value: coco refuses the start, whether it came from
+or only whitespace is not a value: cocoa refuses the start, whether it came from
 the start form or from a bench plan dispatching a member.
 
 ### 2.2 A parameter's shape
@@ -146,7 +146,7 @@ list        = true                  # optional; string and enum only
 description = "Backends to build, one build each"   # required
 ```
 
-To coco a value is a string with a **shape**, and the shape is what it can
+To cocoa a value is a string with a **shape**, and the shape is what it can
 check and what the form can ask for. There are four:
 
 | `type`   | `list`  | A value is…                                  |
@@ -180,10 +180,10 @@ a list is an array (§6.1).
 A manifest written for the form before 2026-08-23 — `params = ["mesh", "gpu"]`,
 names alone — does not load; the error says what replaced it.
 
-## 3. `coco.toml` — a bench
+## 3. `cocoa.toml` — a bench
 
 A **bench** is a fan-out launcher. Its plan turns the bench's parameters into
-instances of jobs **already registered in coco**. A bench never defines,
+instances of jobs **already registered in cocoa**. A bench never defines,
 contains, or owns jobs.
 
 ```toml
@@ -215,7 +215,7 @@ A bench has no template, no launch, no poll and no cancel of its own:
 
 A manifest either loads or it does not. A folder whose manifest is broken stays
 registered and is **shown with its error** — never hidden, never silently
-dropped. Until it loads, coco knows its path, the side it registered on (§5)
+dropped. Until it loads, cocoa knows its path, the side it registered on (§5)
 and the error: not its name, not its parameters.
 
 Rejected at load time:
@@ -239,7 +239,7 @@ Rejected at load time:
   or `{% import %}` (§6.1).
 
 Manifests are re-read on every listing: the store holds the folder path and
-its kind, never a parsed copy. Editing `coco.toml` therefore takes effect without
+its kind, never a parsed copy. Editing `cocoa.toml` therefore takes effect without
 re-registering, and fixing a broken manifest heals the entity in place, history
 intact. Listing happens on the refresh tick, not on every frame.
 
@@ -247,7 +247,7 @@ intact. Listing happens on the refresh tick, not on every frame.
 
 ## 5. The private store
 
-The one thing that is coco's own state, and that no folder can say about
+The one thing that is cocoa's own state, and that no folder can say about
 itself, is which folders are registered, and as what. That is all the store
 holds:
 
@@ -267,11 +267,11 @@ holds:
   remembers.
 
 It lives in Electron's per-app, per-user data directory, beside `ui-state.json`
-— on macOS `~/Library/Application Support/coco/store.json`, on Linux
-`~/.config/coco/store.json`. `COCO_STORE_PATH` overrides it, which is how a
+— on macOS `~/Library/Application Support/cocoa/store.json`, on Linux
+`~/.config/cocoa/store.json`. `COCOA_STORE_PATH` overrides it, which is how a
 drive run keeps its hands off the real one.
 
-> It used to live at `~/.local/share/coco/store.json`, the same path hardcoded
+> It used to live at `~/.local/share/cocoa/store.json`, the same path hardcoded
 > in both implementations so that a folder registered in one appeared in the
 > other. That was the point while there were two. The workbench carries the
 > file over once, by copy, and never looks at it again.
@@ -313,7 +313,7 @@ loss, never a second source of truth.
 
 ## 6. Invocation rules
 
-Every script coco invokes:
+Every script cocoa invokes:
 
 - runs with **cwd = the entity folder**, so relative paths in the manifest and
   inside the script resolve against it;
@@ -323,7 +323,7 @@ Every script coco invokes:
   slips;
 - receives user-supplied values as **separate argv elements**;
 - receives **only** the arguments this document specifies plus the declared
-  params — coco never passes anything ad-hoc. Wanting to pass something else
+  params — cocoa never passes anything ad-hoc. Wanting to pass something else
   means editing the manifest first;
 - has stdout and stderr captured, and can be killed from the UI while running.
 
@@ -340,11 +340,11 @@ A script that times out is the same failure: whatever the script was supposed
 to accomplish did not happen, and the operation reports the error with the
 captured output attached.
 
-**Control lines.** coco reads every stdout line beginning with `COCO_RETURN: `
+**Control lines.** cocoa reads every stdout line beginning with `COCOA_RETURN: `
 and ignores all other output, so scripts may log freely. How many such lines
 are expected depends on the script:
 
-| Script | `COCO_RETURN:` lines | Payload |
+| Script | `COCOA_RETURN:` lines | Payload |
 |---|---|---|
 | `launch` | exactly one (last wins) | the submission id |
 | `poll` | exactly one | `<STATUS> [reason]`, or `UNREACHABLE <reason>` |
@@ -357,7 +357,7 @@ are expected depends on the script:
 
 ### 6.1 Template rendering
 
-Before launching, coco renders `[render].template` with the render params. The
+Before launching, cocoa renders `[render].template` with the render params. The
 result is written into `runs/<run_id>/`, named after the template with a
 trailing `.tmpl` removed (`job.sbatch.tmpl` → `job.sbatch`, `job.kkk.tmpl` →
 `job.kkk`).
@@ -368,12 +368,12 @@ template never uses is equally an error. Both directions are checked when the
 manifest loads, so a mismatch is visible before anyone tries to start anything.
 
 **`run_id` is not available in a template**, and neither is any other
-coco-supplied value: a template sees exactly its declared params, and nothing
+cocoa-supplied value: a template sees exactly its declared params, and nothing
 else. Referencing `run_id` is an undeclared variable like any other and fails
 the manifest.
 
 A run has no need to name itself. `launch` returns a submission id (§7.1), and
-that is the identifier the scheduler and coco both use for the run from then
+that is the identifier the scheduler and cocoa both use for the run from then
 on — so the template, which is rendered before any submission exists, never has
 to carry an identity.
 
@@ -409,15 +409,15 @@ Two other consequences of checking statically, both intentional:
 
 Receives the entity-relative path of the rendered artifact, the run id, and the
 launch params as pairs (§6). It submits however it likes — ssh, sbatch, a local process — and
-must print the identifier coco will track it by:
+must print the identifier cocoa will track it by:
 
 ```
-COCO_RETURN: 5001
+COCOA_RETURN: 5001
 ```
 
-The **last** `COCO_RETURN` line wins, so a script may retry and log freely
+The **last** `COCOA_RETURN` line wins, so a script may retry and log freely
 before it. A launch that exits 0 without one is an error: it is reported, and
-**nothing is recorded** — coco will not track a run it cannot identify.
+**nothing is recorded** — cocoa will not track a run it cannot identify.
 
 The payload must be a single token — a return line with whitespace is the same
 error as a missing one. On any launch failure (non-zero exit, timeout, or a
@@ -425,8 +425,8 @@ missing or invalid return line), the start fails: no run record is written, the
 run id is consumed and never reused (§5), and the rendered artifact stays in
 `runs/<run_id>/` for inspection.
 
-The submission id is opaque to coco: any non-empty token without whitespace.
-coco stores it in the record and hands it back to `poll`, `report` and `cancel`
+The submission id is opaque to cocoa: any non-empty token without whitespace.
+cocoa stores it in the record and hands it back to `poll`, `report` and `cancel`
 for the rest of the run's life.
 
 The record written at this point holds both parameter sets separately:
@@ -455,7 +455,7 @@ Called once per active run with that run's submission id — the same shape
 `cancel` gets — and answers for that one run, no id prefix needed:
 
 ```
-COCO_RETURN: FAILED slurm reported TIMEOUT after 4h
+COCOA_RETURN: FAILED slurm reported TIMEOUT after 4h
 ```
 
 Everything after the status is a free-text reason, kept and displayed as-is.
@@ -469,14 +469,14 @@ another's.
 
 Poll is where a scheduler's vocabulary gets translated: slurm's `COMPLETING`
 is reported as `RUNNING`, `TIMEOUT` and `NODE_FAIL` as `FAILED`. That mapping
-belongs to the script, which knows its scheduler. coco maintains no table of
+belongs to the script, which knows its scheduler. cocoa maintains no table of
 foreign state names.
 
 Note that poll reports `COMPLETED`, not `SUCCEEDED`: it speaks only for the
-cluster, and `SUCCEEDED` is coco's word for "finished and reported" (§9).
+cluster, and `SUCCEEDED` is cocoa's word for "finished and reported" (§9).
 
-If the first token after `COCO_RETURN: ` is the keyword `UNREACHABLE` rather
-than a status word, coco cannot currently see this run — see §10.
+If the first token after `COCOA_RETURN: ` is the keyword `UNREACHABLE` rather
+than a status word, cocoa cannot currently see this run — see §10.
 
 ### 7.3 `report`
 
@@ -485,11 +485,11 @@ than a status word, coco cannot currently see this run — see §10.
 ```
 
 Must produce `report/<run_id>.txt`, and may additionally produce
-`report/<run_id>.html`. coco creates the `report/` directory beforehand; its
+`report/<run_id>.html`. cocoa creates the `report/` directory beforehand; its
 contents are entirely the script's business.
 
-coco runs `report` automatically when a run reaches `COMPLETED`, holding the
-run at `ANALYZING` until it finishes (§9). When the script exits 0, coco
+cocoa runs `report` automatically when a run reaches `COMPLETED`, holding the
+run at `ANALYZING` until it finishes (§9). When the script exits 0, cocoa
 verifies that `report/<run_id>.txt` exists; a missing file is treated as a
 report failure.
 
@@ -523,14 +523,14 @@ Receives the bench's declared params as `--name value` pairs (§6), and prints
 one JSON object per instance to launch:
 
 ```
-COCO_RETURN: {"job": "solver-gpu", "params": {"size": "256", "backend": "cuda", "mesh": "256", "profile": "false"}}
-COCO_RETURN: {"job": "solver-gpu", "params": {"size": "512", "backend": "cuda", "mesh": "512", "profile": "true"}}
+COCOA_RETURN: {"job": "solver-gpu", "params": {"size": "256", "backend": "cuda", "mesh": "256", "profile": "false"}}
+COCOA_RETURN: {"job": "solver-gpu", "params": {"size": "512", "backend": "cuda", "mesh": "512", "profile": "true"}}
 ```
 
 `job` must name a **registered job** — not a bench, not an unregistered folder.
 `params` must supply exactly that job's parameters, render and launch sets
 together: no extras, none missing, each value of its declared shape (§2.2) —
-a JSON string, or a JSON array of strings for a list. coco rejects numbers,
+a JSON string, or a JSON array of strings for a list. cocoa rejects numbers,
 booleans, nulls, nested objects and any value of the wrong shape rather than
 coercing it.
 
@@ -550,7 +550,7 @@ with no run id allocated and nothing submitted until the user agrees.
 
 ### 8.2 Fan-out and the bench record
 
-Once the user confirms the planned instances, coco allocates the bench's run id
+Once the user confirms the planned instances, cocoa allocates the bench's run id
 and dispatches every instance through **its own job's `launch`**, each in that
 job's folder. A bench has no launch script of its own.
 
@@ -601,7 +601,7 @@ difference is in `launch_failures`, which is how a bench records that it could
 not dispatch part of its own fan-out.
 
 **A failed dispatch does not abort the rest.** Instances are independent, so
-coco attempts every one, records each failure, and the bench ends at `ERROR`
+cocoa attempts every one, records each failure, and the bench ends at `ERROR`
 because it never became what the plan asked for. The members that did launch
 keep running and can be cancelled normally.
 
@@ -618,7 +618,7 @@ your notes.)*
 ```
 
 The bench's own report over its members' results. Because members live in
-*other* folders, coco writes `members.json` first, so the script never goes
+*other* folders, cocoa writes `members.json` first, so the script never goes
 looking:
 
 ```json
@@ -652,22 +652,22 @@ that is ever wanted, this is the rule to revisit.)*
 
 ## 9. Status
 
-coco keeps its own closed vocabulary. Scripts speak it; coco does not learn new
+cocoa keeps its own closed vocabulary. Scripts speak it; cocoa does not learn new
 state names at runtime.
 
 | Status | Set by | Terminal | Meaning |
 |---|---|---|---|
-| `STARTING` | coco | no | Record written, launch invoked, nothing polled yet |
+| `STARTING` | cocoa | no | Record written, launch invoked, nothing polled yet |
 | `PENDING` | poll | no | Accepted by the scheduler, not yet running |
 | `RUNNING` | poll | no | Executing |
 | `COMPLETED` | poll | no | Work finished successfully; report not run yet |
-| `ANALYZING` | coco | no | The report script is in flight |
-| `SUCCEEDED` | coco | **yes** | Finished and reported |
+| `ANALYZING` | cocoa | no | The report script is in flight |
+| `SUCCEEDED` | cocoa | **yes** | Finished and reported |
 | `FAILED` | poll | **yes** | The work finished unsuccessfully |
-| `CANCELLING` | coco | no | Cancel invoked, not yet confirmed by a poll |
+| `CANCELLING` | cocoa | no | Cancel invoked, not yet confirmed by a poll |
 | `CANCELLED` | poll | **yes** | Confirmed cancelled |
-| `UNREACHABLE` | poll / coco | no | coco cannot currently see this run (§10) |
-| `ERROR` | coco | **yes**\* | Something coco did not expect; the reason is shown |
+| `UNREACHABLE` | poll / cocoa | no | cocoa cannot currently see this run (§10) |
+| `ERROR` | cocoa | **yes**\* | Something cocoa did not expect; the reason is shown |
 
 The healthy path is:
 
@@ -684,11 +684,11 @@ returns to the healthy path once the script is fixed — a successful manual
 report re-run moves it to `SUCCEEDED` (§7.3, §11).
 
 **Who owns what.** The cluster's words — `PENDING`, `RUNNING`, `COMPLETED`,
-`FAILED`, `CANCELLED`, `UNREACHABLE` — come from poll. coco sets `STARTING`,
+`FAILED`, `CANCELLED`, `UNREACHABLE` — come from poll. cocoa sets `STARTING`,
 `ANALYZING`, `SUCCEEDED`, `CANCELLING` and `ERROR`, each describing an
-operation coco itself has in flight or a conclusion only coco can draw.
+operation cocoa itself has in flight or a conclusion only cocoa can draw.
 
-coco stops polling a run that reaches a terminal status, and a later poll line
+cocoa stops polling a run that reaches a terminal status, and a later poll line
 for it is ignored. `UNREACHABLE` is deliberately **not** terminal: polling
 continues, and the next good poll replaces it with the real status.
 
@@ -736,15 +736,15 @@ referenced by `{run_id, job name}`. If that job is unregistered later, or its
 record is gone, the member cannot be resolved.
 
 The bench run then reads `ERROR`, and **names the members it cannot find** —
-their job names are in the record, so coco always knows which ones are missing.
+their job names are in the record, so cocoa always knows which ones are missing.
 Re-registering the job heals every one of its member rows and the bench returns
 to its real status.
 
 ---
 
-## 10. When coco cannot see a run
+## 10. When cocoa cannot see a run
 
-Execution failure and query failure are different facts. A run coco cannot
+Execution failure and query failure are different facts. A run cocoa cannot
 currently see is not a run that failed, and `UNREACHABLE` exists so that the
 difference survives: it sits on the same status axis, but it is **not terminal**
 and it does not end anything.
@@ -753,17 +753,17 @@ A poll that cannot reach its scheduler says so and exits **0** — it did its
 job; the scheduler is the problem:
 
 ```
-COCO_RETURN: UNREACHABLE squeue: connection timed out
+COCOA_RETURN: UNREACHABLE squeue: connection timed out
 ```
 
-coco moves that run to `UNREACHABLE`, showing the reason and the last known
+cocoa moves that run to `UNREACHABLE`, showing the reason and the last known
 status beside it (`UNREACHABLE — last known RUNNING`). Polling continues, and
 the next successful poll overwrites it. Nothing needs recovering by hand. (A
 scheduler that is down for one run is usually down for all of them — each
 run's own poll call reports it for itself.)
 
 A poll that **exits non-zero** is broken code rather than an unreachable
-scheduler, but the effect on coco is the same — it cannot see the run — so it
+scheduler, but the effect on cocoa is the same — it cannot see the run — so it
 is treated the same way: that run goes `UNREACHABLE` with
 `poll script failed: <captured output>` as the reason, and the failure is also
 raised as a loud operation error so the script gets fixed. Fixing it heals
@@ -778,7 +778,7 @@ Report progress is part of the status axis, not a second one: `COMPLETED` →
 fails leaves the run at `ERROR` with its output attached. That `ERROR` is the
 one healable case: fixing the script and re-running report by hand moves the
 run to `SUCCEEDED` — the cluster had already said `COMPLETED`, and `SUCCEEDED`
-is coco's word for finished *and* reported (§7.3).
+is cocoa's word for finished *and* reported (§7.3).
 
 It follows that:
 
@@ -792,9 +792,9 @@ the system browser, the only thing that renders it faithfully.
 
 ---
 
-## 12. What coco writes
+## 12. What cocoa writes
 
-To be exhaustive, inside a registered folder coco creates and maintains only:
+To be exhaustive, inside a registered folder cocoa creates and maintains only:
 
 - `runs/<run_id>/run.json` — the record;
 - `runs/<run_id>/<rendered template>` — jobs, at launch;
@@ -812,11 +812,11 @@ A malformed `run.json` fails **that run only**, which is shown as a broken row
 carrying its error. It does not blank the folder's history — one corrupt file
 must not hide hundreds of good runs.
 
-coco never edits a script, a template, or a report.
+cocoa never edits a script, a template, or a report.
 
 ### 12.1 Deleting a run
 
-Deletion is the one operation that removes what coco wrote, and it is exact:
+Deletion is the one operation that removes what cocoa wrote, and it is exact:
 `runs/<run_id>/` goes whole — record, rendered artifact, `members.json` —
 and so do `report/<run_id>.txt` and `report/<run_id>.html`. The folder's
 other runs stay.
@@ -830,7 +830,7 @@ rest. Deletion therefore never leaves half a fan-out behind: no bench
 pointing at members that are gone, no member naming a bench that is.
 
 Only a finished run can be deleted. An active run is refused — cancel is how
-work stops — and so is `UNREACHABLE`: a run coco cannot see may still be
+work stops — and so is `UNREACHABLE`: a run cocoa cannot see may still be
 running, and deleting its record would be the one way to never find out. A
 bench run must be settled **and** every resolvable member finished: a bench
 settles when one member fails (§9.1) while another may still be running,

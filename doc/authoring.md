@@ -1,21 +1,21 @@
 # Writing a job or a bench
 
 This is the guide for authoring an experiment folder — everything needed to
-build one that coco can register, start, watch and report, with nothing else
+build one that cocoa can register, start, watch and report, with nothing else
 required reading. The normative contract, with every edge case and the
 reasoning behind it, is [convention.md](convention.md); section references
 below (§) point into it. Where this guide and that document disagree, that
 document wins.
 
-coco manages two kinds of experiment:
+cocoa manages two kinds of experiment:
 
 - A **job** is an independently launchable experiment. One start = one run =
   one submission to whatever runs it (a cluster, a queue, a local process).
 - A **bench** is a fan-out launcher: its plan turns the bench's parameters
-  into instances of jobs *already registered in coco*. A bench never defines,
+  into instances of jobs *already registered in cocoa*. A bench never defines,
   contains, or owns jobs.
 
-An experiment is a folder. coco is pointed at the folder, reads `coco.toml`,
+An experiment is a folder. cocoa is pointed at the folder, reads `cocoa.toml`,
 and from then on invokes the scripts the manifest declares. It stores its own
 records inside the folder — copy the folder and the history comes along.
 
@@ -23,10 +23,10 @@ records inside the folder — copy the folder and the history comes along.
 
 ```
 <entity folder>/
-  coco.toml              # the manifest: the interface to coco
+  cocoa.toml              # the manifest: the interface to cocoa
   job.sbatch.tmpl        # jobs: the template (the middle name is yours)
   launch.sh  poll.py  report.py  cancel.sh
-  runs/                  # maintained by coco: this folder's history
+  runs/                  # maintained by cocoa: this folder's history
     <run_id>/
       run.json           # record: arguments, submission id, status history
       job.sbatch         # the rendered template (jobs)
@@ -36,9 +36,9 @@ records inside the folder — copy the folder and the history comes along.
     <run_id>.html        # optional
 ```
 
-coco creates and maintains only `runs/` and `report/` (§12); it never edits a
+cocoa creates and maintains only `runs/` and `report/` (§12); it never edits a
 script, a template, or a report. Registration is by path, and editing
-`coco.toml` takes effect without re-registering — the manifest is re-read on
+`cocoa.toml` takes effect without re-registering — the manifest is re-read on
 every listing.
 
 **Scripts must be runnable without guessing.** Either the file is executable
@@ -55,7 +55,7 @@ name        = "solver-gpu"          # platform-wide unique
 description = "GPU solver sweep"    # optional, shown on the overview page
 
 [render]
-template    = "job.sbatch.tmpl"     # rendered by coco before launch
+template    = "job.sbatch.tmpl"     # rendered by cocoa before launch
 
 [[render.params]]
 name        = "size"
@@ -87,7 +87,7 @@ folder that truly has nothing to cancel still declares a `cancel` script,
 even one that only exits 0.
 
 A manifest either loads or it does not (§4). A broken one leaves the folder
-visible in coco, carrying the error, until it is fixed in place.
+visible in cocoa, carrying the error, until it is fixed in place.
 
 ## 3. Parameters
 
@@ -146,7 +146,7 @@ Rules that are checked when the manifest loads (§6.1):
   uses is equally an error.
 - `{% include %}`, `{% extends %}` and `{% import %}` are rejected; loops,
   conditionals, filters and `{% set %}` are fine.
-- `run_id` is not available, nor any other coco-supplied value. A run has no
+- `run_id` is not available, nor any other cocoa-supplied value. A run has no
   need to name itself: launch returns the submission id, and that is the
   identity from then on.
 
@@ -160,18 +160,18 @@ Every script runs with **cwd = the folder**, gets only what this contract
 names, has stdout/stderr captured, and can be killed from the UI. Exit 0
 means the script did its job; non-zero (or a timeout) is a script failure,
 reported with the captured output — it never marks a run finished. Lines
-beginning with `COCO_RETURN: ` are the answer; everything else is free
+beginning with `COCOA_RETURN: ` are the answer; everything else is free
 logging (§6).
 
 **`launch`** — `./launch.sh --script runs/41/job.sbatch --run 41 --gpu 1`.
-Submits however it likes and prints the identifier coco will track:
+Submits however it likes and prints the identifier cocoa will track:
 
 ```
-COCO_RETURN: 5001
+COCOA_RETURN: 5001
 ```
 
 One token, no whitespace; the last such line wins. The submission id is
-opaque to coco and is handed back to `poll`, `report` and `cancel` for the
+opaque to cocoa and is handed back to `poll`, `report` and `cancel` for the
 rest of the run's life. Exit 0 without a return line is a failed launch:
 nothing is recorded (§7.1).
 
@@ -179,21 +179,21 @@ nothing is recorded (§7.1).
 timer. Prints one line:
 
 ```
-COCO_RETURN: RUNNING
-COCO_RETURN: FAILED node fell over
-COCO_RETURN: UNREACHABLE squeue timed out
+COCOA_RETURN: RUNNING
+COCOA_RETURN: FAILED node fell over
+COCOA_RETURN: UNREACHABLE squeue timed out
 ```
 
-The words coco accepts: `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`,
+The words cocoa accepts: `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`,
 `CANCELLED`, and `UNREACHABLE` (§9). `COMPLETED` means the work finished and
-the report has not been taken yet — coco then runs `report` by itself.
+the report has not been taken yet — cocoa then runs `report` by itself.
 `FAILED` and `UNREACHABLE` may carry a reason after the word. `UNREACHABLE`
-is for "I cannot see the cluster right now": coco keeps polling, shows the
+is for "I cannot see the cluster right now": cocoa keeps polling, shows the
 last known status, and the next good answer replaces it (§10).
 
 **`report`** — `./report.py --run 41 --submission 5001`. Writes
 `report/41.txt` (required; `report/41.html` optional beside it) and prints
-nothing to coco. A report script that exits 0 without producing the file is
+nothing to cocoa. A report script that exits 0 without producing the file is
 a failure.
 
 **`cancel`** — `./cancel.sh --submission 5001`. Tells the scheduler to stop
@@ -228,8 +228,8 @@ is cancelled by cancelling them (§3, §9.1).
 launch:
 
 ```
-COCO_RETURN: {"job": "solver-gpu", "params": {"size": "256", "gpu": "0", "backends": ["cuda"]}}
-COCO_RETURN: {"job": "solver-gpu", "params": {"size": "512", "gpu": "1", "backends": ["cuda", "hip"]}}
+COCOA_RETURN: {"job": "solver-gpu", "params": {"size": "256", "gpu": "0", "backends": ["cuda"]}}
+COCOA_RETURN: {"job": "solver-gpu", "params": {"size": "512", "gpu": "1", "backends": ["cuda", "hip"]}}
 ```
 
 `job` names a registered job; `params` supplies exactly that job's
@@ -237,7 +237,7 @@ parameters — render and launch together, no extras, none missing, each value
 of its declared shape (string, or array of strings for a list). Every
 instance is validated before anything is submitted, and every fault is named
 at once (§8.1). A plan that produces no instances fails the start. `plan`
-takes no run id, which is what lets it double as the dry run coco shows
+takes no run id, which is what lets it double as the dry run cocoa shows
 before dispatching.
 
 **`report`** — `./report.py --run 7 --members runs/7/members.json`. The
@@ -252,7 +252,7 @@ them. Output rules are the job report's: `report/7.txt` required.
 - Records in `runs/` are readable JSON and safe to read from scripts; they
   are written atomically. Never write them.
 - Timeouts (defaults): launch, poll, cancel 60 s; plan 120 s; report 600 s.
-- A run coco deletes takes `runs/<id>/` and `report/<id>.*` with it — for a
+- A run cocoa deletes takes `runs/<id>/` and `report/<id>.*` with it — for a
   bench run, its dispatched runs too (§12.1); run ids otherwise never repeat.
-- Nothing else in the folder is coco's business: keep source, data and
+- Nothing else in the folder is cocoa's business: keep source, data and
   scratch wherever suits the scripts.

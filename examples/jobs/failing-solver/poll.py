@@ -31,19 +31,19 @@ try:
     with open(os.path.join(here, "runs", run_id, "run.json")) as fh:
         record = json.load(fh)
 except (FileNotFoundError, json.JSONDecodeError):
-    print("COCO_RETURN: UNREACHABLE mock: run record unreadable")
+    print("COCOA_RETURN: UNREACHABLE mock: run record unreadable")
     sys.exit(0)
 started = parse_time(record["history"][0]["at"]).timestamp()
 elapsed = time.time() - started
 mode = record.get("launch", {}).get("mode", "")
 
 if record.get("status") == "CANCELLING":
-    print("COCO_RETURN: CANCELLED mock: cancel confirmed")
+    print("COCOA_RETURN: CANCELLED mock: cancel confirmed")
 elif mode == "fail" and elapsed >= 8:
-    print("COCO_RETURN: FAILED mock: convergence stalled at 8 s")
+    print("COCOA_RETURN: FAILED mock: convergence stalled at 8 s")
 elif elapsed < 3:
-    print("COCO_RETURN: PENDING")
+    print("COCOA_RETURN: PENDING")
 elif elapsed < 15:
-    print("COCO_RETURN: RUNNING")
+    print("COCOA_RETURN: RUNNING")
 else:
-    print("COCO_RETURN: COMPLETED")
+    print("COCOA_RETURN: COMPLETED")

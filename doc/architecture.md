@@ -19,12 +19,12 @@ The workbench is the classic Electron shape: the renderer is a web client, the
 main process is the server, and the whole domain lives on the server side.
 
 ```jsonc
-// coco-electron/package.json — the versions that matter
+// cocoa-electron/package.json — the versions that matter
 {
   "dependencies": {
     "express":   "^5.2.1",   // the agent socket's HTTP (§43) — wire code is never hand-rolled
     "nunjucks":  "^3.2.4",   // template rendering (§15.2)
-    "smol-toml": "^1.8.0",   // coco.toml
+    "smol-toml": "^1.8.0",   // cocoa.toml
     // The renderer's controls are shadcn-svelte components: source copied into
     // src/renderer/src/lib/components/ui/ and owned there, not a package. What
     // the copied sources import:
@@ -56,7 +56,7 @@ Commit `package-lock.json`.
 **The renderer is a client, not the application.** It holds no domain logic. It
 renders what the main process sends and asks for operations by name (§26). Node
 integration stays off and context isolation stays on: the page's entire
-vocabulary is what `src/preload/index.ts` puts on `window.coco` through
+vocabulary is what `src/preload/index.ts` puts on `window.cocoa` through
 `contextBridge`: eight operations — `bootstrap`, `start_run`, `cancel`,
 `add_folder`, `remove_folder`, `report`, `refresh_now`, `save_ui` — and two
 event subscriptions, `on_command` and `on_events`. Nothing else crosses.
@@ -69,7 +69,7 @@ folders interchangeable. Template analysis is exact-match in both directions and
 imports are rejected (§15.2).
 
 **Names are `snake_case`, and the case tells you whose they are.** Everything
-coco declares is `snake_case` — functions, methods, class fields, local
+cocoa declares is `snake_case` — functions, methods, class fields, local
 variables, parameters, the fields of `Route` and `UiState`, the preload
 bridge's members, and the IPC channel names. What stays `camelCase` is what
 belongs to somebody else: `fs.statSync`, `app.getPath`, Electron's
@@ -99,7 +99,7 @@ menus come from the shadcn-svelte registry, which copies source into
 files are ours to read and edit, and each edited one says so at the top.
 Tailwind is there because they are written in it; `app.css` tells Tailwind
 that `bg-primary` is `--accent` and `bg-popover` is `--widget-bg`, so the one
-palette in `theme.css` stays the one palette (ui-system.md). coco's own
+palette in `theme.css` stays the one palette (ui-system.md). cocoa's own
 screens keep scoped CSS on the tokens; utilities are for composing the
 components and one-off placement beside them.
 
@@ -160,7 +160,7 @@ stayed possible; it is now in git history only (`coco-egui/`, before that date).
 protocol §43 serves, and the questions the test suites ask were all worked out in
 the egui implementation and all survived the move intact — which is the argument
 for having written them down separately from the UI in the first place. The MCP
-server survived as a *running artifact*: it was extracted to `coco-mcp/` and
+server survived as a *running artifact*: it was extracted to `cocoa-mcp/` and
 drives the workbench without a line changed, because it only ever knew the
 socket.
 
@@ -176,7 +176,7 @@ The application must run and build using:
 npm install
 npm run dev            # electron-vite, hot reload in the renderer
 npm run build          # type-check and bundle main, preload, renderer
-npm run package        # electron-builder, an installable coco.app
+npm run package        # electron-builder, an installable cocoa.app
 ```
 
 on:
@@ -189,9 +189,9 @@ either Apple Silicon or Intel macOS builds.
 
 The application is single-instance per machine: the engine is the store's and
 the agent socket's single owner, so a second launch hands over to the running
-coco — which brings its window to the front — and quits. The instance lock
+cocoa — which brings its window to the front — and quits. The instance lock
 follows `userData`, so a drive run's private profile runs alongside a real
-coco rather than refusing to start.
+cocoa rather than refusing to start.
 
 ### 6.2 macOS Requirements
 
@@ -205,8 +205,8 @@ On macOS:
   macOS, and Quit. Other platforms get no menu at all. If commands return, they
   declare platform-aware `CmdOrCtrl` accelerators, and a menu pick and a click
   must route through the same operation (§25).
-- Closing the window quits the app — coco deliberately breaks with the macOS
-  stay-in-the-dock convention. Coco is its window: a windowless engine would
+- Closing the window quits the app — cocoa deliberately breaks with the macOS
+  stay-in-the-dock convention. Cocoa is its window: a windowless engine would
   keep refreshing and answering the agent socket with nothing watching it.
 - Do not assume `/home/...` paths.
 - Do not depend on Bash-specific commands.
@@ -225,7 +225,7 @@ On Linux:
 
 ### 6.4 No Browser Target
 
-coco is a desktop application. The renderer is a web client, but it is not a web
+cocoa is a desktop application. The renderer is a web client, but it is not a web
 page: it depends on the main process for every fact it shows and every operation
 it performs, and that process spawns local scripts against local folders. There
 is no hosted build and none is planned.
@@ -275,10 +275,10 @@ The engine holds the domain in memory. Reads never touch disk. Writes go to
 memory first and are then written through to the experiment folders, so the
 folders stay the record ([convention.md](convention.md)) without being on the read path.
 
-coco's own files are coco's alone: run records are read once, when a folder
+cocoa's own files are cocoa's alone: run records are read once, when a folder
 is first seen (startup, or its registration), and never re-scanned — an
 outside edit shows up at the next open, not the next tick. Manifests stay the
-user's authored files, so each refresh tick re-reads `coco.toml` and an edit
+user's authored files, so each refresh tick re-reads `cocoa.toml` and an edit
 lands within 3 s.
 
 `store.json` persists only what is not in the folders — the registered folders
@@ -323,8 +323,8 @@ The main process keeps its own model of the world, rebuilds it each cycle, and
 turns the difference into events (`diff_worlds` in `src/main/bridge/sync.ts`):
 
 ```text
-coco:bootstrap   once, on load — the one full-state message
-coco:events      batches thereafter:
+cocoa:bootstrap   once, on load — the one full-state message
+cocoa:events      batches thereafter:
                    entity   | job-run | bench-run   upserted | removed
                    notice
                    refreshed                        (content-free heartbeat)
@@ -377,7 +377,7 @@ Also reachable:
 ```text
 Running → Failed
 Running → Cancelling → Cancelled
-anywhere → Error          (coco could not carry out its own side)
+anywhere → Error          (cocoa could not carry out its own side)
 ```
 
 ### 27.2 Bench Start
@@ -393,7 +393,7 @@ Call 3: Starting
 ...
 ```
 
-Every call starts together. No call is ever `Pending` on coco's account — only
+Every call starts together. No call is ever `Pending` on cocoa's account — only
 the cluster can make a run pending.
 
 Children advance independently, and finish out of order:
@@ -476,7 +476,7 @@ is a window that opens the way it always opens.
 ## 33. Project Structure
 
 ```text
-coco-electron/
+cocoa-electron/
 ├── package.json
 ├── electron.vite.config.ts        # three builds: main, preload, renderer
 ├── electron-builder.yml
@@ -506,7 +506,7 @@ coco-electron/
 │   │   │   ├── job.ts             #     start / poll / report / cancel (§7)
 │   │   │   ├── bench.ts           #     plan / start / report / cancel / status (§8, §9)
 │   │   │   ├── in_flight.ts       #     launch scripts not yet answered (§7.1)
-│   │   │   ├── manifest.ts        #     coco.toml, fully validated
+│   │   │   ├── manifest.ts        #     cocoa.toml, fully validated
 │   │   │   ├── params.ts          #     what a start must supply, checked the same on every way in
 │   │   │   ├── template.ts        #     analyze / render (§15.2)
 │   │   │   ├── invoke.ts          #     lexical command split, spawn
@@ -547,7 +547,7 @@ coco-electron/
 │           ├── state.svelte.ts    #   the one rune (§34)
 │           ├── ui_state.ts        #   Route, UiState, sanitize (§9, §32)
 │           ├── journal.ts         #   what happened, in a sentence, from each event (§11.1)
-│           ├── theme.css          #   the palette and coco's chrome (ui-system.md)
+│           ├── theme.css          #   the palette and cocoa's chrome (ui-system.md)
 │           ├── app.css            #   Tailwind; shadcn's names for theme.css's tokens
 │           ├── lib/
 │           │   ├── utils.ts       #   `cn()` and the prop types the components import
@@ -570,7 +570,7 @@ coco-electron/
 Beside it in the repository:
 
 ```text
-coco-mcp/         the MCP server (§43.5) — one binary, serde_json, nothing else
+cocoa-mcp/         the MCP server (§43.5) — one binary, serde_json, nothing else
 examples/         the demonstration library: real experiments, no cluster needed
 doc/              this documentation
 ```
@@ -581,7 +581,7 @@ Two boundaries are structural rather than stylistic, and must hold:
    filesystem, and that is what makes it testable against real temp folders with
    no app around it, and portable between the two implementations.
 2. **`src/renderer/` imports nothing from `src/main/`.** Its only channel is
-   `window.coco` (§5). If the renderer needs a fact, the fact belongs in the
+   `window.cocoa` (§5). If the renderer needs a fact, the fact belongs in the
    world or in an operation's answer.
 
 `RunFacts.svelte` exists because a dispatched run has two addresses (§2.3.1,
@@ -613,7 +613,7 @@ export const app = $state({
 })
 ```
 
-`world` is a **mirror, not a source**. Only `coco:bootstrap` and `coco:events`
+`world` is a **mirror, not a source**. Only `cocoa:bootstrap` and `cocoa:events`
 write it. No component may edit it to reflect an action it just took — the
 action's events are what update the screen, and they arrive before the action's
 answer resolves (§26.3).
@@ -680,7 +680,7 @@ justify moving to it.
 12. Do not create a permanent right-side inspector.
 13. Do not put the parameter field permanently on overview pages.
 14. Do not display full run details only in a sidebar.
-15. Do not conflate query failure with experiment failure, or coco's `Error`
+15. Do not conflate query failure with experiment failure, or cocoa's `Error`
     with the experiment's `Failed` (§10.2).
 16. Do not model a Bench as owning, defining, or sequencing Jobs.
 17. Do not duplicate a run record to serve both the Job and Bench views.
@@ -691,6 +691,6 @@ justify moving to it.
 22. Do not let dependency versions float; do not upgrade without recording the
     reason.
 23. Keep the on-disk convention as `convention.md` states it. A folder an
-    earlier coco wrote must still load; the test suites are what catch it.
+    earlier cocoa wrote must still load; the test suites are what catch it.
 
 ---

@@ -1,5 +1,5 @@
 # Rust / Cargo build output
-/coco-mcp/target
+/cocoa-mcp/target
 **/*.rs.bk
 *.pdb
 
