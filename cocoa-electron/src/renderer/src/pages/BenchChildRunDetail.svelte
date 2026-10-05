@@ -107,12 +107,12 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    margin-bottom: 16px;
+    margin-bottom: 24px;
   }
 
   h1 {
     margin: 0;
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 600;
     color: var(--strong-foreground);
   }

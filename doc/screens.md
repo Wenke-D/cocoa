@@ -1348,16 +1348,19 @@ Possible states:
 ```text
 Report is not yet available.
 Report is being generated.
-[Plain text]  [HTML]
+[👁 View report]
+[👁 Text]  [👁 HTML]
 Report is missing.
 Unable to read report: <message>
 ```
 
-A report that exists is shown as buttons alone, one per file the run wrote,
-labelled with its format: `Plain text` for `report/<run>.txt`, `HTML` for
-`report/<run>.html`, plain text first. Each opens the Report Viewer on that
-file; no sentence says a report is available, since the buttons do. The
-same row appears on a Bench run's page (§18).
+A report that exists is shown as buttons alone, each opening the Report
+Viewer on one file; no sentence says a report is available, since the
+buttons do. One file is one action, `View report`: someone who wants to read
+the report does not care which format it is, so the format is only the
+tooltip. Two files (`report/<run>.txt` and `report/<run>.html`) are a choice,
+and only then is the format the point: `Text` and `HTML`, plain text first,
+each with the view icon. The same row appears on a Bench run's page (§18).
 
 ---
 

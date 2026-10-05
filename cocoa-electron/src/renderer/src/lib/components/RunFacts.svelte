@@ -64,9 +64,17 @@
 <style>
   dl {
     display: grid;
-    grid-template-columns: 120px 1fr;
-    gap: 8px 16px;
-    max-width: 640px;
+    grid-template-columns: 140px 1fr;
+    align-items: baseline;
+    gap: 14px 24px;
+    max-width: 880px;
+    font-size: 15px;
+  }
+
+  /* Code-like values (durations, arguments) one step below the prose beside
+     them, as everywhere else — not the app's 12px table size. */
+  dl :global(.mono) {
+    font-size: 14px;
   }
 
   dl :global(dt) {
