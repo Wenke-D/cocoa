@@ -107,7 +107,11 @@
               run_id={app.route.run_id}
             />
           {:else if app.route.page === 'report'}
-            <ReportViewer context={app.route.context} run_id={app.route.run_id} />
+            <ReportViewer
+              context={app.route.context}
+              run_id={app.route.run_id}
+              format={app.route.format}
+            />
           {/if}
         </div>
       {/key}

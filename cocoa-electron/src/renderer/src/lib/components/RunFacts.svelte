@@ -14,12 +14,12 @@
     format_relative,
     format_started_at,
     origin_label,
-    query_available,
-    report_summary
+    query_available
   } from '@shared/world'
-  import type { JobRun } from '@shared/world'
+  import type { JobRun, ReportFormat } from '@shared/world'
   import type { ReportContext } from '../../ui_state'
   import { app, navigate } from '../../state.svelte'
+  import ReportButtons from './ReportButtons.svelte'
 
   let {
     run,
@@ -40,15 +40,11 @@
   <dd class="mono params">{run.parameters === '' ? '(none)' : run.parameters}</dd>
   <dt>Report</dt>
   <dd>
-    {report_summary(run.report)}
-    {#if typeof run.report === 'object' && 'Available' in run.report}
-      <button
-        class="link"
-        onclick={() => navigate({ page: 'report', context: report_context, run_id: run.id })}
-      >
-        View report
-      </button>
-    {/if}
+    <ReportButtons
+      report={run.report}
+      open={(format: ReportFormat) =>
+        navigate({ page: 'report', context: report_context, run_id: run.id, format })}
+    />
   </dd>
   {#if !query_available(run.query_health)}
     <dt>Query</dt>
@@ -80,15 +76,6 @@
   dl :global(dd) {
     margin: 0;
     color: var(--foreground);
-  }
-
-  .link {
-    margin-left: 8px;
-    background: none;
-    border: none;
-    padding: 0;
-    color: var(--link);
-    cursor: pointer;
   }
 
   .warning {

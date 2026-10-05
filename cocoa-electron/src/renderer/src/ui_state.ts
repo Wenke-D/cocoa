@@ -15,6 +15,7 @@
 // values out of range fall back to their defaults.
 
 import { from_nullable } from '@shared/maybe'
+import type { ReportFormat } from '@shared/world'
 
 /**
  * Which page a report was opened from. A run dispatched by a bench has two
@@ -36,7 +37,7 @@ export type Route =
   | { page: 'bench_run'; bench_id: string; run_id: string }
   /** A run dispatched by a bench, seen in the bench's context (§19). */
   | { page: 'bench_child'; bench_id: string; bench_run_id: string; run_id: string }
-  | { page: 'report'; context: ReportContext; run_id: string }
+  | { page: 'report'; context: ReportContext; run_id: string; format: ReportFormat }
 
 /**
  * One breadcrumb — the port of `navigation::Crumb`. `route` is `null` for the

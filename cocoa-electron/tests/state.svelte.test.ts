@@ -175,7 +175,12 @@ describe('recover', () => {
   it('recovers a report route through its context', () => {
     send({ kind: 'entity-upserted', entity: entity('solver') })
     send({ kind: 'job-run-upserted', run: job_run('0', 'solver') })
-    navigate({ page: 'report', context: { kind: 'job_run', job_id: 'solver' }, run_id: '0' })
+    navigate({
+      page: 'report',
+      context: { kind: 'job_run', job_id: 'solver' },
+      run_id: '0',
+      format: 'PlainText'
+    })
 
     send({ kind: 'job-run-removed', job_id: 'solver', id: '0' })
     expect(app.route).toEqual({ page: 'entity', entity_id: 'solver' })
@@ -298,7 +303,8 @@ describe('a dispatched run seen through its bench', () => {
     navigate({
       page: 'report',
       context: { kind: 'bench_child', bench_id: 'nightly', bench_run_id: '7' },
-      run_id: '8'
+      run_id: '8',
+      format: 'PlainText'
     })
 
     send({ kind: 'job-run-removed', job_id: 'solver', id: '8' })

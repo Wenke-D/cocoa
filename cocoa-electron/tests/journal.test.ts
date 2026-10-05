@@ -135,7 +135,7 @@ describe('sentences_of', () => {
     const world = world_with([job_run('0', { status: 'Analyzing' })])
     const done = job_run('0', {
       status: 'Succeeded',
-      report: { Available: { format: 'PlainText', text_bytes: 12 } }
+      report: { Available: { files: [{ format: 'PlainText', text_bytes: 12 }] } }
     })
     expect(told(world, { kind: 'job-run-upserted', run: done })).toEqual([
       'solver · 0 · Succeeded · good',

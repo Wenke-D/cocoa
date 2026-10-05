@@ -38,11 +38,18 @@ export type RunOrigin =
 
 export type ReportFormat = 'PlainText' | 'Html'
 
+/** One report file of a run: `report/<run>.txt` or `report/<run>.html`. */
+export interface ReportFile {
+  format: ReportFormat
+  text_bytes: number
+}
+
 export type ReportState =
   | 'Unavailable'
   | 'Generating'
   | 'Missing'
-  | { Available: { format: ReportFormat; text_bytes: number } }
+  /** Every report file the run wrote, one or both, plain text first. */
+  | { Available: { files: ReportFile[] } }
   | { ReadError: { message: string } }
 
 export interface Entity {
@@ -199,10 +206,12 @@ export type DeleteTarget =
 
 export type DeleteResult = { ok: true } | { ok: false; message: string }
 
-/** Which run's report to read. The entity id is the folder it lives in. */
+/** Which run's report to read, and which of its files. The entity id is the
+ * folder it lives in. */
 export interface ReportTarget {
   entity_id: string
   run_id: string
+  format: ReportFormat
 }
 
 export type AddFolderResult =
@@ -276,6 +285,11 @@ export function trigger_label(by: Trigger): string {
   return by === 'Human' ? 'you' : 'agent'
 }
 
+/** A report format as the page names it. */
+export function format_label(format: ReportFormat): string {
+  return format === 'Html' ? 'HTML' : 'Plain text'
+}
+
 export function report_summary(report: ReportState): string {
   if (report === 'Unavailable') {
     return 'Report is not yet available.'
@@ -287,8 +301,8 @@ export function report_summary(report: ReportState): string {
     return 'Report is missing.'
   }
   if ('Available' in report) {
-    const label = report.Available.format === 'Html' ? 'HTML' : 'Plain text'
-    return `${label} report is available.`
+    const labels = report.Available.files.map((file) => format_label(file.format))
+    return `${labels.join(' and ')} report is available.`
   }
   return `Unable to read report: ${report.ReadError.message}`
 }

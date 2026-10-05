@@ -1261,7 +1261,7 @@ Show:
 - Human-readable run time.
 - Status pill.
 - Cancel button only when cancellable.
-- Open Report button when report is available.
+- An Open button per report file when a report is available (§17.5).
 - Optional overflow menu.
 
 Example:
@@ -1348,10 +1348,16 @@ Possible states:
 ```text
 Report is not yet available.
 Report is being generated.
-Open Report
+[Plain text]  [HTML]
 Report is missing.
 Unable to read report: <message>
 ```
+
+A report that exists is shown as buttons alone, one per file the run wrote,
+labelled with its format: `Plain text` for `report/<run>.txt`, `HTML` for
+`report/<run>.html`, plain text first. Each opens the Report Viewer on that
+file; no sentence says a report is available, since the buttons do. The
+same row appears on a Bench run's page (§18).
 
 ---
 

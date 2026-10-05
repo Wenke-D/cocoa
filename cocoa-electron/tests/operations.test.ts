@@ -261,24 +261,42 @@ describe('read_report', () => {
 
   it('reads a plain-text report', async () => {
     const [job, cocoa, run_id] = await reported('reporter')
-    const result = read_report(cocoa, { entity_id: job, run_id: String(run_id) })
+    const result = read_report(cocoa, {
+      entity_id: job,
+      run_id: String(run_id),
+      format: 'PlainText'
+    })
     expect(result).toEqual({ ok: true, format: 'PlainText', text: `report for run ${run_id}\n` })
   })
 
-  // The world builder prefers .txt when a run wrote both; the viewer must be
-  // handed the format the page announced, or it offers something else.
-  it('prefers plain text over HTML, as the world builder does', async () => {
+  // A run that wrote both gets a button for each (§20): each reads its own file.
+  it('reads the format asked for when a run wrote both', async () => {
     const [job, cocoa, run_id] = await reported('two-formats')
     fs.writeFileSync(path.join(job, 'report', `${run_id}.html`), '<p>hi</p>')
-    const result = read_report(cocoa, { entity_id: job, run_id: String(run_id) })
-    expect(result.ok === true && result.format).toBe('PlainText')
+    const target = { entity_id: job, run_id: String(run_id) }
+    expect(read_report(cocoa, { ...target, format: 'Html' })).toEqual({
+      ok: true,
+      format: 'Html',
+      text: '<p>hi</p>'
+    })
+    expect(read_report(cocoa, { ...target, format: 'PlainText' })).toEqual({
+      ok: true,
+      format: 'PlainText',
+      text: `report for run ${run_id}\n`
+    })
+  })
+
+  it('says so when the format asked for was not written', async () => {
+    const [job, cocoa, run_id] = await reported('text-only')
+    const result = read_report(cocoa, { entity_id: job, run_id: String(run_id), format: 'Html' })
+    expect(result).toEqual({ ok: false, message: `run ${run_id} has no html report` })
   })
 
   it('reads an HTML report when that is all there is', async () => {
     const [job, cocoa, run_id] = await reported('html-only')
     fs.rmSync(path.join(job, 'report', `${run_id}.txt`))
     fs.writeFileSync(path.join(job, 'report', `${run_id}.html`), '<h1>Report</h1>')
-    const result = read_report(cocoa, { entity_id: job, run_id: String(run_id) })
+    const result = read_report(cocoa, { entity_id: job, run_id: String(run_id), format: 'Html' })
     expect(result).toEqual({ ok: true, format: 'Html', text: '<h1>Report</h1>' })
   })
 
@@ -287,22 +305,26 @@ describe('read_report', () => {
     const job = job_folder(dir, 'unreported')
     const cocoa = engine(dir)
     cocoa.register(job)
-    const result = read_report(cocoa, { entity_id: job, run_id: '0' })
-    expect(result).toEqual({ ok: false, message: 'run 0 has no report' })
+    const result = read_report(cocoa, { entity_id: job, run_id: '0', format: 'PlainText' })
+    expect(result).toEqual({ ok: false, message: 'run 0 has no txt report' })
   })
 
   // The renderer names the folder, so the folder is checked: a report is only
   // ever read out of a registered experiment, and only by run id.
   it('refuses a folder that is not registered', () => {
     const cocoa = engine(temp_dir())
-    const result = read_report(cocoa, { entity_id: '/etc', run_id: '0' })
+    const result = read_report(cocoa, { entity_id: '/etc', run_id: '0', format: 'PlainText' })
     expect(result.ok).toBe(false)
     expect(result.ok === false && result.message).toContain('no experiment is registered')
   })
 
   it('refuses a run id that is not a run id', async () => {
     const [job, cocoa] = await reported('picky-id')
-    const result = read_report(cocoa, { entity_id: job, run_id: '../../../etc/passwd' })
+    const result = read_report(cocoa, {
+      entity_id: job,
+      run_id: '../../../etc/passwd',
+      format: 'PlainText'
+    })
     expect(result.ok).toBe(false)
     expect(result.ok === false && result.message).toContain('is not a run id')
   })

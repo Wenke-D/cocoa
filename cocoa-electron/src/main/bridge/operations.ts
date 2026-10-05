@@ -115,12 +115,8 @@ export async function cancel(engine: Engine, target: CancelTarget): Promise<Canc
 }
 
 /**
- * Reads one run's report off disk (§20). The world already says whether a
- * report exists and in which format; this is the content behind that.
- *
- * Plain text wins over HTML when a run wrote both, matching `report_state_of`
- * in the world builder — the two must agree, or the viewer would offer a
- * format the page did not announce.
+ * Reads one report file of a run off disk (§20): the format the target names.
+ * The world already says which files exist; this is the content behind one.
  */
 export function read_report(engine: Engine, target: ReportTarget): ReportResult {
   if (!engine.registered(target.entity_id)) {
@@ -130,33 +126,32 @@ export function read_report(engine: Engine, target: ReportTarget): ReportResult 
     return { ok: false, message: `\`${target.run_id}\` is not a run id` }
   }
 
-  const dir = path.join(target.entity_id, 'report')
-  for (const [format, file] of [
-    ['PlainText', path.join(dir, `${target.run_id}.txt`)],
-    ['Html', path.join(dir, `${target.run_id}.html`)]
-  ] as const) {
-    let stat: fs.Stats
-    try {
-      stat = fs.statSync(file)
-    } catch {
-      continue
-    }
-    if (!stat.isFile()) {
-      continue
-    }
-    if (stat.size > MAX_REPORT_BYTES) {
-      return {
-        ok: false,
-        message: `report is ${Math.round(stat.size / 1_000_000)} MB; too large to open in the app`
-      }
-    }
-    try {
-      return { ok: true, format, text: fs.readFileSync(file, 'utf8') }
-    } catch (error) {
-      return { ok: false, message: `report could not be read: ${(error as Error).message}` }
+  const format = target.format
+  if (format !== 'PlainText' && format !== 'Html') {
+    return { ok: false, message: `\`${String(format)}\` is not a report format` }
+  }
+  const extension = format === 'Html' ? 'html' : 'txt'
+  const file = path.join(target.entity_id, 'report', `${target.run_id}.${extension}`)
+  let stat: fs.Stats
+  try {
+    stat = fs.statSync(file)
+  } catch {
+    return { ok: false, message: `run ${target.run_id} has no ${extension} report` }
+  }
+  if (!stat.isFile()) {
+    return { ok: false, message: `run ${target.run_id} has no ${extension} report` }
+  }
+  if (stat.size > MAX_REPORT_BYTES) {
+    return {
+      ok: false,
+      message: `report is ${Math.round(stat.size / 1_000_000)} MB; too large to open in the app`
     }
   }
-  return { ok: false, message: `run ${target.run_id} has no report` }
+  try {
+    return { ok: true, format, text: fs.readFileSync(file, 'utf8') }
+  } catch (error) {
+    return { ok: false, message: `report could not be read: ${(error as Error).message}` }
+  }
 }
 
 /**

@@ -96,10 +96,18 @@ describe('build_world', () => {
     const run = build_world(cocoa, null).job_runs[job][String(run_id)]
     expect(run.status).toBe('Succeeded')
     expect(run.ended_at).not.toBeNull()
-    expect(run.report).toEqual({
+    const text_bytes = fs.statSync(path.join(job, 'report', `${run_id}.txt`)).size
+    expect(run.report).toEqual({ Available: { files: [{ format: 'PlainText', text_bytes }] } })
+
+    // An HTML report beside it is a second file to open, after the text (§20)
+    fs.writeFileSync(path.join(job, 'report', `${run_id}.html`), '<p>hi</p>')
+    const both = build_world(cocoa, null).job_runs[job][String(run_id)]
+    expect(both.report).toEqual({
       Available: {
-        format: 'PlainText',
-        text_bytes: fs.statSync(path.join(job, 'report', `${run_id}.txt`)).size
+        files: [
+          { format: 'PlainText', text_bytes },
+          { format: 'Html', text_bytes: 9 }
+        ]
       }
     })
   })

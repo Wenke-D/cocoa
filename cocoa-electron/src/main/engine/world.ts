@@ -9,6 +9,7 @@ import type {
   Entity,
   JobRun,
   QueryHealth,
+  ReportFile,
   ReportState,
   RunOrigin,
   RunStatus,
@@ -286,24 +287,24 @@ function map_status(status: Status): RunStatus {
   }
 }
 
+/** Every report file the run wrote, plain text first (§20). */
 function report_state_of(folder: string, run_id: number): ReportState {
-  const txt = path.join(folder, 'report', `${run_id}.txt`)
-  if (fs.existsSync(txt)) {
-    return size_of(txt, 'PlainText')
+  const files: ReportFile[] = []
+  for (const [format, extension] of [
+    ['PlainText', 'txt'],
+    ['Html', 'html']
+  ] as const) {
+    const file = path.join(folder, 'report', `${run_id}.${extension}`)
+    if (!fs.existsSync(file)) {
+      continue
+    }
+    try {
+      files.push({ format, text_bytes: fs.statSync(file).size })
+    } catch (cause) {
+      return { ReadError: { message: (cause as Error).message } }
+    }
   }
-  const html = path.join(folder, 'report', `${run_id}.html`)
-  if (fs.existsSync(html)) {
-    return size_of(html, 'Html')
-  }
-  return 'Missing'
-}
-
-function size_of(file: string, format: 'PlainText' | 'Html'): ReportState {
-  try {
-    return { Available: { format, text_bytes: fs.statSync(file).size } }
-  } catch (cause) {
-    return { ReadError: { message: (cause as Error).message } }
-  }
+  return files.length > 0 ? { Available: { files } } : 'Missing'
 }
 
 /** `~`-folds paths under home, component-wise (specification §24.4). */

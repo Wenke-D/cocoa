@@ -8,6 +8,7 @@
   search and copy work on HTML too (§20.5).
 -->
 <script lang="ts">
+  import { format_label } from '@shared/world'
   import type { ReportFormat } from '@shared/world'
   import type { Crumb } from '../ui_state'
   import { app, context_entity_id, entity_of, notify, report_owner_id } from '../state.svelte'
@@ -16,7 +17,11 @@
   import { Button } from '$lib/components/ui/button'
   import { Input } from '$lib/components/ui/input'
 
-  let { context, run_id }: { context: ReportContext; run_id: string } = $props()
+  let {
+    context,
+    run_id,
+    format
+  }: { context: ReportContext; run_id: string; format: ReportFormat } = $props()
 
   const entity_id = $derived(context_entity_id(context))
   const entity = $derived(entity_of(entity_id))
@@ -64,7 +69,6 @@
 
   let loading = $state(true)
   let error = $state<string | null>(null)
-  let format = $state<ReportFormat>('PlainText')
   let text = $state('')
 
   let show_source = $state(false)
@@ -74,12 +78,11 @@
   // Reading is by run, and a run's report does not change under the viewer:
   // it is read once, when the address is opened.
   $effect(() => {
-    const target = { entity_id: owner_id, run_id }
+    const target = { entity_id: owner_id, run_id, format }
     loading = true
     void window.cocoa.report(target).then((result) => {
       loading = false
       if (result.ok) {
-        format = result.format
         text = result.text
         error = null
       } else {
@@ -166,7 +169,7 @@
 
 <header>
   <h1>Report <span class="mono run">{run_id}</span></h1>
-  <span class="format">{format === 'Html' ? 'HTML' : 'Plain text'}</span>
+  <span class="format">{format_label(format)}</span>
   <div class="tools">
     {#if format === 'Html'}
       <Button variant="secondary" onclick={() => (show_source = !show_source)}>

@@ -42,7 +42,8 @@ export function list_entities(world: World, kind: 'Job' | 'Bench'): AgentRespons
 /** Where the report file is, when there is one to read. */
 function report_location(folder: string, run_id: string, report: ReportState): Maybe<string> {
   if (typeof report === 'object' && 'Available' in report) {
-    const extension = report.Available.format === 'Html' ? 'html' : 'txt'
+    // The plain-text file when there is one: it is the required report (§7.3)
+    const extension = report.Available.files[0].format === 'Html' ? 'html' : 'txt'
     return some(path.join(folder, 'report', `${run_id}.${extension}`))
   }
   return empty()

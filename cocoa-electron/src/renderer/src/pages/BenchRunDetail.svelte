@@ -4,13 +4,14 @@
     format_started_at,
     is_cancellable,
     is_terminal,
-    report_summary,
     trigger_label
   } from '@shared/world'
   import { bench_run, job_run } from '@shared/world'
+  import type { ReportFormat } from '@shared/world'
   import type { Crumb } from '../ui_state'
   import { app, entity_of, navigate, request_cancel, request_delete } from '../state.svelte'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
+  import ReportButtons from '../lib/components/ReportButtons.svelte'
   import StatusPill from '../lib/components/StatusPill.svelte'
   import { Button } from '$lib/components/ui/button'
   import SquareIcon from '@lucide/svelte/icons/square'
@@ -80,16 +81,16 @@
     <dd class="mono params">{run.parameters === '' ? '(none)' : run.parameters}</dd>
     <dt>Report</dt>
     <dd>
-      {report_summary(run.report)}
-      {#if typeof run.report === 'object' && 'Available' in run.report}
-        <button
-          class="link"
-          onclick={() =>
-            navigate({ page: 'report', context: { kind: 'bench_run', bench_id }, run_id: run.id })}
-        >
-          View report
-        </button>
-      {/if}
+      <ReportButtons
+        report={run.report}
+        open={(format: ReportFormat) =>
+          navigate({
+            page: 'report',
+            context: { kind: 'bench_run', bench_id },
+            run_id: run.id,
+            format
+          })}
+      />
     </dd>
     {#if run.error !== null}
       <dt>Error</dt>
@@ -178,15 +179,6 @@
 
   dd {
     margin: 0;
-  }
-
-  .link {
-    margin-left: 8px;
-    background: none;
-    border: none;
-    padding: 0;
-    color: var(--link);
-    cursor: pointer;
   }
 
   .error {

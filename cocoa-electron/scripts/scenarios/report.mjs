@@ -3,6 +3,7 @@ import path from 'node:path'
 
 // Open both kinds of report in the app: plain text with search, and HTML
 // rendered in place (§20, with this form's divergence — no system browser).
+// The mock writes both files, so the run shows one button for each (§17.5).
 
 export async function run({ page, shot, log, wait_text, library }) {
   await wait_text('solver-gpu', 20_000)
@@ -15,10 +16,15 @@ export async function run({ page, shot, log, wait_text, library }) {
 
   // The mock completes at 15 s and the tick reports it right after.
   await wait_text('Succeeded', 40_000)
-  await wait_text('report is available', 10_000)
+  const html_button = page.getByRole('button', { name: 'HTML', exact: true })
+  await html_button.waitFor({ timeout: 10_000 })
+  log(
+    'report row:',
+    (await page.locator('dd', { has: html_button }).innerText()).replace(/\n/g, ' | ')
+  )
   await shot('run-succeeded')
 
-  await page.getByRole('button', { name: 'View report' }).click()
+  await page.getByRole('button', { name: 'Plain text', exact: true }).click()
   await page.locator('pre.body').waitFor({ timeout: 10_000 })
   log('report head:', (await page.locator('pre.body').innerText()).split('\n')[0])
   log('header:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
@@ -34,15 +40,10 @@ export async function run({ page, shot, log, wait_text, library }) {
   await wait_text('Report copied.', 5_000)
   log('copy notice shown')
 
-  // Now the HTML report the same mock also wrote. The world announces plain
-  // text when both exist, so removing the .txt is what an HTML-only
-  // experiment looks like; the next tick re-reads the folder and says so.
-  fs.rmSync(path.join(library, 'jobs/solver-gpu/report/0.txt'))
+  // Now the HTML report the same mock also wrote: its own button, back on
+  // the run's page
   await page.locator('nav button.crumb').nth(1).click()
-  await wait_text('HTML report is available', 15_000)
-  await shot('run-html')
-
-  await page.getByRole('button', { name: 'View report' }).click()
+  await html_button.click()
   await page.locator('iframe.rendered').waitFor({ timeout: 10_000 })
   log('header:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
 
@@ -70,4 +71,15 @@ export async function run({ page, shot, log, wait_text, library }) {
   await page.locator('pre.body').waitFor({ timeout: 5_000 })
   log('source head:', (await page.locator('pre.body').innerText()).slice(0, 60))
   await shot('report-html-source')
+
+  // With the HTML file gone, the next tick re-reads the folder: one button
+  fs.rmSync(path.join(library, 'jobs/solver-gpu/report/0.html'))
+  await page.locator('nav button.crumb').nth(1).click()
+  await html_button.waitFor({ state: 'detached', timeout: 15_000 })
+  const text_button = page.getByRole('button', { name: 'Plain text', exact: true })
+  log(
+    'report row:',
+    (await page.locator('dd', { has: text_button }).innerText()).replace(/\n/g, ' | ')
+  )
+  await shot('run-text-only')
 }
