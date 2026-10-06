@@ -4,7 +4,7 @@ A desktop workbench for experiments that live on your own machine.
 
 An experiment, to cocoa, is a **folder**: a `cocoa.toml` manifest and the scripts
 it names. Experiments come in two kinds — **jobs**, launched one run at a time,
-and **benches**, whose plan fans out over jobs — and *experiment* is the word
+and **campaigns**, whose plan fans out over jobs — and *experiment* is the word
 for either, here and everywhere cocoa speaks. The manifest says how to check
 that what a run needs is in place and deploy it when it is not, how to launch a
 run, how to ask whether it is still going, how to produce a report, and how to
@@ -46,15 +46,15 @@ written back through to them. Nothing important lives only in the app.
 times with different parameters and you have five independent runs — cocoa never
 blocks a start because something else is running.
 
-**A Bench** is a fan-out. It does not contain Jobs and it is not a pipeline.
+**A Campaign** is a fan-out. It does not contain Jobs and it is not a pipeline.
 When you start one, its plan script returns a list of calls to Jobs *that
 already exist in your Explorer*, each with its own parameters, and cocoa
 dispatches all of them at once. There is no ordering and no dependency between
 them. The same Job may appear a dozen times with a dozen parameter sets — a
-sweep is what a Bench is for.
+sweep is what a Campaign is for.
 
-A run dispatched by a Bench is a **real run of that Job**, stored once and
-reachable from both places: from the Bench's dispatch table, and from the Job's
+A run dispatched by a Campaign is a **real run of that Job**, stored once and
+reachable from both places: from the Campaign's dispatch table, and from the Job's
 own history. Same record, different context; the breadcrumbs and the highlighted
 Explorer row tell you which way you came.
 
@@ -70,8 +70,8 @@ Explorer row tell you which way you came.
 4. **Read the report.** When the run finishes, cocoa runs the report script and
    shows the result in the window — plain text or HTML, searchable, with a wrap
    toggle and a copy button.
-5. **Cancel, if you need to.** Behind a confirmation, and for a Bench, only the
-   runs that Bench dispatched.
+5. **Cancel, if you need to.** Behind a confirmation, and for a Campaign, only the
+   runs that Campaign dispatched.
 
 ## Two things told apart
 
@@ -97,7 +97,7 @@ its report does: the cluster's verdict is not the report's to change.
 cocoa answers on a Unix socket while its window is open, and an agent can list
 experiments, read runs, and start them through it — the same operations a click
 uses, on the same engine, landing on the same screen. Every run records who
-asked: **you**, an **agent**, or the **bench** that dispatched it. See the
+asked: **you**, an **agent**, or the **campaign** that dispatched it. See the
 [agent interface](../spec/agent/43-agent-interface.md).
 
 ## What it is not
@@ -105,7 +105,7 @@ asked: **you**, an **agent**, or the **bench** that dispatched it. See the
 - Not a scheduler. Your scripts talk to whatever runs your work.
 - Not a build system. Your deploy script builds and copies; cocoa only asks
   your check whether it needs to.
-- Not a pipeline or DAG tool. A Bench fans out; it does not sequence.
+- Not a pipeline or DAG tool. A Campaign fans out; it does not sequence.
 - Not a server, and not multi-user. It is one window on one workstation.
 - Not a place your data lives. It is a view of folders that were already yours.
 
@@ -113,7 +113,7 @@ asked: **you**, an **agent**, or the **bench** that dispatched it. See the
 
 | | |
 |---|---|
-| [authoring.md](authoring.md) | Writing a job or a bench: the folder, the manifest, the six scripts |
+| [authoring.md](authoring.md) | Writing a job or a campaign: the folder, the manifest, the six scripts |
 | [examples/](../../examples/README.md) | A library of small, real experiments to try cocoa against — no cluster needed |
 | [agent interface](../spec/agent/43-agent-interface.md) | Driving cocoa from an agent: the socket, its routes, and the MCP binary |
 

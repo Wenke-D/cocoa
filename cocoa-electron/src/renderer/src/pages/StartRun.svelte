@@ -102,7 +102,7 @@
       navigate(
         entity.kind === 'Job'
           ? { page: 'job_run', job_id: entity_id, run_id: result.run_id }
-          : { page: 'bench_run', bench_id: entity_id, run_id: result.run_id }
+          : { page: 'campaign_run', campaign_id: entity_id, run_id: result.run_id }
       )
     } else {
       // The draft is preserved on refusal, as in cocoa (§31).
@@ -120,7 +120,7 @@
     <span>Start</span>
   </nav>
 
-  <h1>{entity.kind === 'Job' ? 'Start Job' : 'Start Bench'}</h1>
+  <h1>{entity.kind === 'Job' ? 'Start Job' : 'Start Campaign'}</h1>
 
   {#if manifest_blocking_reason(entity.manifest) !== null}
     <p class="blocking">{manifest_blocking_reason(entity.manifest)}</p>

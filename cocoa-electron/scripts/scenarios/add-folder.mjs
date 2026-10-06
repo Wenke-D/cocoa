@@ -19,7 +19,7 @@ async function pick(app, folder) {
 export const seed = 'library-only'
 
 export async function run({ app, page, shot, log, wait_text, library }) {
-  await wait_text('No jobs or benches have been added', 20_000)
+  await wait_text('No jobs or campaigns have been added', 20_000)
   await shot('empty')
 
   // Cancelling the picker does nothing at all.
@@ -48,7 +48,7 @@ export async function run({ app, page, shot, log, wait_text, library }) {
   log('picked the library root:', await page.locator('.notice').innerText())
   await shot('refused')
 
-  await pick(app, path.join(library, 'benches/nightly-benchmark'))
+  await pick(app, path.join(library, 'campaigns/nightly-benchmark'))
   await page.locator('aside button.add').click()
   await wait_text('nightly-benchmark', 10_000)
   log('explorer:', (await page.locator('aside').innerText()).replace(/\n/g, ' | '))

@@ -1,7 +1,7 @@
 <!--
   Everything started and not yet finished (§11.1): top-level runs, newest
   first, each row leading to the run's detail page, where Cancel lives. A
-  bench run appears once and is counted once; the members it still has
+  campaign run appears once and is counted once; the members it still has
   running are listed beneath it, indented, as what it is made of.
 -->
 <script lang="ts">
@@ -42,7 +42,7 @@
         }
       }
     }
-    for (const runs of Object.values(world.bench_runs)) {
+    for (const runs of Object.values(world.campaign_runs)) {
       for (const run of Object.values(runs)) {
         if (!is_active(run.status)) {
           continue
@@ -58,11 +58,11 @@
               started_at: member.started_at,
               status: member.status,
               health: member.query_health,
-              // Seen through the bench (§19): the Explorer stays on the bench.
+              // Seen through the campaign (§19): the Explorer stays on the campaign.
               route: {
-                page: 'bench_child',
-                bench_id: run.bench_id,
-                bench_run_id: run.id,
+                page: 'campaign_child',
+                campaign_id: run.campaign_id,
+                campaign_run_id: run.id,
                 run_id: member.id
               },
               members: []
@@ -70,13 +70,13 @@
           }
         }
         rows.push({
-          key: `bench ${run.bench_id} ${run.id}`,
-          name: entity_of(run.bench_id)?.name ?? '(removed)',
+          key: `campaign ${run.campaign_id} ${run.id}`,
+          name: entity_of(run.campaign_id)?.name ?? '(removed)',
           id: run.id,
           started_at: run.started_at,
           status: run.status,
           health: run.query_health,
-          route: { page: 'bench_run', bench_id: run.bench_id, run_id: run.id },
+          route: { page: 'campaign_run', campaign_id: run.campaign_id, run_id: run.id },
           members
         })
       }

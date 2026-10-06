@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mock bench report: summarizes the members cocoa wrote to members.json."""
+"""Mock campaign report: summarizes the members cocoa wrote to members.json."""
 import json
 import os
 import sys
@@ -13,8 +13,8 @@ with open(os.path.join(here, "runs", run, "members.json")) as fh:
 
 os.makedirs(os.path.join(here, "report"), exist_ok=True)
 lines = [
-    f"Mock bench report for run {run}",
-    f"Bench params: {json.dumps(members.get('params', {}))}",
+    f"Mock campaign report for run {run}",
+    f"Campaign params: {json.dumps(members.get('params', {}))}",
     "",
     "Members:",
 ]

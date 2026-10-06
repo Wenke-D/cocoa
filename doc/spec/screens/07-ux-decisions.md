@@ -4,7 +4,7 @@ The UI must follow these decisions.
 
 ## 7.1 Viewing Has Higher Priority Than Starting
 
-The selected Job or Bench overview primarily shows:
+The selected Job or Campaign overview primarily shows:
 
 1. Current state.
 2. Active runs.
@@ -29,7 +29,7 @@ Do not create a permanent third inspector column.
 
 The activity bar (§8.2) and the status bar (§8.5) are chrome, not content regions. The activity bar chooses which view the one sidebar shows; it never holds content of its own.
 
-Job details, Bench details, child-run details, and reports must open in the main-content region.
+Job details, Campaign details, child-run details, and reports must open in the main-content region.
 
 ## 7.3 Full-Page Details
 

@@ -1,4 +1,4 @@
-# Writing a job or a bench
+# Writing a job or a campaign
 
 This is the guide for authoring an experiment folder — everything needed to
 build one that cocoa can register, start, watch and report, with nothing else
@@ -11,8 +11,8 @@ cocoa manages two kinds of experiment:
 
 - A **job** is an independently launchable experiment. One start = one run =
   one submission to whatever runs it (a cluster, a queue, a local process).
-- A **bench** is a fan-out launcher: its plan turns the bench's parameters
-  into instances of jobs *already registered in cocoa*. A bench never defines,
+- A **campaign** is a fan-out launcher: its plan turns the campaign's parameters
+  into instances of jobs *already registered in cocoa*. A campaign never defines,
   contains, or owns jobs.
 
 An experiment is a folder. cocoa is pointed at the folder, reads `cocoa.toml`,
@@ -30,7 +30,7 @@ records inside the folder — copy the folder and the history comes along.
     <run_id>/
       run.json           # record: arguments, submission id, status history
       job.sbatch         # the rendered template (jobs)
-      members.json       # the fan-out (benches)
+      members.json       # the fan-out (campaigns)
   report/                # report output, at the folder root
     <run_id>.txt         # required
     <run_id>.html        # optional
@@ -190,9 +190,9 @@ what is still active. A check that fails, prints no line, or a word other than
 these three refuses the start too.
 
 cocoa checks one job for one start at a time, so a second start waits for the
-first one's deploy and then checks again — two deploys never overlap. A bench
+first one's deploy and then checks again — two deploys never overlap. A campaign
 checks each job it calls once, before dispatching anything, and any refusal
-refuses the whole bench.
+refuses the whole campaign.
 
 **`deploy`** — `./deploy.sh`, no arguments, when the check said `STALE`
 (§7.6). Builds and copies whatever the check found stale to where the runs
@@ -257,10 +257,10 @@ way to regenerate old reports after changing the script (§7.3.2).
 the run; the next poll reports what actually happened. Cancel requests the
 stop, poll confirms it.
 
-## 6. A bench's manifest and scripts
+## 6. A campaign's manifest and scripts
 
 ```toml
-kind        = "bench"
+kind        = "campaign"
 name        = "nightly-benchmark"
 description = "Mesh sweep across the GPU solver"
 
@@ -277,7 +277,7 @@ description = "Which mesh family to sweep"
 command     = "./report.py"
 ```
 
-A bench has no template, no launch, no poll, no cancel, no check and no
+A campaign has no template, no launch, no poll, no cancel, no check and no
 deploy of its own: it launches through its member jobs — each checked, and
 deployed if stale, as at a job's own start — its status is derived from
 theirs, and it is cancelled by cancelling them (§3, §7.5, §9.1).
@@ -300,7 +300,7 @@ before dispatching.
 
 **`report`** — `./report.py --run 7 --members runs/7/members.json`. The
 members file lists every dispatched run — its job, arguments, submission id,
-and where that job's report landed — so the bench's report can aggregate
+and where that job's report landed — so the campaign's report can aggregate
 them. Output rules are the job report's: `report/7.txt` required.
 
 ## 7. What to count on, and what not to
@@ -315,6 +315,6 @@ them. Output rules are the job report's: `report/7.txt` required.
 - Timeouts (defaults): check, launch, poll, cancel 60 s; plan 120 s; deploy,
   report 600 s.
 - A run cocoa deletes takes `runs/<id>/` and `report/<id>.*` with it — for a
-  bench run, its dispatched runs too (§12.1); run ids otherwise never repeat.
+  campaign run, its dispatched runs too (§12.1); run ids otherwise never repeat.
 - Nothing else in the folder is cocoa's business: keep source, data and
   scratch wherever suits the scripts.

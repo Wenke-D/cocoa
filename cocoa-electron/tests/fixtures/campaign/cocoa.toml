@@ -1,6 +1,6 @@
-kind        = "bench"
-name        = "fixture-bench"
-description = "Test fixture: a bench that plans whatever `plan-lines` holds"
+kind        = "campaign"
+name        = "fixture-campaign"
+description = "Test fixture: a campaign that plans whatever `plan-lines` holds"
 
 [plan]
 command     = "./plan.sh"

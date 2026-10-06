@@ -5,7 +5,7 @@
   confirm wears the destructive colour.
 -->
 <script lang="ts">
-  import { bench_run, job_run } from '@shared/world'
+  import { campaign_run, job_run } from '@shared/world'
   import { app, close_overlay, confirm_delete, entity_of } from '../../state.svelte'
   import type { Overlay } from '../../state.svelte'
   import ModalFrame from './ModalFrame.svelte'
@@ -30,15 +30,15 @@
         ]
       }
     }
-    const run = bench_run(app.world, target.bench_id, target.run_id)
+    const run = campaign_run(app.world, target.campaign_id, target.run_id)
     if (run === undefined) {
       return null
     }
     return {
-      title: `Delete bench run ${run.id} for good?`,
-      subject: entity_of(target.bench_id)?.name ?? '(removed)',
+      title: `Delete campaign run ${run.id} for good?`,
+      subject: entity_of(target.campaign_id)?.name ?? '(removed)',
       lines: [
-        `This bench run and the ${run.plan.steps.length} runs it dispatched disappear`,
+        `This campaign run and the ${run.plan.steps.length} runs it dispatched disappear`,
         'from their histories forever, reports included.',
         'This cannot be undone.'
       ]

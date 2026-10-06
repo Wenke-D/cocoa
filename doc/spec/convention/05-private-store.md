@@ -7,11 +7,11 @@ holds:
 ```json
 {
   "jobs": ["/abs/path/to/solver-gpu"],
-  "benches": ["/abs/path/to/nightly"]
+  "campaigns": ["/abs/path/to/nightly"]
 }
 ```
 
-- **jobs**, **benches** — registered folder paths, on the side their manifest
+- **jobs**, **campaigns** — registered folder paths, on the side their manifest
   declared when they were registered. Adding a folder is registration, and it
   persists across sessions. Registering a path that is already in the store is
   a no-op. A folder whose manifest breaks later stays on its side, carrying the

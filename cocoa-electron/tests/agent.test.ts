@@ -14,7 +14,7 @@ import type { AgentServer } from '../src/main/agent/serve'
 import { serve, socket_path } from '../src/main/agent/serve'
 
 const FOLDER = '/exp/solver-gpu'
-const BENCH_FOLDER = '/exp/nightly'
+const CAMPAIGN_FOLDER = '/exp/nightly'
 
 function world(): World {
   const base = empty_world()
@@ -32,11 +32,11 @@ function world(): World {
       ]
     },
     {
-      id: BENCH_FOLDER,
-      kind: 'Bench',
+      id: CAMPAIGN_FOLDER,
+      kind: 'Campaign',
       name: 'nightly',
       description: null,
-      path: BENCH_FOLDER,
+      path: CAMPAIGN_FOLDER,
       manifest: 'Valid',
       parameters: [
         { name: 'sweep', type: 'string', values: null, list: false, description: 'the sweep' }
@@ -81,11 +81,11 @@ function world(): World {
       }
     }
   }
-  base.bench_runs = {
-    [BENCH_FOLDER]: {
+  base.campaign_runs = {
+    [CAMPAIGN_FOLDER]: {
       '2': {
         id: '2',
-        bench_id: BENCH_FOLDER,
+        campaign_id: CAMPAIGN_FOLDER,
         by: 'Agent',
         started_at: '2026-08-20T12:00:00.000+02:00',
         ended_at: null,
@@ -101,7 +101,7 @@ function world(): World {
     }
   }
   base.runs_by_job = { [FOLDER]: ['0', '1'] }
-  base.runs_by_bench = { [BENCH_FOLDER]: ['2'] }
+  base.runs_by_campaign = { [CAMPAIGN_FOLDER]: ['2'] }
   return base
 }
 
@@ -255,8 +255,8 @@ describe('reads', () => {
     ])
   })
 
-  it('lists benches separately', async () => {
-    const { json } = await ask('GET', '/benches')
+  it('lists campaigns separately', async () => {
+    const { json } = await ask('GET', '/campaigns')
     expect(json).toHaveLength(1)
     expect(json[0]).toMatchObject({ name: 'nightly', runs: 1, active: 1 })
   })
@@ -280,8 +280,8 @@ describe('reads', () => {
     expect(detail.runs[1]).toMatchObject({ report_running: false, report_error: null })
   })
 
-  it('gives a bench its calls and its members file', async () => {
-    const { json } = await ask('GET', '/benches/nightly')
+  it('gives a campaign its calls and its members file', async () => {
+    const { json } = await ask('GET', '/campaigns/nightly')
     const detail = json as unknown as {
       runs: {
         calls: { call: number; job: string; run_id: string }[]
@@ -291,14 +291,14 @@ describe('reads', () => {
     expect(detail.runs[0].calls).toEqual([
       { call: 0, job: 'solver-gpu', parameters: '--nodes 4', run_id: '0' }
     ])
-    expect(detail.runs[0].location.members).toBe(`${BENCH_FOLDER}/runs/2/members.json`)
+    expect(detail.runs[0].location.members).toBe(`${CAMPAIGN_FOLDER}/runs/2/members.json`)
   })
 
   // A name that exists as the other kind deserves a pointer, not a flat no.
   it('points at the other kind rather than refusing flatly', async () => {
     const { status, json } = await ask('GET', '/jobs/nightly')
     expect(status).toBe(404)
-    expect(json.error).toBe('nightly is not a job; ask /benches/nightly')
+    expect(json.error).toBe('nightly is not a job; ask /campaigns/nightly')
   })
 
   it('says plainly when there is no such thing', async () => {
@@ -394,17 +394,17 @@ describe('registering a folder', () => {
     expect(asked).toBe(FOLDER)
   })
 
-  it('names a bench as one, and answers 200 for a folder already there', async () => {
+  it('names a campaign as one, and answers 200 for a folder already there', async () => {
     const { status, json } = await ask(
       'POST',
       '/experiments',
-      JSON.stringify({ path: BENCH_FOLDER }),
+      JSON.stringify({ path: CAMPAIGN_FOLDER }),
       undefined,
       undefined,
-      () => ({ ok: true, entity_id: BENCH_FOLDER, already: true })
+      () => ({ ok: true, entity_id: CAMPAIGN_FOLDER, already: true })
     )
     expect(status).toBe(200)
-    expect(json).toMatchObject({ kind: 'bench', already: true, follow: '/benches/nightly' })
+    expect(json).toMatchObject({ kind: 'campaign', already: true, follow: '/campaigns/nightly' })
   })
 
   it('refuses a missing, relative or unparseable path before the workbench is asked', async () => {
@@ -479,10 +479,10 @@ describe('re-running a report', () => {
     expect(missing.json.error).toBe('No such run: solver-gpu run 41')
   })
 
-  it("refuses a bench, and passes the workbench's refusal through as a 400", async () => {
-    const bench = await ask('POST', '/experiments/nightly/runs/2/report')
-    expect(bench.status).toBe(400)
-    expect(bench.json.error).toContain('is a bench')
+  it("refuses a campaign, and passes the workbench's refusal through as a 400", async () => {
+    const campaign = await ask('POST', '/experiments/nightly/runs/2/report')
+    expect(campaign.status).toBe(400)
+    expect(campaign.json.error).toContain('is a campaign')
 
     const refused = await ask(
       'POST',

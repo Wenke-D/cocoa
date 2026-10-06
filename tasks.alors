@@ -96,7 +96,7 @@ install: package
 # cannot take. Scenario is a name from cocoa-electron/scripts/scenarios/:
 #
 #     alors drive cancel
-#     alors drive bench-child
+#     alors drive campaign-child
 #
 # Screenshots land in cocoa-electron/.drive/shots/.
 drive scenario:

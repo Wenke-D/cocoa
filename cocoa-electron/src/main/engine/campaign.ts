@@ -1,5 +1,5 @@
-// The bench operations (convention §8, §9): plan, start, report, cancel, and
-// the status a bench run derives from its members. A bench is built out of
+// The campaign operations (convention §8, §9): plan, start, report, cancel, and
+// the status a campaign run derives from its members. A campaign is built out of
 // job runs — its start is job starts, its cancel is job cancels — so this
 // module leans on `job.ts`.
 
@@ -9,7 +9,7 @@ import type { Engine } from './index'
 import { EngineError } from './errors'
 import * as invoke from './invoke'
 import type { Invocation } from './invoke'
-import type { Bench } from './memory'
+import type { Campaign } from './memory'
 import type { Params } from '@shared/params'
 import { argv_of } from '@shared/params'
 import type { CheckAnswer, Release } from './deploys'
@@ -18,9 +18,9 @@ import type { PreparedStart } from './job'
 import { param_problems, validate_params } from './params'
 import { all_params, now_stamp, sorted } from './record'
 import type {
-  BenchMember,
-  BenchMembersFile,
-  BenchRecord,
+  CampaignMember,
+  CampaignMembersFile,
+  CampaignRecord,
   LaunchFailure,
   RunRecord,
   Trigger
@@ -36,13 +36,13 @@ export interface PlanInstance {
   launch: Params
 }
 
-export interface BenchStart {
+export interface CampaignStart {
   run_id: number
-  members: BenchMember[]
+  members: CampaignMember[]
   launch_failures: LaunchFailure[]
 }
 
-export interface BenchStatusView {
+export interface CampaignStatusView {
   status: Status
   missing_members: string[]
   succeeded: number
@@ -52,7 +52,7 @@ export interface BenchStatusView {
   errors: number
 }
 
-/** How one member took a bench's cancel (§9.1). */
+/** How one member took a campaign's cancel (§9.1). */
 export interface MemberCancel {
   run_id: number
   job: string
@@ -67,12 +67,12 @@ interface PlanLine {
 }
 
 /** Runs `plan` and validates every instance before anything is submitted (§8.1). */
-export async function plan_bench(
+export async function plan_campaign(
   engine: Engine,
-  bench: Bench,
+  campaign: Campaign,
   params_given: Record<string, unknown>
 ): Promise<PlanInstance[]> {
-  const manifest = bench.usable_manifest()
+  const manifest = campaign.usable_manifest()
   const params = validate_params(manifest.plan_params, params_given, 'plan')
 
   const argv = [...manifest.plan.words]
@@ -81,9 +81,9 @@ export async function plan_bench(
   }
   let invocation: Invocation
   try {
-    invocation = await invoke.run(bench.path, argv, engine.config.plan_timeout)
+    invocation = await invoke.run(campaign.path, argv, engine.config.plan_timeout)
   } catch (cause) {
-    throw EngineError.io(bench.path, cause)
+    throw EngineError.io(campaign.path, cause)
   }
   if (!invoke.invocation_ok(invocation)) {
     throw EngineError.invocation(
@@ -96,7 +96,7 @@ export async function plan_bench(
 
   const lines = invoke.cocoa_return_lines(invocation.stdout)
   if (lines.length === 0) {
-    throw EngineError.validation('plan produced no instances; a bench start needs at least one')
+    throw EngineError.validation('plan produced no instances; a campaign start needs at least one')
   }
 
   // Every call is checked, not just up to the first bad one (§8.1).
@@ -145,23 +145,23 @@ export async function plan_bench(
 }
 
 /**
- * Starts a bench: validates the plan, checks every job it calls, then
+ * Starts a campaign: validates the plan, checks every job it calls, then
  * dispatches every instance (§8.2). Each job is checked once, under its gate,
  * before anything is dispatched (§7.5): a `CONFLICT` anywhere refuses the
  * whole start, naming every job at fault, and a stale job's members all wait
  * on one deploy of it.
  */
-export async function start_bench(
+export async function start_campaign(
   engine: Engine,
-  bench: Bench,
+  campaign: Campaign,
   params_given: Record<string, unknown>,
   by: Trigger
-): Promise<BenchStart> {
-  const manifest = bench.usable_manifest()
+): Promise<CampaignStart> {
+  const manifest = campaign.usable_manifest()
   const params = validate_params(manifest.plan_params, params_given, 'plan')
-  const instances = await plan_bench(engine, bench, params)
+  const instances = await plan_campaign(engine, campaign, params)
 
-  // Gates are taken in one order — by folder — so two bench starts calling
+  // Gates are taken in one order — by folder — so two campaign starts calling
   // the same jobs can never each hold one the other waits on.
   const paths = [...new Set(instances.map((instance) => instance.job_path))].sort()
   const checked = new Map<string, { release: Release; answer: CheckAnswer | null }>()
@@ -190,11 +190,11 @@ export async function start_bench(
       gate.release()
     }
     throw EngineError.validation(
-      `the bench cannot start, nothing was dispatched: ${problems.join('; ')}`
+      `the campaign cannot start, nothing was dispatched: ${problems.join('; ')}`
     )
   }
 
-  const bench_run_id = bench.runs.next_id()
+  const campaign_run_id = campaign.runs.next_id()
   const outcomes: (number | Error)[] = new Array<number | Error>(instances.length)
   for (const job_path of paths) {
     const job = engine.job(job_path)
@@ -209,8 +209,8 @@ export async function start_bench(
       try {
         starts.push(
           prepare_start(job, job_manifest, instance.render, instance.launch, {
-            by: 'bench',
-            run_id: bench_run_id,
+            by: 'campaign',
+            run_id: campaign_run_id,
             name: manifest.name,
             call: index + 1
           })
@@ -226,7 +226,7 @@ export async function start_bench(
     }
   }
 
-  const members: BenchMember[] = []
+  const members: CampaignMember[] = []
   const launch_failures: LaunchFailure[] = []
   for (const [index, instance] of instances.entries()) {
     const outcome = outcomes[index]
@@ -241,9 +241,9 @@ export async function start_bench(
     }
   }
 
-  const record: BenchRecord = {
-    run_id: bench_run_id,
-    bench: manifest.name,
+  const record: CampaignRecord = {
+    run_id: campaign_run_id,
+    campaign: manifest.name,
     by,
     started_at: now_stamp(),
     params: sorted(params),
@@ -251,15 +251,19 @@ export async function start_bench(
     members,
     launch_failures: launch_failures
   }
-  bench.runs.write(record)
+  campaign.runs.write(record)
 
-  return { run_id: bench_run_id, members, launch_failures }
+  return { run_id: campaign_run_id, members, launch_failures }
 }
 
-/** Runs the bench's report over its members' results (§8.3). */
-export async function bench_report(engine: Engine, bench: Bench, run_id: number): Promise<void> {
-  const manifest = bench.usable_manifest()
-  const record = bench.runs.record(run_id)
+/** Runs the campaign's report over its members' results (§8.3). */
+export async function campaign_report(
+  engine: Engine,
+  campaign: Campaign,
+  run_id: number
+): Promise<void> {
+  const manifest = campaign.usable_manifest()
+  const record = campaign.runs.record(run_id)
 
   const resolved = engine.resolve_members(record)
   const block_reasons: string[] = []
@@ -276,13 +280,13 @@ export async function bench_report(engine: Engine, bench: Bench, run_id: number)
     }
   }
   if (block_reasons.length > 0) {
-    throw EngineError.validation(`no bench report: ${block_reasons.join(', ')}`)
+    throw EngineError.validation(`no campaign report: ${block_reasons.join(', ')}`)
   }
 
-  const run_dir = path.join(bench.path, 'runs', String(run_id))
-  const members_file: BenchMembersFile = {
+  const run_dir = path.join(campaign.path, 'runs', String(run_id))
+  const members_file: CampaignMembersFile = {
     run_id: run_id,
-    bench: record.bench,
+    campaign: record.campaign,
     params: record.params,
     members: resolved.map((member) => {
       const member_record = member.record as RunRecord
@@ -298,7 +302,7 @@ export async function bench_report(engine: Engine, bench: Bench, run_id: number)
   }
   write_atomic(path.join(run_dir, 'members.json'), JSON.stringify(members_file, null, 2))
 
-  const report_dir = path.join(bench.path, 'report')
+  const report_dir = path.join(campaign.path, 'report')
   try {
     fs.mkdirSync(report_dir, { recursive: true })
   } catch (cause) {
@@ -313,9 +317,9 @@ export async function bench_report(engine: Engine, bench: Bench, run_id: number)
   ]
   let invocation: Invocation
   try {
-    invocation = await invoke.run(bench.path, argv, engine.config.report_timeout)
+    invocation = await invoke.run(campaign.path, argv, engine.config.report_timeout)
   } catch (cause) {
-    throw EngineError.io(bench.path, cause)
+    throw EngineError.io(campaign.path, cause)
   }
 
   const report_path = path.join(report_dir, `${run_id}.txt`)
@@ -326,7 +330,7 @@ export async function bench_report(engine: Engine, bench: Bench, run_id: number)
       ? `report script exited 0 but produced no report/${run_id}.txt`
       : invoke.invocation_output(invocation)
   record.report = { attempted: true, at: now_stamp(), ...(error !== undefined ? { error } : {}) }
-  bench.runs.write(record)
+  campaign.runs.write(record)
 
   if (!ok) {
     throw EngineError.invocation(
@@ -338,18 +342,18 @@ export async function bench_report(engine: Engine, bench: Bench, run_id: number)
   }
 }
 
-/** Cancels a bench run by cancelling its still-cancellable members (§3, §9.1). */
-export async function cancel_bench(
+/** Cancels a campaign run by cancelling its still-cancellable members (§3, §9.1). */
+export async function cancel_campaign(
   engine: Engine,
-  bench: Bench,
+  campaign: Campaign,
   run_id: number
 ): Promise<MemberCancel[]> {
-  const record = bench.runs.record(run_id)
+  const record = campaign.runs.record(run_id)
   const results: MemberCancel[] = []
   for (const member of record.members) {
     const job = engine.find_job_by_name(member.job)
     if (job === null) {
-      throw EngineError.not_found(`member job \`${member.job}\` of bench run ${run_id}`)
+      throw EngineError.not_found(`member job \`${member.job}\` of campaign run ${run_id}`)
     }
     const member_record = job.runs.find(member.run_id)
     if (member_record === null) {
@@ -384,9 +388,13 @@ export async function cancel_bench(
   return results
 }
 
-/** Derives a bench run's status (§9.1). Never stored, computed from memory. */
-export function bench_status(engine: Engine, bench: Bench, run_id: number): BenchStatusView {
-  const record = bench.runs.record(run_id)
+/** Derives a campaign run's status (§9.1). Never stored, computed from memory. */
+export function campaign_status(
+  engine: Engine,
+  campaign: Campaign,
+  run_id: number
+): CampaignStatusView {
+  const record = campaign.runs.record(run_id)
   const resolved = engine.resolve_members(record)
   const missing = resolved.filter((member) => member.record === null).map((m) => m.job_name)
   const members = resolved
@@ -396,9 +404,9 @@ export function bench_status(engine: Engine, bench: Bench, run_id: number): Benc
   const status =
     missing.length > 0
       ? 'ERROR'
-      : derive_bench_status(members, record, report_on_disk(bench.path, run_id))
+      : derive_campaign_status(members, record, report_on_disk(campaign.path, run_id))
 
-  const counts: BenchStatusView = {
+  const counts: CampaignStatusView = {
     status,
     missing_members: missing,
     succeeded: 0,
@@ -428,10 +436,10 @@ export function bench_status(engine: Engine, bench: Bench, run_id: number): Benc
   return counts
 }
 
-/** The bench status derivation (§9.1), over fully-resolved members. */
-function derive_bench_status(
+/** The campaign status derivation (§9.1), over fully-resolved members. */
+function derive_campaign_status(
   members: RunRecord[],
-  bench: BenchRecord,
+  campaign: CampaignRecord,
   report_exists: boolean
 ): Status {
   if (members.some((member) => member.status === 'CANCELLING')) {
@@ -444,7 +452,7 @@ function derive_bench_status(
     }
     return 'RUNNING'
   }
-  if (bench.launch_failures.length > 0 || members.some((m) => m.status === 'ERROR')) {
+  if (campaign.launch_failures.length > 0 || members.some((m) => m.status === 'ERROR')) {
     return 'ERROR'
   }
   if (members.some((m) => m.status === 'FAILED')) {
@@ -453,8 +461,8 @@ function derive_bench_status(
   if (members.some((m) => m.status === 'CANCELLED')) {
     return 'CANCELLED'
   }
-  if (bench.report !== undefined && bench.report.attempted) {
-    if (bench.report.error !== undefined) {
+  if (campaign.report !== undefined && campaign.report.attempted) {
+    if (campaign.report.error !== undefined) {
       return 'ERROR'
     }
     if (!report_exists) {

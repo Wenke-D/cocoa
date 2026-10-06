@@ -6,7 +6,7 @@
     is_terminal,
     trigger_label
   } from '@shared/world'
-  import { bench_run, job_run } from '@shared/world'
+  import { campaign_run, job_run } from '@shared/world'
   import type { ReportFormat } from '@shared/world'
   import type { Crumb } from '../ui_state'
   import { app, entity_of, navigate, request_cancel, request_delete } from '../state.svelte'
@@ -17,13 +17,13 @@
   import SquareIcon from '@lucide/svelte/icons/square'
   import Trash2Icon from '@lucide/svelte/icons/trash-2'
 
-  let { bench_id, run_id }: { bench_id: string; run_id: string } = $props()
+  let { campaign_id, run_id }: { campaign_id: string; run_id: string } = $props()
 
-  const run = $derived(bench_run(app.world, bench_id, run_id))
-  const bench = $derived(entity_of(bench_id))
+  const run = $derived(campaign_run(app.world, campaign_id, run_id))
+  const campaign = $derived(entity_of(campaign_id))
 
   const crumbs = $derived<Crumb[]>([
-    { label: bench?.name ?? '(removed)', route: { page: 'entity', entity_id: bench_id } },
+    { label: campaign?.name ?? '(removed)', route: { page: 'entity', entity_id: campaign_id } },
     { label: run_id, route: null, mono: true }
   ])
 
@@ -50,9 +50,9 @@
         size="icon-sm"
         variant="secondary"
         class="cancel ml-auto"
-        title="Cancel Bench"
-        aria-label="Cancel Bench"
-        onclick={() => request_cancel({ kind: 'bench_run', bench_id, run_id: run.id })}
+        title="Cancel Campaign"
+        aria-label="Cancel Campaign"
+        onclick={() => request_cancel({ kind: 'campaign_run', campaign_id, run_id: run.id })}
       >
         <SquareIcon />
       </Button>
@@ -63,7 +63,7 @@
         class="ml-auto"
         title="Delete Run…"
         aria-label="Delete Run"
-        onclick={() => request_delete({ kind: 'bench_run', bench_id, run_id: run.id })}
+        onclick={() => request_delete({ kind: 'campaign_run', campaign_id, run_id: run.id })}
       >
         <Trash2Icon />
       </Button>
@@ -86,7 +86,7 @@
         open={(format: ReportFormat) =>
           navigate({
             page: 'report',
-            context: { kind: 'bench_run', bench_id },
+            context: { kind: 'campaign_run', campaign_id },
             run_id: run.id,
             format
           })}
@@ -118,14 +118,14 @@
       {#each run.plan.steps as step (step.index)}
         {@const child = job_run(app.world, step.job_id, step.run_id)}
         {@const job_name = entity_of(step.job_id)?.name ?? '(removed)'}
-        <!-- The bench's context, not the job's: same run, other address
-             (§2.3.1), and the Explorer stays on the bench (§19). -->
+        <!-- The campaign's context, not the job's: same run, other address
+             (§2.3.1), and the Explorer stays on the campaign (§19). -->
         <tr
           onclick={() =>
             navigate({
-              page: 'bench_child',
-              bench_id,
-              bench_run_id: run.id,
+              page: 'campaign_child',
+              campaign_id,
+              campaign_run_id: run.id,
               run_id: step.run_id
             })}
         >

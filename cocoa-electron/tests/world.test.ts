@@ -6,7 +6,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { build_world } from '../src/main/engine/world'
 import {
-  bench_folder,
+  campaign_folder,
   cleanup_temp_dirs,
   engine,
   job_folder,
@@ -188,20 +188,20 @@ describe('build_world', () => {
     expect(world.entities[0].parameters).toEqual([])
   })
 
-  it('describes a bench run, its plan and the runs it dispatched', async () => {
+  it('describes a campaign run, its plan and the runs it dispatched', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'member-job')
-    const bench = bench_folder(dir, 'sweep', ['member-job', 'member-job'])
+    const campaign = campaign_folder(dir, 'sweep', ['member-job', 'member-job'])
     const cocoa = engine(dir)
     cocoa.register(job)
-    cocoa.register(bench)
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    cocoa.register(campaign)
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
 
     const world = build_world(cocoa, null)
-    const run = world.bench_runs[bench][String(start.run_id)]
+    const run = world.campaign_runs[campaign][String(start.run_id)]
     expect(run).toMatchObject({
-      bench_id: bench,
+      campaign_id: campaign,
       by: 'Human',
       parameters: '--mesh fine',
       status: 'Starting',
@@ -221,32 +221,34 @@ describe('build_world', () => {
         run_id: String(start.members[1].run_id)
       }
     ])
-    expect(world.runs_by_bench).toEqual({ [bench]: [String(start.run_id)] })
+    expect(world.runs_by_campaign).toEqual({ [campaign]: [String(start.run_id)] })
 
-    // The same run, two addresses (§2.3.1): a member knows the bench run and
+    // The same run, two addresses (§2.3.1): a member knows the campaign run and
     // the call that dispatched it.
     expect(world.job_runs[job][String(start.members[1].run_id)].origin).toEqual({
-      Bench: {
+      Campaign: {
         name: 'sweep',
-        bench_id: bench,
-        bench_run_id: String(start.run_id),
+        campaign_id: campaign,
+        campaign_run_id: String(start.run_id),
         call: 2
       }
     })
   })
 
-  // A bench has no history of its own (§9.1): it ends when its last member
+  // A campaign has no history of its own (§9.1): it ends when its last member
   // does, and until then its clock runs.
-  it("dates a bench run's end by its last member's", async () => {
+  it("dates a campaign run's end by its last member's", async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'member-job')
-    const bench = bench_folder(dir, 'sweep', ['member-job', 'member-job'])
+    const campaign = campaign_folder(dir, 'sweep', ['member-job', 'member-job'])
     const cocoa = engine(dir)
     cocoa.register(job)
-    cocoa.register(bench)
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    cocoa.register(campaign)
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
-    expect(build_world(cocoa, null).bench_runs[bench][String(start.run_id)].ended_at).toBeNull()
+    expect(
+      build_world(cocoa, null).campaign_runs[campaign][String(start.run_id)].ended_at
+    ).toBeNull()
 
     write(job, 'poll-state', 'FAILED no convergence')
     await cocoa.poll_job(job)
@@ -257,32 +259,32 @@ describe('build_world', () => {
     const latest = ends.reduce((a, b) =>
       Date.parse(b as string) > Date.parse(a as string) ? b : a
     )
-    expect(world.bench_runs[bench][String(start.run_id)]).toMatchObject({
+    expect(world.campaign_runs[campaign][String(start.run_id)]).toMatchObject({
       status: 'Failed',
       ended_at: latest
     })
   })
 
-  // End to end, a bench that succeeds ends when its own report lands — not
+  // End to end, a campaign that succeeds ends when its own report lands — not
   // when its last member did (§8.2).
   it('ends at its own report when it has one', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'member-job')
-    const bench = bench_folder(dir, 'sweep', ['member-job'])
+    const campaign = campaign_folder(dir, 'sweep', ['member-job'])
     const cocoa = engine(dir)
     cocoa.register(job)
-    cocoa.register(bench)
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    cocoa.register(campaign)
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
 
     write(job, 'poll-state', 'COMPLETED')
-    // One tick reports the member, the next reports the bench over it.
+    // One tick reports the member, the next reports the campaign over it.
     await cocoa.refresh()
     await cocoa.refresh()
 
-    const record = cocoa.bench(bench).runs.record(start.run_id)
+    const record = cocoa.campaign(campaign).runs.record(start.run_id)
     expect(record.report?.at).toBeDefined()
-    const run = build_world(cocoa, null).bench_runs[bench][String(start.run_id)]
+    const run = build_world(cocoa, null).campaign_runs[campaign][String(start.run_id)]
     expect(run.status).toBe('Succeeded')
     expect(run.ended_at).toBe(record.report?.at)
   })

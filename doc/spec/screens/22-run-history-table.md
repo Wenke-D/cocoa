@@ -1,6 +1,6 @@
 # 22. Run-History Table Behavior
 
-Job history, Bench history, and Bench dispatch tables share one table
+Job history, Campaign history, and Campaign dispatch tables share one table
 treatment, defined once (`table.runs` in `theme.css`) rather than per page.
 
 **Widths are declared, never measured.** The layout is fixed, and each column's
@@ -48,10 +48,10 @@ Run         54    a run id, flush right, so the digits line up, with room after 
 Arguments    —    remainder; the run's arguments, as given, on code's ground
 Duration   100    `HH:MM:SS` while it runs, `1h 12m 33s` once it ended
 Started    116    `2 days ago`; the locale date and time on hover
-By          80    `you`, `agent`, or a bench name and call number, truncated
+By          80    `you`, `agent`, or a campaign name and call number, truncated
 ```
 
-Bench history:
+Campaign history:
 
 ```text
             22
@@ -62,11 +62,11 @@ Started    116
 By          80
 ```
 
-A bench history has no Calls column: how many members a run dispatched is
+A campaign history has no Calls column: how many members a run dispatched is
 the plan's business, on the run's own page (§18), and it was the one count
 in a row of facts.
 
-Bench dispatch:
+Campaign dispatch:
 
 ```text
 #          54    the call index, flush right, with room after it
@@ -106,7 +106,7 @@ In tables:
 
 ## 22.4 Filtering
 
-Job and Bench overview pages support:
+Job and Campaign overview pages support:
 
 - Status filter.
 - Parameter text search.
@@ -118,7 +118,7 @@ Filters affect All Runs only, not Active Runs.
 The demonstration library must support at least 500 history rows without making
 the UI unusable.
 
-A Bench plan must support at least 50 dispatched runs, since a parameter sweep is
+A Campaign plan must support at least 50 dispatched runs, since a parameter sweep is
 the primary use case. The dispatch table must stay usable at that size.
 
 A drive scenario (§28) may start a larger dataset to check this.
@@ -127,7 +127,7 @@ A drive scenario (§28) may start a larger dataset to check this.
 
 ## 22.6 Row Menu
 
-Every row of a job or bench history has a context menu with two actions, both
+Every row of a job or campaign history has a context menu with two actions, both
 about that run's parameters:
 
 - **Start over** starts a new run at once, with exactly the values this run

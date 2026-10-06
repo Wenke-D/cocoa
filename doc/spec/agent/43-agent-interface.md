@@ -60,9 +60,9 @@ rather than left hanging.
 ```text
 GET  /help                         what this is, and every route, from the tool itself
 GET  /jobs                         every Job: name, folder, parameters, run tallies
-GET  /benches                      every Bench, same shape
+GET  /campaigns                      every Campaign, same shape
 GET  /jobs/{name}                  one Job and its runs, with file locations
-GET  /benches/{name}               one Bench, its runs, their calls and locations
+GET  /campaigns/{name}               one Campaign, its runs, their calls and locations
 POST /experiments                  {"path": "/abs/folder"} → 201 {"name", "kind", …}
 POST /experiments/{name}/runs      {"parameters": {…}} → 201 {"run_id": "…"}
 POST /experiments/{name}/runs/{run_id}/report
@@ -77,7 +77,7 @@ once, to register one.
 `add_folder` the picker's answer goes through, the same refusals. The body
 names the folder by **absolute** path — the agent's working directory is not
 cocoa's, and a relative path would quietly resolve against the wrong one — and
-its `cocoa.toml` decides whether it is a Job or a Bench:
+its `cocoa.toml` decides whether it is a Job or a Campaign:
 
 ```json
 { "name": "solver-gpu", "kind": "job", "folder": "/abs/solver-gpu",
@@ -132,7 +132,7 @@ outcome is then on the run as on any report: `Succeeded`, or `Error` with its
 `error`, on the healthy path; `Failed` with or without `report_error` for a
 failed run. `404` names an experiment or run that is not there; `400` carries
 the workbench's refusal — a run that cannot be reported, one whose report is
-already running, or a Bench, whose own report is not re-run by hand. Who asked
+already running, or a Campaign, whose own report is not re-run by hand. Who asked
 is not recorded (convention §7.3.2). The MCP binary does not offer this route
 as a tool yet.
 

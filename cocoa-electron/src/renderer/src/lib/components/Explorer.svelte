@@ -1,7 +1,7 @@
 <!--
-  The Explorer (§8.3, §11.2): the benches and jobs the user has added, as two
+  The Explorer (§8.3, §11.2): the campaigns and jobs the user has added, as two
   panes one above the other, each with its own scroll, the divider between
-  them draggable. Benches first — a bench is what the jobs are for.
+  them draggable. Campaigns first — a campaign is what the jobs are for.
 -->
 <script lang="ts">
   import {
@@ -18,7 +18,7 @@
   import ViewTitle from './ViewTitle.svelte'
 
   const jobs = $derived(app.world.entities.filter((entity) => entity.kind === 'Job'))
-  const benches = $derived(app.world.entities.filter((entity) => entity.kind === 'Bench'))
+  const campaigns = $derived(app.world.entities.filter((entity) => entity.kind === 'Campaign'))
   const selected = $derived(selected_entity_id())
 
   let panes = $state<HTMLDivElement | null>(null)
@@ -102,8 +102,8 @@
 
 <div class="panes" bind:this={panes}>
   <section class="pane" style="flex-grow: {app.explorer_split}">
-    <h3 class="section">BENCHES</h3>
-    <div class="list">{@render rows(benches)}</div>
+    <h3 class="section">CAMPAIGNS</h3>
+    <div class="list">{@render rows(campaigns)}</div>
   </section>
   <div
     class="splitter"

@@ -13,7 +13,7 @@
 </div>
 
 <style>
-  /* Flush with the section headings under it — EXPLORER and BENCHES share a
+  /* Flush with the section headings under it — EXPLORER and CAMPAIGNS share a
      left edge; only rows are indented (§8.3). */
   .title {
     display: flex;

@@ -5,7 +5,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type {
-  BenchRun,
+  CampaignRun,
   Entity,
   JobRun,
   QueryHealth,
@@ -19,7 +19,7 @@ import type { EngineError } from './errors'
 import type { Engine } from './index'
 import { report_in_flight, report_on_disk, reportable } from './job'
 import { all_params, ended_at, started_at } from './record'
-import type { BenchRecord, RunRecord } from './record'
+import type { CampaignRecord, RunRecord } from './record'
 import { is_terminal } from './status'
 import type { Status } from './status'
 import type { ParamSpec } from '@shared/params'
@@ -29,9 +29,9 @@ export function build_world(engine: Engine, last_refresh: string | null): World 
   const world: World = {
     entities: [],
     job_runs: {},
-    bench_runs: {},
+    campaign_runs: {},
     runs_by_job: {},
-    runs_by_bench: {},
+    runs_by_campaign: {},
     last_refresh: last_refresh
   }
   const now_iso = new Date().toISOString()
@@ -62,21 +62,21 @@ export function build_world(engine: Engine, last_refresh: string | null): World 
     }
   }
 
-  for (const bench of engine.benches()) {
-    const manifest = bench.manifest
+  for (const campaign of engine.campaigns()) {
+    const manifest = campaign.manifest
     if (manifest === null) {
-      world.entities.push(broken_entity(bench, 'Bench'))
+      world.entities.push(broken_entity(campaign, 'Campaign'))
       continue
     }
-    world.entities.push(entity_for(bench.path, manifest, 'Bench', [...manifest.plan_params]))
-    for (const run_view of [...bench.runs.all()].reverse()) {
+    world.entities.push(entity_for(campaign.path, manifest, 'Campaign', [...manifest.plan_params]))
+    for (const run_view of [...campaign.runs.all()].reverse()) {
       if (run_view.record === null) {
         continue
       }
-      const run = bench_run_of(engine, bench.path, run_view.record, now_iso)
-      const runs = (world.bench_runs[run.bench_id] ??= {})
+      const run = campaign_run_of(engine, campaign.path, run_view.record, now_iso)
+      const runs = (world.campaign_runs[run.campaign_id] ??= {})
       runs[run.id] = run
-      index_run(world.runs_by_bench, run.bench_id, run.id, run.started_at, runs)
+      index_run(world.runs_by_campaign, run.campaign_id, run.id, run.started_at, runs)
     }
   }
 
@@ -111,7 +111,7 @@ function index_run(
 
 function broken_entity(
   broken: { path: string; manifest_error: EngineError | null },
-  kind: 'Job' | 'Bench'
+  kind: 'Job' | 'Campaign'
 ): Entity {
   return {
     id: broken.path,
@@ -127,7 +127,7 @@ function broken_entity(
 function entity_for(
   folder: string,
   manifest: { name: string; description?: string },
-  kind: 'Job' | 'Bench',
+  kind: 'Job' | 'Campaign',
   parameters: ParamSpec[]
 ): Entity {
   return {
@@ -179,33 +179,33 @@ function origin_of(engine: Engine, record: RunRecord): RunOrigin {
     return 'Agent'
   }
   return {
-    Bench: {
+    Campaign: {
       name: origin.name,
-      bench_id: engine.find_bench_by_name(origin.name)?.path ?? null,
-      bench_run_id: String(origin.run_id),
+      campaign_id: engine.find_campaign_by_name(origin.name)?.path ?? null,
+      campaign_run_id: String(origin.run_id),
       call: origin.call
     }
   }
 }
 
-function bench_run_of(
+function campaign_run_of(
   engine: Engine,
-  bench_path: string,
-  record: BenchRecord,
+  campaign_path: string,
+  record: CampaignRecord,
   now_iso: string
-): BenchRun {
+): CampaignRun {
   let status: RunStatus = 'Error'
   let ended: string | null = null
   try {
-    const derived = engine.bench_status(bench_path, record.run_id)
+    const derived = engine.campaign_status(campaign_path, record.run_id)
     status = map_status(derived.status)
-    ended = bench_ended_at(engine, record, derived.status)
+    ended = campaign_ended_at(engine, record, derived.status)
   } catch {
     // Fall through to Error, as the Rust adapter does.
   }
   return {
     id: String(record.run_id),
-    bench_id: bench_path,
+    campaign_id: campaign_path,
     by: record.by === 'agent' ? 'Agent' : 'Human',
     started_at: record.started_at,
     ended_at: ended,
@@ -226,21 +226,21 @@ function bench_run_of(
     status,
     query_health: 'Healthy',
     last_successful_query: now_iso,
-    report: report_state_of(bench_path, record.run_id),
+    report: report_state_of(campaign_path, record.run_id),
     error: null
   }
 }
 
 /**
- * When a bench run ended, if it has — end to end, as a person sees it (§8.2):
+ * When a campaign run ended, if it has — end to end, as a person sees it (§8.2):
  * at its own report, when there was one (landed or failed); otherwise, having
  * settled without one (§9.1: a member failed or was cancelled), when its last
- * member ended; and a bench that ended without members ending (every launch
+ * member ended; and a campaign that ended without members ending (every launch
  * failed, a member cocoa cannot resolve) is dated by its start, so that its
  * clock at least stops. Records written before `report.at` existed fall
  * through to the members.
  */
-function bench_ended_at(engine: Engine, record: BenchRecord, status: Status): string | null {
+function campaign_ended_at(engine: Engine, record: CampaignRecord, status: Status): string | null {
   if (record.report?.attempted === true && record.report.at !== undefined) {
     return record.report.at
   }

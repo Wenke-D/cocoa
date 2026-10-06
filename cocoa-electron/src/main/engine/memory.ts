@@ -1,24 +1,24 @@
 // The in-memory truth (convention §1–§5, §12): the registered jobs and
-// benches, each holding its manifest and its runs. Reads never touch the
+// campaigns, each holding its manifest and its runs. Reads never touch the
 // disk. Writes mutate memory first and write through to the experiment
 // folder — same file formats, so folders stay inspectable. Between reconcile
 // passes memory wins; a concurrent hand-edit can lose, which is accepted
 // (local, single instance).
 //
-// Jobs and benches are the whole domain; there is no type over both. The
+// Jobs and campaigns are the whole domain; there is no type over both. The
 // store remembers which folders are which, so a folder whose manifest breaks
 // stays what it was, carrying the error, and one whose manifest changes kind
 // moves across.
 //
 // `Engine` (index.ts) extends this with the operations that run scripts over
-// it: `job.ts`, `bench.ts`, `in_flight.ts`.
+// it: `job.ts`, `campaign.ts`, `in_flight.ts`.
 
 import fs from 'node:fs'
 import path from 'node:path'
 import { EngineError, as_engine_error } from './errors'
 import { load_manifest } from './manifest'
-import type { BenchManifest, JobManifest, Manifest } from './manifest'
-import type { BenchRecord, RunRecord } from './record'
+import type { CampaignManifest, JobManifest, Manifest } from './manifest'
+import type { CampaignRecord, RunRecord } from './record'
 import { load_store, save_store, write_atomic } from './store'
 
 export interface RunView<R> {
@@ -152,22 +152,22 @@ export class Job {
   }
 }
 
-/** A registered bench folder (§3): its manifest as last read, and its runs. */
-export class Bench {
+/** A registered campaign folder (§3): its manifest as last read, and its runs. */
+export class Campaign {
   readonly path: string
   /** `null` while `cocoa.toml` is unusable; `manifest_error` then says why (§4). */
-  manifest: BenchManifest | null
+  manifest: CampaignManifest | null
   manifest_error: EngineError | null = null
-  readonly runs: Runs<BenchRecord>
+  readonly runs: Runs<CampaignRecord>
 
-  constructor(folder: string, manifest: BenchManifest | null = null) {
+  constructor(folder: string, manifest: CampaignManifest | null = null) {
     this.path = folder
     this.manifest = manifest
     this.runs = new Runs(folder)
   }
 
   /** The manifest, or the error standing in its place. */
-  usable_manifest(): BenchManifest {
+  usable_manifest(): CampaignManifest {
     if (this.manifest === null) {
       throw this.manifest_error ?? EngineError.manifest(this.path, 'manifest is unusable')
     }
@@ -175,7 +175,7 @@ export class Bench {
   }
 }
 
-/** A bench member looked up in its job's records (§8.3, §9.1); `null` where the lookup fails. */
+/** A campaign member looked up in its job's records (§8.3, §9.1); `null` where the lookup fails. */
 export interface ResolvedMember {
   run_id: number
   job_name: string
@@ -192,7 +192,7 @@ export interface Registration {
 export class Memory {
   private readonly store_path: string
   private readonly jobs_by_path = new Map<string, Job>()
-  private readonly benches_by_path = new Map<string, Bench>()
+  private readonly campaigns_by_path = new Map<string, Campaign>()
 
   constructor(store_path: string) {
     this.store_path = store_path
@@ -200,8 +200,8 @@ export class Memory {
     for (const folder of store.jobs) {
       this.jobs_by_path.set(folder, new Job(folder))
     }
-    for (const folder of store.benches) {
-      this.benches_by_path.set(folder, new Bench(folder))
+    for (const folder of store.campaigns) {
+      this.campaigns_by_path.set(folder, new Campaign(folder))
     }
     this.reconcile()
   }
@@ -223,14 +223,14 @@ export class Memory {
       job.manifest = read.manifest
       job.manifest_error = read.error
     }
-    for (const bench of this.benches()) {
-      const read = read_manifest(bench.path)
-      if (read.manifest !== null && read.manifest.kind !== 'bench') {
-        this.rekind(bench.path, read.manifest)
+    for (const campaign of this.campaigns()) {
+      const read = read_manifest(campaign.path)
+      if (read.manifest !== null && read.manifest.kind !== 'campaign') {
+        this.rekind(campaign.path, read.manifest)
         continue
       }
-      bench.manifest = read.manifest
-      bench.manifest_error = read.error
+      campaign.manifest = read.manifest
+      campaign.manifest_error = read.error
     }
   }
 
@@ -241,7 +241,7 @@ export class Memory {
    */
   private rekind(folder: string, manifest: Manifest): void {
     this.jobs_by_path.delete(folder)
-    this.benches_by_path.delete(folder)
+    this.campaigns_by_path.delete(folder)
     this.adopt(folder, manifest)
     this.save()
   }
@@ -250,14 +250,14 @@ export class Memory {
     if (manifest.kind === 'job') {
       this.jobs_by_path.set(folder, new Job(folder, manifest))
     } else {
-      this.benches_by_path.set(folder, new Bench(folder, manifest))
+      this.campaigns_by_path.set(folder, new Campaign(folder, manifest))
     }
   }
 
   private save(): void {
     save_store(this.store_path, {
       jobs: [...this.jobs_by_path.keys()],
-      benches: [...this.benches_by_path.keys()]
+      campaigns: [...this.campaigns_by_path.keys()]
     })
   }
 
@@ -300,14 +300,14 @@ export class Memory {
     } catch {
       canonical = folder
     }
-    if (!this.jobs_by_path.delete(canonical) && !this.benches_by_path.delete(canonical)) {
+    if (!this.jobs_by_path.delete(canonical) && !this.campaigns_by_path.delete(canonical)) {
       throw EngineError.not_found(`folder ${canonical}`)
     }
     this.save()
   }
 
   registered(folder: string): boolean {
-    return this.jobs_by_path.has(folder) || this.benches_by_path.has(folder)
+    return this.jobs_by_path.has(folder) || this.campaigns_by_path.has(folder)
   }
 
   /** Every registered job, in registration order. */
@@ -315,31 +315,31 @@ export class Memory {
     return [...this.jobs_by_path.values()]
   }
 
-  /** Every registered bench, in registration order. */
-  benches(): Bench[] {
-    return [...this.benches_by_path.values()]
+  /** Every registered campaign, in registration order. */
+  campaigns(): Campaign[] {
+    return [...this.campaigns_by_path.values()]
   }
 
   job(folder: string): Job {
     const job = this.jobs_by_path.get(folder)
     if (job === undefined) {
-      if (this.benches_by_path.has(folder)) {
-        throw EngineError.validation(`${folder} is a bench, not a job`)
+      if (this.campaigns_by_path.has(folder)) {
+        throw EngineError.validation(`${folder} is a campaign, not a job`)
       }
       throw EngineError.not_found(`job ${folder}`)
     }
     return job
   }
 
-  bench(folder: string): Bench {
-    const bench = this.benches_by_path.get(folder)
-    if (bench === undefined) {
+  campaign(folder: string): Campaign {
+    const campaign = this.campaigns_by_path.get(folder)
+    if (campaign === undefined) {
       if (this.jobs_by_path.has(folder)) {
-        throw EngineError.validation(`${folder} is a job, not a bench`)
+        throw EngineError.validation(`${folder} is a job, not a campaign`)
       }
-      throw EngineError.not_found(`bench ${folder}`)
+      throw EngineError.not_found(`campaign ${folder}`)
     }
-    return bench
+    return campaign
   }
 
   /** Names are read off manifests, so a job whose manifest is broken has none (§5). */
@@ -347,18 +347,18 @@ export class Memory {
     return this.jobs().find((job) => job.manifest?.name === name) ?? null
   }
 
-  find_bench_by_name(name: string): Bench | null {
-    return this.benches().find((bench) => bench.manifest?.name === name) ?? null
+  find_campaign_by_name(name: string): Campaign | null {
+    return this.campaigns().find((campaign) => campaign.manifest?.name === name) ?? null
   }
 
   private find_name_collision(name: string): string | null {
-    if (this.find_job_by_name(name) !== null || this.find_bench_by_name(name) !== null) {
+    if (this.find_job_by_name(name) !== null || this.find_campaign_by_name(name) !== null) {
       return name
     }
     return null
   }
 
-  resolve_members(record: BenchRecord): ResolvedMember[] {
+  resolve_members(record: CampaignRecord): ResolvedMember[] {
     return record.members.map((member) => {
       const job = this.find_job_by_name(member.job)
       return {

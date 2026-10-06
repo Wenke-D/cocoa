@@ -16,9 +16,9 @@ A change is done when all of the following hold.
 - Query failure is visually distinct from execution failure, and cocoa's `Error`
   from the experiment's `Failed` (§10.2).
 - Clicking any history row opens a full run-detail page.
-- Bench runs display a full-width dispatch table of every run they started.
-- A Bench dispatches all of its calls at once, with no ordering or dependency.
-- A run dispatched by a Bench appears in the referenced Job's own history, stored
+- Campaign runs display a full-width dispatch table of every run they started.
+- A Campaign dispatches all of its calls at once, with no ordering or dependency.
+- A run dispatched by a Campaign appears in the referenced Job's own history, stored
   once and reachable from both contexts, showing the same facts either way (§19).
 - Reports open in the full main-content area, plain text and HTML alike (§20).
 - Reports can be searched, wrapped, selected, and copied.

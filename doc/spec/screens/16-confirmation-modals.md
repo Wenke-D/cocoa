@@ -17,20 +17,20 @@ will be requested.
 Keep Running                         Cancel Run
 ```
 
-## 16.2 Bench Copy
+## 16.2 Campaign Copy
 
 ```text
-Cancel this Bench run?
+Cancel this Campaign run?
 
 Nightly Benchmark
 
 All 4 runs still active will be cancelled.
 2 runs have already finished and keep their results.
 
-Runs of the same Jobs started outside this Bench
+Runs of the same Jobs started outside this Campaign
 are not affected.
 
-Keep Running                       Cancel Bench
+Keep Running                       Cancel Campaign
 ```
 
 ## 16.3 Behavior
@@ -66,18 +66,18 @@ cocoa cannot see may still be running, and deleting its record would be the
 one way to never find out. A `Failed` run whose report is still `Generating`
 offers no Delete until the report lands (convention §12.1).
 
-**A fan-out is deleted whole, from the bench's side.** A run a bench
+**A fan-out is deleted whole, from the campaign's side.** A run a campaign
 dispatched offers no Delete anywhere — not on its page, not in the job's
 history row — and the engine refuses it whatever the UI shows, pointing at
-the bench run. Deleting the bench run takes every run it dispatched with
+the campaign run. Deleting the campaign run takes every run it dispatched with
 it, and requires each resolvable member to be finished itself, since a
-bench can settle while a member still runs (§9.1 of the convention). So
-deletion never leaves half a fan-out: no bench pointing at members that
-are gone, no member naming a bench that is.
+campaign can settle while a member still runs (§9.1 of the convention). So
+deletion never leaves half a fan-out: no campaign pointing at members that
+are gone, no member naming a campaign that is.
 
 The click asks first, always — that modal is the second confirmation. Its
 copy speaks the user's language, never cocoa's file names: the run
-disappears from the history forever, its report goes with it — for a bench
+disappears from the history forever, its report goes with it — for a campaign
 run, the runs it dispatched too — and `This cannot be undone.` The confirm
 button wears the destructive colour and never a neutral one.
 

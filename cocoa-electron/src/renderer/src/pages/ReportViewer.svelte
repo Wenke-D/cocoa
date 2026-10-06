@@ -30,25 +30,29 @@
 
   /**
    * The trail a report is read under is the trail of the page it was opened
-   * from — the same run reached through a bench keeps the bench's, including
-   * the bench run in between (§20.1, §2.3.1).
+   * from — the same run reached through a campaign keeps the campaign's, including
+   * the campaign run in between (§20.1, §2.3.1).
    */
   const crumbs = $derived.by<Crumb[]>(() => {
     const trail: Crumb[] = [
       { label: entity?.name ?? '(removed)', route: { page: 'entity', entity_id } }
     ]
-    if (context.kind === 'bench_child') {
+    if (context.kind === 'campaign_child') {
       trail.push({
-        label: context.bench_run_id,
-        route: { page: 'bench_run', bench_id: context.bench_id, run_id: context.bench_run_id },
+        label: context.campaign_run_id,
+        route: {
+          page: 'campaign_run',
+          campaign_id: context.campaign_id,
+          run_id: context.campaign_run_id
+        },
         mono: true
       })
       trail.push({
         label: run_id,
         route: {
-          page: 'bench_child',
-          bench_id: context.bench_id,
-          bench_run_id: context.bench_run_id,
+          page: 'campaign_child',
+          campaign_id: context.campaign_id,
+          campaign_run_id: context.campaign_run_id,
           run_id
         },
         mono: true
@@ -59,7 +63,7 @@
         route:
           context.kind === 'job_run'
             ? { page: 'job_run', job_id: context.job_id, run_id }
-            : { page: 'bench_run', bench_id: context.bench_id, run_id },
+            : { page: 'campaign_run', campaign_id: context.campaign_id, run_id },
         mono: true
       })
     }

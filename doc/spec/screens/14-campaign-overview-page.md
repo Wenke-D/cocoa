@@ -1,19 +1,19 @@
-# 14. Bench Overview Page
+# 14. Campaign Overview Page
 
-The Bench overview follows the same hierarchy as the Job overview.
+The Campaign overview follows the same hierarchy as the Job overview.
 
 ## 14.1 Header
 
-As §13.1, with the bench's own parameters — what its plan takes — under the
+As §13.1, with the campaign's own parameters — what its plan takes — under the
 same `Parameters` heading, and the same `Actions` row below:
 
-- Bench display name.
+- Campaign display name.
 - The manifest's `description`, when it gives one.
 - Folder path.
 - Manifest validity.
 - The declared parameters, one row each: name, shape, description.
 
-A Bench has no static job list, so the header cannot state how many Jobs it will
+A Campaign has no static job list, so the header cannot state how many Jobs it will
 dispatch. Show the size of the most recent run instead, and say so:
 
 ```text
@@ -29,7 +29,7 @@ sweep     quick / full   How much of the suite to run
 [▶] [⊟]
 ```
 
-For a Bench that has never run:
+For a Campaign that has never run:
 
 ```text
 Smoke Test
@@ -43,13 +43,13 @@ sweep     quick / full   How much of the suite to run
 [▶] [⊟]
 ```
 
-Never display a fixed job count as if it were a property of the Bench.
+Never display a fixed job count as if it were a property of the Campaign.
 
-## 14.2 Active Bench Runs
+## 14.2 Active Campaign Runs
 
 Each card shows:
 
-- Aggregate Bench status.
+- Aggregate Campaign status.
 - Completed count.
 - Total dispatched count.
 - Progress bar.
@@ -76,7 +76,7 @@ Open    Cancel
 The progress bar measures terminal children over total dispatched. It is a
 completion ratio, not a position in a sequence.
 
-## 14.3 Bench All Runs Table
+## 14.3 Campaign All Runs Table
 
 Columns:
 
@@ -100,4 +100,4 @@ Progress format:
 
 Prefer an exact run count over a percentage-only display.
 
-Clicking the row opens Bench Run Detail.
+Clicking the row opens Campaign Run Detail.

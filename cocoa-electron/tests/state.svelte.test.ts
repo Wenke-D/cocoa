@@ -9,7 +9,7 @@
 // `.active-dot` assertion in `scripts/scenarios/remove-folder.mjs`.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { BenchPlanStep, BenchRun, CocoaEvent, Entity, JobRun } from '@shared/world'
+import type { CampaignPlanStep, CampaignRun, CocoaEvent, Entity, JobRun } from '@shared/world'
 import { empty_world } from '@shared/world'
 import {
   app,
@@ -31,7 +31,7 @@ import {
   confirm_delete
 } from '../src/renderer/src/state.svelte'
 
-function entity(id: string, kind: 'Job' | 'Bench' = 'Job'): Entity {
+function entity(id: string, kind: 'Job' | 'Campaign' = 'Job'): Entity {
   return {
     id,
     kind,
@@ -65,14 +65,18 @@ function job_run(id: string, job_id: string, extra: Partial<JobRun> = {}): JobRu
 }
 
 /**
- * `steps` is what the bench dispatched. It is not decoration: the plan is the
+ * `steps` is what the campaign dispatched. It is not decoration: the plan is the
  * only link from a dispatched run back to the job that ran it (§2.3.1), now
  * that a run id means nothing without its experiment.
  */
-function bench_run(id: string, bench_id: string, steps: BenchPlanStep[] = []): BenchRun {
+function campaign_run(
+  id: string,
+  campaign_id: string,
+  steps: CampaignPlanStep[] = []
+): CampaignRun {
   return {
     id,
-    bench_id: bench_id,
+    campaign_id: campaign_id,
     by: 'Human',
     started_at: '2026-08-19T10:00:00.000+02:00',
     ended_at: null,
@@ -138,11 +142,11 @@ describe('apply_events', () => {
     expect(app.world.runs_by_job['solver']).toEqual([])
   })
 
-  it('tracks bench runs the same way', () => {
-    send({ kind: 'entity-upserted', entity: entity('nightly', 'Bench') })
-    send({ kind: 'bench-run-upserted', run: bench_run('7', 'nightly') })
+  it('tracks campaign runs the same way', () => {
+    send({ kind: 'entity-upserted', entity: entity('nightly', 'Campaign') })
+    send({ kind: 'campaign-run-upserted', run: campaign_run('7', 'nightly') })
 
-    expect(app.world.runs_by_bench['nightly']).toEqual(['7'])
+    expect(app.world.runs_by_campaign['nightly']).toEqual(['7'])
     expect(has_active_run(app.world.entities[0])).toBe(true)
   })
 })
@@ -256,56 +260,62 @@ describe('notices', () => {
 })
 
 // One run, two addresses (§2.3.1): reached through its job, or through the
-// bench that dispatched it. The record is the same; the context is not.
-describe('a dispatched run seen through its bench', () => {
+// campaign that dispatched it. The record is the same; the context is not.
+describe('a dispatched run seen through its campaign', () => {
   function dispatched(): void {
-    send({ kind: 'entity-upserted', entity: entity('nightly', 'Bench') })
+    send({ kind: 'entity-upserted', entity: entity('nightly', 'Campaign') })
     send({ kind: 'entity-upserted', entity: entity('solver') })
     send({
-      kind: 'bench-run-upserted',
-      run: bench_run('7', 'nightly', [{ index: 0, job_id: 'solver', parameters: '', run_id: '8' }])
+      kind: 'campaign-run-upserted',
+      run: campaign_run('7', 'nightly', [
+        { index: 0, job_id: 'solver', parameters: '', run_id: '8' }
+      ])
     })
     send({ kind: 'job-run-upserted', run: job_run('8', 'solver') })
   }
 
-  // Arriving through the bench must not move the Explorer onto the job, even
+  // Arriving through the campaign must not move the Explorer onto the job, even
   // though the job is right there in the Explorer too (§19).
-  it('keeps the bench selected', () => {
+  it('keeps the campaign selected', () => {
     dispatched()
-    navigate({ page: 'bench_child', bench_id: 'nightly', bench_run_id: '7', run_id: '8' })
+    navigate({ page: 'campaign_child', campaign_id: 'nightly', campaign_run_id: '7', run_id: '8' })
     expect(selected_entity_id()).toBe('nightly')
   })
 
-  it('falls back to the bench run when the dispatched run goes', () => {
+  it('falls back to the campaign run when the dispatched run goes', () => {
     dispatched()
-    navigate({ page: 'bench_child', bench_id: 'nightly', bench_run_id: '7', run_id: '8' })
+    navigate({ page: 'campaign_child', campaign_id: 'nightly', campaign_run_id: '7', run_id: '8' })
 
     send({ kind: 'job-run-removed', job_id: 'solver', id: '8' })
-    expect(app.route).toEqual({ page: 'bench_run', bench_id: 'nightly', run_id: '7' })
+    expect(app.route).toEqual({ page: 'campaign_run', campaign_id: 'nightly', run_id: '7' })
     expect(app.notice?.text).toContain('dispatched run')
   })
 
-  it('falls back past the bench run when that goes too', () => {
+  it('falls back past the campaign run when that goes too', () => {
     dispatched()
-    navigate({ page: 'bench_child', bench_id: 'nightly', bench_run_id: '7', run_id: '8' })
+    navigate({ page: 'campaign_child', campaign_id: 'nightly', campaign_run_id: '7', run_id: '8' })
 
-    send({ kind: 'bench-run-removed', bench_id: 'nightly', id: '7' })
+    send({ kind: 'campaign-run-removed', campaign_id: 'nightly', id: '7' })
     expect(app.route).toEqual({ page: 'entity', entity_id: 'nightly' })
   })
 
   // The report file lives where the run happened — in the job's folder — even
-  // though the reader arrived through the bench.
+  // though the reader arrived through the campaign.
   it('reads its report from the job that ran it', () => {
     dispatched()
-    const context = { kind: 'bench_child', bench_id: 'nightly', bench_run_id: '7' } as const
+    const context = {
+      kind: 'campaign_child',
+      campaign_id: 'nightly',
+      campaign_run_id: '7'
+    } as const
     expect(report_owner_id(context, '8')).toBe('solver')
   })
 
-  it('recovers a report opened in the bench context', () => {
+  it('recovers a report opened in the campaign context', () => {
     dispatched()
     navigate({
       page: 'report',
-      context: { kind: 'bench_child', bench_id: 'nightly', bench_run_id: '7' },
+      context: { kind: 'campaign_child', campaign_id: 'nightly', campaign_run_id: '7' },
       run_id: '8',
       format: 'PlainText'
     })

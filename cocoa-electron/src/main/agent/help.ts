@@ -31,7 +31,7 @@ export function help(): AgentResponse {
         path: '/jobs',
         answers: 'every Job: name, folder, declared parameters, run tallies'
       },
-      { method: 'GET', path: '/benches', answers: 'every Bench, in the same shape' },
+      { method: 'GET', path: '/campaigns', answers: 'every Campaign, in the same shape' },
       {
         method: 'GET',
         path: '/jobs/{name}',
@@ -42,9 +42,9 @@ export function help(): AgentResponse {
       },
       {
         method: 'GET',
-        path: '/benches/{name}',
+        path: '/campaigns/{name}',
         answers:
-          'one Bench and its runs, each with the calls it dispatched and its locations ' +
+          'one Campaign and its runs, each with the calls it dispatched and its locations ' +
           '(run_dir, record, members, report)'
       },
       {
@@ -52,10 +52,10 @@ export function help(): AgentResponse {
         path: '/experiments/{name}/runs',
         body: { parameters: { '<declared name>': '<value>' } },
         answers:
-          'starts the Job or Bench; 201 with {run_id}. Every declared parameter must be ' +
+          'starts the Job or Campaign; 201 with {run_id}. Every declared parameter must be ' +
           'supplied, shaped as declared — GET /jobs/{name} lists them with type, values and ' +
           'description: a string, or a list of strings for a list, each ' +
-          'enum value one of its `values`. Every start runs the Job’s check first (a Bench ' +
+          'enum value one of its `values`. Every start runs the Job’s check first (a Campaign ' +
           'start checks each Job it calls, once): CURRENT launches at once and the run ' +
           'appears STARTING; STALE runs the Job’s deploy first and the run appears DEPLOYING ' +
           'until it is done (a failed deploy leaves it Error, with the output in error and ' +
@@ -71,7 +71,7 @@ export function help(): AgentResponse {
         body: { path: '/absolute/path/to/the/folder' },
         answers:
           'registers the experiment folder at that absolute path, as the Explorer’s + does: ' +
-          'its cocoa.toml decides whether it is a Job or a Bench. 201 with {name, kind, ' +
+          'its cocoa.toml decides whether it is a Job or a Campaign. 201 with {name, kind, ' +
           'folder, already, follow}; 200 and already: true when it was registered already. ' +
           '400 with the reason for a path that is not absolute or not a folder, a manifest ' +
           'that does not load, or a name another experiment already has.'
@@ -87,7 +87,7 @@ export function help(): AgentResponse {
           'Follow GET /jobs/{name} until the run’s report_running is false: a COMPLETED-path ' +
           'run then reads Succeeded, or Error with its error; a FAILED run stays Failed, with ' +
           'report_error when the script failed. 404 for an unknown experiment or run; 400 ' +
-          'for a Bench, a run that cannot be reported, or one whose report is already running.'
+          'for a Campaign, a run that cannot be reported, or one whose report is already running.'
       }
     ]
   })

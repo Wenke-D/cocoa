@@ -7,7 +7,7 @@ and the error: not its name, not its parameters.
 
 Rejected at load time:
 
-- `kind` missing or other than `job` / `bench`;
+- `kind` missing or other than `job` / `campaign`;
 - `name` missing, not a string, or empty;
 - unknown keys for the declared kind, at the top level, in a declared table, or
   on a parameter;

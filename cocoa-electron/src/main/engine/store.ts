@@ -17,11 +17,11 @@ import { EngineError } from './errors'
 
 export interface StoreData {
   jobs: string[]
-  benches: string[]
+  campaigns: string[]
 }
 
 export function empty_store(): StoreData {
-  return { jobs: [], benches: [] }
+  return { jobs: [], campaigns: [] }
 }
 
 export function load_store(store_path: string): StoreData {
@@ -43,7 +43,7 @@ export function load_store(store_path: string): StoreData {
   const data = parsed as Partial<StoreData>
   return {
     jobs: Array.isArray(data.jobs) ? data.jobs : [],
-    benches: Array.isArray(data.benches) ? data.benches : []
+    campaigns: Array.isArray(data.campaigns) ? data.campaigns : []
   }
 }
 

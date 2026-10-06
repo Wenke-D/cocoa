@@ -87,7 +87,7 @@ share lives in `orion/`:
 | `full_edc`, `full_fsd`, `legacy_full_edc` | Did the simulation reach endTime, and what did it produce? | Long by design. The history at every written time (Δt, Courant, T, Qdot, continuity, wall time) and min/mean/max of the main fields at each one, then every field at the last. Beside it, `report/<run>/history.csv` (every step) and `report/<run>/case/` (the case without `processor*`, with `case.foam` for ParaView, about 150 MB) |
 
 When an experiment is reused for another purpose, its `report.py` changes
-with it, and its row here and a line in the log say so. A bench report
+with it, and its row here and a line in the log say so. A campaign report
 (like `probe_scaling/report.py`) is one table that answers its question. It
 reads its members' reports and never goes back to the cluster.
 
@@ -97,7 +97,7 @@ reads its members' reports and never goes back to the cluster.
    what it is for, and its report purpose matches.
 2. The `README.md` table lists every folder; a new experiment adds its row.
 3. An experiment folder is self-contained: its `cocoa.toml`, its
-   `job.sbatch.tmpl` and its `report.py` (a bench: its `plan` and
+   `job.sbatch.tmpl` and its `report.py` (a campaign: its `plan` and
    `report.py`). `orion/` holds only what reaches the cluster and reads its
    runs: launch, poll, cancel, `cluster.py`, `foamrun.py`.
 4. `runs/` and `report/` belong to cocoa. We read them and never edit them

@@ -22,7 +22,7 @@ npm run dev
 ```
 
 **→ [Read the overview](doc/manual/overview.md)** for what cocoa is, what a Job and a
-Bench are, and what using it looks like.
+Campaign are, and what using it looks like.
 
 ## The repository
 
@@ -43,8 +43,8 @@ For using cocoa and writing experiments for it.
 
 | | |
 |---|---|
-| [overview.md](doc/manual/overview.md) | **Start here.** What cocoa is, what a Job and a Bench are, and what using it looks like. |
-| [authoring.md](doc/manual/authoring.md) | Writing a job or a bench: the folder, the manifest, the six scripts. |
+| [overview.md](doc/manual/overview.md) | **Start here.** What cocoa is, what a Job and a Campaign are, and what using it looks like. |
+| [authoring.md](doc/manual/authoring.md) | Writing a job or a campaign: the folder, the manifest, the six scripts. |
 
 ### Development specification — [`doc/spec/`](doc/spec/)
 

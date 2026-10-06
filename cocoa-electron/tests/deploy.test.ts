@@ -8,7 +8,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { RunRecord } from '../src/main/engine/record'
 import {
-  bench_folder,
+  campaign_folder,
   cleanup_temp_dirs,
   engine,
   exists,
@@ -215,21 +215,21 @@ describe('one job is checked and deployed by one start at a time', () => {
   })
 })
 
-describe('a bench start', () => {
+describe('a campaign start', () => {
   it('checks each job once and deploys a stale one once for all its members', async () => {
     const dir = temp_dir()
     const solver = job_folder(dir, 'solver')
     const other = job_folder(dir, 'other')
-    const bench = bench_folder(dir, 'sweep', ['solver', 'other', 'solver'])
+    const campaign = campaign_folder(dir, 'sweep', ['solver', 'other', 'solver'])
     const cocoa = engine(dir)
-    for (const folder of [solver, other, bench]) {
+    for (const folder of [solver, other, campaign]) {
       cocoa.register(folder)
     }
     write(solver, 'check-state', 'STALE')
     write(solver, 'deploy-hold', '')
     write_script(other, 'check.sh', 'echo ran >> check-ran\necho "COCOA_RETURN: CURRENT"\n')
 
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     expect(start.launch_failures).toEqual([])
     // Plan order is kept, whichever job was dispatched first.
     expect(start.members.map((member) => member.job)).toEqual(['solver', 'other', 'solver'])
@@ -245,47 +245,47 @@ describe('a bench start', () => {
     for (const member of [a, c]) {
       const record = cocoa.job(solver).runs.record(member.run_id)
       expect(record.submission_id).toBe(`sub-${member.run_id}`)
-      expect(record.origin).toMatchObject({ by: 'bench', run_id: start.run_id })
+      expect(record.origin).toMatchObject({ by: 'campaign', run_id: start.run_id })
     }
   })
 
   it('reads STARTING while its members wait on a deploy', async () => {
     const dir = temp_dir()
     const solver = job_folder(dir, 'solver')
-    const bench = bench_folder(dir, 'sweep', ['solver', 'solver'])
+    const campaign = campaign_folder(dir, 'sweep', ['solver', 'solver'])
     const cocoa = engine(dir)
     cocoa.register(solver)
-    cocoa.register(bench)
+    cocoa.register(campaign)
     write(solver, 'check-state', 'STALE')
     write(solver, 'deploy-hold', '')
 
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
-    expect(cocoa.bench_status(bench, start.run_id).status).toBe('STARTING')
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
+    expect(cocoa.campaign_status(campaign, start.run_id).status).toBe('STARTING')
 
     // A cancel cannot pass over members that will launch later in silence.
-    const cancels = await cocoa.cancel_bench(bench, start.run_id)
+    const cancels = await cocoa.cancel_campaign(campaign, start.run_id)
     expect(cancels.map((cancel) => cancel.ok)).toEqual([false, false])
 
     fs.rmSync(path.join(solver, 'deploy-hold'))
     await settle(cocoa)
   })
 
-  it('refuses the whole bench when any job’s check refuses, naming every one', async () => {
+  it('refuses the whole campaign when any job’s check refuses, naming every one', async () => {
     const dir = temp_dir()
     const solver = job_folder(dir, 'solver')
     const other = job_folder(dir, 'other')
     const third = job_folder(dir, 'third')
-    const bench = bench_folder(dir, 'sweep', ['solver', 'other', 'third'])
+    const campaign = campaign_folder(dir, 'sweep', ['solver', 'other', 'third'])
     const cocoa = engine(dir)
-    for (const folder of [solver, other, third, bench]) {
+    for (const folder of [solver, other, third, campaign]) {
       cocoa.register(folder)
     }
     write(solver, 'check-state', 'CONFLICT run 4 is reading the binary')
     write(other, 'check-state', 'STALE')
     write_script(third, 'check.sh', 'exit 2\n')
 
-    const message = await failure(cocoa.start_bench(bench, { mesh: 'fine' }, 'human'))
-    expect(message).toContain('the bench cannot start, nothing was dispatched')
+    const message = await failure(cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human'))
+    expect(message).toContain('the campaign cannot start, nothing was dispatched')
     expect(message).toContain('job `solver`: `solver` cannot start now')
     expect(message).toContain('run 4 is reading the binary')
     expect(message).toContain('job `third`: `./check.sh` exited 2')
@@ -294,7 +294,7 @@ describe('a bench start', () => {
     for (const folder of [solver, other, third]) {
       expect(cocoa.job(folder).runs.all()).toEqual([])
     }
-    expect(cocoa.bench(bench).runs.all()).toEqual([])
+    expect(cocoa.campaign(campaign).runs.all()).toEqual([])
     expect(deploys(other)).toBe(0)
 
     // The refusal let every gate go: each job starts again at once.

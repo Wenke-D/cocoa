@@ -11,11 +11,11 @@ A delivery must include:
 6. macOS run verification.
 7. Linux build verification or a documented limitation.
 8. Screenshots of:
-    - Job overview, including a Bench-sourced history row.
+    - Job overview, including a Campaign-sourced history row.
     - Start page.
     - Job run detail.
-    - Bench run detail with the dispatch table.
-    - A parameter-sweep Bench run.
+    - Campaign run detail with the dispatch table.
+    - A parameter-sweep Campaign run.
     - Child-run detail.
     - Report viewer, plain text and HTML.
     - Query-unavailable state.

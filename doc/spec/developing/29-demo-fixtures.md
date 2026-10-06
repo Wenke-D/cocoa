@@ -4,7 +4,7 @@ Initial demo data should include at least:
 
 ## Jobs
 
-Every Job referenced by any Bench plan must exist here.
+Every Job referenced by any Campaign plan must exist here.
 
 ```text
 Prepare Data
@@ -17,13 +17,13 @@ Generate Report
 Invalid Job Manifest
 ```
 
-## Benches
+## Campaigns
 
 ```text
 Nightly Benchmark
 Parameter Sweep
 Smoke Test
-Broken Plan Bench
+Broken Plan Campaign
 ```
 
 ## Nightly Benchmark Plan
@@ -55,7 +55,7 @@ call 4  Solver GPU  --mesh=512
 call 5  Solver GPU  --mesh=1024
 ```
 
-## Broken Plan Bench
+## Broken Plan Campaign
 
 Its plan references `Invalid Job Manifest`, so Start always fails validation and
 dispatches nothing. This fixture exists to exercise §2.3.2 and §15.4.
@@ -84,7 +84,7 @@ Provide, as plain text:
 
 1. A short successful Job report.
 2. A failed Job report.
-3. A Bench summary report.
+3. A Campaign summary report.
 4. A long report with at least several hundred lines.
 5. A report containing very long unwrapped lines.
 6. A report with repeated searchable terms.
@@ -95,7 +95,7 @@ application's control:
 
 7. A dark report carrying an inline SVG chart.
 8. A light, document-styled failure report.
-9. A table-heavy Bench summary.
+9. A table-heavy Campaign summary.
 
 Both formats must appear in the demo Explorer so the viewer's two paths are both
 exercised without touching the developer controls.

@@ -43,7 +43,7 @@ fn socket_path() -> PathBuf {
 /// beside the code that enforces it; baking a copy into this binary would
 /// hand agents whichever revision they happened to have installed.
 const HELP_AI: &str = "\
-cocoa runs experiment folders: jobs (one start = one submission) and benches \
+cocoa runs experiment folders: jobs (one start = one submission) and campaigns \
 (a plan fans out over registered jobs). The convention for authoring such a \
 folder — manifest, parameters, scripts, template, reports — is documented at:
 
@@ -141,8 +141,8 @@ fn tools() -> Value {
             "inputSchema": no_arguments,
         },
         {
-            "name": "cocoa_list_benches",
-            "description": "Every Bench (a fan-out launcher over existing Jobs), same shape.",
+            "name": "cocoa_list_campaigns",
+            "description": "Every Campaign (a fan-out launcher over existing Jobs), same shape.",
             "inputSchema": no_arguments,
         },
         {
@@ -151,13 +151,13 @@ fn tools() -> Value {
             "inputSchema": by_name,
         },
         {
-            "name": "cocoa_bench",
-            "description": "One Bench and its runs, each with the calls it dispatched and its file locations.",
+            "name": "cocoa_campaign",
+            "description": "One Campaign and its runs, each with the calls it dispatched and its file locations.",
             "inputSchema": by_name,
         },
         {
             "name": "cocoa_start",
-            "description": "Start a Job or Bench by name. Every declared parameter must be supplied, shaped as declared (cocoa_job lists them with type, values and description). Every start runs the Job's check first: the run appears STARTING at once, or DEPLOYING while a stale Job is deployed first; a check that answers CONFLICT refuses the start with its reason and records nothing. Returns the run id; the run advances as its scripts answer.",
+            "description": "Start a Job or Campaign by name. Every declared parameter must be supplied, shaped as declared (cocoa_job lists them with type, values and description). Every start runs the Job's check first: the run appears STARTING at once, or DEPLOYING while a stale Job is deployed first; a check that answers CONFLICT refuses the start with its reason and records nothing. Returns the run id; the run advances as its scripts answer.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -178,7 +178,7 @@ fn tools() -> Value {
         },
         {
             "name": "cocoa_register",
-            "description": "Register an experiment folder, as the Explorer's + does: its cocoa.toml decides whether it is a Job or a Bench. Returns its name, kind and the tool to follow it with; a folder already registered is a no-op that says so. Refused, with the reason, for a path that is not absolute or not a folder, a manifest that does not load, or a name already taken.",
+            "description": "Register an experiment folder, as the Explorer's + does: its cocoa.toml decides whether it is a Job or a Campaign. Returns its name, kind and the tool to follow it with; a folder already registered is a no-op that says so. Refused, with the reason, for a path that is not absolute or not a folder, a manifest that does not load, or a name already taken.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -194,11 +194,11 @@ fn call_tool(name: &str, arguments: &Value) -> Result<Value, (i64, String)> {
     let outcome = match name {
         "cocoa_help" => http("GET", "/help", None),
         "cocoa_list_jobs" => http("GET", "/jobs", None),
-        "cocoa_list_benches" => http("GET", "/benches", None),
+        "cocoa_list_campaigns" => http("GET", "/campaigns", None),
         "cocoa_job" => http("GET", &format!("/jobs/{}", encoded_name(arguments)?), None),
-        "cocoa_bench" => http(
+        "cocoa_campaign" => http(
             "GET",
-            &format!("/benches/{}", encoded_name(arguments)?),
+            &format!("/campaigns/{}", encoded_name(arguments)?),
             None,
         ),
         "cocoa_start" => {

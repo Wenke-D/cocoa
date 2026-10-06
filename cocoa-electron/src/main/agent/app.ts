@@ -7,7 +7,7 @@ import express from 'express'
 import type { AgentDeps, AgentResponse } from './answer'
 import { failure } from './answer'
 import { help } from './help'
-import { bench_detail, job_detail, list_entities } from './reads'
+import { campaign_detail, job_detail, list_entities } from './reads'
 import { register_folder } from './register'
 import { rerun_report } from './report'
 import { start_run } from './start'
@@ -47,14 +47,14 @@ export function agent_app(deps: AgentDeps): express.Express {
   app.get('/jobs', (_request, response) =>
     reply(response, list_entities(deps.current_world(), 'Job'))
   )
-  app.get('/benches', (_request, response) =>
-    reply(response, list_entities(deps.current_world(), 'Bench'))
+  app.get('/campaigns', (_request, response) =>
+    reply(response, list_entities(deps.current_world(), 'Campaign'))
   )
   app.get('/jobs/:name', (request, response) =>
     reply(response, job_detail(deps.current_world(), request.params.name))
   )
-  app.get('/benches/:name', (request, response) =>
-    reply(response, bench_detail(deps.current_world(), request.params.name))
+  app.get('/campaigns/:name', (request, response) =>
+    reply(response, campaign_detail(deps.current_world(), request.params.name))
   )
   app.post('/experiments', (request, response) =>
     reply(response, register_folder(text_of(request.body), deps))
@@ -70,9 +70,9 @@ export function agent_app(deps: AgentDeps): express.Express {
   const surface = [
     '/help',
     '/jobs',
-    '/benches',
+    '/campaigns',
     '/jobs/:name',
-    '/benches/:name',
+    '/campaigns/:name',
     '/experiments',
     '/experiments/:name/runs',
     '/experiments/:name/runs/:run_id/report'

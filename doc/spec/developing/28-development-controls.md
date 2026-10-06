@@ -18,7 +18,7 @@ COCOA_SOCKET_PATH     a scratch socket   — must not take the socket a real coc
 
 The library is seeded as a private copy of `examples/`, never the user's own.
 
-Scenarios cover: add-folder, remove-folder, cancel, cancel-bench, bench-child,
+Scenarios cover: add-folder, remove-folder, cancel, cancel-campaign, campaign-child,
 report, notice, persistence, agent.
 
 Everything else is a test (§37). Do not add developer affordances to the

@@ -23,8 +23,8 @@
 14. Do not display full run details only in a sidebar.
 15. Do not conflate query failure with experiment failure, or cocoa's `Error`
     with the experiment's `Failed` (§10.2).
-16. Do not model a Bench as owning, defining, or sequencing Jobs.
-17. Do not duplicate a run record to serve both the Job and Bench views.
+16. Do not model a Campaign as owning, defining, or sequencing Jobs.
+17. Do not duplicate a run record to serve both the Job and Campaign views.
 18. Do not reintroduce a concurrency policy or block Start on active runs.
 19. Do not make the Query operation a prominent manual action.
 20. Do not remove active runs from the UI when navigating elsewhere.

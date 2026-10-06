@@ -112,7 +112,7 @@ status, never on it. `FAILED` is the cluster's verdict, and nothing the report
 script does can change it: a report that lands does not make the run
 `SUCCEEDED`, and one that fails does not make it `ERROR`.
 
-The report's state therefore lives in the record, in the bench report's shape
+The report's state therefore lives in the record, in the campaign report's shape
 (§8.2):
 
 ```json
@@ -143,8 +143,8 @@ A run is not deleted while its report is owed (§12.1): the script would write
 id to find.
 
 `CANCELLED` still has no report: the run stopped because someone asked, not
-because it broke. And a bench is unchanged: its member's own report runs, but
-a bench with a `FAILED` member still settles `FAILED` with no bench report
+because it broke. And a campaign is unchanged: its member's own report runs, but
+a campaign with a `FAILED` member still settles `FAILED` with no campaign report
 (§8.3, §9.1).
 
 ### 7.3.2 Re-running a report by hand
@@ -174,11 +174,11 @@ completed); a run whose report is already due or running — two scripts never
 write one run's report at once; and a folder whose manifest does not load.
 
 Who asked is not recorded. The record has one `origin`, for who started the
-run (§8.2 for a bench's), and a status change carries only its status and
+run (§8.2 for a campaign's), and a status change carries only its status and
 moment; a re-run's `ANALYZING` is in the history like any other, and its
 asker is not a fact any reader of the record has needed.
 
-A bench's own report is not re-run by hand. It dates the bench's end (§8.2),
+A campaign's own report is not re-run by hand. It dates the campaign's end (§8.2),
 which a re-run would move; its members' reports can each be re-run, under
 their own jobs.
 
@@ -240,11 +240,11 @@ deploying, waits for it and then checks afresh — so it sees what the first
 deployed, and two deploys never write over each other. The wait lasts until
 the first start's runs are launched.
 
-A bench start checks each job its plan calls **once**, before dispatching
+A campaign start checks each job its plan calls **once**, before dispatching
 anything (§8.2). Validation is all-or-nothing, as for the plan itself: a
 `CONFLICT` or a broken check on any job refuses the whole start, naming every
 job at fault, and nothing is dispatched. A stale job is deployed once, and all
-the bench's members of that job wait on that one deploy.
+the campaign's members of that job wait on that one deploy.
 
 A run records what its check said:
 
@@ -281,7 +281,7 @@ tick collects the script's outcome:
   retries it, and the next start checks afresh.
 
 A `DEPLOYING` run has no submission, so there is nothing to poll and nothing
-to cancel yet: a cancel is refused until it has launched, and a bench cancel
+to cancel yet: a cancel is refused until it has launched, and a campaign cancel
 names such members as not cancelled rather than passing over them. It cannot be
 deleted while it is waiting (§12.1).
 

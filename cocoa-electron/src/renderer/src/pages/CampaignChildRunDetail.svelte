@@ -1,15 +1,15 @@
 <!--
-  A run dispatched by a bench, seen in the bench's context (§19).
+  A run dispatched by a campaign, seen in the campaign's context (§19).
 
   This page and `JobRunDetail` render the same run record — one record, two
   addresses (§2.3.1). The facts come from the same component precisely so they
   cannot drift apart. What this page adds is the context: the trail back to the
-  bench run, the call index within the plan, and a link to the job's own
+  campaign run, the call index within the plan, and a link to the job's own
   overview — which is the *only* way from here to move the Explorer's selection
   to that job.
 -->
 <script lang="ts">
-  import { bench_run, is_cancellable, job_run } from '@shared/world'
+  import { campaign_run, is_cancellable, job_run } from '@shared/world'
   import type { Crumb } from '../ui_state'
   import { app, dispatched_owner, entity_of, navigate, request_cancel } from '../state.svelte'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
@@ -18,15 +18,15 @@
   import { Button } from '$lib/components/ui/button'
 
   let {
-    bench_id,
-    bench_run_id,
+    campaign_id,
+    campaign_run_id,
     run_id
-  }: { bench_id: string; bench_run_id: string; run_id: string } = $props()
+  }: { campaign_id: string; campaign_run_id: string; run_id: string } = $props()
 
-  /** The bench *entity*, for its name; and the bench *run* this was one call of. */
-  const bench = $derived(entity_of(bench_id))
-  const parent_run = $derived(bench_run(app.world, bench_id, bench_run_id))
-  const job_id = $derived(dispatched_owner(bench_id, bench_run_id, run_id))
+  /** The campaign *entity*, for its name; and the campaign *run* this was one call of. */
+  const campaign = $derived(entity_of(campaign_id))
+  const parent_run = $derived(campaign_run(app.world, campaign_id, campaign_run_id))
+  const job_id = $derived(dispatched_owner(campaign_id, campaign_run_id, run_id))
   const run = $derived(job_id === undefined ? undefined : job_run(app.world, job_id, run_id))
   const step = $derived(parent_run?.plan.steps.find((candidate) => candidate.run_id === run_id))
   const job = $derived(step === undefined ? undefined : entity_of(step.job_id))
@@ -47,10 +47,10 @@
   })
 
   const crumbs = $derived<Crumb[]>([
-    { label: bench?.name ?? '(removed)', route: { page: 'entity', entity_id: bench_id } },
+    { label: campaign?.name ?? '(removed)', route: { page: 'entity', entity_id: campaign_id } },
     {
-      label: bench_run_id,
-      route: { page: 'bench_run', bench_id, run_id: bench_run_id },
+      label: campaign_run_id,
+      route: { page: 'campaign_run', campaign_id, run_id: campaign_run_id },
       mono: true
     },
     { label: leaf, route: null }
@@ -64,7 +64,7 @@
     <h1 class="mono">{run.id}</h1>
     <StatusPill status={run.status} health={run.query_health} />
     <!--
-      Cancelling here stops this one run. It is not the bench's cancel, and it
+      Cancelling here stops this one run. It is not the campaign's cancel, and it
       does not touch the siblings (§19, §2.3.3) — which is why the target is
       the job run, exactly as it is on the job's own page.
     -->
@@ -79,12 +79,12 @@
     {/if}
   </header>
 
-  <RunFacts {run} report_context={{ kind: 'bench_child', bench_id, bench_run_id }}>
+  <RunFacts {run} report_context={{ kind: 'campaign_child', campaign_id, campaign_run_id }}>
     {#snippet leading()}
       <dt>Job</dt>
       <dd>
         {#if step !== undefined}
-          <!-- Explicit navigation: arriving through the bench must not move the
+          <!-- Explicit navigation: arriving through the campaign must not move the
                Explorer selection, but asking for the job by name may (§19). -->
           <button
             class="job-link"

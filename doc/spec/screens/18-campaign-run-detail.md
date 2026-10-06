@@ -1,4 +1,4 @@
-# 18. Bench Run-Detail Page
+# 18. Campaign Run-Detail Page
 
 This page must use the full main-content width.
 
@@ -7,11 +7,11 @@ This page must use the full main-content width.
 Show:
 
 - Breadcrumbs.
-- Bench name.
+- Campaign name.
 - Run time.
 - Aggregate status.
-- Cancel Bench button when any child is still active.
-- Open Bench Report button when available.
+- Cancel Campaign button when any child is still active.
+- Open Campaign Report button when available.
 
 Do not show a current Job. Nothing is sequenced, so no call is "current".
 
@@ -78,15 +78,15 @@ together. This is expected — do not treat staggered start times as a goal.
 
 Sort by `Call` index by default. Sorting by status or duration is P1.
 
-Clicking a row opens Bench Child-Run Detail.
+Clicking a row opens Campaign Child-Run Detail.
 
 Clicking a Report button opens that run's Report Viewer.
 
 Running rows may be emphasized, but no row is "the active step".
 
-## 18.4 Bench Parameters
+## 18.4 Campaign Parameters
 
-Show the complete Bench input parameter string above the dispatch table, in a
+Show the complete Campaign input parameter string above the dispatch table, in a
 monospace selectable block.
 
 This is the string the user typed. Each dispatched run has its own derived

@@ -39,33 +39,33 @@
 6. Restore query health.
 7. Confirm normal status returns.
 
-## Scenario D: Bench Fan-Out
+## Scenario D: Campaign Fan-Out
 
 1. Select `Nightly Benchmark`.
-2. Start the Bench.
-3. Confirm navigation to Bench Run Detail.
+2. Start the Campaign.
+3. Confirm navigation to Campaign Run Detail.
 4. Confirm all 6 calls are listed and all are active at once.
 5. Confirm no call is shown as Pending.
 6. Advance the mock state and confirm children finish out of order.
 7. Click a completed child run.
 8. Confirm a full child-run detail page opens.
-9. Confirm the sidebar still highlights the Bench.
+9. Confirm the sidebar still highlights the Campaign.
 10. Return through breadcrumbs.
 11. Open the referenced Job from the child-run page.
-12. Confirm the same run appears in that Job's ALL RUNS table with the Bench as
+12. Confirm the same run appears in that Job's ALL RUNS table with the Campaign as
     its Source.
 13. Open it from there and confirm the Explorer selection moves to the Job.
 14. Open a child report.
 
-## Scenario E: Bench Partial Failure
+## Scenario E: Campaign Partial Failure
 
-1. Start a Bench.
+1. Start a Campaign.
 2. Fail exactly one child run.
 3. Confirm that child is Failed.
 4. Confirm every sibling keeps running.
-5. Confirm the Bench is still Running, with the failure visible in the counts.
+5. Confirm the Campaign is still Running, with the failure visible in the counts.
 6. Complete the remaining children.
-7. Confirm the Bench becomes Failed only after the last child is terminal.
+7. Confirm the Campaign becomes Failed only after the last child is terminal.
 8. Confirm any generated failure report can be opened.
 
 ## Scenario H: Parameter Sweep
@@ -79,11 +79,11 @@
 
 ## Scenario I: Invalid Plan
 
-1. Select `Broken Plan Bench`.
+1. Select `Broken Plan Campaign`.
 2. Start it.
 3. Confirm Start fails with an inline error naming the offending call and Job.
 4. Confirm the modal stays open and preserves the typed parameters.
-5. Confirm no Bench run and no Job run were created anywhere in the Explorer.
+5. Confirm no Campaign run and no Job run were created anywhere in the Explorer.
 
 ## Scenario F: Add Folder
 
@@ -91,7 +91,7 @@
 2. Click Add Folder and confirm the operating system's folder picker opens.
 3. Cancel it, and confirm the Explorer is unchanged.
 4. Click Add Folder again and pick the bundled `examples/` directory.
-5. Confirm its three Jobs appear in the Jobs group and its Bench in the Benches group.
+5. Confirm its three Jobs appear in the Jobs group and its Campaign in the Campaigns group.
 6. Confirm the status bar reports how many folders were added.
 7. Pick the same directory again, and confirm nothing is duplicated and the status bar says they are already in the Explorer.
 8. Pick a directory with no manifest anywhere below it.

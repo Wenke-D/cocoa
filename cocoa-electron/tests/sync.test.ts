@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { empty_world } from '@shared/world'
-import type { BenchRun, Entity, JobRun, RunsByEntity, World } from '@shared/world'
+import type { CampaignRun, Entity, JobRun, RunsByEntity, World } from '@shared/world'
 import { diff_worlds } from '../src/main/bridge/sync'
 
 function entity(id: string, extra: Partial<Entity> = {}): Entity {
@@ -43,10 +43,10 @@ function job_run(id: string, extra: Partial<JobRun> = {}): JobRun {
   }
 }
 
-function bench_run(id: string, extra: Partial<BenchRun> = {}): BenchRun {
+function campaign_run(id: string, extra: Partial<CampaignRun> = {}): CampaignRun {
   return {
     id,
-    bench_id: 'nightly',
+    campaign_id: 'nightly',
     by: 'Human',
     started_at: '2026-08-19T10:00:00.000+02:00',
     ended_at: null,
@@ -75,10 +75,10 @@ function job_runs(...runs: JobRun[]): RunsByEntity<JobRun> {
   return out
 }
 
-function bench_runs(...runs: BenchRun[]): RunsByEntity<BenchRun> {
-  const out: RunsByEntity<BenchRun> = {}
+function campaign_runs(...runs: CampaignRun[]): RunsByEntity<CampaignRun> {
+  const out: RunsByEntity<CampaignRun> = {}
   for (const run of runs) {
-    ;(out[run.bench_id] ??= {})[run.id] = run
+    ;(out[run.campaign_id] ??= {})[run.id] = run
   }
   return out
 }
@@ -92,7 +92,7 @@ describe('diff_worlds', () => {
     const world = world_of({
       entities: [entity('solver')],
       job_runs: job_runs(job_run('0')),
-      bench_runs: bench_runs(bench_run('1'))
+      campaign_runs: campaign_runs(campaign_run('1'))
     })
     expect(diff_worlds(world, structuredClone(world))).toEqual([])
   })
@@ -102,12 +102,12 @@ describe('diff_worlds', () => {
   it('ignores a moved last_successful_query stamp on its own', () => {
     const before = world_of({
       job_runs: job_runs(job_run('0')),
-      bench_runs: bench_runs(bench_run('1'))
+      campaign_runs: campaign_runs(campaign_run('1'))
     })
     const after = world_of({
       job_runs: job_runs(job_run('0', { last_successful_query: '2026-08-19T10:00:06.000+02:00' })),
-      bench_runs: bench_runs(
-        bench_run('1', { last_successful_query: '2026-08-19T10:00:06.000+02:00' })
+      campaign_runs: campaign_runs(
+        campaign_run('1', { last_successful_query: '2026-08-19T10:00:06.000+02:00' })
       )
     })
     expect(diff_worlds(before, after)).toEqual([])
@@ -145,7 +145,7 @@ describe('diff_worlds', () => {
         { name: 'mesh', type: 'string', values: null, list: false, description: 'the mesh' }
       ]
     })
-    const added = entity('bench-1', { kind: 'Bench' })
+    const added = entity('campaign-1', { kind: 'Campaign' })
     const events = diff_worlds(before, world_of({ entities: [changed, added] }))
     expect(events).toEqual([
       { kind: 'entity-upserted', entity: changed },
@@ -162,31 +162,31 @@ describe('diff_worlds', () => {
     ])
   })
 
-  it('tracks bench runs and their plans', () => {
-    const before = world_of({ bench_runs: bench_runs(bench_run('1')) })
-    const replanned = bench_run('1', {
+  it('tracks campaign runs and their plans', () => {
+    const before = world_of({ campaign_runs: campaign_runs(campaign_run('1')) })
+    const replanned = campaign_run('1', {
       plan: { steps: [{ index: 0, job_id: 'solver', parameters: '--size 256', run_id: '2' }] }
     })
-    expect(diff_worlds(before, world_of({ bench_runs: bench_runs(replanned) }))).toEqual([
-      { kind: 'bench-run-upserted', run: replanned }
+    expect(diff_worlds(before, world_of({ campaign_runs: campaign_runs(replanned) }))).toEqual([
+      { kind: 'campaign-run-upserted', run: replanned }
     ])
     expect(diff_worlds(before, world_of({}))).toEqual([
-      { kind: 'bench-run-removed', bench_id: 'nightly', id: '1' }
+      { kind: 'campaign-run-removed', campaign_id: 'nightly', id: '1' }
     ])
   })
 
-  // A bench member succeeding moves the member and the bench together; both
+  // A campaign member succeeding moves the member and the campaign together; both
   // land in one batch, so the renderer never draws a torn world.
-  it('reports a member and its bench in one batch', () => {
+  it('reports a member and its campaign in one batch', () => {
     const before = world_of({
       job_runs: job_runs(job_run('2')),
-      bench_runs: bench_runs(bench_run('1'))
+      campaign_runs: campaign_runs(campaign_run('1'))
     })
     const after = world_of({
       job_runs: job_runs(job_run('2', { status: 'Succeeded' })),
-      bench_runs: bench_runs(bench_run('1', { status: 'Analyzing' }))
+      campaign_runs: campaign_runs(campaign_run('1', { status: 'Analyzing' }))
     })
     const events = diff_worlds(before, after)
-    expect(events.map((event) => event.kind)).toEqual(['job-run-upserted', 'bench-run-upserted'])
+    expect(events.map((event) => event.kind)).toEqual(['job-run-upserted', 'campaign-run-upserted'])
   })
 })

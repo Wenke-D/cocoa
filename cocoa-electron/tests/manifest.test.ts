@@ -106,13 +106,13 @@ describe('load_manifest', () => {
     expect(manifest.description).toBe('GPU solver sweep')
   })
 
-  it('loads a valid bench', () => {
+  it('loads a valid campaign', () => {
     const dir = temp_dir()
     write(
       dir,
       'cocoa.toml',
       `
-kind        = "bench"
+kind        = "campaign"
 name        = "nightly-benchmark"
 
 [plan]
@@ -128,8 +128,8 @@ command     = "./report.py"
 `
     )
     const manifest = load_manifest(dir)
-    expect(manifest.kind).toBe('bench')
-    if (manifest.kind !== 'bench') {
+    expect(manifest.kind).toBe('campaign')
+    if (manifest.kind !== 'campaign') {
       return
     }
     expect(manifest.name).toBe('nightly-benchmark')
@@ -315,7 +315,7 @@ description = "Backends to try"
     write(dir, 'cocoa.toml', 'kind = "pipeline"\nname = "x"\n')
     const message = refused(dir)
     expect(message).toContain('job')
-    expect(message).toContain('bench')
+    expect(message).toContain('campaign')
   })
 
   it('rejects a missing or empty name', () => {
@@ -348,13 +348,13 @@ params = []
     expect(refused(dir)).toContain('unknown field')
   })
 
-  it('rejects a bench carrying job tables', () => {
+  it('rejects a campaign carrying job tables', () => {
     const dir = temp_dir()
     write(
       dir,
       'cocoa.toml',
       `
-kind = "bench"
+kind = "campaign"
 name = "b"
 [plan]
 command = "./plan.sh"

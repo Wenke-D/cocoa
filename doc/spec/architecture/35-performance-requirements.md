@@ -3,7 +3,7 @@
 The application must remain responsive with:
 
 - 500 historical runs.
-- A Bench run that dispatched 50 concurrent child runs.
+- A Campaign run that dispatched 50 concurrent child runs.
 - Many simultaneously active runs across several Jobs.
 - A report containing thousands of lines.
 - A continuously updating duration field.

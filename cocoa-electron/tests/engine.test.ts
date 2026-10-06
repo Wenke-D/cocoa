@@ -16,7 +16,7 @@ import { build_world } from '../src/main/engine/world'
 import type { RunRecord } from '../src/main/engine/record'
 import { load_store } from '../src/main/engine/store'
 import {
-  bench_folder,
+  campaign_folder,
   cleanup_temp_dirs,
   engine,
   exists,
@@ -369,31 +369,31 @@ describe('deletion', () => {
     expect(is_file(job, 'runs', String(run_id), 'run.json')).toBe(true)
   })
 
-  it('deletes a settled bench run whole, members included, and only whole', async () => {
+  it('deletes a settled campaign run whole, members included, and only whole', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'member-job')
-    const bench = bench_folder(dir, 'sweep', [])
+    const campaign = campaign_folder(dir, 'sweep', [])
     const cocoa = engine(dir)
     cocoa.register(job)
-    cocoa.register(bench)
-    plan_lines(bench, [
+    cocoa.register(campaign)
+    plan_lines(campaign, [
       '{"job": "member-job", "params": {"size": "1", "gpu": "0"}}',
       '{"job": "member-job", "params": {"size": "2", "gpu": "0"}}'
     ])
 
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
     const member = start.members[0]
 
     // A dispatched run is never deleted from the job's side, whatever its
-    // status: the fan-out goes whole, from the bench.
+    // status: the fan-out goes whole, from the campaign.
     expect(
       await failure(Promise.resolve().then(() => cocoa.delete_run(job, member.run_id)))
-    ).toContain('delete that bench run instead')
+    ).toContain('delete that campaign run instead')
 
     // Still dispatching members: refused.
     expect(
-      await failure(Promise.resolve().then(() => cocoa.delete_bench_run(bench, start.run_id)))
+      await failure(Promise.resolve().then(() => cocoa.delete_campaign_run(campaign, start.run_id)))
     ).toContain('cancel it first')
 
     write(job, 'poll-state', 'FAILED broke')
@@ -401,12 +401,12 @@ describe('deletion', () => {
 
     // Settled, but a failed member's report is still owed (§7.3.1).
     expect(
-      await failure(Promise.resolve().then(() => cocoa.delete_bench_run(bench, start.run_id)))
+      await failure(Promise.resolve().then(() => cocoa.delete_campaign_run(campaign, start.run_id)))
     ).toContain('report is still running')
     await cocoa.refresh()
 
-    cocoa.delete_bench_run(bench, start.run_id)
-    expect(exists(bench, 'runs', String(start.run_id))).toBe(false)
+    cocoa.delete_campaign_run(campaign, start.run_id)
+    expect(exists(campaign, 'runs', String(start.run_id))).toBe(false)
     // The members went with it: no record, no files, in their own job.
     for (const gone of start.members) {
       expect(exists(job, 'runs', String(gone.run_id))).toBe(false)
@@ -446,7 +446,7 @@ describe('registration', () => {
 
     const reopened = engine(dir)
     expect(reopened.jobs().map((job) => job.path)).toEqual([folder])
-    expect(reopened.benches()).toEqual([])
+    expect(reopened.campaigns()).toEqual([])
     expect(reopened.job(folder).manifest).toBeNull()
     expect(reopened.job(folder).manifest_error?.message).toContain('kind')
   })
@@ -459,14 +459,14 @@ describe('registration', () => {
     const cocoa = engine(dir)
     cocoa.register(folder)
 
-    const bench_manifest = path.join(bench_folder(dir, 'now-a-bench', []), 'cocoa.toml')
-    fs.copyFileSync(bench_manifest, path.join(folder, 'cocoa.toml'))
+    const campaign_manifest = path.join(campaign_folder(dir, 'now-a-campaign', []), 'cocoa.toml')
+    fs.copyFileSync(campaign_manifest, path.join(folder, 'cocoa.toml'))
     cocoa.reconcile()
 
     expect(cocoa.jobs()).toEqual([])
-    expect(cocoa.benches().map((bench) => bench.path)).toEqual([folder])
-    expect(cocoa.bench(folder).manifest?.name).toBe('now-a-bench')
-    expect(load_store(path.join(dir, 'store.json'))).toEqual({ jobs: [], benches: [folder] })
+    expect(cocoa.campaigns().map((campaign) => campaign.path)).toEqual([folder])
+    expect(cocoa.campaign(folder).manifest?.name).toBe('now-a-campaign')
+    expect(load_store(path.join(dir, 'store.json'))).toEqual({ jobs: [], campaigns: [folder] })
   })
 
   // The other side of that rule: a manifest already broken when the folder is
@@ -515,7 +515,7 @@ describe('registration', () => {
   })
 })
 
-describe('benches', () => {
+describe('campaigns', () => {
   it('records members and launch failures across a fan-out', async () => {
     const dir = temp_dir()
     const good = job_folder(dir, 'good-job')
@@ -523,78 +523,80 @@ describe('benches', () => {
     // A dispatch failure is a member that never spawned (§8.2). A script that
     // spawns and then fails is a member in ERROR, covered elsewhere.
     fs.rmSync(path.join(bad, 'launch.sh'))
-    const bench = bench_folder(dir, 'sweep', ['good-job', 'bad-job'])
+    const campaign = campaign_folder(dir, 'sweep', ['good-job', 'bad-job'])
 
     const cocoa = engine(dir)
     cocoa.register(good)
     cocoa.register(bad)
-    cocoa.register(bench)
+    cocoa.register(campaign)
 
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
     expect(start.members).toHaveLength(1)
     expect(start.launch_failures).toHaveLength(1)
     expect(start.launch_failures[0].job).toBe('bad-job')
 
-    // A dispatched run records which bench run and which call dispatched it.
+    // A dispatched run records which campaign run and which call dispatched it.
     const member = cocoa.job(good).runs.record(start.members[0].run_id)
     expect(member.origin).toEqual({
-      by: 'bench',
+      by: 'campaign',
       run_id: start.run_id,
       name: 'sweep',
       call: 1
     })
 
-    // The bench never became what the plan asked for: ERROR, eventually.
+    // The campaign never became what the plan asked for: ERROR, eventually.
     write(good, 'poll-state', 'COMPLETED')
     await cocoa.poll_job(good)
     await cocoa.report_run(good, start.members[0].run_id, 'auto')
-    const status = cocoa.bench_status(bench, start.run_id)
+    const status = cocoa.campaign_status(campaign, start.run_id)
     expect(status.status).toBe('ERROR')
     expect(status.succeeded).toBe(1)
   })
 
-  it('refuses a bench report unless every member succeeded', async () => {
+  it('refuses a campaign report unless every member succeeded', async () => {
     const dir = temp_dir()
     const good = job_folder(dir, 'ok-job')
-    const bench = bench_folder(dir, 'nightly', ['ok-job'])
+    const campaign = campaign_folder(dir, 'nightly', ['ok-job'])
     const cocoa = engine(dir)
     cocoa.register(good)
-    cocoa.register(bench)
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    cocoa.register(campaign)
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
 
     write(good, 'poll-state', 'FAILED no convergence')
     await cocoa.poll_job(good)
-    const status = cocoa.bench_status(bench, start.run_id)
+    const status = cocoa.campaign_status(campaign, start.run_id)
     expect(status.status).toBe('FAILED')
     expect(status.failed).toBe(1)
 
-    expect(await failure(cocoa.bench_report(bench, start.run_id))).toContain('no bench report')
-    expect(exists(bench, 'report', `${start.run_id}.txt`)).toBe(false)
+    expect(await failure(cocoa.campaign_report(campaign, start.run_id))).toContain(
+      'no campaign report'
+    )
+    expect(exists(campaign, 'report', `${start.run_id}.txt`)).toBe(false)
   })
 
   it('reports when every member succeeded', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'sweep-job')
-    const bench = bench_folder(dir, 'nightly', ['sweep-job'])
+    const campaign = campaign_folder(dir, 'nightly', ['sweep-job'])
     const cocoa = engine(dir)
     cocoa.register(job)
-    cocoa.register(bench)
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    cocoa.register(campaign)
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
 
-    expect(cocoa.bench_status(bench, start.run_id).status).toBe('STARTING')
+    expect(cocoa.campaign_status(campaign, start.run_id).status).toBe('STARTING')
 
     write(job, 'poll-state', 'COMPLETED')
     await cocoa.poll_job(job)
     await cocoa.report_run(job, start.members[0].run_id, 'auto')
-    expect(cocoa.bench_status(bench, start.run_id).status).toBe('ANALYZING')
+    expect(cocoa.campaign_status(campaign, start.run_id).status).toBe('ANALYZING')
 
-    await cocoa.bench_report(bench, start.run_id)
-    expect(cocoa.bench_status(bench, start.run_id).status).toBe('SUCCEEDED')
-    expect(is_file(bench, 'runs', String(start.run_id), 'members.json')).toBe(true)
-    expect(is_file(bench, 'report', `${start.run_id}.txt`)).toBe(true)
+    await cocoa.campaign_report(campaign, start.run_id)
+    expect(cocoa.campaign_status(campaign, start.run_id).status).toBe('SUCCEEDED')
+    expect(is_file(campaign, 'runs', String(start.run_id), 'members.json')).toBe(true)
+    expect(is_file(campaign, 'report', `${start.run_id}.txt`)).toBe(true)
   })
 
   // A plan is generated, so its mistakes arrive in batches. Every call is
@@ -603,8 +605,8 @@ describe('benches', () => {
   it('names every bad plan call at once', async () => {
     const dir = temp_dir()
     const good = job_folder(dir, 'good-job')
-    const bench = bench_folder(dir, 'sweep', ['good-job'])
-    plan_lines(bench, [
+    const campaign = campaign_folder(dir, 'sweep', ['good-job'])
+    plan_lines(campaign, [
       '{"job": "ghost", "params": {}}',
       '{"job": "good-job", "params": {"size": "1", "gpu": "0"}}',
       '{"job": "phantom", "params": {}}',
@@ -612,9 +614,9 @@ describe('benches', () => {
     ])
     const cocoa = engine(dir)
     cocoa.register(good)
-    cocoa.register(bench)
+    cocoa.register(campaign)
 
-    const message = await failure(cocoa.start_bench(bench, { mesh: 'fine' }, 'human'))
+    const message = await failure(cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human'))
 
     // Three of the four calls are bad, and all three are named — including
     // the last, which an abort-on-first check would never have reached.
@@ -623,19 +625,19 @@ describe('benches', () => {
     expect(message).toContain('call 3')
     expect(message).toContain('call 4')
     expect(message).not.toContain('call 2')
-    expect(cocoa.bench(bench).runs.all()).toEqual([])
+    expect(cocoa.campaign(campaign).runs.all()).toEqual([])
   })
 
   it('dispatches nothing when the plan is invalid', async () => {
     const dir = temp_dir()
-    const bench = bench_folder(dir, 'broken-plan', [])
-    plan_lines(bench, ['{"job": "ghost", "params": {}}'])
+    const campaign = campaign_folder(dir, 'broken-plan', [])
+    plan_lines(campaign, ['{"job": "ghost", "params": {}}'])
     const cocoa = engine(dir)
-    cocoa.register(bench)
+    cocoa.register(campaign)
 
-    const message = await failure(cocoa.start_bench(bench, { mesh: 'fine' }, 'human'))
+    const message = await failure(cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human'))
     expect(message).toContain('not a registered job')
-    expect(cocoa.bench(bench).runs.all()).toEqual([])
+    expect(cocoa.campaign(campaign).runs.all()).toEqual([])
   })
 })
 
@@ -883,16 +885,16 @@ describe('failed runs', () => {
     expect(exists(job, 'report', `${run_id}.txt`)).toBe(false)
   })
 
-  // Only the member's own report is new: the bench still settles FAILED,
-  // with no bench report (§8.3, §9.1).
-  it("reports a bench's failed member, and the bench still settles without one", async () => {
+  // Only the member's own report is new: the campaign still settles FAILED,
+  // with no campaign report (§8.3, §9.1).
+  it("reports a campaign's failed member, and the campaign still settles without one", async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'member-job')
-    const bench = bench_folder(dir, 'nightly', ['member-job'])
+    const campaign = campaign_folder(dir, 'nightly', ['member-job'])
     const cocoa = engine(dir)
     cocoa.register(job)
-    cocoa.register(bench)
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    cocoa.register(campaign)
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
     const member = start.members[0].run_id
 
@@ -905,10 +907,12 @@ describe('failed runs', () => {
     expect(member_record.report?.attempted).toBe(true)
     expect(is_file(job, 'report', `${member}.txt`)).toBe(true)
 
-    expect(cocoa.bench_status(bench, start.run_id).status).toBe('FAILED')
-    expect(cocoa.bench(bench).runs.record(start.run_id).report).toBeUndefined()
-    expect(exists(bench, 'report', `${start.run_id}.txt`)).toBe(false)
-    expect(await failure(cocoa.bench_report(bench, start.run_id))).toContain('no bench report')
+    expect(cocoa.campaign_status(campaign, start.run_id).status).toBe('FAILED')
+    expect(cocoa.campaign(campaign).runs.record(start.run_id).report).toBeUndefined()
+    expect(exists(campaign, 'report', `${start.run_id}.txt`)).toBe(false)
+    expect(await failure(cocoa.campaign_report(campaign, start.run_id))).toContain(
+      'no campaign report'
+    )
   })
 })
 

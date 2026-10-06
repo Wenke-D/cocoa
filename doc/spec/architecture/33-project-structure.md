@@ -29,7 +29,7 @@ cocoa-electron/
 │   │   │   ├── index.ts           #     the engine proper: Engine, and the refresh tick
 │   │   │   ├── memory.ts          #     the in-memory truth, written through to folders
 │   │   │   ├── job.ts             #     start / poll / report / cancel (§7)
-│   │   │   ├── bench.ts           #     plan / start / report / cancel / status (§8, §9)
+│   │   │   ├── campaign.ts           #     plan / start / report / cancel / status (§8, §9)
 │   │   │   ├── in_flight.ts       #     launch scripts not yet answered (§7.1)
 │   │   │   ├── manifest.ts        #     cocoa.toml, fully validated
 │   │   │   ├── params.ts          #     what a start must supply, checked the same on every way in
@@ -84,8 +84,8 @@ cocoa-electron/
 │           │                      #   Input, Label, Spinner, Select, Checkbox,
 │           │                      #   Textarea — copied-in, owned source
 │           └── pages/             #   Empty, EntityOverview, StartRun,
-│                                  #   JobRunDetail, BenchRunDetail,
-│                                  #   BenchChildRunDetail, ReportViewer
+│                                  #   JobRunDetail, CampaignRunDetail,
+│                                  #   CampaignChildRunDetail, ReportViewer
 │
 ├── scripts/drive.mjs + scenarios/ # drive the built app (§28)
 └── tests/                         # vitest (§37)
@@ -97,7 +97,7 @@ Beside it in the repository:
 ```text
 cocoa-mcp/         the MCP server (§43.5) — one binary, serde_json, nothing else
 examples/         the demonstration library: real experiments, no cluster needed
-doc/manual/       the user manual: the overview, and writing a job or a bench
+doc/manual/       the user manual: the overview, and writing a job or a campaign
 doc/spec/         the development specification: one file per section, a folder per area
 ```
 
@@ -111,5 +111,5 @@ Two boundaries are structural rather than stylistic, and must hold:
    world or in an operation's answer.
 
 `RunFacts.svelte` exists because a dispatched run has two addresses (§2.3.1,
-§19): the job-run page and the bench-child page show the same record, so the
+§19): the job-run page and the campaign-child page show the same record, so the
 facts come from one component and cannot drift.

@@ -24,12 +24,12 @@ Three rules hold everywhere:
 |---|---|
 | §1 | [Folder layout](01-folder-layout.md) |
 | §2 | [`cocoa.toml` — a job](02-job-manifest.md) |
-| §3 | [`cocoa.toml` — a bench](03-bench-manifest.md) |
+| §3 | [`cocoa.toml` — a campaign](03-campaign-manifest.md) |
 | §4 | [Manifest validation](04-manifest-validation.md) |
 | §5 | [The private store](05-private-store.md) |
 | §6 | [Invocation rules](06-invocation-rules.md) |
 | §7 | [Job scripts](07-job-scripts.md) |
-| §8 | [Bench scripts](08-bench-scripts.md) |
+| §8 | [Campaign scripts](08-campaign-scripts.md) |
 | §9 | [Status](09-status.md) |
 | §10 | [When cocoa cannot see a run](10-unreachable-runs.md) |
 | §11 | [Reports](11-reports.md) |

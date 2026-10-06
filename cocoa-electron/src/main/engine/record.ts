@@ -1,4 +1,4 @@
-// Run and bench records (convention §7, §8, §12). Field names and enum
+// Run and campaign records (convention §7, §8, §12). Field names and enum
 // spellings are the convention's, so a run.json written by an earlier cocoa
 // still reads.
 
@@ -15,7 +15,7 @@ export type Trigger = 'human' | 'agent'
 
 /** serde: `#[serde(tag = "by", rename_all = "snake_case")]` */
 export type RunOrigin =
-  { by: 'human' } | { by: 'agent' } | { by: 'bench'; run_id: number; name: string; call: number }
+  { by: 'human' } | { by: 'agent' } | { by: 'campaign'; run_id: number; name: string; call: number }
 
 export interface RunRecord {
   run_id: number
@@ -47,7 +47,7 @@ export interface RunDeploy {
   error?: string
 }
 
-export interface BenchMember {
+export interface CampaignMember {
   run_id: number
   job: string
 }
@@ -59,42 +59,42 @@ export interface LaunchFailure {
 }
 
 /**
- * The bench's own report, once attempted (§8.3). `at` is when — the moment the
- * bench ended, for a person reading its history (§8.2).
+ * The campaign's own report, once attempted (§8.3). `at` is when — the moment the
+ * campaign ended, for a person reading its history (§8.2).
  */
-export interface BenchReport {
+export interface CampaignReport {
   attempted: boolean
   at?: string
   error?: string
 }
 
 /**
- * A `FAILED` run's report (§7.3.1), in the bench report's shape. The healthy
+ * A `FAILED` run's report (§7.3.1), in the campaign report's shape. The healthy
  * path keeps its report on the status axis (§11) and never writes this.
  * `{ attempted: false }` is written with `FAILED` itself — the report is owed
  * — and `at`, with `error` when the script failed, once it has run. A run
  * recorded `FAILED` without it predates the rule and owes nothing.
  */
-export type RunReport = BenchReport
+export type RunReport = CampaignReport
 
 /** Whether a `FAILED` run's report is owed or in flight (§7.3.1). */
 export function report_owed(record: RunRecord): boolean {
   return record.report?.attempted === false
 }
 
-export interface BenchRecord {
+export interface CampaignRecord {
   run_id: number
-  bench: string
+  campaign: string
   by: Trigger
   started_at: string
   params: Params
   planned: number
-  members: BenchMember[]
+  members: CampaignMember[]
   launch_failures: LaunchFailure[]
-  report?: BenchReport
+  report?: CampaignReport
 }
 
-export interface BenchMembersFileMember {
+export interface CampaignMembersFileMember {
   run_id: number
   job: string
   params: Params
@@ -102,11 +102,11 @@ export interface BenchMembersFileMember {
   report: string
 }
 
-export interface BenchMembersFile {
+export interface CampaignMembersFile {
   run_id: number
-  bench: string
+  campaign: string
   params: Params
-  members: BenchMembersFileMember[]
+  members: CampaignMembersFileMember[]
 }
 
 /**

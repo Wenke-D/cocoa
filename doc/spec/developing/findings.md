@@ -118,7 +118,7 @@ open.
 A dispatched run's page shows `Call 1` and `Started by nightly-benchmark ·
 call 2` for the same run. They come from two places: `plan.steps[].index` is
 the plan's 0-based position, and the run record's `origin.call` is stamped
-`index + 1` by the engine (`bench.ts`). The first implementation displayed both
+`index + 1` by the engine (`campaign.ts`). The first implementation displayed both
 the same way, so this was faithful rather than newly wrong — but a reader
 seeing both at once has no way to know that. Fixing it means picking one
 convention for display.

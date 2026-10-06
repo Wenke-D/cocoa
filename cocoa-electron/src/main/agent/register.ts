@@ -36,13 +36,13 @@ export function register_folder(body: string, deps: AgentDeps): AgentResponse {
   const entity = deps
     .current_world()
     .entities.find((candidate) => candidate.id === result.entity_id)
-  const kind = entity?.kind === 'Bench' ? 'bench' : 'job'
+  const kind = entity?.kind === 'Campaign' ? 'campaign' : 'job'
   const name = entity?.name ?? path.basename(result.entity_id)
   return json(result.already ? 200 : 201, {
     name,
     kind,
     folder: result.entity_id,
     already: result.already,
-    follow: `/${kind === 'bench' ? 'benches' : 'jobs'}/${name}`
+    follow: `/${kind === 'campaign' ? 'campaigns' : 'jobs'}/${name}`
   })
 }

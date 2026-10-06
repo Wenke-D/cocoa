@@ -38,8 +38,8 @@
         <SquareIcon />
       </Button>
     {:else if is_deletable(run)}
-      <!-- A bench-dispatched run has no Delete here: the fan-out is deleted
-           whole, from the bench run's page (§16.4). Nor has a failed run
+      <!-- A campaign-dispatched run has no Delete here: the fan-out is deleted
+           whole, from the campaign run's page (§16.4). Nor has a failed run
            whose report is still being written (convention §12.1). -->
       <Button
         size="icon-sm"

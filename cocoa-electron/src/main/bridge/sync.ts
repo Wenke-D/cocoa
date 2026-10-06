@@ -47,14 +47,14 @@ export function diff_worlds(previous: World, next: World): CocoaEvent[] {
   )
 
   diff_runs(
-    previous.bench_runs,
-    next.bench_runs,
+    previous.campaign_runs,
+    next.campaign_runs,
     events,
     (run) => ({
-      kind: 'bench-run-upserted',
+      kind: 'campaign-run-upserted',
       run
     }),
-    (bench_id, id) => ({ kind: 'bench-run-removed', bench_id, id })
+    (campaign_id, id) => ({ kind: 'campaign-run-removed', campaign_id, id })
   )
 
   return events

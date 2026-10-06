@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 import { empty_world } from '@shared/world'
-import type { BenchRun, CocoaEvent, Entity, JobRun, World } from '@shared/world'
+import type { CampaignRun, CocoaEvent, Entity, JobRun, World } from '@shared/world'
 import { sentences_of, tone_of } from '../src/renderer/src/journal'
 
 const AT = '2026-08-22T22:00:00.000+02:00'
@@ -44,10 +44,10 @@ function job_run(id: string, extra: Partial<JobRun> = {}): JobRun {
   }
 }
 
-function bench_run(id: string, extra: Partial<BenchRun> = {}): BenchRun {
+function campaign_run(id: string, extra: Partial<CampaignRun> = {}): CampaignRun {
   return {
     id,
-    bench_id: 'nightly',
+    campaign_id: 'nightly',
     by: 'Human',
     started_at: '2026-08-19T10:00:00.000+02:00',
     ended_at: null,
@@ -64,16 +64,16 @@ function bench_run(id: string, extra: Partial<BenchRun> = {}): BenchRun {
 }
 
 /** A world listing both experiments, holding the given runs. */
-function world_with(runs: JobRun[] = [], benches: BenchRun[] = []): World {
+function world_with(runs: JobRun[] = [], campaigns: CampaignRun[] = []): World {
   const world: World = {
     ...empty_world(),
-    entities: [entity('solver'), entity('nightly', { kind: 'Bench' })]
+    entities: [entity('solver'), entity('nightly', { kind: 'Campaign' })]
   }
   for (const run of runs) {
     ;(world.job_runs[run.job_id] ??= {})[run.id] = run
   }
-  for (const run of benches) {
-    ;(world.bench_runs[run.bench_id] ??= {})[run.id] = run
+  for (const run of campaigns) {
+    ;(world.campaign_runs[run.campaign_id] ??= {})[run.id] = run
   }
   return world
 }
@@ -99,12 +99,14 @@ describe('sentences_of', () => {
       'solver · 0 · started by you · info'
     ])
     const dispatched = job_run('1', {
-      origin: { Bench: { name: 'nightly', bench_id: 'nightly', bench_run_id: '2', call: 1 } }
+      origin: {
+        Campaign: { name: 'nightly', campaign_id: 'nightly', campaign_run_id: '2', call: 1 }
+      }
     })
     expect(told(world, { kind: 'job-run-upserted', run: dispatched })).toEqual([
       'solver · 1 · started by nightly · call 1 · info'
     ])
-    const bench = bench_run('2', {
+    const campaign = campaign_run('2', {
       by: 'Agent',
       plan: {
         steps: [
@@ -113,7 +115,7 @@ describe('sentences_of', () => {
         ]
       }
     })
-    expect(told(world, { kind: 'bench-run-upserted', run: bench })).toEqual([
+    expect(told(world, { kind: 'campaign-run-upserted', run: campaign })).toEqual([
       'nightly · 2 · started by agent, 2 calls · info'
     ])
   })

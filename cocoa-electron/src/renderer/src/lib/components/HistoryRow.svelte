@@ -1,5 +1,5 @@
 <!--
-  One row of a job's or a bench's history (§22): the cells are the page's;
+  One row of a job's or a campaign's history (§22): the cells are the page's;
   this is the row's behaviour — a click opens the run, and a right-click
   offers the run's parameters again (§22.6) — Start over runs them now,
   Refill… puts them in the Start page — and, for a finished run, Delete…
@@ -31,8 +31,8 @@
 
   function delete_target(): void {
     request_delete(
-      route.page === 'bench_run'
-        ? { kind: 'bench_run', bench_id: entity_id, run_id }
+      route.page === 'campaign_run'
+        ? { kind: 'campaign_run', campaign_id: entity_id, run_id }
         : { kind: 'job_run', job_id: entity_id, run_id }
     )
   }

@@ -178,9 +178,9 @@ fn the_mcp_binary_serves_the_socket_as_tools() {
     for expected in [
         "cocoa_help",
         "cocoa_list_jobs",
-        "cocoa_list_benches",
+        "cocoa_list_campaigns",
         "cocoa_job",
-        "cocoa_bench",
+        "cocoa_campaign",
         "cocoa_start",
         "cocoa_register",
     ] {

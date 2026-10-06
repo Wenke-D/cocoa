@@ -21,12 +21,12 @@ anywhere → Error          (cocoa could not carry out its own side)
 `Failed` is terminal the moment poll says it, and stays so: the report a failed
 run gets is recorded beside its status and never moves it (convention §7.3.1).
 
-## 27.2 Bench Start
+## 27.2 Campaign Start
 
-Starting a Bench creates a Bench run plus one Job run per plan call, all at once.
+Starting a Campaign creates a Campaign run plus one Job run per plan call, all at once.
 
 ```text
-Bench: Starting
+Campaign: Starting
 
 Call 1: Starting
 Call 2: Starting
@@ -40,17 +40,17 @@ the cluster can make a run pending.
 Children advance independently, and finish out of order:
 
 ```text
-Bench Running · 0 / 6 finished
-Call 2 Succeeded          Bench Running · 1 / 6
-Call 5 Failed             Bench Running · 2 / 6   ← siblings keep running
-Call 1 Succeeded          Bench Running · 3 / 6
-Call 3 Succeeded          Bench Running · 4 / 6
-Call 6 Succeeded          Bench Running · 5 / 6
-Call 4 Succeeded          Bench Failed  · 6 / 6   ← aggregate resolves last
+Campaign Running · 0 / 6 finished
+Call 2 Succeeded          Campaign Running · 1 / 6
+Call 5 Failed             Campaign Running · 2 / 6   ← siblings keep running
+Call 1 Succeeded          Campaign Running · 3 / 6
+Call 3 Succeeded          Campaign Running · 4 / 6
+Call 6 Succeeded          Campaign Running · 5 / 6
+Call 4 Succeeded          Campaign Failed  · 6 / 6   ← aggregate resolves last
 ```
 
-The Bench must not reach a terminal status while any child is still active, and
-a failed child must not stop its siblings. The Bench's status is **derived** from
+The Campaign must not reach a terminal status while any child is still active, and
+a failed child must not stop its siblings. The Campaign's status is **derived** from
 its children, not stored independently of them.
 
 ## 27.3 The Refresh Tick

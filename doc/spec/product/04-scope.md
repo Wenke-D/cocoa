@@ -11,16 +11,16 @@ The workbench must include:
 - Large unified main-content region.
 - No permanent right-side inspector.
 - Job overview.
-- Bench overview.
+- Campaign overview.
 - Start page.
 - Cancel confirmation modal.
 - Job run-detail page.
-- Bench run-detail page.
-- Bench child-run detail page.
+- Campaign run-detail page.
+- Campaign child-run detail page.
 - Report viewer, plain text and HTML (§20).
 - Active Runs section.
 - All Runs table.
-- Bench dispatch table.
+- Campaign dispatch table.
 - Breadcrumb navigation.
 - Real manifests, templates, and process execution ([convention](../convention/README.md)).
 - The demonstration library in `examples/` registering and running unchanged.

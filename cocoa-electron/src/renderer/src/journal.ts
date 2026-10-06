@@ -7,7 +7,7 @@
 
 import { origin_label, trigger_label } from '@shared/world'
 import type {
-  BenchRun,
+  CampaignRun,
   CocoaEvent,
   JobRun,
   QueryHealth,
@@ -20,7 +20,7 @@ import type {
 export type JournalTarget =
   | { kind: 'entity'; entity_id: string }
   | { kind: 'job_run'; job_id: string; run_id: string }
-  | { kind: 'bench_run'; bench_id: string; run_id: string }
+  | { kind: 'campaign_run'; campaign_id: string; run_id: string }
 
 /** What an event means, which is what colours it: good news, bad, a warning, or just news. */
 export type Tone = 'neutral' | 'info' | 'good' | 'bad' | 'warn'
@@ -101,11 +101,15 @@ export function sentences_of(world: World, event: CocoaEvent, at: string): Journ
     case 'job-run-removed':
       tell(name_in(world, event.job_id), event.id, 'no longer listed', 'neutral', null)
       break
-    case 'bench-run-upserted': {
+    case 'campaign-run-upserted': {
       const run = event.run
-      const name = name_in(world, run.bench_id)
-      const target: JournalTarget = { kind: 'bench_run', bench_id: run.bench_id, run_id: run.id }
-      const old = world.bench_runs[run.bench_id]?.[run.id]
+      const name = name_in(world, run.campaign_id)
+      const target: JournalTarget = {
+        kind: 'campaign_run',
+        campaign_id: run.campaign_id,
+        run_id: run.id
+      }
+      const old = world.campaign_runs[run.campaign_id]?.[run.id]
       if (old === undefined) {
         const calls = run.plan.steps.length
         const by = `started by ${trigger_label(run.by)}, ${calls} ${calls === 1 ? 'call' : 'calls'}`
@@ -115,8 +119,8 @@ export function sentences_of(world: World, event: CocoaEvent, at: string): Journ
       run_moves(name, old, run, target, tell)
       break
     }
-    case 'bench-run-removed':
-      tell(name_in(world, event.bench_id), event.id, 'no longer listed', 'neutral', null)
+    case 'campaign-run-removed':
+      tell(name_in(world, event.campaign_id), event.id, 'no longer listed', 'neutral', null)
       break
     // A failure the user is told about is also something that happened.
     case 'notice':
@@ -130,11 +134,11 @@ export function sentences_of(world: World, event: CocoaEvent, at: string): Journ
   return entries
 }
 
-/** The moves a job run and a bench run have in common. */
+/** The moves a job run and a campaign run have in common. */
 function run_moves(
   name: string,
-  old: JobRun | BenchRun,
-  run: JobRun | BenchRun,
+  old: JobRun | CampaignRun,
+  run: JobRun | CampaignRun,
   target: JournalTarget,
   tell: (name: string, run: string | null, what: string, tone: Tone, target: JournalTarget) => void
 ): void {

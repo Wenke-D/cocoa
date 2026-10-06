@@ -26,7 +26,7 @@ import type { Engine } from '../engine'
 /** Reports larger than this are refused rather than sent over IPC whole. */
 const MAX_REPORT_BYTES = 16 * 1024 * 1024
 
-/** Starts a job or a bench by entity name, splitting params as the manifest asks. */
+/** Starts a job or a campaign by entity name, splitting params as the manifest asks. */
 /**
  * `trigger` is the whole difference between a click and an agent's call
  * (§43): same lookup, same validation, same queue — one word on the record,
@@ -40,7 +40,7 @@ export async function start_run(
 ): Promise<StartResult> {
   try {
     const job = engine.find_job_by_name(name)
-    const bench = engine.find_bench_by_name(name)
+    const campaign = engine.find_campaign_by_name(name)
     let run_id: number
     if (job !== null) {
       const manifest = job.usable_manifest()
@@ -55,8 +55,8 @@ export async function start_run(
         }
       }
       run_id = await engine.start_job(job.path, render, launch, trigger)
-    } else if (bench !== null) {
-      const start = await engine.start_bench(bench.path, parameters, trigger)
+    } else if (campaign !== null) {
+      const start = await engine.start_campaign(campaign.path, parameters, trigger)
       run_id = start.run_id
     } else {
       return { ok: false, message: `no experiment named \`${name}\` is registered` }
@@ -77,7 +77,7 @@ export function delete_run(engine: Engine, target: DeleteTarget): DeleteResult {
     if (target.kind === 'job_run') {
       engine.delete_run(target.job_id, Number(target.run_id))
     } else {
-      engine.delete_bench_run(target.bench_id, Number(target.run_id))
+      engine.delete_campaign_run(target.campaign_id, Number(target.run_id))
     }
     return { ok: true }
   } catch (error) {
@@ -106,7 +106,7 @@ export function rerun_report(engine: Engine, target: RerunReportTarget): RerunRe
  * Requests a cancellation (§16.3). Success means the request was accepted —
  * the run moves to `CANCELLING` and only the next poll can call it cancelled.
  *
- * A bench cancels member by member, and members can disagree: this reports a
+ * A campaign cancels member by member, and members can disagree: this reports a
  * partial failure as a failure, naming what did not stop. (The Rust adapter
  * discards the per-member results here; a cancel that half worked should not
  * read as done.)
@@ -117,7 +117,7 @@ export async function cancel(engine: Engine, target: CancelTarget): Promise<Canc
       await engine.cancel_run(target.job_id, Number(target.run_id))
       return { ok: true }
     }
-    const results = await engine.cancel_bench(target.bench_id, Number(target.run_id))
+    const results = await engine.cancel_campaign(target.campaign_id, Number(target.run_id))
     const failures = results.filter((result) => !result.ok)
     if (failures.length === 0) {
       return { ok: true }

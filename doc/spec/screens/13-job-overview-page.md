@@ -97,7 +97,7 @@ Open    Cancel
 Runs are independent (§30). Any number of active-run cards may be displayed, and
 Start is never disabled because a run is already active.
 
-A card for a run dispatched by a Bench must show its origin:
+A card for a run dispatched by a Campaign must show its origin:
 
 ```text
 Running                          from Nightly Benchmark · Run 10:24
@@ -144,16 +144,16 @@ Report
 
 ```text
 —                     started directly by the user
-Nightly Benchmark     dispatched by that Bench
+Nightly Benchmark     dispatched by that Campaign
 ```
 
-The Bench name is a link to the owning Bench run. Clicking it opens
-`BenchRunDetail`; clicking anywhere else in the row opens `JobRunDetail`.
+The Campaign name is a link to the owning Campaign run. Clicking it opens
+`CampaignRunDetail`; clicking anywhere else in the row opens `JobRunDetail`.
 
-Bench-dispatched runs are ordinary history rows. Never hide them from the Job's
+Campaign-dispatched runs are ordinary history rows. Never hide them from the Job's
 own history.
 
-An origin filter (`All` / `Direct only` / `From a Bench`) is P1.
+An origin filter (`All` / `Direct only` / `From a Campaign`) is P1.
 
 The entire row is clickable and opens Job Run Detail.
 

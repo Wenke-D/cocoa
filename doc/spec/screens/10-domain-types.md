@@ -7,7 +7,7 @@ keeps the two from drifting.
 Ids are plain strings. TypeScript has no newtype, and a branded type would buy
 compile-time separation at the cost of every boundary — JSON, the socket, the
 records on disk — needing a cast. The field name carries the meaning instead:
-`job_id`, `run_id`, `bench_run_id` are never spelled `id` where the kind is
+`job_id`, `run_id`, `campaign_run_id` are never spelled `id` where the kind is
 ambiguous.
 
 **A run id is unique within its experiment and nowhere wider.** It is allocated
@@ -21,16 +21,16 @@ by experiment rather than in one flat map:
 export type RunsByEntity<T> = Record<string, Record<string, T>>
 
 job_runs: RunsByEntity<JobRun>      // world.job_runs[job_id][run_id]
-bench_runs: RunsByEntity<BenchRun>
+campaign_runs: RunsByEntity<CampaignRun>
 ```
 
 The one link that cannot be spelled as a pair is a dispatched run seen from its
-bench: the bench run knows the child's id but not whose job it is. Its **plan**
+campaign: the campaign run knows the child's id but not whose job it is. Its **plan**
 answers that — `plan.steps[].job_id` — and is the authoritative link between
 the two (§2.3.1).
 
 ```ts
-export type EntityKind = 'Job' | 'Bench'
+export type EntityKind = 'Job' | 'Campaign'
 ```
 
 The unions below are serialized the way serde writes an externally-tagged enum —
@@ -167,36 +167,36 @@ A succeeded run may temporarily have no report.
 
 ## 10.6 Run Origin
 
-Every Job run records how it was started, and every Bench run records who asked.
+Every Job run records how it was started, and every Campaign run records who asked.
 
 ```ts
 export type RunOrigin =
   | 'Human'
   | 'Agent'
   | {
-      Bench: {
+      Campaign: {
         name: string
-        bench_id: string | null
-        bench_run_id: string
+        campaign_id: string | null
+        campaign_run_id: string
         call: number
       }
     }
 
-/** A Bench is never dispatched by another Bench (§2.2), so who asked for one
+/** A Campaign is never dispatched by another Campaign (§2.2), so who asked for one
  *  gets a type that cannot say otherwise. */
 export type Trigger = 'Human' | 'Agent'
 ```
 
 Exactly one of the three is true of any run, so the history's Source column is
-one column with three kinds of value rather than two columns (§13.3): the Bench
+one column with three kinds of value rather than two columns (§13.3): the Campaign
 name as a link, or `you`, or `agent`.
 
 Origin is recorded at dispatch, not worked out at read time. Reconstructing it —
-finding the Bench by name and scanning its members for this run — has to invent
-an answer when the Bench folder is gone, and a run that outlives its Bench then
+finding the Campaign by name and scanning its members for this run — has to invent
+an answer when the Campaign folder is gone, and a run that outlives its Campaign then
 shows a confident wrong call number instead of the name it was dispatched under.
-`name` and `call` are therefore recorded; `bench_id` is resolved for navigation
-only, and is `None` once the Bench has left the Explorer — the run keeps its
+`name` and `call` are therefore recorded; `campaign_id` is resolved for navigation
+only, and is `None` once the Campaign has left the Explorer — the run keeps its
 history, the link simply stops being a link.
 
 `call` counts from 1, as the plan's own validation errors count (§15.4). The
@@ -211,18 +211,18 @@ something the engine decides.
 Origin is presentation and navigation metadata only. It must not change how the
 run executes, and it must not exclude the run from the owning Job's history.
 
-## 10.7 Bench Plan
+## 10.7 Campaign Plan
 
 ```ts
-export interface BenchPlanStep {
+export interface CampaignPlanStep {
   index: number
   job_id: string
   parameters: string
   run_id: string
 }
 
-export interface BenchPlan {
-  steps: BenchPlanStep[]
+export interface CampaignPlan {
+  steps: CampaignPlanStep[]
 }
 ```
 

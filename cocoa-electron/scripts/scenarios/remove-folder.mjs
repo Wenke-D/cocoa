@@ -47,7 +47,7 @@ export async function run({ page, shot, log, wait_text, library }) {
   await page.getByRole('menuitem', { name: 'Remove from Explorer' }).click()
   await page.locator('[role="dialog"] button.confirm').click({ timeout: 10_000 })
   await page.locator('[role="dialog"]').waitFor({ state: 'detached', timeout: 15_000 })
-  await wait_text('No jobs or benches have been added', 10_000)
+  await wait_text('No jobs or campaigns have been added', 10_000)
   log('after remove:', (await page.locator('aside').innerText()).replace(/\n/g, ' | '))
   // The confirmation lands with the answer, a moment after the events do.
   await wait_text('Removed from the Explorer', 10_000)

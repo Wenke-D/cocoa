@@ -85,7 +85,7 @@ order; the record stores them as two maps (§7.1).
 
 **Every declared param must be given a value at start.** A value that is empty
 or only whitespace is not a value: cocoa refuses the start, whether it came from
-the start form or from a bench plan dispatching a member.
+the start form or from a campaign plan dispatching a member.
 
 ## 2.2 A parameter's shape
 

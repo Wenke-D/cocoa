@@ -1,4 +1,4 @@
-// Cancel a bench run: one confirmation, several members stopped at once
+// Cancel a campaign run: one confirmation, several members stopped at once
 // (specification §16.2).
 
 export async function run({ page, shot, log, wait_text }) {
@@ -13,22 +13,22 @@ export async function run({ page, shot, log, wait_text }) {
   // Wait until the dispatched runs have reached the cluster, or there is
   // nothing to cancel yet.
   await wait_text('Running', 25_000)
-  log('bench header:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
-  await shot('bench-run')
+  log('campaign header:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
+  await shot('campaign-run')
 
   await page.locator('button.cancel').click()
   await page.locator('[role="dialog"]').waitFor({ timeout: 5_000 })
   log('modal copy:', (await page.locator('[role="dialog"]').innerText()).replace(/\n/g, ' | '))
-  await shot('bench-confirm')
+  await shot('campaign-confirm')
 
   await page.locator('[role="dialog"] button.confirm').click({ timeout: 10_000 })
   await page.locator('[role="dialog"]').waitFor({ state: 'detached', timeout: 20_000 })
   await wait_text('Cancelling', 10_000)
   log('after confirm:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
-  await shot('bench-cancelling')
+  await shot('campaign-cancelling')
 
   await wait_text('Cancelled', 25_000)
   log('after poll:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
   log('members:', (await page.locator('tbody').innerText()).replace(/\n/g, ' | '))
-  await shot('bench-cancelled')
+  await shot('campaign-cancelled')
 }

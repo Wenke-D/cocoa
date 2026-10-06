@@ -51,45 +51,45 @@ so the last known status stays visible even while the current one is
 change.
 
 Every timestamp a record carries — `started_at`, each status change, the
-bench's `report.at` — is RFC 3339 with the writer's UTC offset,
+campaign's `report.at` — is RFC 3339 with the writer's UTC offset,
 `2026-08-23T13:02:40.123+02:00`: a moment, never a wall-clock reading that
 only means something in the room it was taken in. A reader converts to its
 own local zone for display; the folder may be read from another one.
 
-## 9.1 Bench status is derived, never stored
+## 9.1 Campaign status is derived, never stored
 
-A bench run's status is computed from its members every time it is read. It is
+A campaign run's status is computed from its members every time it is read. It is
 not a field in the record and not cached in the UI. In order:
 
 1. Any member unresolvable → `ERROR` (§9.2).
 2. Any member `CANCELLING` → `CANCELLING`.
 3. Any member non-terminal → `RUNNING`, or `STARTING` while every member is
    `STARTING` or `DEPLOYING`.
-4. All members terminal → the bench settles. Recorded `launch_failures`
-   (§8.2), or any member that ended `ERROR`, make the bench `ERROR`; otherwise
+4. All members terminal → the campaign settles. Recorded `launch_failures`
+   (§8.2), or any member that ended `ERROR`, make the campaign `ERROR`; otherwise
    any member that ended `FAILED` makes it `FAILED`; otherwise any member that
-   ended `CANCELLED` makes it `CANCELLED`. No bench report runs in any of these
+   ended `CANCELLED` makes it `CANCELLED`. No campaign report runs in any of these
    cases (§8.3).
-5. All members succeeded and nothing failed to launch → the bench's own report
+5. All members succeeded and nothing failed to launch → the campaign's own report
    decides: in flight → `ANALYZING`, on disk → `SUCCEEDED`, script failed →
    `ERROR`.
 
 A failing member never aborts its siblings — instances are independent — so the
-bench stays active until every member is terminal.
+campaign stays active until every member is terminal.
 
-Note the order: a recorded launch failure decides the bench's *final* outcome,
-but it does not cut the run short. A bench that dispatched ten of twelve
+Note the order: a recorded launch failure decides the campaign's *final* outcome,
+but it does not cut the run short. A campaign that dispatched ten of twelve
 instances still reads `RUNNING` while those ten work, and only settles at
 `ERROR` once they are all terminal. Steps 2 and 3 come first for exactly that
 reason.
 
 ## 9.2 Members that cannot be resolved
 
-A bench run's members are ordinary job runs living in their own jobs' folders,
+A campaign run's members are ordinary job runs living in their own jobs' folders,
 referenced by `{run_id, job name}`. If that job is unregistered later, or its
 record is gone, the member cannot be resolved.
 
-The bench run then reads `ERROR`, and **names the members it cannot find** —
+The campaign run then reads `ERROR`, and **names the members it cannot find** —
 their job names are in the record, so cocoa always knows which ones are missing.
-Re-registering the job heals every one of its member rows and the bench returns
+Re-registering the job heals every one of its member rows and the campaign returns
 to its real status.

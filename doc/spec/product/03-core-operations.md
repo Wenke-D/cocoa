@@ -36,8 +36,8 @@ mid-launch with nothing recorded; the next refresh finds it and moves it to
 `ERROR`, because the stdout that carried its submission id died with the
 process that read it.
 
-Starting a Bench returns a **plan** — a list of `(existing Job, parameters)` calls,
-all dispatched at once. The Bench itself executes nothing; it fans out to Jobs.
+Starting a Campaign returns a **plan** — a list of `(existing Job, parameters)` calls,
+all dispatched at once. The Campaign itself executes nothing; it fans out to Jobs.
 Each dispatch is an ordinary Job Start.
 
 Who triggers what:

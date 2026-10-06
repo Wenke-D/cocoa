@@ -8,8 +8,8 @@ address at render time. A route must never carry a copy of a run.
 // cocoa-electron/src/shared/ui.ts
 export type ReportContext =
   | { kind: 'job_run'; job_id: string }
-  | { kind: 'bench_run'; bench_id: string }
-  | { kind: 'bench_child'; bench_id: string; bench_run_id: string }
+  | { kind: 'campaign_run'; campaign_id: string }
+  | { kind: 'campaign_child'; campaign_id: string; campaign_run_id: string }
 
 export type Route =
   | { page: 'empty' }
@@ -18,9 +18,9 @@ export type Route =
    *  draft held outside the route. */
   | { page: 'start'; entity_id: string }
   | { page: 'job_run'; job_id: string; run_id: string }
-  | { page: 'bench_run'; bench_id: string; run_id: string }
-  /** A run dispatched by a bench, seen in the bench's context (§19). */
-  | { page: 'bench_child'; bench_id: string; bench_run_id: string; run_id: string }
+  | { page: 'campaign_run'; campaign_id: string; run_id: string }
+  /** A run dispatched by a campaign, seen in the campaign's context (§19). */
+  | { page: 'campaign_child'; campaign_id: string; campaign_run_id: string; run_id: string }
   | { page: 'report'; context: ReportContext; run_id: string }
 ```
 
@@ -44,7 +44,7 @@ every launch opens on the Explorer with nothing selected; architecture §32.)
 
 ## 9.1 Sidebar Navigation
 
-Clicking a Job or Bench in the sidebar must:
+Clicking a Job or Campaign in the sidebar must:
 
 - Select that entity.
 - Navigate to its overview.
@@ -53,14 +53,14 @@ Clicking a Job or Bench in the sidebar must:
 
 ## 9.2 Context Preservation
 
-A run dispatched by a Bench is reachable from two routes (§2.3.1). The route you
+A run dispatched by a Campaign is reachable from two routes (§2.3.1). The route you
 arrived by — not the run's origin — decides the context.
 
-Reached from the Bench run's dispatch table:
+Reached from the Campaign run's dispatch table:
 
 ```text
-Route:   BenchChildRunDetail
-Sidebar: Nightly Benchmark  (the Bench stays selected)
+Route:   CampaignChildRunDetail
+Sidebar: Nightly Benchmark  (the Campaign stays selected)
 Crumbs:  Nightly Benchmark / Run 2026-08-15 10:24 / Solver GPU
 ```
 

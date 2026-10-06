@@ -1,11 +1,11 @@
 <!--
   The facts of one job run, rendered identically wherever that run is seen.
 
-  A run dispatched by a bench has two addresses (§2.3.1) and this is the part
+  A run dispatched by a campaign has two addresses (§2.3.1) and this is the part
   that must not differ between them: §19 says the two pages "must present
   identical facts", and the only way to be sure of that is for there to be one
   of them. What differs — breadcrumbs, which Explorer row stays selected, the
-  report's context, and the rows a bench adds in front — is passed in.
+  report's context, and the rows a campaign adds in front — is passed in.
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte'

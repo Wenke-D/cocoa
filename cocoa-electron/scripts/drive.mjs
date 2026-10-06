@@ -43,7 +43,7 @@ function seed_library(seed) {
   fs.cpSync(path.join(REPO_ROOT, 'examples'), library, { recursive: true })
 
   const folders = []
-  for (const group of ['jobs', 'benches']) {
+  for (const group of ['jobs', 'campaigns']) {
     const dir = path.join(library, group)
     if (!fs.existsSync(dir)) {
       continue
@@ -65,12 +65,12 @@ function seed_library(seed) {
     : seed === 'library-only'
       ? []
       : folders
-  // The store lists jobs and benches separately (convention §5); the library
+  // The store lists jobs and campaigns separately (convention §5); the library
   // keeps them in folders of those names.
   const side = (folder) => path.basename(path.dirname(folder))
   const store = {
     jobs: entities.filter((folder) => side(folder) === 'jobs'),
-    benches: entities.filter((folder) => side(folder) === 'benches')
+    campaigns: entities.filter((folder) => side(folder) === 'campaigns')
   }
   fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2))
   // Whatever a previous drive arranged — window state on disk, the page's

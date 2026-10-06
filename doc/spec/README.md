@@ -39,12 +39,12 @@ has a README of its own: what the area is, and its sections in order.
 | **11** | [Explorer Sidebar](screens/11-explorer-sidebar.md) | screens |
 | **12** | [Empty Page](screens/12-empty-page.md) | screens |
 | **13** | [Job Overview Page](screens/13-job-overview-page.md) | screens |
-| **14** | [Bench Overview Page](screens/14-bench-overview-page.md) | screens |
+| **14** | [Campaign Overview Page](screens/14-campaign-overview-page.md) | screens |
 | **15** | [Start Page](screens/15-start-page.md) | screens |
 | **16** | [Cancel and Delete Confirmation Modals](screens/16-confirmation-modals.md) | screens |
 | **17** | [Job Run-Detail Page](screens/17-job-run-detail.md) | screens |
-| **18** | [Bench Run-Detail Page](screens/18-bench-run-detail.md) | screens |
-| **19** | [Bench Child-Run Detail Page](screens/19-bench-child-run-detail.md) | screens |
+| **18** | [Campaign Run-Detail Page](screens/18-campaign-run-detail.md) | screens |
+| **19** | [Campaign Child-Run Detail Page](screens/19-campaign-child-run-detail.md) | screens |
 | **20** | [Report Viewer](screens/20-report-viewer.md) | screens |
 | **21** | [Global Active Runs Indicator](screens/21-active-runs-indicator.md) | screens |
 | **22** | [Run-History Table Behavior](screens/22-run-history-table.md) | screens |
@@ -80,12 +80,12 @@ cites them as `(convention §5)`.
 |---|---|
 | **1** | [Folder layout](convention/01-folder-layout.md) |
 | **2** | [`cocoa.toml` — a job](convention/02-job-manifest.md) |
-| **3** | [`cocoa.toml` — a bench](convention/03-bench-manifest.md) |
+| **3** | [`cocoa.toml` — a campaign](convention/03-campaign-manifest.md) |
 | **4** | [Manifest validation](convention/04-manifest-validation.md) |
 | **5** | [The private store](convention/05-private-store.md) |
 | **6** | [Invocation rules](convention/06-invocation-rules.md) |
 | **7** | [Job scripts](convention/07-job-scripts.md) |
-| **8** | [Bench scripts](convention/08-bench-scripts.md) |
+| **8** | [Campaign scripts](convention/08-campaign-scripts.md) |
 | **9** | [Status](convention/09-status.md) |
 | **10** | [When cocoa cannot see a run](convention/10-unreachable-runs.md) |
 | **11** | [Reports](convention/11-reports.md) |

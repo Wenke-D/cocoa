@@ -1,5 +1,5 @@
 #!/bin/sh
-# Writes the bench report over the members file cocoa hands it.
+# Writes the campaign report over the members file cocoa hands it.
 run=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -8,4 +8,4 @@ while [ $# -gt 0 ]; do
   esac
 done
 mkdir -p report
-echo "bench report $run" > "report/$run.txt"
+echo "campaign report $run" > "report/$run.txt"

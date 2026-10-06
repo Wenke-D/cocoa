@@ -10,7 +10,7 @@ import { EngineError } from './errors'
 import * as template from './template'
 import { split_command } from './words'
 
-export type Kind = 'job' | 'bench'
+export type Kind = 'job' | 'campaign'
 
 /** A `command` value, split into argv at load time. Lexical only. */
 export interface Command {
@@ -37,8 +37,8 @@ export interface JobManifest {
   deploy: Command
 }
 
-export interface BenchManifest {
-  kind: 'bench'
+export interface CampaignManifest {
+  kind: 'campaign'
   name: string
   description?: string
   plan: Command
@@ -46,7 +46,7 @@ export interface BenchManifest {
   report: Command
 }
 
-export type Manifest = JobManifest | BenchManifest
+export type Manifest = JobManifest | CampaignManifest
 
 function parse_command(raw: string, manifest_path: string, key: string): Command {
   let words: string[]
@@ -258,15 +258,15 @@ export function load_manifest(folder: string): Manifest {
   if (kind === 'job') {
     return load_job(folder, manifest_path, value)
   }
-  if (kind === 'bench') {
-    return load_bench(manifest_path, value)
+  if (kind === 'campaign') {
+    return load_campaign(manifest_path, value)
   }
   if (kind === '') {
     throw EngineError.manifest(manifest_path, 'missing required key `kind`')
   }
   throw EngineError.manifest(
     manifest_path,
-    `\`kind\` must be \`job\` or \`bench\`, found \`${kind}\``
+    `\`kind\` must be \`job\` or \`campaign\`, found \`${kind}\``
   )
 }
 
@@ -376,7 +376,7 @@ function load_job(folder: string, manifest_path: string, raw: TomlTable): JobMan
   }
 }
 
-function load_bench(manifest_path: string, raw: TomlTable): BenchManifest {
+function load_campaign(manifest_path: string, raw: TomlTable): CampaignManifest {
   reject_unknown_keys(raw, ['kind', 'name', 'description', 'plan', 'report'], manifest_path)
 
   const name = require_name(raw.name, manifest_path)
@@ -386,7 +386,7 @@ function load_bench(manifest_path: string, raw: TomlTable): BenchManifest {
   reject_unknown_keys(report, ['command'], manifest_path)
 
   return {
-    kind: 'bench',
+    kind: 'campaign',
     name,
     description: typeof raw.description === 'string' ? raw.description : undefined,
     plan: parse_command(

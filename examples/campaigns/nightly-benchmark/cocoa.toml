@@ -1,4 +1,4 @@
-kind        = "bench"
+kind        = "campaign"
 name        = "nightly-benchmark"
 description = "Mock nightly sweep: two solver-gpu instances and one flaky-solver"
 

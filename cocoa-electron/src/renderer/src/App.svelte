@@ -14,8 +14,8 @@
   import EntityOverview from './pages/EntityOverview.svelte'
   import StartRun from './pages/StartRun.svelte'
   import JobRunDetail from './pages/JobRunDetail.svelte'
-  import BenchRunDetail from './pages/BenchRunDetail.svelte'
-  import BenchChildRunDetail from './pages/BenchChildRunDetail.svelte'
+  import CampaignRunDetail from './pages/CampaignRunDetail.svelte'
+  import CampaignChildRunDetail from './pages/CampaignChildRunDetail.svelte'
   import ReportViewer from './pages/ReportViewer.svelte'
 
   let dragging = $state(false)
@@ -98,12 +98,12 @@
             <StartRun entity_id={app.route.entity_id} />
           {:else if app.route.page === 'job_run'}
             <JobRunDetail job_id={app.route.job_id} run_id={app.route.run_id} />
-          {:else if app.route.page === 'bench_run'}
-            <BenchRunDetail bench_id={app.route.bench_id} run_id={app.route.run_id} />
-          {:else if app.route.page === 'bench_child'}
-            <BenchChildRunDetail
-              bench_id={app.route.bench_id}
-              bench_run_id={app.route.bench_run_id}
+          {:else if app.route.page === 'campaign_run'}
+            <CampaignRunDetail campaign_id={app.route.campaign_id} run_id={app.route.run_id} />
+          {:else if app.route.page === 'campaign_child'}
+            <CampaignChildRunDetail
+              campaign_id={app.route.campaign_id}
+              campaign_run_id={app.route.campaign_run_id}
               run_id={app.route.run_id}
             />
           {:else if app.route.page === 'report'}

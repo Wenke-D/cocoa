@@ -8,10 +8,10 @@ import { check_value } from '@shared/params'
 import type { Route, ReportContext, SidebarView } from './ui_state'
 import { JOURNAL_LENGTH, sentences_of, stamp } from './journal'
 import type { JournalEntry, JournalTarget } from './journal'
-import { bench_run, empty_world, is_active, job_run } from '@shared/world'
+import { campaign_run, empty_world, is_active, job_run } from '@shared/world'
 import type {
   AddFolderResult,
-  BenchRun,
+  CampaignRun,
   RemoveFolderResult,
   CancelResult,
   CancelTarget,
@@ -87,7 +87,7 @@ export interface AppState {
   sidebar_width: number
   sidebar_view: SidebarView
   sidebar_open: boolean
-  /** The Explorer's BENCHES pane, as a share of its height. */
+  /** The Explorer's CAMPAIGNS pane, as a share of its height. */
   explorer_split: number
   report_wrap: boolean
   /** The one clock every duration on screen is computed from. */
@@ -197,7 +197,7 @@ export async function confirm_delete(): Promise<void> {
   if (result.ok) {
     const target = overlay.target
     app.overlay = null
-    const entity_id = target.kind === 'job_run' ? target.job_id : target.bench_id
+    const entity_id = target.kind === 'job_run' ? target.job_id : target.campaign_id
     if (route_shows_run(app.route, target)) {
       navigate({ page: 'entity', entity_id })
     }
@@ -212,7 +212,7 @@ export async function confirm_delete(): Promise<void> {
 /**
  * Whether `route` is looking at the deleted run — its page, or its report.
  * A run has two addresses (§19): a deleted job run may be on screen as a
- * bench's child, where the route names the bench, so that page steps back
+ * campaign's child, where the route names the campaign, so that page steps back
  * on the run id alone; a same-id run of another job is a near miss this
  * accepts, since stepping back from a page is cheap and a page showing a
  * deleted run is not.
@@ -221,10 +221,10 @@ function route_shows_run(route: Route, target: DeleteTarget): boolean {
   if (route.page === 'job_run' && target.kind === 'job_run') {
     return route.job_id === target.job_id && route.run_id === target.run_id
   }
-  if (route.page === 'bench_run' && target.kind === 'bench_run') {
-    return route.bench_id === target.bench_id && route.run_id === target.run_id
+  if (route.page === 'campaign_run' && target.kind === 'campaign_run') {
+    return route.campaign_id === target.campaign_id && route.run_id === target.run_id
   }
-  if (route.page === 'bench_child' || route.page === 'report') {
+  if (route.page === 'campaign_child' || route.page === 'report') {
     return route.run_id === target.run_id
   }
   return false
@@ -425,11 +425,11 @@ export function apply_events(events: CocoaEvent[]): void {
       case 'job-run-removed':
         remove_run(world.job_runs, world.runs_by_job, event.job_id, event.id)
         break
-      case 'bench-run-upserted':
-        upsert_run(world.bench_runs, world.runs_by_bench, event.run, event.run.bench_id)
+      case 'campaign-run-upserted':
+        upsert_run(world.campaign_runs, world.runs_by_campaign, event.run, event.run.campaign_id)
         break
-      case 'bench-run-removed':
-        remove_run(world.bench_runs, world.runs_by_bench, event.bench_id, event.id)
+      case 'campaign-run-removed':
+        remove_run(world.campaign_runs, world.runs_by_campaign, event.campaign_id, event.id)
         break
       case 'refreshed':
         world.last_refresh = event.at
@@ -489,7 +489,7 @@ function upsert_run<Run extends { id: string; started_at: string }>(
  * a bare id — which it could only do while ids were globally unique.
  */
 function remove_run(
-  runs: RunsByEntity<JobRun> | RunsByEntity<BenchRun>,
+  runs: RunsByEntity<JobRun> | RunsByEntity<CampaignRun>,
   index: Record<string, string[]>,
   owner_id: string,
   id: string
@@ -515,7 +515,7 @@ export function entity_of(id: string): Entity | undefined {
 /**
  * Which Explorer row stays highlighted — `Route::selected_entity`.
  *
- * Viewing a dispatched run through its bench keeps the *bench* selected, even
+ * Viewing a dispatched run through its campaign keeps the *campaign* selected, even
  * though the run belongs to a job that is in the Explorer too (§19). Arriving
  * that way must not move the selection to the job; the job's name on the page
  * is the explicit way there.
@@ -530,45 +530,47 @@ export function selected_entity_id(): string | null {
       return route.entity_id
     case 'job_run':
       return route.job_id
-    case 'bench_run':
-    case 'bench_child':
-      return route.bench_id
+    case 'campaign_run':
+    case 'campaign_child':
+      return route.campaign_id
     case 'report':
       return context_entity_id(route.context)
   }
 }
 
 export function context_entity_id(context: ReportContext): string {
-  return context.kind === 'job_run' ? context.job_id : context.bench_id
+  return context.kind === 'job_run' ? context.job_id : context.campaign_id
 }
 
 /**
  * Whose folder the report file is actually in — which is not the same
  * question as whose context it is being read under. A run dispatched by a
- * bench writes its report into the *job's* folder, because that is where the
- * run happened; the bench is only how the reader arrived (§2.3.1, §20.1).
+ * campaign writes its report into the *job's* folder, because that is where the
+ * run happened; the campaign is only how the reader arrived (§2.3.1, §20.1).
  */
 export function report_owner_id(context: ReportContext, run_id: string): string {
-  if (context.kind === 'bench_child') {
-    return dispatched_owner(context.bench_id, context.bench_run_id, run_id) ?? context.bench_id
+  if (context.kind === 'campaign_child') {
+    return (
+      dispatched_owner(context.campaign_id, context.campaign_run_id, run_id) ?? context.campaign_id
+    )
   }
   return context_entity_id(context)
 }
 
 /**
- * Which job a dispatched run belongs to, read from the bench run's own plan.
+ * Which job a dispatched run belongs to, read from the campaign run's own plan.
  *
  * The plan is the authoritative link between the two (§2.3.1), and now the
  * only one: a run id means nothing without the experiment it was allocated
  * in, so there is no map to look a bare child id up in.
  */
 export function dispatched_owner(
-  bench_id: string,
-  bench_run_id: string,
+  campaign_id: string,
+  campaign_run_id: string,
   run_id: string
 ): string | undefined {
-  const bench = bench_run(app.world, bench_id, bench_run_id)
-  return bench?.plan.steps.find((step) => step.run_id === run_id)?.job_id
+  const campaign = campaign_run(app.world, campaign_id, campaign_run_id)
+  return campaign?.plan.steps.find((step) => step.run_id === run_id)?.job_id
 }
 
 /** Repairs a route — and closes an overlay — the world can no longer answer for. */
@@ -590,7 +592,7 @@ export function recover(): void {
         ? entity_gone(overlay.entity_id)
         : overlay.target.kind === 'job_run'
           ? job_run(world, overlay.target.job_id, overlay.target.run_id) === undefined
-          : bench_run(world, overlay.target.bench_id, overlay.target.run_id) === undefined
+          : campaign_run(world, overlay.target.campaign_id, overlay.target.run_id) === undefined
     if (gone) {
       app.overlay = null
     }
@@ -614,31 +616,35 @@ export function recover(): void {
         notify('That run is no longer listed.')
       }
       return
-    case 'bench_run':
-      if (bench_run(world, route.bench_id, route.run_id) === undefined) {
-        app.route = entity_gone(route.bench_id)
+    case 'campaign_run':
+      if (campaign_run(world, route.campaign_id, route.run_id) === undefined) {
+        app.route = entity_gone(route.campaign_id)
           ? { page: 'empty' }
-          : { page: 'entity', entity_id: route.bench_id }
+          : { page: 'entity', entity_id: route.campaign_id }
         notify('That run is no longer listed.')
       }
       return
     // Two runs have to still exist for this address to mean anything: the
-    // dispatched run it shows, and the bench run whose context it is seen in.
-    // Losing the child falls back to the bench run, which is where the user
-    // came from; losing the bench run itself falls back further.
-    case 'bench_child': {
-      if (bench_run(world, route.bench_id, route.bench_run_id) === undefined) {
-        app.route = entity_gone(route.bench_id)
+    // dispatched run it shows, and the campaign run whose context it is seen in.
+    // Losing the child falls back to the campaign run, which is where the user
+    // came from; losing the campaign run itself falls back further.
+    case 'campaign_child': {
+      if (campaign_run(world, route.campaign_id, route.campaign_run_id) === undefined) {
+        app.route = entity_gone(route.campaign_id)
           ? { page: 'empty' }
-          : { page: 'entity', entity_id: route.bench_id }
+          : { page: 'entity', entity_id: route.campaign_id }
         notify('That run is no longer listed.')
         return
       }
-      // Which job the child belongs to comes from the bench's plan; if the
+      // Which job the child belongs to comes from the campaign's plan; if the
       // plan no longer lists it, it is gone by the same test.
-      const job_id = dispatched_owner(route.bench_id, route.bench_run_id, route.run_id)
+      const job_id = dispatched_owner(route.campaign_id, route.campaign_run_id, route.run_id)
       if (job_id === undefined || job_run(world, job_id, route.run_id) === undefined) {
-        app.route = { page: 'bench_run', bench_id: route.bench_id, run_id: route.bench_run_id }
+        app.route = {
+          page: 'campaign_run',
+          campaign_id: route.campaign_id,
+          run_id: route.campaign_run_id
+        }
         notify('That dispatched run is no longer listed.')
       }
       return
@@ -649,13 +655,13 @@ export function recover(): void {
       // entity are still listed.
       const entity_id = context_entity_id(route.context)
       // A report opened from a dispatched run is a *job* run's report, even
-      // though the context is the bench's — the same two-addresses rule. The
+      // though the context is the campaign's — the same two-addresses rule. The
       // owner is what says which map to look in, and for a dispatched run
       // that owner comes from the plan.
       const owner_id = report_owner_id(route.context, route.run_id)
       const run =
-        route.context.kind === 'bench_run'
-          ? bench_run(world, owner_id, route.run_id)
+        route.context.kind === 'campaign_run'
+          ? campaign_run(world, owner_id, route.run_id)
           : job_run(world, owner_id, route.run_id)
       if (run === undefined) {
         app.route = entity_gone(entity_id) ? { page: 'empty' } : { page: 'entity', entity_id }
@@ -676,15 +682,15 @@ export function has_active_run(entity: Entity): boolean {
       return run !== undefined && is_active(run.status)
     })
   }
-  const ids = world.runs_by_bench[entity.id] ?? []
+  const ids = world.runs_by_campaign[entity.id] ?? []
   return ids.some((id) => {
-    const run = bench_run(world, entity.id, id)
+    const run = campaign_run(world, entity.id, id)
     return run !== undefined && is_active(run.status)
   })
 }
 
 /** Top-bar count, mirroring `World::active_run_count`: direct job runs plus
- * bench runs, never counting dispatched children twice. */
+ * campaign runs, never counting dispatched children twice. */
 export function active_run_count(): number {
   const world = app.world
   const direct = Object.values(world.job_runs)
@@ -692,10 +698,10 @@ export function active_run_count(): number {
     .filter(
       (run) => is_active(run.status) && (run.origin === 'Human' || run.origin === 'Agent')
     ).length
-  const benches = Object.values(world.bench_runs)
+  const campaigns = Object.values(world.campaign_runs)
     .flatMap((runs) => Object.values(runs))
     .filter((run) => is_active(run.status)).length
-  return direct + benches
+  return direct + campaigns
 }
 
 // ---------------------------------------------------------------------------
@@ -744,12 +750,12 @@ export function go_to(target: JournalTarget): void {
       }
       navigate({ page: 'job_run', job_id: target.job_id, run_id: target.run_id })
       return
-    case 'bench_run':
-      if (bench_run(app.world, target.bench_id, target.run_id) === undefined) {
+    case 'campaign_run':
+      if (campaign_run(app.world, target.campaign_id, target.run_id) === undefined) {
         notify('That run is no longer listed.')
         return
       }
-      navigate({ page: 'bench_run', bench_id: target.bench_id, run_id: target.run_id })
+      navigate({ page: 'campaign_run', campaign_id: target.campaign_id, run_id: target.run_id })
   }
 }
 

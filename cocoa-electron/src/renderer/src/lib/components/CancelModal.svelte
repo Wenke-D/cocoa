@@ -4,7 +4,7 @@
 -->
 <script lang="ts">
   import {
-    bench_run,
+    campaign_run,
     format_clock,
     format_duration,
     is_active,
@@ -38,7 +38,7 @@
         confirm: 'Cancel Run'
       }
     }
-    const run = bench_run(app.world, target.bench_id, target.run_id)
+    const run = campaign_run(app.world, target.campaign_id, target.run_id)
     if (run === undefined) {
       return null
     }
@@ -48,15 +48,15 @@
     const active = children.filter((child) => is_active(child.status)).length
     const finished = children.filter((child) => is_terminal(child.status)).length
     return {
-      title: 'Cancel this Bench run?',
-      subject: entity_of(target.bench_id)?.name ?? '(removed)',
+      title: 'Cancel this Campaign run?',
+      subject: entity_of(target.campaign_id)?.name ?? '(removed)',
       lines: [
         `All ${active} runs still active will be cancelled.`,
         `${finished} runs have already finished and keep their results.`,
         '',
-        'Runs of the same Jobs started outside this Bench are not affected.'
+        'Runs of the same Jobs started outside this Campaign are not affected.'
       ],
-      confirm: 'Cancel Bench'
+      confirm: 'Cancel Campaign'
     }
   })
 </script>

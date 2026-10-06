@@ -1,5 +1,5 @@
 // End-to-end check of the bundled `examples/` library: registering the folders
-// and driving the engine through the mock scripts (launch, poll, bench plan,
+// and driving the engine through the mock scripts (launch, poll, campaign plan,
 // fan-out). No cluster needed — the same folders the user adds by picking
 // `examples/` in the Add Folder picker.
 //
@@ -60,12 +60,12 @@ describe('bundled example library', () => {
     const solver = path.join(root, 'jobs/solver-gpu')
     const flaky = path.join(root, 'jobs/flaky-solver')
     const failing = path.join(root, 'jobs/failing-solver')
-    const bench = path.join(root, 'benches/nightly-benchmark')
-    for (const folder of [solver, flaky, failing, bench]) {
+    const campaign = path.join(root, 'campaigns/nightly-benchmark')
+    for (const folder of [solver, flaky, failing, campaign]) {
       cocoa.register(folder)
     }
     expect(cocoa.jobs()).toHaveLength(3)
-    expect(cocoa.benches()).toHaveLength(1)
+    expect(cocoa.campaigns()).toHaveLength(1)
 
     // A healthy job lifecycle through the first polls. Nothing is deployed
     // yet, so the first start deploys (§7.6) before its launch; both scripts
@@ -82,8 +82,8 @@ describe('bundled example library', () => {
     expect(poll.changed).toHaveLength(1)
     expect(['PENDING', 'RUNNING']).toContain(cocoa.job(solver).runs.record(run_id).status)
 
-    // The bench plans three instances and dispatches them all at once.
-    const plan = await cocoa.plan_bench(bench, { sweep: 'nightly' })
+    // The campaign plans three instances and dispatches them all at once.
+    const plan = await cocoa.plan_campaign(campaign, { sweep: 'nightly' })
     expect(plan).toHaveLength(3)
     expect(plan.map((instance) => instance.job_name)).toEqual([
       'solver-gpu',
@@ -91,8 +91,8 @@ describe('bundled example library', () => {
       'flaky-solver'
     ])
 
-    // Deployed now, so the bench's solver-gpu members launch as they are.
-    const start = await cocoa.start_bench(bench, { sweep: 'nightly' }, 'human')
+    // Deployed now, so the campaign's solver-gpu members launch as they are.
+    const start = await cocoa.start_campaign(campaign, { sweep: 'nightly' }, 'human')
     expect(await settle(cocoa)).toEqual([])
     expect(start.members).toHaveLength(3)
     expect(start.launch_failures).toEqual([])

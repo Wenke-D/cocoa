@@ -12,7 +12,7 @@ describe('store', () => {
   it('reads a missing store as the empty one and round-trips it', () => {
     const file = path.join(temp_dir(), 'store.json')
     const store = load_store(file)
-    expect(store).toEqual({ jobs: [], benches: [] })
+    expect(store).toEqual({ jobs: [], campaigns: [] })
     save_store(file, store)
     expect(load_store(file)).toEqual(store)
   })

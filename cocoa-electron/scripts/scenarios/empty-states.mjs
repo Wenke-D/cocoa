@@ -20,7 +20,7 @@ export async function run({ page, shot, log, wait_text, relaunch }) {
 
   // 3. Nothing registered: empty the store and come back up.
   const store_path = process.env.COCOA_STORE_PATH ?? path.join('.drive', 'store.json')
-  fs.writeFileSync(store_path, JSON.stringify({ jobs: [], benches: [] }))
+  fs.writeFileSync(store_path, JSON.stringify({ jobs: [], campaigns: [] }))
   ;({ page } = await relaunch())
   await page.getByText('No experiments are registered').waitFor({ timeout: 20_000 })
   await shot('empty-2-no-experiments')

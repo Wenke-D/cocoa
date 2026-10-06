@@ -36,7 +36,7 @@ Query health
 Source
 ```
 
-`Source` is `Started directly` or a link to the dispatching Bench run:
+`Source` is `Started directly` or a link to the dispatching Campaign run:
 
 ```text
 Source    Nightly Benchmark · Run 2026-08-15 10:24 · call 4
@@ -111,7 +111,7 @@ buttons do. One file is one action, `View report`: someone who wants to read
 the report does not care which format it is, so the format is only the
 tooltip. Two files (`report/<run>.txt` and `report/<run>.html`) are a choice,
 and only then is the format the point: `Text` and `HTML`, plain text first,
-each with the view icon. The same row appears on a Bench run's page (§18).
+each with the view icon. The same row appears on a Campaign run's page (§18).
 
 The row's last action is `Re-run report`, a secondary button with a
 counter-clockwise arrow, on every job run whose `report_rerunnable` is true —
@@ -122,7 +122,7 @@ again. Pressed, it is busy (`Re-running…`) until the engine answers, which is
 at once; by then the report is due, and the row reads `Report is being
 generated.` until the outcome lands (convention §7.3.2). A refusal is a
 notice in the error voice; so is a report that then fails, as on the
-automatic path. A bench run's own Report row has no re-run.
+automatic path. A campaign run's own Report row has no re-run.
 
 A `Failed` run's report is shown exactly as a succeeded run's: the same
 buttons, the same viewer. When its script failed, the row says

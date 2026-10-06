@@ -9,7 +9,7 @@
     origin_label,
     trigger_label
   } from '@shared/world'
-  import { bench_run, job_run } from '@shared/world'
+  import { campaign_run, job_run } from '@shared/world'
   import { describe_values } from '@shared/params'
   import { app, entity_of, navigate, request_remove } from '../state.svelte'
   import HistoryRow from '../lib/components/HistoryRow.svelte'
@@ -30,9 +30,9 @@
       .reverse()
   )
 
-  const bench_runs = $derived(
-    (app.world.runs_by_bench[entity_id] ?? [])
-      .map((id) => bench_run(app.world, entity_id, id))
+  const campaign_runs = $derived(
+    (app.world.runs_by_campaign[entity_id] ?? [])
+      .map((id) => campaign_run(app.world, entity_id, id))
       .filter((run) => run !== undefined)
       .reverse()
   )
@@ -42,7 +42,7 @@
   <!-- Top to bottom: what it is called, what it is for, where it is; then
        what it takes, as a table — name, shape, description — since a
        parameter is read before it is filled in (§13.1). No kind label: the
-       Start button below says "Job" or "Bench", and so does the Explorer
+       Start button below says "Job" or "Campaign", and so does the Explorer
        section the row came from. -->
   <header>
     <h1>{entity.name}</h1>
@@ -81,7 +81,7 @@
        stays available when the manifest is broken — a folder that cannot
        start is exactly one someone may want out of the Explorer. -->
   <h2>Actions</h2>
-  {@const start_label = entity.kind === 'Job' ? 'Start Job' : 'Start Bench'}
+  {@const start_label = entity.kind === 'Job' ? 'Start Job' : 'Start Campaign'}
   <div class="actions">
     <Button
       size="icon-sm"
@@ -155,7 +155,7 @@
         </tbody>
       </table>
     {/if}
-  {:else if bench_runs.length === 0}
+  {:else if campaign_runs.length === 0}
     <p class="none">No runs yet.</p>
   {:else}
     <table class="runs">
@@ -175,13 +175,13 @@
         </tr>
       </thead>
       <tbody>
-        {#each bench_runs as run (run.id)}
+        {#each campaign_runs as run (run.id)}
           <HistoryRow
             {entity_id}
             run_id={run.id}
             params={run.params}
             deletable={is_terminal(run.status)}
-            route={{ page: 'bench_run', bench_id: entity_id, run_id: run.id }}
+            route={{ page: 'campaign_run', campaign_id: entity_id, run_id: run.id }}
           >
             <td><StatusPill status={run.status} health={run.query_health} compact /></td>
             <td class="mono num">{run.id}</td>

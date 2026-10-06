@@ -8,9 +8,9 @@ when the scenario fails. Scenarios live in `scripts/scenarios/` and are plain
 modules exporting `run({ page, app, shot, log, waitText })`. Rebuild before
 driving — it runs `out/`, not the dev server.
 
-Scenarios that exist today: `cancel.mjs`, `cancel-bench.mjs`, `report.mjs`,
+Scenarios that exist today: `cancel.mjs`, `cancel-campaign.mjs`, `report.mjs`,
 `add-folder.mjs`, `remove-folder.mjs`, `notice.mjs`, `persistence.mjs`,
-`bench-child.mjs`, `agent.mjs`, `events.mjs`, `history.mjs`. A scenario may
+`campaign-child.mjs`, `agent.mjs`, `events.mjs`, `history.mjs`. A scenario may
 also call `relaunch()` — quit and start again against the same store and
 ui-state file, the only way to drive what is supposed to survive a launch —
 and `DRIVE_PACKAGED=1` runs any of them against the packaged `.app` instead of

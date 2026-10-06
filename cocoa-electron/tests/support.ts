@@ -109,11 +109,11 @@ export function job_folder(dir: string, name: string): string {
 }
 
 /**
- * A copy of the shared bench fixture, whose plan dispatches one call per
+ * A copy of the shared campaign fixture, whose plan dispatches one call per
  * named job. `plan_lines` rewrites that plan for tests that need a bad one.
  */
-export function bench_folder(dir: string, name: string, job_names: string[]): string {
-  const folder = copy_fixture('bench', dir, name)
+export function campaign_folder(dir: string, name: string, job_names: string[]): string {
+  const folder = copy_fixture('campaign', dir, name)
   plan_lines(
     folder,
     job_names.map((job) => `{"job": "${job}", "params": {"size": "256", "gpu": "0"}}`)
@@ -121,12 +121,12 @@ export function bench_folder(dir: string, name: string, job_names: string[]): st
   return folder
 }
 
-/** The plan a bench fixture will produce, one call per line. */
+/** The plan a campaign fixture will produce, one call per line. */
 export function plan_lines(folder: string, lines: string[]): void {
   fs.writeFileSync(path.join(folder, 'plan-lines'), lines.join('\n') + '\n')
 }
 
-function copy_fixture(fixture: 'job' | 'bench', dir: string, name: string): string {
+function copy_fixture(fixture: 'job' | 'campaign', dir: string, name: string): string {
   const folder = path.join(dir, name)
   fs.cpSync(path.join(FIXTURES, fixture), folder, { recursive: true })
   const manifest = path.join(folder, 'cocoa.toml')

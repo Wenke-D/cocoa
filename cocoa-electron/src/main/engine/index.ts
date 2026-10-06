@@ -6,16 +6,16 @@
 //
 // Five files, along the seams the domain has:
 //
-//   memory.ts     the truth — `Job`, `Bench`, their runs, registration, write-through
+//   memory.ts     the truth — `Job`, `Campaign`, their runs, registration, write-through
 //   job.ts        start / poll / report / cancel, one job (§7, §10, §11)
-//   bench.ts      plan / start / report / cancel / status, one bench (§8, §9)
+//   campaign.ts      plan / start / report / cancel / status, one campaign (§8, §9)
 //   in_flight.ts  the launch scripts not yet answered (§7.1)
 //   deploys.ts    each job's gate: check before a start, deploy when stale (§7.5, §7.6)
 //   index.ts      this: `Engine`, which is the memory plus those operations,
 //                 and the refresh tick that drives them all (§7.5)
 
-import * as bench from './bench'
-import type { BenchStart, BenchStatusView, MemberCancel, PlanInstance } from './bench'
+import * as campaign from './campaign'
+import type { CampaignStart, CampaignStatusView, MemberCancel, PlanInstance } from './campaign'
 import { as_engine_error } from './errors'
 import type { EngineError } from './errors'
 import { Deploys } from './deploys'
@@ -70,9 +70,9 @@ export interface RefreshReport {
  * itself against the world having moved (`poll_job`'s history check,
  * `cancel_run`'s recheck, `start_job`'s reservation).
  *
- * Every operation takes a folder, the id a job or bench is addressed by
- * everywhere (IPC, the agent socket, a bench's members), and resolves it
- * once; the operation modules work on the `Job` or `Bench` itself.
+ * Every operation takes a folder, the id a job or campaign is addressed by
+ * everywhere (IPC, the agent socket, a campaign's members), and resolves it
+ * once; the operation modules work on the `Job` or `Campaign` itself.
  */
 export class Engine extends Memory {
   readonly config: Config
@@ -122,36 +122,36 @@ export class Engine extends Memory {
     del.delete_run(this.job(folder), run_id)
   }
 
-  delete_bench_run(folder: string, run_id: number): void {
-    del.delete_bench_run(this, this.bench(folder), run_id)
+  delete_campaign_run(folder: string, run_id: number): void {
+    del.delete_campaign_run(this, this.campaign(folder), run_id)
   }
 
   // ------------------------------------------------------------------
-  // Bench operations — bench.ts
+  // Campaign operations — campaign.ts
   // ------------------------------------------------------------------
 
-  async plan_bench(folder: string, params: Record<string, unknown>): Promise<PlanInstance[]> {
-    return bench.plan_bench(this, this.bench(folder), params)
+  async plan_campaign(folder: string, params: Record<string, unknown>): Promise<PlanInstance[]> {
+    return campaign.plan_campaign(this, this.campaign(folder), params)
   }
 
-  async start_bench(
+  async start_campaign(
     folder: string,
     params: Record<string, unknown>,
     by: Trigger
-  ): Promise<BenchStart> {
-    return bench.start_bench(this, this.bench(folder), params, by)
+  ): Promise<CampaignStart> {
+    return campaign.start_campaign(this, this.campaign(folder), params, by)
   }
 
-  async bench_report(folder: string, run_id: number): Promise<void> {
-    return bench.bench_report(this, this.bench(folder), run_id)
+  async campaign_report(folder: string, run_id: number): Promise<void> {
+    return campaign.campaign_report(this, this.campaign(folder), run_id)
   }
 
-  async cancel_bench(folder: string, run_id: number): Promise<MemberCancel[]> {
-    return bench.cancel_bench(this, this.bench(folder), run_id)
+  async cancel_campaign(folder: string, run_id: number): Promise<MemberCancel[]> {
+    return campaign.cancel_campaign(this, this.campaign(folder), run_id)
   }
 
-  bench_status(folder: string, run_id: number): BenchStatusView {
-    return bench.bench_status(this, this.bench(folder), run_id)
+  campaign_status(folder: string, run_id: number): CampaignStatusView {
+    return campaign.campaign_status(this, this.campaign(folder), run_id)
   }
 
   // ------------------------------------------------------------------
@@ -194,7 +194,7 @@ export class Engine extends Memory {
 
   /**
    * One refresh tick (§7.5, §10): harvest, reconcile disk → memory, poll,
-   * auto-report, bench reports. Deploys are harvested before launches: a
+   * auto-report, campaign reports. Deploys are harvested before launches: a
    * deploy that landed spawns the launches waiting on it.
    */
   async refresh(): Promise<RefreshReport> {
@@ -264,11 +264,11 @@ export class Engine extends Memory {
       }
     }
 
-    for (const bench of this.benches()) {
-      if (bench.manifest === null) {
+    for (const campaign of this.campaigns()) {
+      if (campaign.manifest === null) {
         continue
       }
-      for (const run_view of bench.runs.all()) {
+      for (const run_view of campaign.runs.all()) {
         const record = run_view.record
         if (record === null) {
           continue
@@ -278,13 +278,13 @@ export class Engine extends Memory {
           continue
         }
         try {
-          const status = this.bench_status(bench.path, run_view.run_id)
+          const status = this.campaign_status(campaign.path, run_view.run_id)
           if (status.status === 'ANALYZING') {
             report.reports_run += 1
-            await this.bench_report(bench.path, run_view.run_id)
+            await this.campaign_report(campaign.path, run_view.run_id)
           }
         } catch (cause) {
-          report.report_errors.push(as_engine_error(bench.path, cause))
+          report.report_errors.push(as_engine_error(campaign.path, cause))
         }
       }
     }

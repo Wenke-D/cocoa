@@ -4,7 +4,7 @@
 
 import type { ParamSpec, Params } from './params'
 
-export type EntityKind = 'Job' | 'Bench'
+export type EntityKind = 'Job' | 'Campaign'
 
 export type ManifestState = 'Valid' | 'Missing' | { Invalid: { message: string } }
 
@@ -29,10 +29,10 @@ export type RunOrigin =
   | 'Human'
   | 'Agent'
   | {
-      Bench: {
+      Campaign: {
         name: string
-        bench_id: string | null
-        bench_run_id: string
+        campaign_id: string | null
+        campaign_run_id: string
         call: number
       }
     }
@@ -101,22 +101,22 @@ export interface RunDeploy {
   error: string | null
 }
 
-export interface BenchPlanStep {
+export interface CampaignPlanStep {
   index: number
   job_id: string
   parameters: string
   run_id: string
 }
 
-export interface BenchRun {
+export interface CampaignRun {
   id: string
-  bench_id: string
+  campaign_id: string
   by: Trigger
   started_at: string
   ended_at: string | null
   parameters: string
   params: Params
-  plan: { steps: BenchPlanStep[] }
+  plan: { steps: CampaignPlanStep[] }
   status: RunStatus
   query_health: QueryHealth
   last_successful_query: string
@@ -141,10 +141,10 @@ export type RunsByEntity<T> = Record<string, Record<string, T>>
 export interface World {
   entities: Entity[]
   job_runs: RunsByEntity<JobRun>
-  bench_runs: RunsByEntity<BenchRun>
+  campaign_runs: RunsByEntity<CampaignRun>
   /** Each experiment's run ids, oldest first — the index carries the order. */
   runs_by_job: Record<string, string[]>
-  runs_by_bench: Record<string, string[]>
+  runs_by_campaign: Record<string, string[]>
   last_refresh: string | null
 }
 
@@ -153,17 +153,21 @@ export function job_run(world: World, job_id: string, run_id: string): JobRun | 
   return world.job_runs[job_id]?.[run_id]
 }
 
-export function bench_run(world: World, bench_id: string, run_id: string): BenchRun | undefined {
-  return world.bench_runs[bench_id]?.[run_id]
+export function campaign_run(
+  world: World,
+  campaign_id: string,
+  run_id: string
+): CampaignRun | undefined {
+  return world.campaign_runs[campaign_id]?.[run_id]
 }
 
 export function empty_world(): World {
   return {
     entities: [],
     job_runs: {},
-    bench_runs: {},
+    campaign_runs: {},
     runs_by_job: {},
-    runs_by_bench: {},
+    runs_by_campaign: {},
     last_refresh: null
   }
 }
@@ -175,7 +179,7 @@ export function empty_world(): World {
 // change. The renderer bootstraps once (the one irreducible full-state
 // message — a fresh page owns nothing), then applies events. Events from one
 // logical operation arrive as ONE batch, so the renderer never sees a torn
-// world (a member succeeded while its bench still reads running).
+// world (a member succeeded while its campaign still reads running).
 
 export interface BootstrapPayload {
   world: World
@@ -196,8 +200,8 @@ export type CocoaEvent =
   | { kind: 'job-run-upserted'; run: JobRun }
   /** A removal has no run to carry the pair, so it names both halves. */
   | { kind: 'job-run-removed'; job_id: string; id: string }
-  | { kind: 'bench-run-upserted'; run: BenchRun }
-  | { kind: 'bench-run-removed'; bench_id: string; id: string }
+  | { kind: 'campaign-run-upserted'; run: CampaignRun }
+  | { kind: 'campaign-run-removed'; campaign_id: string; id: string }
   /** Heartbeat: the engine completed a refresh pass. Content-free. */
   | { kind: 'refreshed'; at: string }
   /**
@@ -216,14 +220,14 @@ export type StartResult = { ok: true; run_id: string } | { ok: false; message: s
  */
 export type CancelTarget =
   | { kind: 'job_run'; job_id: string; run_id: string }
-  | { kind: 'bench_run'; bench_id: string; run_id: string }
+  | { kind: 'campaign_run'; campaign_id: string; run_id: string }
 
 export type CancelResult = { ok: true } | { ok: false; message: string }
 
 /** The run to delete for good (§16.4): same two addresses a cancel uses. */
 export type DeleteTarget =
   | { kind: 'job_run'; job_id: string; run_id: string }
-  | { kind: 'bench_run'; bench_id: string; run_id: string }
+  | { kind: 'campaign_run'; campaign_id: string; run_id: string }
 
 export type DeleteResult = { ok: true } | { ok: false; message: string }
 
@@ -272,7 +276,7 @@ export function is_active(status: RunStatus): boolean {
 
 /**
  * Whether a job run can be deleted from its own page or row: finished, not
- * dispatched by a bench (§16.4), and with no report still being written for
+ * dispatched by a campaign (§16.4), and with no report still being written for
  * it — a `Failed` run's report runs after its verdict (convention §12.1).
  */
 export function is_deletable(run: JobRun): boolean {
@@ -310,7 +314,7 @@ export function manifest_blocking_reason(state: ManifestState): string | null {
   return `Manifest is invalid: ${state.Invalid.message}`
 }
 
-/** Mirrors `RunOrigin`'s history-row label: `you`, `agent`, or the Bench. */
+/** Mirrors `RunOrigin`'s history-row label: `you`, `agent`, or the Campaign. */
 export function origin_label(origin: RunOrigin): string {
   if (origin === 'Human') {
     return 'you'
@@ -318,7 +322,7 @@ export function origin_label(origin: RunOrigin): string {
   if (origin === 'Agent') {
     return 'agent'
   }
-  return `${origin.Bench.name} · call ${origin.Bench.call}`
+  return `${origin.Campaign.name} · call ${origin.Campaign.call}`
 }
 
 export function trigger_label(by: Trigger): string {

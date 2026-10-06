@@ -19,11 +19,11 @@ question, answered and gone.
 
 The Start page contains:
 
-- The experiment's name as the title, under a small `START JOB` / `START BENCH`
+- The experiment's name as the title, under a small `START JOB` / `START CAMPAIGN`
   type label — the identity block an entity page uses (§13.1). The title takes
   the ordinary heading colour: the accent means "interactive" everywhere else in
   the workbench, so an accented title would read as a link.
-- For a Bench, a note that the runs to dispatch are decided at start.
+- For a Campaign, a note that the runs to dispatch are decided at start.
 - A `PARAMETERS` section, marked `(all required)`, holding one field per
   declared parameter, in declaration order, each under its name, what may be
   put there (the `Values` wording of §13.1), and its description (convention
@@ -39,7 +39,7 @@ The form keeps a measure of its own rather than filling the editor's width: a
 declared parameter is a short value, and a field the width of the window invites
 a paragraph.
 
-For a Bench, the page cannot preview the plan — the plan does not exist until
+For a Campaign, the page cannot preview the plan — the plan does not exist until
 Start is pressed. Do not display a fabricated job list.
 
 Example:
@@ -116,7 +116,7 @@ its own placeholder. An experiment that declares no parameters starts with
 none.
 
 The engine refuses a blank value exactly as it refuses a missing one, so a start
-reaching it by any other route — a Bench dispatching a member, say — is refused
+reaching it by any other route — a Campaign dispatching a member, say — is refused
 the same way.
 
 ## 15.3 No Prefill by Default
@@ -157,7 +157,7 @@ On submission:
    - Re-enable submission.
    - Show an inline error.
 
-For a Bench, step 3 produces the plan, validates it against the Explorer (§2.3.2),
+For a Campaign, step 3 produces the plan, validates it against the Explorer (§2.3.2),
 and dispatches every call. Plan validation failure is a Start failure: the modal
 stays open, nothing is dispatched, and the error names **every** call that
 cannot be dispatched, not the first one found.
@@ -171,7 +171,7 @@ that is wrong throughout.
 Example inline error:
 
 ```text
-Cannot start this Bench. 3 of its 12 calls cannot be dispatched:
+Cannot start this Campaign. 3 of its 12 calls cannot be dispatched:
 
   call 2: `solver-xl` is not a registered job
   call 5: job `solver-gpu` — missing `gpu`, extra `device`

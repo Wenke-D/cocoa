@@ -140,7 +140,7 @@ code,
   font-size: 12px;
 }
 
-/* The one run-table treatment: job history, bench history, dispatch calls
+/* The one run-table treatment: job history, campaign history, dispatch calls
    (specification §22). Global for the same reason the buttons are — it was on
    its third copy.
 

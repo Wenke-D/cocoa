@@ -9,10 +9,10 @@ phase. Do not add one.
 Consequences:
 
 - Start is never disabled because a run is already active.
-- A Bench dispatching a Job never conflicts with, waits for, or is blocked by any
+- A Campaign dispatching a Job never conflicts with, waits for, or is blocked by any
   other run of that Job.
 - The same Job may simultaneously have a directly-started run and several runs
-  dispatched by one or more Benches.
+  dispatched by one or more Campaigns.
 - Cancelling any run affects only that run.
 
 When an active run already exists, the Start page may show an informational

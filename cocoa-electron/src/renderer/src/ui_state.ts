@@ -18,15 +18,15 @@ import { from_nullable } from '@shared/maybe'
 import type { ReportFormat } from '@shared/world'
 
 /**
- * Which page a report was opened from. A run dispatched by a bench has two
+ * Which page a report was opened from. A run dispatched by a campaign has two
  * addresses (§2.3.1), so the report of one run does too: the context, not the
  * run's origin, decides the breadcrumbs and which Explorer row stays
  * selected.
  */
 export type ReportContext =
   | { kind: 'job_run'; job_id: string }
-  | { kind: 'bench_run'; bench_id: string }
-  | { kind: 'bench_child'; bench_id: string; bench_run_id: string }
+  | { kind: 'campaign_run'; campaign_id: string }
+  | { kind: 'campaign_child'; campaign_id: string; campaign_run_id: string }
 
 /** An address, never content. */
 export type Route =
@@ -34,9 +34,9 @@ export type Route =
   | { page: 'entity'; entity_id: string }
   | { page: 'start'; entity_id: string }
   | { page: 'job_run'; job_id: string; run_id: string }
-  | { page: 'bench_run'; bench_id: string; run_id: string }
-  /** A run dispatched by a bench, seen in the bench's context (§19). */
-  | { page: 'bench_child'; bench_id: string; bench_run_id: string; run_id: string }
+  | { page: 'campaign_run'; campaign_id: string; run_id: string }
+  /** A run dispatched by a campaign, seen in the campaign's context (§19). */
+  | { page: 'campaign_child'; campaign_id: string; campaign_run_id: string; run_id: string }
   | { page: 'report'; context: ReportContext; run_id: string; format: ReportFormat }
 
 /**
@@ -56,7 +56,7 @@ export type SidebarView = 'explorer' | 'runs' | 'events'
 /** What the renderer arranges and remembers, and nobody else. */
 export interface UiState {
   sidebar_width: number
-  /** Where the Explorer's horizontal divider sits: BENCHES' share of the height (§8.3). */
+  /** Where the Explorer's horizontal divider sits: CAMPAIGNS' share of the height (§8.3). */
   explorer_split: number
   /** Whether the report's plain-text view wraps long lines instead of scrolling. */
   report_wrap_lines: boolean

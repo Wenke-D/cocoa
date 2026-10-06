@@ -5,14 +5,14 @@ The workbench is built. What follows is the standing list, not a build order.
 **Working:** the engine port in full — manifests, templates, the job lifecycle,
 the poll protocol, auto and manual reports with ERROR healing — the manual
 re-run reachable from the run page and the agent socket — reports for failed
-runs beside their status, cancel, bench
-plan and fan-out, derived bench status, orphan detection, abandonment at close.
+runs beside their status, cancel, campaign
+plan and fan-out, derived campaign status, orphan detection, abandonment at close.
 Memory as the truth with write-through; records read once, manifests re-read
 each tick (§26.1); guarded writes, no queue (§26.2). Event-driven
 sync (§26.3). Notices (§26.4). The journal and the Events view, the
 activity bar with Explorer and Active Runs (§8, §11.1). The agent socket and the MCP binary (§43). The
-persisted arrangement (§32). Explorer, overview, start, run detail, bench run
-detail, bench child detail, report viewer for both formats, add and remove
+persisted arrangement (§32). Explorer, overview, start, run detail, campaign run
+detail, campaign child detail, report viewer for both formats, add and remove
 folder, cancel with confirmation. An electron-builder package.
 
 **Outstanding**, roughly by what each one costs:

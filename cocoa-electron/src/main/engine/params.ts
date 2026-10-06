@@ -1,6 +1,6 @@
 // What a start must supply (convention §2.1): every declared parameter, no
 // other, each a value of its declared shape. One check for every way in — the
-// form, the row menu, a bench's plan, an agent — so a refusal reads the same
+// form, the row menu, a campaign's plan, an agent — so a refusal reads the same
 // wherever it came from, and names every fault at once.
 
 import type { ParamSpec, Params } from '@shared/params'

@@ -1,5 +1,5 @@
 // The main process is the server side of the classic Electron shape: it owns
-// the cocoa engine, runs the refresh loop that monitors jobs and benches, and
+// the cocoa engine, runs the refresh loop that monitors jobs and campaigns, and
 // emits changes to the UI and the AI. The renderer bootstraps once, then
 // receives typed events.
 //

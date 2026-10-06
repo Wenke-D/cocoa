@@ -16,7 +16,9 @@
   import { Button } from '$lib/components/ui/button'
   import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle'
 
-  const benches = $derived(app.world.entities.filter((entity) => entity.kind === 'Bench').length)
+  const campaigns = $derived(
+    app.world.entities.filter((entity) => entity.kind === 'Campaign').length
+  )
   const jobs = $derived(app.world.entities.filter((entity) => entity.kind === 'Job').length)
   const active = $derived(active_run_count())
 
@@ -26,7 +28,7 @@
   /** Zero-value segments stay: the line keeps one shape from launch to launch. */
   const glance = $derived(
     [
-      counted(benches, 'bench', 'benches'),
+      counted(campaigns, 'campaign', 'campaigns'),
       counted(jobs, 'job', 'jobs'),
       counted(active, 'active run', 'active runs')
     ].join(' · ')

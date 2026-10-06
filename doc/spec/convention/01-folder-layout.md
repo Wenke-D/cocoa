@@ -12,7 +12,7 @@ template it declares, and — once cocoa has been used on it — its own records
     <run_id>/
       run.json           # record: args, submission id, status history
       job.sbatch         # the rendered template (jobs)
-      members.json       # the fan-out (benches)
+      members.json       # the fan-out (campaigns)
   report/                # report output, at the folder root
     <run_id>.txt         # required
     <run_id>.html        # optional

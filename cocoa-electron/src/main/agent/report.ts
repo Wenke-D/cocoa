@@ -19,10 +19,10 @@ export function rerun_report(name: string, run_id: string, deps: AgentDeps): Age
   if (entity === undefined) {
     return failure(404, `No such entity: ${name}`)
   }
-  if (entity.kind === 'Bench') {
+  if (entity.kind === 'Campaign') {
     return failure(
       400,
-      `${name} is a bench; a bench's report is not re-run by hand, but each of its runs' ` +
+      `${name} is a campaign; a campaign's report is not re-run by hand, but each of its runs' ` +
         `can be, under its own job`
     )
   }

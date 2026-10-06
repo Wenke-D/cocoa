@@ -80,7 +80,7 @@ export function prepare_start(
  * Starts a job (§7.1, §7.5): checks it under its gate, then launches — at
  * once when it is current, after its deploy when it is stale. A start means
  * "launched", not waited-for: the run is recorded before its script
- * answers. `origin` says who asked: a person, an agent, or a bench's call.
+ * answers. `origin` says who asked: a person, an agent, or a campaign's call.
  */
 export async function start_job(
   engine: Engine,

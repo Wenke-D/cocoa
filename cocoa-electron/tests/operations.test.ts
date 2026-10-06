@@ -15,7 +15,7 @@ import {
   delete_run
 } from '../src/main/bridge/operations'
 import {
-  bench_folder,
+  campaign_folder,
   cleanup_temp_dirs,
   engine,
   job_folder,
@@ -44,18 +44,18 @@ describe('start_run', () => {
     expect(record.origin).toEqual({ by: 'human' })
   })
 
-  it('starts a bench by name', async () => {
+  it('starts a campaign by name', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'member')
-    const bench = bench_folder(dir, 'sweep', ['member'])
+    const campaign = campaign_folder(dir, 'sweep', ['member'])
     const cocoa = engine(dir)
     cocoa.register(job)
-    cocoa.register(bench)
+    cocoa.register(campaign)
 
     const result = await start_run(cocoa, 'sweep', { mesh: 'fine' })
     expect(result.ok).toBe(true)
     await settle(cocoa)
-    expect(cocoa.bench(bench).runs.all()).toHaveLength(1)
+    expect(cocoa.campaign(campaign).runs.all()).toHaveLength(1)
   })
 
   it('refuses an unknown name without throwing', async () => {
@@ -165,45 +165,49 @@ describe('cancel', () => {
     expect(result.ok === false && result.message).toContain('cannot be cancelled')
   })
 
-  it('cancels every still-active member of a bench', async () => {
+  it('cancels every still-active member of a campaign', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'member')
-    const bench = bench_folder(dir, 'sweep', ['member', 'member'])
+    const campaign = campaign_folder(dir, 'sweep', ['member', 'member'])
     const cocoa = engine(dir)
     cocoa.register(job)
-    cocoa.register(bench)
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    cocoa.register(campaign)
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
     write(job, 'poll-state', 'RUNNING')
     await cocoa.poll_job(job)
 
     expect(
-      await cancel(cocoa, { kind: 'bench_run', bench_id: bench, run_id: String(start.run_id) })
+      await cancel(cocoa, {
+        kind: 'campaign_run',
+        campaign_id: campaign,
+        run_id: String(start.run_id)
+      })
     ).toEqual({ ok: true })
     for (const member of start.members) {
       expect(cocoa.job(job).runs.record(member.run_id).status).toBe('CANCELLING')
     }
-    expect(cocoa.bench_status(bench, start.run_id).status).toBe('CANCELLING')
+    expect(cocoa.campaign_status(campaign, start.run_id).status).toBe('CANCELLING')
   })
 
   // The Rust adapter drops the per-member results here; a cancel that half
   // worked should not read as done.
-  it('reports a bench whose members refused, naming one of them', async () => {
+  it('reports a campaign whose members refused, naming one of them', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'member')
-    const bench = bench_folder(dir, 'sweep', ['member', 'member'])
+    const campaign = campaign_folder(dir, 'sweep', ['member', 'member'])
     const cocoa = engine(dir)
     cocoa.register(job)
-    cocoa.register(bench)
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    cocoa.register(campaign)
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
     write(job, 'poll-state', 'RUNNING')
     await cocoa.poll_job(job)
     write_script(job, 'cancel.sh', "echo 'scancel: invalid job id' >&2\nexit 1\n")
 
     const result = await cancel(cocoa, {
-      kind: 'bench_run',
-      bench_id: bench,
+      kind: 'campaign_run',
+      campaign_id: campaign,
       run_id: String(start.run_id)
     })
     expect(result.ok).toBe(false)
@@ -212,23 +216,27 @@ describe('cancel', () => {
     expect(result.ok === false && result.message).toContain('1 more')
   })
 
-  // Members that already ended keep their results; the bench asks only what
+  // Members that already ended keep their results; the campaign asks only what
   // is still the cluster's to stop.
   it('leaves finished members alone', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'member')
-    const bench = bench_folder(dir, 'sweep', ['member'])
+    const campaign = campaign_folder(dir, 'sweep', ['member'])
     const cocoa = engine(dir)
     cocoa.register(job)
-    cocoa.register(bench)
-    const start = await cocoa.start_bench(bench, { mesh: 'fine' }, 'human')
+    cocoa.register(campaign)
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
     write(job, 'poll-state', 'COMPLETED')
     await cocoa.poll_job(job)
     await cocoa.report_run(job, start.members[0].run_id, 'auto')
 
     expect(
-      await cancel(cocoa, { kind: 'bench_run', bench_id: bench, run_id: String(start.run_id) })
+      await cancel(cocoa, {
+        kind: 'campaign_run',
+        campaign_id: campaign,
+        run_id: String(start.run_id)
+      })
     ).toEqual({ ok: true })
     expect(cocoa.job(job).runs.record(start.members[0].run_id).status).toBe('SUCCEEDED')
   })

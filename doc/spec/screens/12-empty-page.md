@@ -62,5 +62,5 @@ state never shows — the previous one does.
                   cocoa
 Select an experiment in the Explorer to begin.
 
-       2 benches · 4 jobs · 1 active run
+       2 campaigns · 4 jobs · 1 active run
 ```

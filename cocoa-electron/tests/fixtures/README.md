@@ -24,7 +24,7 @@ needs after copying.
   appends one line to `deploys`, so a test can count them, and one that lands
   writes `CURRENT` into `check-state`.
 
-## `bench/` — manifest name `fixture-bench`
+## `campaign/` — manifest name `fixture-campaign`
 
 Driven by `plan-lines`: one planned call per line, as the JSON object the plan
 contract expects.

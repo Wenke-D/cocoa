@@ -4,9 +4,9 @@
 
 The sidebar hosts three views, selected from the activity bar (§8.2).
 
-**Explorer.** The Benches and Jobs the user has added, grouped by kind (§11.2). This is the only persistent navigation surface. It carries no filter field: the Explorer is a short, fully visible list of folders the user added themselves. The run-history filters of §22.4 and the report search of §20.2 are unaffected.
+**Explorer.** The Campaigns and Jobs the user has added, grouped by kind (§11.2). This is the only persistent navigation surface. It carries no filter field: the Explorer is a short, fully visible list of folders the user added themselves. The run-history filters of §22.4 and the report search of §20.2 are unaffected.
 
-**Active Runs.** Everything started and not yet finished. Top-level runs only: a Bench run appears once, never once per dispatched child, matching the count of §21. The members a Bench run still has running are listed beneath it, indented, as what it is made of — not counted, and leading to the child seen through its bench (§19). Rows show the entity name and the run's status badge, and navigate to that run's detail page, where Cancel lives. When nothing is running, show a subtle `Nothing is running.` note rather than an error.
+**Active Runs.** Everything started and not yet finished. Top-level runs only: a Campaign run appears once, never once per dispatched child, matching the count of §21. The members a Campaign run still has running are listed beneath it, indented, as what it is made of — not counted, and leading to the child seen through its campaign (§19). Rows show the entity name and the run's status badge, and navigate to that run's detail page, where Cancel lives. When nothing is running, show a subtle `Nothing is running.` note rather than an error.
 
 **Events.** What happened, newest first: a run that started and by whom, a status that moved, a report that landed, a run cocoa lost sight of or found again, a folder that was added or removed, a manifest that broke or healed, and any failure the status bar reported. Each entry is the moment, the experiment, the run, and what happened — the last coloured by what it means: green for a report landing, a success or a run found again; red for a failure; amber for a run cocoa cannot see; blue for news; grey for the rest. Entries are kept apart by a rule. The backend only says what changed, as it always has (§26.3); the renderer, which holds the entry as it was, says what moved — the backend knows nothing of this view. The last hundred are kept, in the page's memory only: a reload or a relaunch starts empty. An entry about something still listed navigates to it. When nothing has happened, show a subtle `Nothing has happened yet.` note.
 
@@ -15,7 +15,7 @@ The sidebar hosts three views, selected from the activity bar (§8.2).
 Display separate groups:
 
 ```text
-BENCHES
+CAMPAIGNS
 JOBS
 ```
 
@@ -60,7 +60,7 @@ that is the hover with a little more weight is not clear.
 It must remain selected when viewing:
 
 - A run.
-- A run dispatched by that Bench.
+- A run dispatched by that Campaign.
 - A report.
 
 ## 11.5 Add Folder
