@@ -97,8 +97,12 @@ its report does: the cluster's verdict is not the report's to change.
 cocoa answers on a Unix socket while its window is open, and an agent can list
 experiments, read runs, and start them through it — the same operations a click
 uses, on the same engine, landing on the same screen. Every run records who
-asked: **you**, an **agent**, or the **campaign** that dispatched it. See the
-[agent interface](../spec/agent/43-agent-interface.md).
+asked: **you**, an **agent**, or the **campaign** that dispatched it.
+
+That is what makes it worth giving an agent: the agent works where you can see
+it. Its runs appear in your window as it starts them, through the same scripts
+you would use, rather than as commands typed into a cluster somewhere you are
+not looking. See [working with an agent](agents.md).
 
 ## What it is not
 
@@ -109,13 +113,21 @@ asked: **you**, an **agent**, or the **campaign** that dispatched it. See the
 - Not a server, and not multi-user. It is one window on one workstation.
 - Not a place your data lives. It is a view of folders that were already yours.
 
+## Beside a workflow tool
+
+cocoa does not replace Snakemake, Nextflow, or whatever orders the steps of
+your work on the cluster. Those define what depends on what, remotely. cocoa
+is the end you sit at: start something, follow its status, read its report
+when it is done. The two compose — a job's `launch` can submit a whole
+Snakemake workflow, and cocoa follows it as one run.
+
 ## Where to read next
 
 | | |
 |---|---|
-| [authoring.md](authoring.md) | Writing a job or a campaign: the folder, the manifest, the six scripts |
+| [authoring.md](authoring.md) | Writing a job or a campaign: the folder, the manifest, the six scripts, and what a report should say |
+| [agents.md](agents.md) | Working with an agent: how it reaches cocoa, and the rules it works by |
 | [examples/](../../examples/README.md) | A library of small, real experiments to try cocoa against — no cluster needed |
-| [agent interface](../spec/agent/43-agent-interface.md) | Driving cocoa from an agent: the socket, its routes, and the MCP binary |
 
 Everything else — what each screen must do, how cocoa is built, the full folder
 contract and how to work on it — is the development specification, in

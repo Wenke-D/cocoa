@@ -16,6 +16,10 @@ export function help(): AgentResponse {
       'those scripts, tracks each run’s status, and collects reports. This socket is the ' +
       'agent interface — the same engine the window drives, reached over HTTP/1.1 on a Unix ' +
       'socket.',
+    manual:
+      'Read before working on experiments: https://github.com/Wenke-D/cocoa/blob/main/manual.ai.md ' +
+      '(raw: https://raw.githubusercontent.com/Wenke-D/cocoa/main/manual.ai.md) — the rules an ' +
+      'agent works by, how an experiment’s scripts are written, and what a report should say.',
     how_to_reach_it:
       'curl --unix-socket ~/.local/share/cocoa/cocoa.sock http://localhost/<path> ' +
       '(COCOA_SOCKET_PATH overrides the location), or the bundled `cocoa-mcp-server` binary, ' +

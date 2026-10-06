@@ -44,7 +44,9 @@ For using cocoa and writing experiments for it.
 | | |
 |---|---|
 | [overview.md](doc/manual/overview.md) | **Start here.** What cocoa is, what a Job and a Campaign are, and what using it looks like. |
-| [authoring.md](doc/manual/authoring.md) | Writing a job or a campaign: the folder, the manifest, the six scripts. |
+| [authoring.md](doc/manual/authoring.md) | Writing a job or a campaign: the folder, the manifest, the six scripts, and what a report should say. |
+| [agents.md](doc/manual/agents.md) | Working with an AI agent: connecting it, and the rules it works by. |
+| [manual.ai.md](manual.ai.md) | The entry point for an agent itself: a short page pointing at the two above. The MCP server hands it out. |
 
 ### Development specification — [`doc/spec/`](doc/spec/)
 

@@ -201,6 +201,18 @@ shows `DEPLOYING` meanwhile, and launches once the deploy exits 0. A deploy
 that fails moves every run waiting on it to `ERROR` with its output — none of
 them was submitted.
 
+Two habits make the pair work well:
+
+- **A check remembers what was deployed.** It runs before every start, so it
+  must be quick and must not deploy anything itself. Have `deploy` leave a
+  record of what it put in place — a hash of the inputs, an image tag, a
+  commit — and have `check` compare that record with what is there now.
+  Without it, every start either redeploys or guesses.
+- **Building stays out of the experiment.** The folder describes runs. What
+  builds the executable or the image is its own project; `deploy` may call
+  that project's build and then copy the result where the runs expect it, but
+  the build itself does not live in the experiment.
+
 **`launch`** — `./launch.sh --script runs/41/job.sbatch --run 41 --gpu 1`.
 Submits however it likes and prints the identifier cocoa will track:
 
@@ -238,7 +250,8 @@ a failure.
 It runs when the poll says `COMPLETED` **and** when it says `FAILED`, with the
 same arguments; `COCOA_RUN_STATUS` in its environment says which (§7.3).
 A failed run is where a report earns its keep — which stage broke, the
-residuals, the tail of the solver log — so write for it:
+residuals, the tail of the solver log — so write for it (*What a report should
+say*, below, has a shape that works):
 
 ```python
 if os.environ.get("COCOA_RUN_STATUS") == "FAILED":
@@ -318,3 +331,46 @@ them. Output rules are the job report's: `report/7.txt` required.
   campaign run, its dispatched runs too (§12.1); run ids otherwise never repeat.
 - Nothing else in the folder is cocoa's business: keep source, data and
   scratch wherever suits the scripts.
+
+## 8. What a report should say
+
+A report is not the run's log. It answers what the experiment was run for,
+and it carries enough to understand a failure without logging into the
+machine the run ran on. What counts as the answer depends on the purpose,
+and a purpose can change: when an experiment is reused for something else,
+its report changes with it.
+
+A shape that serves most purposes, top to bottom:
+
+1. **Verdict** — the first line: the answer, and the number it rests on.
+2. **What ran** — the run and its submission id; where it ran and on what
+   resources; when; and the version of everything that ran — the executable,
+   its build, the image.
+3. **Checklist** — each stage of the run, `ok` or `FAIL`, with the detail
+   that says so.
+4. **Diagnosis** — only when something failed: what broke, the end of that
+   stage's log, the error lines, the scheduler's own output with its noise
+   removed. `COCOA_RUN_STATUS=FAILED` (§7.3.1) is when this matters most.
+5. **Warnings** — each once, with a count.
+
+Each experiment owns its report script, which decides the verdict and what
+to show. Two experiments with the same purpose may start from a copy of one
+script and are free to diverge. What they share — how to reach the cluster,
+how to read what a run left behind — lives in one shared folder beside them,
+and that shared code reads; it never decides what a report says.
+
+A campaign's report is one table that answers the campaign's question. It
+reads its members' reports (`members.json` lists where they are, §8.3) and
+never goes back to the cluster.
+
+## 9. Keeping a library of experiments
+
+- One folder with a `cocoa.toml` is one experiment. Its `description` says
+  what it is for, and its report answers that.
+- Keep an index of the folders — a table in the library's README — and add a
+  row with each new experiment.
+- An experiment folder is self-contained: its manifest, its template, its
+  report script (a campaign: its plan and its report script). Code several
+  experiments share sits in one place beside them.
+- `runs/` and `report/` belong to cocoa. Read them; never edit them by hand.
+

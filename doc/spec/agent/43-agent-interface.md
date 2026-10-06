@@ -154,12 +154,15 @@ for it to answer. The MCP subset it needs (initialize, tools/list, tools/call,
 one JSON message per line) is written out by hand rather than taken from an SDK.
 
 Run with `--help-ai`, the binary prints a pointer instead of serving: one
-paragraph on what cocoa runs, and the URL of the authoring convention
-([authoring.md](../../manual/authoring.md)) in both page and raw form. The document is
-deliberately not baked in — it is versioned and reviewed in the repository
-beside the code that enforces it, and a copy in the binary would hand an
-agent whichever revision it happened to have installed. Live state still
-comes only from the tools.
+paragraph on what cocoa runs, and the GitHub URL of the manual for agents
+([manual.ai.md](../../../manual.ai.md)) in both page and raw form. The same URL is
+in the `initialize` instructions every MCP client shows its agent, and in
+`GET /help`'s `manual` field. The manual is a thin page that points into the
+[user manual](../../manual/agents.md) — the rules an agent works by, how scripts
+and reports are written. It is deliberately not baked in: it is versioned and
+reviewed in the repository beside the code that enforces it, and a copy in
+the binary would hand an agent whichever revision it happened to have
+installed. Live state still comes only from the tools.
 
 The binary is Rust and lives in its own crate, `cocoa-mcp/` — `cargo build`
 there, and nothing else is needed: its only dependency is `serde_json`, and it
