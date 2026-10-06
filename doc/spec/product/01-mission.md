@@ -1,22 +1,17 @@
 # 1. Mission
 
-Everything above, as the list of things the application must let a user do —
-the checklist the rest of this documentation elaborates.
+cocoa is a desktop app. In it, a user can:
 
-A user must be able to:
-
-1. Select a Job or Bench.
-2. See its current runs and complete run history.
+1. Select a Job or a Bench.
+2. See its active runs and its full run history.
 3. Open the Start page.
-4. Enter a free-form parameter string.
+4. Choose or type a value for each parameter.
 5. Start a run.
-6. Monitor its status.
-7. Open a full run-detail page.
-8. Cancel an active run.
-9. Open a plain-text report.
-10. For a Bench, inspect every run it dispatched.
-11. Open the detail page of an individual dispatched run.
-12. See successful, failed, cancelled, and unavailable-query states told apart.
-
-The result must be a real, runnable desktop application rather than a static
-mockup, and must work against real experiment folders.
+6. Follow the run's status as it changes.
+7. Open a page with every detail of a run.
+8. Cancel a run that is still active.
+9. Open a run's report, as plain text or as HTML.
+10. For a Bench run, see every run it dispatched.
+11. Open the detail page of any one of those dispatched runs.
+12. Tell at a glance whether a run succeeded, failed, was cancelled, could not
+    be queried just now, or hit an error on cocoa's own side.
