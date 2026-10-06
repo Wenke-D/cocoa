@@ -8,6 +8,7 @@ import type { AgentDeps, AgentResponse } from './answer'
 import { failure } from './answer'
 import { help } from './help'
 import { bench_detail, job_detail, list_entities } from './reads'
+import { register_folder } from './register'
 import { rerun_report } from './report'
 import { start_run } from './start'
 
@@ -55,6 +56,9 @@ export function agent_app(deps: AgentDeps): express.Express {
   app.get('/benches/:name', (request, response) =>
     reply(response, bench_detail(deps.current_world(), request.params.name))
   )
+  app.post('/experiments', (request, response) =>
+    reply(response, register_folder(text_of(request.body), deps))
+  )
   app.post('/experiments/:name/runs', async (request, response) =>
     reply(response, await start_run(request.params.name, text_of(request.body), deps))
   )
@@ -69,6 +73,7 @@ export function agent_app(deps: AgentDeps): express.Express {
     '/benches',
     '/jobs/:name',
     '/benches/:name',
+    '/experiments',
     '/experiments/:name/runs',
     '/experiments/:name/runs/:run_id/report'
   ]

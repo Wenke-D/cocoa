@@ -26,7 +26,7 @@ while the app polls every few seconds.
 
 | Folder | Behaviour |
 |---|---|
-| `jobs/solver-gpu` | Healthy job. `PENDING` → `RUNNING` (15 s) → `COMPLETED` (30 s) → report. Also writes an HTML report. |
+| `jobs/solver-gpu` | Healthy job. `PENDING` → `RUNNING` (15 s) → `COMPLETED` (30 s) → report. Also writes an HTML report. Its check compares `deployed/solver.cfg` with `solver.cfg`: the first start deploys (`DEPLOYING`, 2 s), later ones launch at once, and editing `solver.cfg` makes the next start deploy again — or be refused with `CONFLICT` while one of its runs is still active. |
 | `jobs/flaky-solver` | Same lifecycle, but between 5–10 s the poll reports `UNREACHABLE` (`squeue: connection timed out`), then recovers. |
 | `jobs/failing-solver` | Launch with `mode=fail` and the poll reports `FAILED` at 8 s. The run stays `FAILED`, and its report — run with `COCOA_RUN_STATUS=FAILED` — says where it broke. |
 | `benches/nightly-benchmark` | Fans out to three instances (two `solver-gpu`, one `flaky-solver`) at once and produces a bench report when all members succeed. |
@@ -36,4 +36,6 @@ record and derives its status from how long ago it started. Cancelling a run
 moves it to `CANCELLING`, and the next poll confirms `CANCELLED`.
 
 Everything the mock scripts write lives inside the folder's own `runs/` and
-`report/` directories, exactly like a real experiment.
+`report/` directories, exactly like a real experiment — and, for
+`solver-gpu`'s deploy, its `deployed/` directory, the "intended place" a real
+deploy would copy to on a cluster.

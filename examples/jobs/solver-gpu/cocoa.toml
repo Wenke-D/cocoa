@@ -26,3 +26,9 @@ command     = "python3 report.py"
 
 [cancel]
 command     = "./cancel.sh"
+
+[check]
+command     = "python3 check.py"
+
+[deploy]
+command     = "./deploy.sh"

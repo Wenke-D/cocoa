@@ -11,12 +11,18 @@ folders in Add Folder and watches a run go by. These two are apparatus.
 
 ## `job/` — manifest name `fixture-job`
 
-Driven by two state files, neither of them committed; a test writes the ones it
+Driven by state files, neither of them committed; a test writes the ones it
 needs after copying.
 
 - `poll-state` — one status word, plus an optional reason, that the poll reports
   for every submission. Default `RUNNING`.
 - `report-state` — `fail` makes the report script exit 1.
+- `check-state` — what the check answers, word and optional reason. Default
+  `CURRENT`; `STALE` makes the next start deploy.
+- `deploy-hold` — while it exists the deploy waits, holding its runs at
+  `DEPLOYING`. `deploy-state` set to `fail` makes the deploy exit 1. A deploy
+  appends one line to `deploys`, so a test can count them, and one that lands
+  writes `CURRENT` into `check-state`.
 
 ## `bench/` — manifest name `fixture-bench`
 

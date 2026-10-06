@@ -85,6 +85,7 @@ export function job_detail(world: World, name: string): AgentResponse {
         error: run.error,
         report_running: run.report === 'Generating',
         report_error: run.report_error,
+        deploy: run.deploy,
         location: {
           run_dir: run_dir,
           record: path.join(run_dir, 'run.json'),

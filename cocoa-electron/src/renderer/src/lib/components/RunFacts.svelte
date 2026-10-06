@@ -10,6 +10,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import {
+    deploy_summary,
     format_duration,
     format_relative,
     format_started_at,
@@ -38,6 +39,14 @@
   <dd class="mono">{format_duration(run.started_at, run.ended_at, app.now_ms)}</dd>
   <dt>Arguments</dt>
   <dd class="mono params">{run.parameters === '' ? '(none)' : run.parameters}</dd>
+  {#if run.deploy !== null}
+    <dt>Deploy</dt>
+    <dd>
+      {deploy_summary(run.deploy)}{#if run.deploy.reason !== null}<span class="reason"
+          >{` — ${run.deploy.reason}`}</span
+        >{/if}
+    </dd>
+  {/if}
   <dt>Report</dt>
   <dd>
     <ReportButtons
@@ -92,6 +101,11 @@
 
   .warning {
     color: var(--warning);
+  }
+
+  /* What the check said beside its word: the folder's words, not cocoa's. */
+  .reason {
+    color: var(--description);
   }
 
   .error {

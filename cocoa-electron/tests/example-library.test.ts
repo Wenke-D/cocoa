@@ -27,7 +27,7 @@ function example_library(): string {
   const root = path.join(temp_dir(), 'examples')
   fs.cpSync(EXAMPLES_ROOT, root, { recursive: true })
   for (const folder of walk_folders(root)) {
-    for (const generated of ['runs', 'report']) {
+    for (const generated of ['runs', 'report', 'deployed']) {
       fs.rmSync(path.join(folder, generated), { recursive: true, force: true })
     }
   }
@@ -67,11 +67,15 @@ describe('bundled example library', () => {
     expect(cocoa.jobs()).toHaveLength(3)
     expect(cocoa.benches()).toHaveLength(1)
 
-    // A healthy job lifecycle through the first polls. The launch script runs
-    // in its own time (§7.1); the record settles once it lands.
+    // A healthy job lifecycle through the first polls. Nothing is deployed
+    // yet, so the first start deploys (§7.6) before its launch; both scripts
+    // run in their own time, and the record settles once they land.
     const run_id = await cocoa.start_job(solver, { nodes: '64' }, { gpu: '0' }, 'human')
+    expect(cocoa.job(solver).runs.record(run_id).status).toBe('DEPLOYING')
     expect(await settle(cocoa)).toEqual([])
     expect(cocoa.job(solver).runs.record(run_id).submission_id).toBe(`slurm-${run_id}`)
+    expect(cocoa.job(solver).runs.record(run_id).deploy).toMatchObject({ check: 'STALE' })
+    expect(fs.existsSync(path.join(solver, 'deployed', 'solver.cfg'))).toBe(true)
 
     const poll = await cocoa.poll_job(solver)
     expect(poll.warnings).toEqual([])
@@ -87,10 +91,23 @@ describe('bundled example library', () => {
       'flaky-solver'
     ])
 
+    // Deployed now, so the bench's solver-gpu members launch as they are.
     const start = await cocoa.start_bench(bench, { sweep: 'nightly' }, 'human')
     expect(await settle(cocoa)).toEqual([])
     expect(start.members).toHaveLength(3)
     expect(start.launch_failures).toEqual([])
+    expect(cocoa.job(solver).runs.record(start.members[0].run_id).deploy).toEqual({
+      check: 'CURRENT'
+    })
+
+    // A config changed while runs are still active is the check's CONFLICT:
+    // the start is refused, and no run is left behind.
+    fs.appendFileSync(path.join(solver, 'solver.cfg'), 'damping = 0.5\n')
+    const before = cocoa.job(solver).runs.all().length
+    await expect(cocoa.start_job(solver, { nodes: '64' }, { gpu: '0' }, 'human')).rejects.toThrow(
+      /cannot start now: deploying it would conflict — mock: solver.cfg changed while run \d+ is active/
+    )
+    expect(cocoa.job(solver).runs.all()).toHaveLength(before)
   })
 
   // The failing example is the other half of the library's point: a run that

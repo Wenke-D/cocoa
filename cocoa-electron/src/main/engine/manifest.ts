@@ -31,6 +31,10 @@ export interface JobManifest {
   poll: Command
   report: Command
   cancel: Command
+  /** Whether what the job runs is in place, asked before every start (§7.5). */
+  check: Command
+  /** Puts it in place when `check` says it is stale (§7.6). */
+  deploy: Command
 }
 
 export interface BenchManifest {
@@ -269,7 +273,18 @@ export function load_manifest(folder: string): Manifest {
 function load_job(folder: string, manifest_path: string, raw: TomlTable): JobManifest {
   reject_unknown_keys(
     raw,
-    ['kind', 'name', 'description', 'render', 'launch', 'poll', 'report', 'cancel'],
+    [
+      'kind',
+      'name',
+      'description',
+      'render',
+      'launch',
+      'poll',
+      'report',
+      'cancel',
+      'check',
+      'deploy'
+    ],
     manifest_path
   )
 
@@ -284,6 +299,10 @@ function load_job(folder: string, manifest_path: string, raw: TomlTable): JobMan
   reject_unknown_keys(report, ['command'], manifest_path)
   const cancel = require_table(raw.cancel, manifest_path, 'cancel')
   reject_unknown_keys(cancel, ['command'], manifest_path)
+  const check = require_table(raw.check, manifest_path, 'check')
+  reject_unknown_keys(check, ['command'], manifest_path)
+  const deploy = require_table(raw.deploy, manifest_path, 'deploy')
+  reject_unknown_keys(deploy, ['command'], manifest_path)
 
   const template_name = require_string(render.template, manifest_path, '[render].template')
   const render_params = require_params(render.params, manifest_path, '[render].params')
@@ -343,6 +362,16 @@ function load_job(folder: string, manifest_path: string, raw: TomlTable): JobMan
       require_string(cancel.command, manifest_path, '[cancel].command'),
       manifest_path,
       '[cancel].command'
+    ),
+    check: parse_command(
+      require_string(check.command, manifest_path, '[check].command'),
+      manifest_path,
+      '[check].command'
+    ),
+    deploy: parse_command(
+      require_string(deploy.command, manifest_path, '[deploy].command'),
+      manifest_path,
+      '[deploy].command'
     )
   }
 }

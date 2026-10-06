@@ -59,6 +59,7 @@ function world(): World {
         report: 'Missing',
         report_error: null,
         report_rerunnable: false,
+        deploy: null,
         error: null
       },
       '1': {
@@ -75,6 +76,7 @@ function world(): World {
         report: { Available: { files: [{ format: 'PlainText', text_bytes: 120 }] } },
         report_error: null,
         report_rerunnable: false,
+        deploy: null,
         error: null
       }
     }
@@ -103,11 +105,16 @@ function world(): World {
   return base
 }
 
-function deps(start?: AgentDeps['start'], rerun?: AgentDeps['rerun_report']): AgentDeps {
+function deps(
+  start?: AgentDeps['start'],
+  rerun?: AgentDeps['rerun_report'],
+  register?: AgentDeps['register']
+): AgentDeps {
   return {
     current_world: world,
     start: start ?? (async () => ({ ok: true, run_id: '7' })),
-    rerun_report: rerun ?? (() => ({ ok: true }))
+    rerun_report: rerun ?? (() => ({ ok: true })),
+    register: register ?? ((folder) => ({ ok: true, entity_id: folder, already: false }))
   }
 }
 
@@ -161,10 +168,11 @@ async function ask(
   url: string,
   body = '',
   start?: AgentDeps['start'],
-  rerun?: AgentDeps['rerun_report']
+  rerun?: AgentDeps['rerun_report'],
+  register?: AgentDeps['register']
 ) {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'cocoa-ask-')))
-  const server = await serve(path.join(dir, 'cocoa.sock'), deps(start, rerun))
+  const server = await serve(path.join(dir, 'cocoa.sock'), deps(start, rerun, register))
   try {
     const answer = await request(
       path.join(dir, 'cocoa.sock'),
@@ -360,6 +368,83 @@ describe('starting a run', () => {
   })
 })
 
+// A folder registered over the socket takes the Explorer's `+` path (§43.4).
+describe('registering a folder', () => {
+  it('registers by absolute path and answers with the name, kind and where to follow', async () => {
+    let asked: string | null = null
+    const { status, json } = await ask(
+      'POST',
+      '/experiments',
+      JSON.stringify({ path: FOLDER }),
+      undefined,
+      undefined,
+      (folder) => {
+        asked = folder
+        return { ok: true, entity_id: FOLDER, already: false }
+      }
+    )
+    expect(status).toBe(201)
+    expect(json).toEqual({
+      name: 'solver-gpu',
+      kind: 'job',
+      folder: FOLDER,
+      already: false,
+      follow: '/jobs/solver-gpu'
+    })
+    expect(asked).toBe(FOLDER)
+  })
+
+  it('names a bench as one, and answers 200 for a folder already there', async () => {
+    const { status, json } = await ask(
+      'POST',
+      '/experiments',
+      JSON.stringify({ path: BENCH_FOLDER }),
+      undefined,
+      undefined,
+      () => ({ ok: true, entity_id: BENCH_FOLDER, already: true })
+    )
+    expect(status).toBe(200)
+    expect(json).toMatchObject({ kind: 'bench', already: true, follow: '/benches/nightly' })
+  })
+
+  it('refuses a missing, relative or unparseable path before the workbench is asked', async () => {
+    let asked = false
+    const register = (): { ok: true; entity_id: string; already: boolean } => {
+      asked = true
+      return { ok: true, entity_id: FOLDER, already: false }
+    }
+    for (const body of ['', '{}', '{"path": 3}', '{"path": "jobs/solver"}', '{oops']) {
+      const { status } = await ask('POST', '/experiments', body, undefined, undefined, register)
+      expect(status).toBe(400)
+    }
+    expect(asked).toBe(false)
+  })
+
+  it("passes the workbench's refusal through as a 400", async () => {
+    const { status, json } = await ask(
+      'POST',
+      '/experiments',
+      JSON.stringify({ path: '/abs/elsewhere' }),
+      undefined,
+      undefined,
+      () => ({
+        ok: false,
+        cancelled: false,
+        message: 'an entity named `solver-gpu` is already registered'
+      })
+    )
+    expect(status).toBe(400)
+    expect(json.error).toBe('an entity named `solver-gpu` is already registered')
+  })
+
+  it('answers only POST, and names the route in its help', async () => {
+    expect((await ask('GET', '/experiments')).status).toBe(405)
+    const { json } = await ask('GET', '/help')
+    const paths = (json as unknown as { endpoints: { path: string; method: string }[] }).endpoints
+    expect(paths).toContainEqual(expect.objectContaining({ method: 'POST', path: '/experiments' }))
+  })
+})
+
 // A report re-run answers once the report is due, not done (§43.4): a script
 // may run for the ten-minute report timeout.
 describe('re-running a report', () => {
@@ -465,7 +550,8 @@ describe('the socket', () => {
           started = true
           return { ok: true, run_id: '9' }
         },
-        rerun_report: () => ({ ok: true })
+        rerun_report: () => ({ ok: true }),
+        register: () => ({ ok: false, cancelled: false, message: 'unused' })
       })
     )
 
@@ -508,7 +594,8 @@ describe('the socket', () => {
           return world()
         },
         start: async () => ({ ok: true, run_id: '7' }),
-        rerun_report: () => ({ ok: true })
+        rerun_report: () => ({ ok: true }),
+        register: () => ({ ok: false, cancelled: false, message: 'unused' })
       })
     )
 

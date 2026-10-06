@@ -157,6 +157,15 @@ function job_run_of(engine: Engine, job_path: string, record: RunRecord, now_iso
     report: report_in_flight(record) ? 'Generating' : report_state_of(job_path, record.run_id),
     report_error: record.report?.error ?? null,
     report_rerunnable: !report_in_flight(record) && reportable(record, 'manual'),
+    deploy:
+      record.deploy === undefined
+        ? null
+        : {
+            check: record.deploy.check,
+            reason: record.deploy.reason ?? null,
+            at: record.deploy.at ?? null,
+            error: record.deploy.error ?? null
+          },
     error: record.error ?? null
   }
 }
@@ -264,6 +273,8 @@ function display_status_of(record: RunRecord): [RunStatus, QueryHealth] {
 
 function map_status(status: Status): RunStatus {
   switch (status) {
+    case 'DEPLOYING':
+      return 'Deploying'
     case 'STARTING':
       return 'Starting'
     case 'PENDING':

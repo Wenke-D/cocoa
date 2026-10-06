@@ -3,6 +3,7 @@
 // runtime. Serialized UPPERCASE in run.json, exactly as serde writes it.
 
 export type Status =
+  | 'DEPLOYING'
   | 'STARTING'
   | 'PENDING'
   | 'RUNNING'

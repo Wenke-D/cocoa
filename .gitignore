@@ -20,6 +20,7 @@
 # Bundled example experiments: generated state stays out of the repo
 /examples/**/runs/
 /examples/**/report/
+/examples/**/deployed/
 
 # Python bytecode from the example scripts
 __pycache__/

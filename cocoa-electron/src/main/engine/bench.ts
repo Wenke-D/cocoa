@@ -12,7 +12,9 @@ import type { Invocation } from './invoke'
 import type { Bench } from './memory'
 import type { Params } from '@shared/params'
 import { argv_of } from '@shared/params'
-import { cancel_run, report_on_disk, start_job } from './job'
+import type { CheckAnswer, Release } from './deploys'
+import { WAITING_ON_DEPLOY, cancel_run, dispatch, prepare_start, report_on_disk } from './job'
+import type { PreparedStart } from './job'
 import { param_problems, validate_params } from './params'
 import { all_params, now_stamp, sorted } from './record'
 import type {
@@ -142,7 +144,13 @@ export async function plan_bench(
   return instances
 }
 
-/** Starts a bench: validates the plan, then dispatches every instance (§8.2). */
+/**
+ * Starts a bench: validates the plan, checks every job it calls, then
+ * dispatches every instance (§8.2). Each job is checked once, under its gate,
+ * before anything is dispatched (§7.5): a `CONFLICT` anywhere refuses the
+ * whole start, naming every job at fault, and a stale job's members all wait
+ * on one deploy of it.
+ */
 export async function start_bench(
   engine: Engine,
   bench: Bench,
@@ -152,30 +160,83 @@ export async function start_bench(
   const manifest = bench.usable_manifest()
   const params = validate_params(manifest.plan_params, params_given, 'plan')
   const instances = await plan_bench(engine, bench, params)
+
+  // Gates are taken in one order — by folder — so two bench starts calling
+  // the same jobs can never each hold one the other waits on.
+  const paths = [...new Set(instances.map((instance) => instance.job_path))].sort()
+  const checked = new Map<string, { release: Release; answer: CheckAnswer | null }>()
+  const problems: string[] = []
+  try {
+    for (const job_path of paths) {
+      const job = engine.job(job_path)
+      const job_manifest = job.usable_manifest()
+      const release = await engine.deploys.acquire(job_path)
+      const gate: { release: Release; answer: CheckAnswer | null } = { release, answer: null }
+      checked.set(job_path, gate)
+      try {
+        gate.answer = await engine.deploys.check(job, job_manifest)
+      } catch (cause) {
+        problems.push(`job \`${job_manifest.name}\`: ${(cause as Error).message}`)
+      }
+    }
+  } catch (cause) {
+    for (const gate of checked.values()) {
+      gate.release()
+    }
+    throw cause
+  }
+  if (problems.length > 0) {
+    for (const gate of checked.values()) {
+      gate.release()
+    }
+    throw EngineError.validation(
+      `the bench cannot start, nothing was dispatched: ${problems.join('; ')}`
+    )
+  }
+
   const bench_run_id = bench.runs.next_id()
+  const outcomes: (number | Error)[] = new Array<number | Error>(instances.length)
+  for (const job_path of paths) {
+    const job = engine.job(job_path)
+    const job_manifest = job.usable_manifest()
+    const gate = checked.get(job_path) as { release: Release; answer: CheckAnswer }
+    const calls: number[] = []
+    const starts: PreparedStart[] = []
+    for (const [index, instance] of instances.entries()) {
+      if (instance.job_path !== job_path) {
+        continue
+      }
+      try {
+        starts.push(
+          prepare_start(job, job_manifest, instance.render, instance.launch, {
+            by: 'bench',
+            run_id: bench_run_id,
+            name: manifest.name,
+            call: index + 1
+          })
+        )
+        calls.push(index)
+      } catch (cause) {
+        outcomes[index] = cause as Error
+      }
+    }
+    const dispatched = await dispatch(engine, job, job_manifest, starts, gate.answer, gate.release)
+    for (const [position, index] of calls.entries()) {
+      outcomes[index] = dispatched[position]
+    }
+  }
 
   const members: BenchMember[] = []
   const launch_failures: LaunchFailure[] = []
   for (const [index, instance] of instances.entries()) {
-    try {
-      const run_id = await start_job(
-        engine,
-        engine.job(instance.job_path),
-        instance.render,
-        instance.launch,
-        {
-          by: 'bench',
-          run_id: bench_run_id,
-          name: manifest.name,
-          call: index + 1
-        }
-      )
-      members.push({ run_id: run_id, job: instance.job_name })
-    } catch (cause) {
+    const outcome = outcomes[index]
+    if (typeof outcome === 'number') {
+      members.push({ run_id: outcome, job: instance.job_name })
+    } else {
       launch_failures.push({
         job: instance.job_name,
         params: { ...instance.render, ...instance.launch },
-        error: (cause as Error).message
+        error: outcome.message
       })
     }
   }
@@ -294,6 +355,17 @@ export async function cancel_bench(
     if (member_record === null) {
       continue
     }
+    // Not skipped like a finished member: it will launch once the deploy is
+    // done, so a cancel that passed over it in silence would read as done.
+    if (member_record.status === 'DEPLOYING') {
+      results.push({
+        run_id: member.run_id,
+        job: member.job,
+        ok: false,
+        error: WAITING_ON_DEPLOY
+      })
+      continue
+    }
     if (!is_cancellable(member_record.status)) {
       continue
     }
@@ -366,7 +438,8 @@ function derive_bench_status(
     return 'CANCELLING'
   }
   if (members.some((member) => !is_terminal(member.status))) {
-    if (members.every((member) => member.status === 'STARTING')) {
+    // A member waiting on its job's deploy has not launched either.
+    if (members.every((member) => member.status === 'STARTING' || member.status === 'DEPLOYING')) {
       return 'STARTING'
     }
     return 'RUNNING'

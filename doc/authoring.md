@@ -25,7 +25,7 @@ records inside the folder — copy the folder and the history comes along.
 <entity folder>/
   cocoa.toml              # the manifest: the interface to cocoa
   job.sbatch.tmpl        # jobs: the template (the middle name is yours)
-  launch.sh  poll.py  report.py  cancel.sh
+  check.sh  deploy.sh  launch.sh  poll.py  report.py  cancel.sh
   runs/                  # maintained by cocoa: this folder's history
     <run_id>/
       run.json           # record: arguments, submission id, status history
@@ -79,12 +79,19 @@ command     = "./report.py"
 
 [cancel]
 command     = "./cancel.sh"
+
+[check]
+command     = "./check.sh"
+
+[deploy]
+command     = "./deploy.sh"
 ```
 
-All four scripts are **required**. A run whose status can never update is a
+All six scripts are **required**. A run whose status can never update is a
 dead end in a monitoring tool, and a run that cannot be stopped is worse — a
 folder that truly has nothing to cancel still declares a `cancel` script,
-even one that only exits 0.
+even one that only exits 0. Likewise a folder with nothing to deploy declares
+a `check` that always answers `CURRENT` and a `deploy` that exits 0.
 
 A manifest either loads or it does not (§4). A broken one leaves the folder
 visible in cocoa, carrying the error, until it is fixed in place.
@@ -163,6 +170,37 @@ reported with the captured output — it never marks a run finished. Lines
 beginning with `COCOA_RETURN: ` are the answer; everything else is free
 logging (§6).
 
+**`check`** — `./check.sh`, no arguments, before **every** start (§7.5). Is
+what the runs use — the executable, its configuration, any auxiliary material
+— in place where they expect it? One line:
+
+```
+COCOA_RETURN: CURRENT
+COCOA_RETURN: STALE solver.cfg changed since the last deploy
+COCOA_RETURN: CONFLICT solver binary is in use by run 38
+```
+
+`CURRENT` launches at once. `STALE` means it must be put in place and nothing
+running is harmed by that — say, a new config file: cocoa runs `deploy`, then
+launches. `CONFLICT` means it must be put in place but doing it now would race
+with work in progress — say, replacing a binary that a running run is
+executing: the start is refused with the reason, and nothing is recorded.
+Which change is which is your script's call; read `runs/*/run.json` to see
+what is still active. A check that fails, prints no line, or a word other than
+these three refuses the start too.
+
+cocoa checks one job for one start at a time, so a second start waits for the
+first one's deploy and then checks again — two deploys never overlap. A bench
+checks each job it calls once, before dispatching anything, and any refusal
+refuses the whole bench.
+
+**`deploy`** — `./deploy.sh`, no arguments, when the check said `STALE`
+(§7.6). Builds and copies whatever the check found stale to where the runs
+expect it, and exits 0 when it is done; it prints nothing to cocoa. The run
+shows `DEPLOYING` meanwhile, and launches once the deploy exits 0. A deploy
+that fails moves every run waiting on it to `ERROR` with its output — none of
+them was submitted.
+
 **`launch`** — `./launch.sh --script runs/41/job.sbatch --run 41 --gpu 1`.
 Submits however it likes and prints the identifier cocoa will track:
 
@@ -239,9 +277,10 @@ description = "Which mesh family to sweep"
 command     = "./report.py"
 ```
 
-A bench has no template, no launch, no poll, no cancel of its own: it
-launches through its member jobs, its status is derived from theirs, and it
-is cancelled by cancelling them (§3, §9.1).
+A bench has no template, no launch, no poll, no cancel, no check and no
+deploy of its own: it launches through its member jobs — each checked, and
+deployed if stale, as at a job's own start — its status is derived from
+theirs, and it is cancelled by cancelling them (§3, §7.5, §9.1).
 
 **`plan`** — `./plan.sh --mesh fine`. Prints one JSON object per instance to
 launch:
@@ -273,7 +312,8 @@ them. Output rules are the job report's: `report/7.txt` required.
   job's `report` (§6).
 - Records in `runs/` are readable JSON and safe to read from scripts; they
   are written atomically. Never write them.
-- Timeouts (defaults): launch, poll, cancel 60 s; plan 120 s; report 600 s.
+- Timeouts (defaults): check, launch, poll, cancel 60 s; plan 120 s; deploy,
+  report 600 s.
 - A run cocoa deletes takes `runs/<id>/` and `report/<id>.*` with it — for a
   bench run, its dispatched runs too (§12.1); run ids otherwise never repeat.
 - Nothing else in the folder is cocoa's business: keep source, data and

@@ -41,7 +41,7 @@ impl Drop for Stub {
     }
 }
 
-/// Answers the two routes this test exercises, and 404s the rest — the subset
+/// Answers the routes this test exercises, and 404s the rest — the subset
 /// of §43.2 the binary speaks: one request, one response, connection closed.
 fn serve() -> Stub {
     let path = socket_path();
@@ -51,13 +51,15 @@ fn serve() -> Stub {
     let handle = std::thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { break };
-            let Some(request) = read_request_line(&mut stream) else {
+            let Some((request, received)) = read_request(&mut stream) else {
                 // The connection Drop makes to unblock accept sends nothing.
                 break;
             };
             let (status, body) = match request.as_str() {
                 "GET /jobs" => (200, json!([{ "name": "solver" }]).to_string()),
                 "POST /experiments/solver/runs" => (201, json!({ "run_id": "9" }).to_string()),
+                // Echoes what arrived, so the test sees the body cross intact.
+                "POST /experiments" => (201, json!({ "received": received }).to_string()),
                 _ => (404, json!({ "error": "no such route" }).to_string()),
             };
             let _ = stream.write_all(
@@ -80,9 +82,9 @@ fn serve() -> Stub {
     }
 }
 
-/// `METHOD path`, with the headers and any body drained so the write side is
-/// not answering into a half-read request.
-fn read_request_line(stream: &mut UnixStream) -> Option<String> {
+/// `METHOD path` and the body, read whole so the write side is not answering
+/// into a half-read request.
+fn read_request(stream: &mut UnixStream) -> Option<(String, String)> {
     let mut reader = BufReader::new(stream.try_clone().ok()?);
     let mut first = String::new();
     if reader.read_line(&mut first).ok()? == 0 {
@@ -105,11 +107,12 @@ fn read_request_line(stream: &mut UnixStream) -> Option<String> {
             length = value.trim().parse().unwrap_or(0);
         }
     }
-    if length > 0 {
-        let mut body = vec![0u8; length];
-        reader.read_exact(&mut body).ok()?;
-    }
-    Some(format!("{method} {path}"))
+    let mut body = vec![0u8; length];
+    reader.read_exact(&mut body).ok()?;
+    Some((
+        format!("{method} {path}"),
+        String::from_utf8_lossy(&body).into_owned(),
+    ))
 }
 
 fn send(stdin: &mut ChildStdin, message: Value) {
@@ -179,6 +182,7 @@ fn the_mcp_binary_serves_the_socket_as_tools() {
         "cocoa_job",
         "cocoa_bench",
         "cocoa_start",
+        "cocoa_register",
     ] {
         assert!(names.contains(&expected), "{names:?} misses {expected}");
     }
@@ -210,6 +214,29 @@ fn the_mcp_binary_serves_the_socket_as_tools() {
     assert_eq!(reply["result"]["isError"], false, "{reply}");
     let text = reply["result"]["content"][0]["text"].as_str().unwrap();
     assert!(text.contains("run_id"), "{text}");
+
+    // A registration carries the folder's path, and nothing else, as JSON.
+    send(
+        &mut stdin,
+        json!({ "jsonrpc": "2.0", "id": 5, "method": "tools/call",
+                "params": { "name": "cocoa_register",
+                            "arguments": { "path": "/abs/my solver" } } }),
+    );
+    let reply = read_reply(&mut lines);
+    assert_eq!(reply["result"]["isError"], false, "{reply}");
+    let text = reply["result"]["content"][0]["text"].as_str().unwrap();
+    let echoed: Value = serde_json::from_str(text).unwrap();
+    let received: Value = serde_json::from_str(echoed["received"].as_str().unwrap()).unwrap();
+    assert_eq!(received, json!({ "path": "/abs/my solver" }));
+
+    // Without a path there is nothing to ask cocoa.
+    send(
+        &mut stdin,
+        json!({ "jsonrpc": "2.0", "id": 6, "method": "tools/call",
+                "params": { "name": "cocoa_register", "arguments": {} } }),
+    );
+    let reply = read_reply(&mut lines);
+    assert_eq!(reply["error"]["code"], -32602, "{reply}");
 
     drop(stdin);
     let _ = child.wait();

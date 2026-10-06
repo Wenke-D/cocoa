@@ -47,8 +47,8 @@ cocoa runs experiment folders: jobs (one start = one submission) and benches \
 (a plan fans out over registered jobs). The convention for authoring such a \
 folder — manifest, parameters, scripts, template, reports — is documented at:
 
-  https://gitlab.inria.fr/wendu/cocoa/-/blob/main/doc/authoring.md
-  (raw: https://gitlab.inria.fr/wendu/cocoa/-/raw/main/doc/authoring.md)
+  https://github.com/Wenke-D/cocoa/blob/main/doc/authoring.md
+  (raw: https://raw.githubusercontent.com/Wenke-D/cocoa/main/doc/authoring.md)
 
 Live state — registered experiments, their parameters, runs, reports — comes \
 from this server's MCP tools (start with cocoa_help), not from the document.
@@ -157,7 +157,7 @@ fn tools() -> Value {
         },
         {
             "name": "cocoa_start",
-            "description": "Start a Job or Bench by name. Every declared parameter must be supplied, shaped as declared (cocoa_job lists them with type, values and description). Returns the run id; the run appears STARTING at once and advances as its scripts answer.",
+            "description": "Start a Job or Bench by name. Every declared parameter must be supplied, shaped as declared (cocoa_job lists them with type, values and description). Every start runs the Job's check first: the run appears STARTING at once, or DEPLOYING while a stale Job is deployed first; a check that answers CONFLICT refuses the start with its reason and records nothing. Returns the run id; the run advances as its scripts answer.",
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -174,6 +174,17 @@ fn tools() -> Value {
                     },
                 },
                 "required": ["experiment"],
+            },
+        },
+        {
+            "name": "cocoa_register",
+            "description": "Register an experiment folder, as the Explorer's + does: its cocoa.toml decides whether it is a Job or a Bench. Returns its name, kind and the tool to follow it with; a folder already registered is a no-op that says so. Refused, with the reason, for a path that is not absolute or not a folder, a manifest that does not load, or a name already taken.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "The folder's absolute path, the one holding its cocoa.toml." },
+                },
+                "required": ["path"],
             },
         },
     ])
@@ -205,6 +216,13 @@ fn call_tool(name: &str, arguments: &Value) -> Result<Value, (i64, String)> {
                 &format!("/experiments/{}/runs", percent_encode(experiment)),
                 Some(json!({ "parameters": parameters }).to_string()),
             )
+        }
+        "cocoa_register" => {
+            let path = arguments
+                .get("path")
+                .and_then(Value::as_str)
+                .ok_or((-32602, "cocoa_register needs `path`".to_owned()))?;
+            http("POST", "/experiments", Some(json!({ "path": path }).to_string()))
         }
         other => return Err((-32602, format!("no such tool: {other}"))),
     };

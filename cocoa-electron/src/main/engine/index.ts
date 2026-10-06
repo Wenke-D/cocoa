@@ -10,6 +10,7 @@
 //   job.ts        start / poll / report / cancel, one job (§7, §10, §11)
 //   bench.ts      plan / start / report / cancel / status, one bench (§8, §9)
 //   in_flight.ts  the launch scripts not yet answered (§7.1)
+//   deploys.ts    each job's gate: check before a start, deploy when stale (§7.5, §7.6)
 //   index.ts      this: `Engine`, which is the memory plus those operations,
 //                 and the refresh tick that drives them all (§7.5)
 
@@ -17,6 +18,7 @@ import * as bench from './bench'
 import type { BenchStart, BenchStatusView, MemberCancel, PlanInstance } from './bench'
 import { as_engine_error } from './errors'
 import type { EngineError } from './errors'
+import { Deploys } from './deploys'
 import { InFlight } from './in_flight'
 import * as del from './delete'
 import * as job from './job'
@@ -35,6 +37,8 @@ export interface Config {
   cancel_timeout: number
   plan_timeout: number
   report_timeout: number
+  check_timeout: number
+  deploy_timeout: number
 }
 
 export const DEFAULT_CONFIG: Config = {
@@ -42,7 +46,10 @@ export const DEFAULT_CONFIG: Config = {
   poll_timeout: 60_000,
   cancel_timeout: 60_000,
   plan_timeout: 120_000,
-  report_timeout: 600_000
+  report_timeout: 600_000,
+  check_timeout: 60_000,
+  // A deploy may build what it puts in place; it gets the report's allowance.
+  deploy_timeout: 600_000
 }
 
 export interface RefreshReport {
@@ -52,6 +59,7 @@ export interface RefreshReport {
   poll_errors: EngineError[]
   reports_run: number
   report_errors: EngineError[]
+  /** Launches that failed, and deploys that failed the launches waiting on them. */
   launch_errors: EngineError[]
 }
 
@@ -70,11 +78,14 @@ export class Engine extends Memory {
   readonly config: Config
   /** The launch scripts this engine is still waiting on. */
   readonly in_flight: InFlight
+  /** Each job's gate, and the deploys this engine is still waiting on. */
+  readonly deploys: Deploys
 
   constructor(store_path: string, config: Config = DEFAULT_CONFIG) {
     super(store_path)
     this.config = config
     this.in_flight = new InFlight(this)
+    this.deploys = new Deploys(this)
   }
 
   // ------------------------------------------------------------------
@@ -144,22 +155,36 @@ export class Engine extends Memory {
   }
 
   // ------------------------------------------------------------------
-  // Launches — in_flight.ts
+  // Launches and deploys — in_flight.ts, deploys.ts
   // ------------------------------------------------------------------
 
   harvest_launches(): EngineError[] {
     return this.in_flight.harvest()
   }
 
+  /**
+   * Waits until no deploy and no launch is in flight. For tests and
+   * shutdown. A deploy that lands launches its runs, so deploys go first.
+   */
   async settle_launches(): Promise<EngineError[]> {
-    return this.in_flight.settle()
+    const errors: EngineError[] = []
+    while (this.deploys.count() > 0) {
+      errors.push(...(await this.deploys.harvest()))
+      if (this.deploys.count() > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 5))
+      }
+    }
+    errors.push(...(await this.in_flight.settle()))
+    return errors
   }
 
   launches_in_flight(): number {
     return this.in_flight.count()
   }
 
+  /** The close (§10): deploys first, since a deploy that lands would launch. */
   abandon_launches(): void {
+    this.deploys.abandon()
     this.in_flight.abandon()
   }
 
@@ -169,9 +194,11 @@ export class Engine extends Memory {
 
   /**
    * One refresh tick (§7.5, §10): harvest, reconcile disk → memory, poll,
-   * auto-report, bench reports.
+   * auto-report, bench reports. Deploys are harvested before launches: a
+   * deploy that landed spawns the launches waiting on it.
    */
   async refresh(): Promise<RefreshReport> {
+    const deploy_errors = await this.deploys.harvest()
     const report: RefreshReport = {
       polls: 0,
       poll_changes: [],
@@ -179,7 +206,7 @@ export class Engine extends Memory {
       poll_errors: [],
       reports_run: 0,
       report_errors: [],
-      launch_errors: this.in_flight.harvest()
+      launch_errors: [...deploy_errors, ...this.in_flight.harvest()]
     }
 
     this.reconcile()
@@ -203,15 +230,19 @@ export class Engine extends Memory {
         }
         // A run still "launching" whose script this engine is not holding
         // is a previous session's leftover (§10): the stdout that carried
-        // its submission id died with that process.
+        // its submission id died with that process. One still deploying is
+        // the same, a stage earlier: nothing will launch it now (§7.6).
         if (
           record.submission_id === '' &&
           !is_terminal(record.status) &&
-          !this.in_flight.holds(job.path, run_view.run_id)
+          !this.in_flight.holds(job.path, run_view.run_id) &&
+          !this.deploys.holds(job.path, run_view.run_id)
         ) {
+          const deploying = record.status === 'DEPLOYING'
           apply_status(record, 'ERROR', now_stamp())
-          record.error =
-            'cocoa closed while the launch script was running; the submission id is lost'
+          record.error = deploying
+            ? 'cocoa closed while the deploy script was running; the run was never launched'
+            : 'cocoa closed while the launch script was running; the submission id is lost'
           try {
             job.runs.write(record)
           } catch (cause) {

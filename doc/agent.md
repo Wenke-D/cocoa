@@ -73,13 +73,40 @@ GET  /jobs                         every Job: name, folder, parameters, run tall
 GET  /benches                      every Bench, same shape
 GET  /jobs/{name}                  one Job and its runs, with file locations
 GET  /benches/{name}               one Bench, its runs, their calls and locations
+POST /experiments                  {"path": "/abs/folder"} → 201 {"name", "kind", …}
 POST /experiments/{name}/runs      {"parameters": {…}} → 201 {"run_id": "…"}
 POST /experiments/{name}/runs/{run_id}/report
                                    re-run a job run's report → 202, once it is due
 ```
 
 Experiments are addressed by name, which is unique across the Explorer
-(convention §5): an agent should not have to know folder paths.
+(convention §5): an agent should not have to know folder paths — except the
+once, to register one.
+
+**Registering a folder** takes the Explorer's `+` path: the same
+`add_folder` the picker's answer goes through, the same refusals. The body
+names the folder by **absolute** path — the agent's working directory is not
+cocoa's, and a relative path would quietly resolve against the wrong one — and
+its `cocoa.toml` decides whether it is a Job or a Bench:
+
+```json
+{ "name": "solver-gpu", "kind": "job", "folder": "/abs/solver-gpu",
+  "already": false, "follow": "/jobs/solver-gpu" }
+```
+
+`201` for a folder newly registered; `200` with `already: true` for one that
+was registered already — a no-op, never a duplicate (convention §5). `400`
+carries the refusal: a path that is not absolute or not a folder, a manifest
+that does not load, a name another experiment already has.
+
+**A start is checked first** (convention §7.5), on this route as on a click.
+`CURRENT` answers `201` with a run that reads `STARTING`; `STALE` answers
+`201` with one that reads `DEPLOYING` until the job's deploy is done (a failed
+deploy leaves it `Error`); `CONFLICT` is a `400` carrying the check's reason,
+and nothing is recorded. Each run in `GET /jobs/{name}` carries `deploy` —
+what its check said, and when its deploy finished or why it failed. A start
+made while that job is checking or deploying waits for it, within the wait of
+§43.3.
 
 The interface describes itself: `/help` names every route, so an agent can
 discover the surface from the surface. It lives beside the routes in the code,
@@ -128,7 +155,7 @@ the right route rather than flatly refused.
 ### 43.5 The MCP binary
 
 `cocoa-mcp-server` serves this same surface as MCP tools (`cocoa_help`,
-`cocoa_list_jobs`, `cocoa_job`, `cocoa_start`, …) so an agent runtime speaks to
+`cocoa_list_jobs`, `cocoa_job`, `cocoa_start`, `cocoa_register`, …) so an agent runtime speaks to
 cocoa through its own tool protocol instead of raw HTTP. An agent's MCP client
 launches the binary and speaks JSON-RPC over stdio; every tool call becomes
 one request over the socket, and the socket's answers pass through verbatim.
@@ -167,8 +194,8 @@ requires that.
 No approval step and no separate notification: a run records who asked (§10.6),
 and that record is where the question is answered. No authentication: the socket
 is reachable only by processes that can open the file, and cocoa runs on the
-user's own workstation. No cancel, no registration, and no event stream yet —
-each is one route, one request variant, and one worker arm away when a real
+user's own workstation. No cancel, no unregistration, and no event stream yet
+— each is one route, one request variant, and one worker arm away when a real
 agent needs it.
 
 ---

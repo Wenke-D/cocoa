@@ -28,7 +28,23 @@ export interface RunRecord {
   error?: string
   /** A `FAILED` run's report, which runs beside its status (§7.3.1). */
   report?: RunReport
+  /** What `check` answered at the start, and the deploy it led to (§7.5). */
+  deploy?: RunDeploy
   origin: RunOrigin
+}
+
+/**
+ * How a run's job was made ready before its launch (§7.5, §7.6). `check` is
+ * the check script's word — a `CONFLICT` refuses the start and leaves no run
+ * to record it on — and `reason` what it said beside the word. A `STALE` run
+ * gets `at` once its deploy finished, with `error` when the script failed.
+ * A run recorded before deploy existed has no field at all.
+ */
+export interface RunDeploy {
+  check: 'CURRENT' | 'STALE'
+  reason?: string
+  at?: string
+  error?: string
 }
 
 export interface BenchMember {
@@ -117,15 +133,19 @@ export function new_run_record(
   render: Params,
   launch: Params,
   origin: RunOrigin,
-  at: string
+  at: string,
+  deploy?: RunDeploy
 ): RunRecord {
+  // A run whose check said STALE waits on its job's deploy before it launches.
+  const status: Status = deploy?.check === 'STALE' ? 'DEPLOYING' : 'STARTING'
   return {
     run_id: run_id,
     submission_id: submission_id,
     render,
     launch,
-    status: 'STARTING',
-    history: [{ status: 'STARTING', at }],
+    status,
+    history: [{ status, at }],
+    ...(deploy !== undefined ? { deploy } : {}),
     origin
   }
 }

@@ -5,8 +5,10 @@ A desktop workbench for experiments that live on your own machine.
 An experiment, to cocoa, is a **folder**: a `cocoa.toml` manifest and the scripts
 it names. Experiments come in two kinds — **jobs**, launched one run at a time,
 and **benches**, whose plan fans out over jobs — and *experiment* is the word
-for either, here and everywhere cocoa speaks. The manifest says how to launch a run, how to ask whether it is still
-going, how to produce a report, and how to cancel it. cocoa runs those scripts.
+for either, here and everywhere cocoa speaks. The manifest says how to check
+that what a run needs is in place and deploy it when it is not, how to launch a
+run, how to ask whether it is still going, how to produce a report, and how to
+cancel it. cocoa runs those scripts.
 It does not know what a cluster is, whether you use Slurm, or how you reach it —
 your `launch.sh` knows, and cocoa knows only what your script printed.
 
@@ -101,6 +103,8 @@ asked: **you**, an **agent**, or the **bench** that dispatched it. See
 ## What it is not
 
 - Not a scheduler. Your scripts talk to whatever runs your work.
+- Not a build system. Your deploy script builds and copies; cocoa only asks
+  your check whether it needs to.
 - Not a pipeline or DAG tool. A Bench fans out; it does not sequence.
 - Not a server, and not multi-user. It is one window on one workstation.
 - Not a place your data lives. It is a view of folders that were already yours.
@@ -304,10 +308,19 @@ several Bench-dispatched runs; cancelling the Bench touches only the latter.
 The real product will eventually expose three operational concepts:
 
 ```text
+Check
+Deploy
 Start
 Query
 Cancel
 ```
+
+Every Start is preceded by a **Check**: the job's own script says whether
+what its runs use is in place. `CURRENT` starts at once; `STALE` runs the
+job's **Deploy** first, the run reading `DEPLOYING` until it is done;
+`CONFLICT` — a deploy now would race with work in progress — refuses the start
+with the script's reason. One job is checked and deployed by one start at a
+time, so deploys never overlap (convention §7.5, §7.6).
 
 Starting a Job begins execution directly. A start means *launched*: the run
 exists, visibly `STARTING`, from the moment its launch script is spawned. The
@@ -334,6 +347,8 @@ Each dispatch is an ordinary Job Start.
 
 Who triggers what:
 
+- **Check** is automatic, before every Start; **Deploy** follows a `STALE`
+  check. Neither is a user action of its own.
 - **Start** is triggered by the user, or by an agent through §43.
 - **Cancel** is triggered by the user after confirmation.
 - **Query** is automatic, on the refresh tick.

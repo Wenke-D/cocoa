@@ -26,3 +26,9 @@ command     = "./report.sh"
 
 [cancel]
 command     = "./cancel.sh"
+
+[check]
+command     = "./check.sh"
+
+[deploy]
+command     = "./deploy.sh"

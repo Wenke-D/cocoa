@@ -9,6 +9,7 @@ export type EntityKind = 'Job' | 'Bench'
 export type ManifestState = 'Valid' | 'Missing' | { Invalid: { message: string } }
 
 export type RunStatus =
+  | 'Deploying'
   | 'Starting'
   | 'Pending'
   | 'Running'
@@ -84,6 +85,19 @@ export interface JobRun {
   /** Whether the report can be re-run by hand now: the engine would take the
    * run (convention §7.3.2), and its report is not already `Generating`. */
   report_rerunnable: boolean
+  /** How the job was made ready before this run launched (convention §7.5,
+   * §7.6); `null` for a run recorded before deploys existed. */
+  deploy: RunDeploy | null
+  error: string | null
+}
+
+/** A run's record of its start's check, and the deploy a `STALE` one ran. */
+export interface RunDeploy {
+  check: 'CURRENT' | 'STALE'
+  reason: string | null
+  /** When the deploy finished; `null` while it runs, and for `CURRENT`. */
+  at: string | null
+  /** The deploy script's output, when it failed. */
   error: string | null
 }
 
@@ -309,6 +323,20 @@ export function origin_label(origin: RunOrigin): string {
 
 export function trigger_label(by: Trigger): string {
   return by === 'Human' ? 'you' : 'agent'
+}
+
+/** What a run's start found and did about its job's deploy (§7.5, §7.6). */
+export function deploy_summary(deploy: RunDeploy): string {
+  if (deploy.check === 'CURRENT') {
+    return 'Up to date — nothing deployed'
+  }
+  if (deploy.error !== null) {
+    return 'Deploy failed'
+  }
+  if (deploy.at === null) {
+    return 'Deploying…'
+  }
+  return `Deployed ${format_started_at(deploy.at)}`
 }
 
 /** A report format as the page names it. */

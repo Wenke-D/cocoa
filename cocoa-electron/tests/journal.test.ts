@@ -38,6 +38,7 @@ function job_run(id: string, extra: Partial<JobRun> = {}): JobRun {
     report: 'Missing',
     report_error: null,
     report_rerunnable: false,
+    deploy: null,
     error: null,
     ...extra
   }

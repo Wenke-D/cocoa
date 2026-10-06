@@ -29,7 +29,7 @@ template it declares, and — once cocoa has been used on it — its own records
 <entity folder>/
   cocoa.toml              # the manifest: the interface to cocoa
   job.sbatch.tmpl        # the template; the middle name is yours to choose
-  launch.sh  poll.py  report.py  cancel.sh
+  check.sh  deploy.sh  launch.sh  poll.py  report.py  cancel.sh
   runs/                  # maintained by cocoa: this folder's history
     <run_id>/
       run.json           # record: args, submission id, status history
@@ -99,14 +99,23 @@ command     = "./report.py"         # gets --run and --submission
 
 [cancel]
 command     = "./cancel.sh"         # gets --submission
+
+[check]
+command     = "./check.sh"          # gets nothing; asked before every start
+
+[deploy]
+command     = "./deploy.sh"         # gets nothing; run when check says STALE
 ```
 
-All four scripts are **required**. A run whose status can never update is a
-dead end in a monitoring tool, and a run that cannot be stopped is worse.
+All six scripts are **required**. A run whose status can never update is a
+dead end in a monitoring tool, and a run that cannot be stopped is worse. A
+start that cannot ask whether what it runs is in place may launch against a
+half-copied executable, which is worse than either (§7.5).
 
 *Consequence worth stating plainly: a folder with no way to cancel its work
 cannot be registered at all. Such a folder needs a `cancel` script even if all
-it does is exit 0.*
+it does is exit 0 — and a folder with nothing to deploy needs a `check` that
+always answers `CURRENT` and a `deploy` that exits 0.*
 
 Either `params` list may be empty (`params = []`).
 
@@ -335,7 +344,8 @@ Every script cocoa invokes:
 **`--run` is passed only where it is needed**: to `launch` (so a script can tag
 its submission) and to both `report` scripts (the report filename is the run
 id). `poll` is job-scoped rather than run-scoped — it speaks for many runs at
-once — and `cancel` and `plan` need no run id.
+once — and `cancel` and `plan` need no run id. `check` and `deploy` get no
+arguments at all: they speak for the job, not for any run (§7.5).
 
 **Exit codes.** `0` means the script did its job. Non-zero is a failure of the
 *script*, reported to the user as an operation error with the captured output
@@ -351,14 +361,16 @@ are expected depends on the script:
 
 | Script | `COCOA_RETURN:` lines | Payload |
 |---|---|---|
+| `check` | exactly one | `CURRENT`, `STALE [reason]`, or `CONFLICT [reason]` |
+| `deploy` | none | — |
 | `launch` | exactly one (last wins) | the submission id |
 | `poll` | exactly one | `<STATUS> [reason]`, or `UNREACHABLE <reason>` |
 | `plan` | one or more | one JSON instance object |
 | `report` | none | — |
 | `cancel` | none | — |
 
-**Timeouts** (defaults, tunable later): launch, poll and cancel 60 s; plan
-120 s; report 600 s.
+**Timeouts** (defaults, tunable later): check, launch, poll and cancel 60 s;
+plan 120 s; deploy and report 600 s.
 
 ### 6.1 Template rendering
 
@@ -600,6 +612,104 @@ settles it. A non-zero exit or timeout is a cancel failure: the run keeps its
 current status, nothing moves, and the captured output is shown as an operation
 error.
 
+### 7.5 `check`
+
+```
+./check.sh
+```
+
+Asked before **every** start, with no arguments: is what this job runs — its
+executable, its configuration, whatever else its runs expect to find — in
+place, and may it be put there now? It answers exactly one line:
+
+```
+COCOA_RETURN: CURRENT
+COCOA_RETURN: STALE solver.cfg changed since the last deploy
+COCOA_RETURN: CONFLICT solver binary is in use by run 38
+```
+
+| Word | Means | cocoa |
+|---|---|---|
+| `CURRENT` | everything is in place | launches at once (§7.1) |
+| `STALE` | something must be put in place, and nothing running is harmed by that | runs `deploy` (§7.6), then launches |
+| `CONFLICT` | something must be put in place, but doing it now would race with work in progress | refuses the start |
+
+Everything after the word is a free-text reason, kept and shown as-is. The
+judgement is the script's alone: cocoa does not know what a deploy touches or
+what a running run reads — whether a new config file is harmless while runs
+are going and a new binary is not is exactly the kind of thing only the folder
+knows. A check may read `runs/` to see what is active (§12); its records are
+safe to read.
+
+A `CONFLICT` refuses the start as a bad value would: nothing is recorded, no
+run id is taken, and the reason is what the person or agent who asked is
+shown. Start again once what it names is over. So does a check that cannot
+say — a non-zero exit, a timeout, no line, more than one, or a word other than
+these three — with the captured output: whatever it would have said, cocoa
+will not guess it.
+
+The check runs **after** the start's values are validated and its template
+rendered, so a start refused for a typing mistake never runs it, and **before**
+anything is written.
+
+**One start at a time.** A job is checked and deployed by one start at a time:
+a second start of the same job, made while the first is checking or
+deploying, waits for it and then checks afresh — so it sees what the first
+deployed, and two deploys never write over each other. The wait lasts until
+the first start's runs are launched.
+
+A bench start checks each job its plan calls **once**, before dispatching
+anything (§8.2). Validation is all-or-nothing, as for the plan itself: a
+`CONFLICT` or a broken check on any job refuses the whole start, naming every
+job at fault, and nothing is dispatched. A stale job is deployed once, and all
+the bench's members of that job wait on that one deploy.
+
+A run records what its check said:
+
+```json
+{ "run_id": 42, "status": "STARTING",
+  "deploy": { "check": "STALE", "reason": "solver.cfg changed",
+              "at": "2026-10-06T15:02:40.123+02:00" } }
+```
+
+`check` is `CURRENT` or `STALE` — a `CONFLICT` leaves no run to record it on —
+`reason` is what the script said beside the word, and `at` and `error` belong
+to the deploy (§7.6). A run recorded before this rule has no `deploy` field.
+
+### 7.6 `deploy`
+
+```
+./deploy.sh
+```
+
+Puts in place what `check` found stale — builds the executable, copies it and
+its auxiliary material where the job's runs expect it, on whatever machine
+they run. No arguments; exit 0 means it is done. It prints nothing to cocoa.
+
+A deploy is spawned rather than waited for, as a launch is (§7.1): every run
+whose start asked for it is recorded at once as `DEPLOYING`, and the refresh
+tick collects the script's outcome:
+
+- **exit 0** — each run waiting on it moves to `STARTING`, its `deploy.at`
+  set, and its `launch` is spawned exactly as at a start (§7.1). A deploy is
+  not followed by a second check: exit 0 is the script saying it is done.
+- **non-zero exit or timeout** — each run waiting on it moves to `ERROR`, with
+  the captured output in its `error` and its `deploy.error`. None of them was
+  ever submitted. The failure is raised as an operation error as well; nothing
+  retries it, and the next start checks afresh.
+
+A `DEPLOYING` run has no submission, so there is nothing to poll and nothing
+to cancel yet: a cancel is refused until it has launched, and a bench cancel
+names such members as not cancelled rather than passing over them. It cannot be
+deleted while it is waiting (§12.1).
+
+A close while a deploy is running kills it, and every run waiting on it is
+moved to `ERROR` at the close — it was never launched, and nothing will launch
+it. A *crash* leaves runs at `DEPLOYING` with nothing to finish them; the next
+session's first tick moves them to `ERROR`, as it does a launch left
+unanswered (§10). What a killed deploy had already put in place is the
+folder's: the next check says whether it is current.
+
 ---
 
 ## 8. Bench scripts
@@ -641,9 +751,11 @@ with no run id allocated and nothing submitted until the user agrees.
 
 ### 8.2 Fan-out and the bench record
 
-Once the user confirms the planned instances, cocoa allocates the bench's run id
-and dispatches every instance through **its own job's `launch`**, each in that
-job's folder. A bench has no launch script of its own.
+Once the user confirms the planned instances, cocoa checks every job the plan
+calls (§7.5), allocates the bench's run id and dispatches every instance
+through **its own job's `launch`**, each in that job's folder — after that
+job's deploy, for a job whose check said `STALE`. A bench has no launch, check
+or deploy script of its own.
 
 Every member is an ordinary job run: it gets its own run id, its own
 `runs/<run_id>/` record in its job's folder, and it appears in that job's
@@ -749,6 +861,7 @@ state names at runtime.
 
 | Status | Set by | Terminal | Meaning |
 |---|---|---|---|
+| `DEPLOYING` | cocoa | no | Record written, the job's deploy in flight, not launched yet (§7.6) |
 | `STARTING` | cocoa | no | Record written, launch invoked, nothing polled yet |
 | `PENDING` | poll | no | Accepted by the scheduler, not yet running |
 | `RUNNING` | poll | no | Executing |
@@ -767,6 +880,8 @@ The healthy path is:
 STARTING → PENDING → RUNNING → COMPLETED → ANALYZING → SUCCEEDED
 ```
 
+preceded by `DEPLOYING` when the start's check said `STALE` (§7.5).
+
 `FAILED` and `CANCELLED` end a run immediately: they skip `ANALYZING`. A
 `CANCELLED` run has no report. A `FAILED` run gets one, run beside its status
 rather than on it: the report has its own state in the record, and the run
@@ -778,8 +893,8 @@ returns to the healthy path once the script is fixed — a successful manual
 report re-run moves it to `SUCCEEDED` (§7.3, §11).
 
 **Who owns what.** The cluster's words — `PENDING`, `RUNNING`, `COMPLETED`,
-`FAILED`, `CANCELLED`, `UNREACHABLE` — come from poll. cocoa sets `STARTING`,
-`ANALYZING`, `SUCCEEDED`, `CANCELLING` and `ERROR`, each describing an
+`FAILED`, `CANCELLED`, `UNREACHABLE` — come from poll. cocoa sets `DEPLOYING`,
+`STARTING`, `ANALYZING`, `SUCCEEDED`, `CANCELLING` and `ERROR`, each describing an
 operation cocoa itself has in flight or a conclusion only cocoa can draw.
 
 cocoa stops polling a run that reaches a terminal status, and a later poll line
@@ -804,7 +919,8 @@ not a field in the record and not cached in the UI. In order:
 
 1. Any member unresolvable → `ERROR` (§9.2).
 2. Any member `CANCELLING` → `CANCELLING`.
-3. Any member non-terminal → `RUNNING`, or `STARTING` while every member is.
+3. Any member non-terminal → `RUNNING`, or `STARTING` while every member is
+   `STARTING` or `DEPLOYING`.
 4. All members terminal → the bench settles. Recorded `launch_failures`
    (§8.2), or any member that ended `ERROR`, make the bench `ERROR`; otherwise
    any member that ended `FAILED` makes it `FAILED`; otherwise any member that

@@ -69,6 +69,12 @@ function start_agent_server(): void {
         void refresh_and_publish()
       }
       return result
+    },
+    // As the Explorer's `+` does with the folder it picked (`bridge/ipc.ts`).
+    register: (folder) => {
+      const result = operations.add_folder(engine, folder)
+      publish_cycle(empty())
+      return result
     }
   }
 

@@ -58,6 +58,7 @@ function job_run(id: string, job_id: string, extra: Partial<JobRun> = {}): JobRu
     report: 'Missing',
     report_error: null,
     report_rerunnable: false,
+    deploy: null,
     error: null,
     ...extra
   }
@@ -372,6 +373,7 @@ describe('the journal and the views', () => {
         report: 'Missing',
         report_error: null,
         report_rerunnable: false,
+        deploy: null,
         error: null
       }
     })

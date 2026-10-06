@@ -54,6 +54,12 @@ command     = "./report.py"
 
 [cancel]
 command     = "./cancel.sh"
+
+[check]
+command     = "./check.sh"
+
+[deploy]
+command     = "./deploy.sh"
 `
 
 const TEMPLATE = '#SBATCH --nodes={{ size }}\n./solver --backend {{ backend }}\n'
@@ -371,10 +377,31 @@ params = []
       'cocoa.toml',
       'kind = "job"\nname = "x"\n[render]\ntemplate = "t.tmpl"\nparams = []\n' +
         '[launch]\ncommand = "./l"\nparams = []\n[poll]\n[report]\ncommand = "./r"\n' +
-        '[cancel]\ncommand = "./c"\n'
+        '[cancel]\ncommand = "./c"\n[check]\ncommand = "./k"\n[deploy]\ncommand = "./d"\n'
     )
     write(dir, 't.tmpl', 'plain\n')
     expect(refused(dir)).toContain('[poll]')
+  })
+
+  it('requires a check and a deploy, each a command and nothing else (§7.5, §7.6)', () => {
+    const dir = temp_dir()
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
+    const without = (table: string): string =>
+      VALID_JOB.replace(`\n[${table}]\ncommand     = "./${table}.sh"\n`, '\n')
+
+    write(dir, 'cocoa.toml', without('check'))
+    expect(refused(dir)).toContain('missing required table `[check]`')
+    write(dir, 'cocoa.toml', without('deploy'))
+    expect(refused(dir)).toContain('missing required table `[deploy]`')
+
+    // No parameters: what to deploy, and where, is the script's business.
+    write(dir, 'cocoa.toml', VALID_JOB + '[[deploy.params]]\nname = "x"\n')
+    expect(refused(dir)).toContain('unknown field `params`')
+
+    write(dir, 'cocoa.toml', VALID_JOB)
+    const manifest = load_manifest(dir)
+    expect(manifest.kind === 'job' && manifest.check.words).toEqual(['./check.sh'])
+    expect(manifest.kind === 'job' && manifest.deploy.words).toEqual(['./deploy.sh'])
   })
 
   it('rejects a command that does not split into words', () => {

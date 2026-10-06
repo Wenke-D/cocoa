@@ -54,7 +54,7 @@ function seed_library(seed) {
         continue
       }
       // Whatever a previous drive generated is not this run's history.
-      for (const generated of ['runs', 'report']) {
+      for (const generated of ['runs', 'report', 'deployed']) {
         fs.rmSync(path.join(folder, generated), { recursive: true, force: true })
       }
       folders.push(folder)

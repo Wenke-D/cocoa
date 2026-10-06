@@ -356,6 +356,7 @@ which of the two it is.
 
 ```ts
 export type RunStatus =
+  | 'Deploying'   // the job's deploy is running; not launched yet (convention §7.6)
   | 'Starting'    // launch script spawned, no submission id yet (§3)
   | 'Pending'     // queued by the cluster, not yet running
   | 'Running'
@@ -1834,6 +1835,7 @@ anything live.
 Recommended semantics:
 
 ```text
+Deploying     neutral/blue animated or pulsing indicator
 Starting      neutral/blue animated or pulsing indicator
 Pending       muted
 Running       blue

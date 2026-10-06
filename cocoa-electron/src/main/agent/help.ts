@@ -11,7 +11,8 @@ export function help(): AgentResponse {
   return json(200, {
     what:
       'cocoa is a local workbench for experiment folders. An experiment is a folder with a ' +
-      'manifest and its own scripts (launch, poll, report, cancel); cocoa starts runs through ' +
+      'manifest and its own scripts (check, deploy, launch, poll, report, cancel); cocoa ' +
+      'starts runs through ' +
       'those scripts, tracks each run’s status, and collects reports. This socket is the ' +
       'agent interface — the same engine the window drives, reached over HTTP/1.1 on a Unix ' +
       'socket.',
@@ -54,8 +55,26 @@ export function help(): AgentResponse {
           'starts the Job or Bench; 201 with {run_id}. Every declared parameter must be ' +
           'supplied, shaped as declared — GET /jobs/{name} lists them with type, values and ' +
           'description: a string, or a list of strings for a list, each ' +
-          'enum value one of its `values`. The run appears STARTING at once; its ' +
-          'submission id and status advance in /jobs/{name} as the scripts answer.'
+          'enum value one of its `values`. Every start runs the Job’s check first (a Bench ' +
+          'start checks each Job it calls, once): CURRENT launches at once and the run ' +
+          'appears STARTING; STALE runs the Job’s deploy first and the run appears DEPLOYING ' +
+          'until it is done (a failed deploy leaves it Error, with the output in error and ' +
+          'deploy.error); CONFLICT refuses the start with a 400 carrying the check’s reason, ' +
+          'and nothing is recorded — start again once what it names is over. A start made ' +
+          'while that Job is checking or deploying waits for it. The submission id and ' +
+          'status advance in /jobs/{name} as the scripts answer; each run’s deploy says ' +
+          'what its check found.'
+      },
+      {
+        method: 'POST',
+        path: '/experiments',
+        body: { path: '/absolute/path/to/the/folder' },
+        answers:
+          'registers the experiment folder at that absolute path, as the Explorer’s + does: ' +
+          'its cocoa.toml decides whether it is a Job or a Bench. 201 with {name, kind, ' +
+          'folder, already, follow}; 200 and already: true when it was registered already. ' +
+          '400 with the reason for a path that is not absolute or not a folder, a manifest ' +
+          'that does not load, or a name another experiment already has.'
       },
       {
         method: 'POST',
