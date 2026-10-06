@@ -112,6 +112,40 @@ describe('build_world', () => {
     })
   })
 
+  // A failed run's report is shown exactly as a succeeded run's, beside the
+  // status it never changes (§7.3.1): in flight, landed, or failed.
+  it("shows a failed run's report as it goes, and its error", async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'failing')
+    const cocoa = engine(dir)
+    cocoa.register(job)
+    const run_id = await cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(cocoa)
+    write(job, 'poll-state', 'FAILED diverged')
+    await cocoa.poll_job(job)
+
+    let run = build_world(cocoa, null).job_runs[job][String(run_id)]
+    expect(run).toMatchObject({ status: 'Failed', report: 'Generating', report_error: null })
+    expect(run.ended_at).not.toBeNull()
+
+    await cocoa.report_run(job, run_id, 'auto')
+    run = build_world(cocoa, null).job_runs[job][String(run_id)]
+    const text_bytes = fs.statSync(path.join(job, 'report', `${run_id}.txt`)).size
+    expect(run).toMatchObject({
+      status: 'Failed',
+      report: { Available: { files: [{ format: 'PlainText', text_bytes }] } },
+      report_error: null,
+      error: null
+    })
+
+    write(job, 'report-state', 'fail')
+    fs.rmSync(path.join(job, 'report', `${run_id}.txt`))
+    await cocoa.report_run(job, run_id, 'manual').catch(() => undefined)
+    run = build_world(cocoa, null).job_runs[job][String(run_id)]
+    expect(run).toMatchObject({ status: 'Failed', report: 'Missing', error: null })
+    expect(run.report_error).toContain('exploded')
+  })
+
   // An unreachable cluster is a gap in knowledge, not a change of state: the
   // run keeps showing what it was last known to be, and the query health
   // carries the reason (§9).

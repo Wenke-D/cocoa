@@ -77,6 +77,10 @@ export interface JobRun {
   query_health: QueryHealth
   last_successful_query: string
   report: ReportState
+  /** Why the report script failed on a `Failed` run, which keeps its status
+   * whatever the report does (convention §7.3.1). Elsewhere a failed report
+   * is the run's `Error`, and this is `null`. */
+  report_error: string | null
   error: string | null
 }
 
@@ -237,6 +241,15 @@ export function is_terminal(status: RunStatus): boolean {
 
 export function is_active(status: RunStatus): boolean {
   return !is_terminal(status)
+}
+
+/**
+ * Whether a job run can be deleted from its own page or row: finished, not
+ * dispatched by a bench (§16.4), and with no report still being written for
+ * it — a `Failed` run's report runs after its verdict (convention §12.1).
+ */
+export function is_deletable(run: JobRun): boolean {
+  return is_terminal(run.status) && typeof run.origin === 'string' && run.report !== 'Generating'
 }
 
 const CANCELLABLE: readonly RunStatus[] = ['Starting', 'Pending', 'Running']

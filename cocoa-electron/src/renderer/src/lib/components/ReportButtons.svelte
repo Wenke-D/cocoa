@@ -6,6 +6,10 @@
   to someone who wants to read it, so it is only the button's tooltip. Two
   files are a choice, and then the format is the point: a `Text` and an
   `HTML` button, each with the same view icon.
+
+  `error` is a failed run's report script failing (convention §7.3.1). It
+  says so in place of the state, or under the buttons when the script left
+  files behind before it failed.
 -->
 <script lang="ts">
   import { format_label, report_summary } from '@shared/world'
@@ -13,7 +17,11 @@
   import { Button } from '$lib/components/ui/button'
   import EyeIcon from '@lucide/svelte/icons/eye'
 
-  let { report, open }: { report: ReportState; open: (format: ReportFormat) => void } = $props()
+  let {
+    report,
+    error = null,
+    open
+  }: { report: ReportState; error?: string | null; open: (format: ReportFormat) => void } = $props()
 
   /** The name a choice between formats goes by: short, since the icon says "view". */
   function choice_label(format: ReportFormat): string {
@@ -44,13 +52,27 @@
       {/each}
     {/if}
   </div>
-{:else}
+{:else if error === null}
   {report_summary(report)}
+{/if}
+{#if error !== null}
+  <p class="error">Report script failed: {error}</p>
 {/if}
 
 <style>
   .buttons {
     display: flex;
     gap: 8px;
+  }
+
+  .error {
+    margin: 0;
+    color: var(--error);
+    white-space: pre-wrap;
+    user-select: text;
+  }
+
+  .buttons + .error {
+    margin-top: 8px;
   }
 </style>

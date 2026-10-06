@@ -18,7 +18,7 @@ import type {
 import type { EngineError } from './errors'
 import type { Engine } from './index'
 import { report_on_disk } from './job'
-import { all_params, ended_at, started_at } from './record'
+import { all_params, ended_at, report_owed, started_at } from './record'
 import type { BenchRecord, RunRecord } from './record'
 import { is_terminal } from './status'
 import type { Status } from './status'
@@ -154,7 +154,8 @@ function job_run_of(engine: Engine, job_path: string, record: RunRecord, now_iso
     status,
     query_health: query_health,
     last_successful_query: now_iso,
-    report: report_state_of(job_path, record.run_id),
+    report: report_in_flight(record) ? 'Generating' : report_state_of(job_path, record.run_id),
+    report_error: record.report?.error ?? null,
     error: record.error ?? null
   }
 }
@@ -285,6 +286,14 @@ function map_status(status: Status): RunStatus {
     case 'ERROR':
       return 'Error'
   }
+}
+
+/**
+ * Whether the run's report script is running, or due to: `ANALYZING` on the
+ * healthy path, and a `FAILED` run's owed report beside its status (§7.3.1).
+ */
+function report_in_flight(record: RunRecord): boolean {
+  return record.status === 'ANALYZING' || report_owed(record)
 }
 
 /** Every report file the run wrote, plain text first (§20). */

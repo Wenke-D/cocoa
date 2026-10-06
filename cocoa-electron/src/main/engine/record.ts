@@ -26,6 +26,8 @@ export interface RunRecord {
   history: StatusChange[]
   reason?: string
   error?: string
+  /** A `FAILED` run's report, which runs beside its status (§7.3.1). */
+  report?: RunReport
   origin: RunOrigin
 }
 
@@ -48,6 +50,20 @@ export interface BenchReport {
   attempted: boolean
   at?: string
   error?: string
+}
+
+/**
+ * A `FAILED` run's report (§7.3.1), in the bench report's shape. The healthy
+ * path keeps its report on the status axis (§11) and never writes this.
+ * `{ attempted: false }` is written with `FAILED` itself — the report is owed
+ * — and `at`, with `error` when the script failed, once it has run. A run
+ * recorded `FAILED` without it predates the rule and owes nothing.
+ */
+export type RunReport = BenchReport
+
+/** Whether a `FAILED` run's report is owed or in flight (§7.3.1). */
+export function report_owed(record: RunRecord): boolean {
+  return record.report?.attempted === false
 }
 
 export interface BenchRecord {

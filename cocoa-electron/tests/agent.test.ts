@@ -57,6 +57,7 @@ function world(): World {
         query_health: 'Healthy',
         last_successful_query: '2026-08-20T10:00:03.000+02:00',
         report: 'Missing',
+        report_error: null,
         error: null
       },
       '1': {
@@ -71,6 +72,7 @@ function world(): World {
         query_health: 'Healthy',
         last_successful_query: '2026-08-20T11:05:00.000+02:00',
         report: { Available: { files: [{ format: 'PlainText', text_bytes: 120 }] } },
+        report_error: null,
         error: null
       }
     }

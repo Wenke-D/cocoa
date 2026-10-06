@@ -22,7 +22,7 @@ import * as del from './delete'
 import * as job from './job'
 import type { PollReport, ReportMode } from './job'
 import { Memory } from './memory'
-import { apply_status, now_stamp } from './record'
+import { apply_status, now_stamp, report_owed } from './record'
 import type { RunOrigin, Trigger } from './record'
 import { is_terminal } from './status'
 import type { Status } from './status'
@@ -214,7 +214,9 @@ export class Engine extends Memory {
           }
           continue
         }
-        if (record.status === 'COMPLETED' || record.status === 'ANALYZING') {
+        // A FAILED run's report is due once, when poll said so (§7.3.1); one
+        // that was already FAILED on disk before that rule owes nothing.
+        if (record.status === 'COMPLETED' || record.status === 'ANALYZING' || report_owed(record)) {
           report.reports_run += 1
           try {
             await this.report_run(job.path, run_view.run_id, 'auto')

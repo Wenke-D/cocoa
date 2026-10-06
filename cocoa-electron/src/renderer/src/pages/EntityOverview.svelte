@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     format_duration,
+    is_deletable,
     is_terminal,
     format_relative,
     format_started_at,
@@ -136,7 +137,7 @@
               {entity_id}
               run_id={run.id}
               params={run.params}
-              deletable={is_terminal(run.status) && typeof run.origin === 'string'}
+              deletable={is_deletable(run)}
               route={{ page: 'job_run', job_id: entity_id, run_id: run.id }}
             >
               <td><StatusPill status={run.status} health={run.query_health} compact /></td>

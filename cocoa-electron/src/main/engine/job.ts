@@ -12,7 +12,7 @@ import type { Job } from './memory'
 import type { Params } from '@shared/params'
 import { argv_of } from '@shared/params'
 import { validate_params } from './params'
-import { apply_status, new_run_record, now_stamp, sorted } from './record'
+import { apply_status, new_run_record, now_stamp, report_owed, sorted } from './record'
 import type { RunOrigin, RunRecord } from './record'
 import { from_poll_word, is_cancellable, is_terminal } from './status'
 import type { Status } from './status'
@@ -193,6 +193,12 @@ export async function poll_job(engine: Engine, job: Job): Promise<PollReport> {
     }
     if (record.status !== status) {
       apply_status(record, status, now, reason)
+      // The report a failed run owes is written with the verdict, in one
+      // write: a close before the script lands leaves it owed, and the next
+      // session takes it like an ANALYZING run's (§7.3.1).
+      if (status === 'FAILED') {
+        record.report = { attempted: false }
+      }
       job.runs.write(record)
       report.changed.push([run_id, status])
     }
@@ -208,6 +214,10 @@ export async function poll_job(engine: Engine, job: Job): Promise<PollReport> {
  * Runs the report script for one run (§7.3, §11). The record is the live
  * in-memory truth: a poll advancing the run while the (possibly long)
  * report script runs mutates the same object, so the outcomes compose.
+ *
+ * A `FAILED` run is reported beside its status, never on it (§7.3.1): it
+ * stays `FAILED` whatever the script does, and the outcome lands in its
+ * `report` field instead.
  */
 export async function report_run(
   engine: Engine,
@@ -217,20 +227,22 @@ export async function report_run(
 ): Promise<void> {
   const manifest = job.usable_manifest()
   const record = job.runs.record(run_id)
+  const failed = record.status === 'FAILED'
 
   const eligible =
     mode === 'auto'
-      ? record.status === 'COMPLETED' || record.status === 'ANALYZING'
+      ? record.status === 'COMPLETED' || record.status === 'ANALYZING' || report_owed(record)
       : record.status === 'COMPLETED' ||
         record.status === 'ANALYZING' ||
         record.status === 'SUCCEEDED' ||
+        failed ||
         (record.status === 'ERROR' &&
           record.history.some((change) => change.status === 'COMPLETED'))
   if (!eligible) {
     throw EngineError.validation(`run ${run_id} (${record.status}) cannot be reported`)
   }
 
-  if (record.status !== 'ANALYZING') {
+  if (!failed && record.status !== 'ANALYZING') {
     apply_status(record, 'ANALYZING', now_stamp())
     job.runs.write(record)
   }
@@ -248,35 +260,51 @@ export async function report_run(
     '--submission',
     record.submission_id
   ]
+  // The cluster's outcome, so one script can serve both (§6, §7.3.1).
+  const env = { COCOA_RUN_STATUS: failed ? 'FAILED' : 'COMPLETED' }
   let invocation: Invocation
   try {
-    invocation = await invoke.run(job.path, argv, engine.config.report_timeout)
+    invocation = await invoke.run(job.path, argv, engine.config.report_timeout, env)
   } catch (cause) {
     throw EngineError.io(job.path, cause)
   }
 
-  if (invoke.invocation_ok(invocation) && report_on_disk(job.path, run_id)) {
+  const ok = invoke.invocation_ok(invocation) && report_on_disk(job.path, run_id)
+  const detail = ok
+    ? undefined
+    : invoke.invocation_ok(invocation)
+      ? `report script exited 0 but produced no report/${run_id}.txt`
+      : invoke.invocation_output(invocation)
+
+  if (failed) {
+    // A failed run is finished, so it may have been deleted while its
+    // report ran; the outcome lands only on the record it was taken for.
+    if (job.runs.find(run_id) === record) {
+      record.report = {
+        attempted: true,
+        at: now_stamp(),
+        ...(detail !== undefined ? { error: detail } : {})
+      }
+      job.runs.write(record)
+    }
+  } else if (ok) {
     apply_status(record, 'SUCCEEDED', now_stamp())
     delete record.error
     job.runs.write(record)
-    return
-  }
-
-  const detail = invoke.invocation_ok(invocation)
-    ? `report script exited 0 but produced no report/${run_id}.txt`
-    : invoke.invocation_output(invocation)
-  const error = EngineError.invocation(
-    manifest.report.display,
-    invocation.exit,
-    invocation.timed_out,
-    detail
-  )
-  if (mode === 'auto') {
+  } else if (mode === 'auto') {
     apply_status(record, 'ERROR', now_stamp())
     record.error = detail
     job.runs.write(record)
   }
-  throw error
+
+  if (detail !== undefined) {
+    throw EngineError.invocation(
+      manifest.report.display,
+      invocation.exit,
+      invocation.timed_out,
+      detail
+    )
+  }
 }
 
 /** Cancels one run through the job's `cancel` script (§7.4). */

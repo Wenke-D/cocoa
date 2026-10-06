@@ -94,8 +94,9 @@ describe('bundled example library', () => {
   })
 
   // The failing example is the other half of the library's point: a run that
-  // ends FAILED, carrying the cluster's reason, and never gets a report.
-  it('carries a failing job to FAILED with the cluster reason', async () => {
+  // ends FAILED, carrying the cluster's reason, and a report that says where
+  // it broke — the run staying FAILED (§7.3.1).
+  it('carries a failing job to FAILED with the cluster reason, and reports it', async () => {
     const root = example_library()
     const cocoa = engine(path.dirname(root))
     const failing = path.join(root, 'jobs/failing-solver')
@@ -123,5 +124,14 @@ describe('bundled example library', () => {
     const polled = cocoa.job(failing).runs.record(run_id)
     expect(polled.status).toBe('FAILED')
     expect(polled.reason).toContain('convergence stalled')
+
+    await cocoa.report_run(failing, run_id, 'auto')
+    const reported = cocoa.job(failing).runs.record(run_id)
+    expect(reported.status).toBe('FAILED')
+    expect(reported.report).toMatchObject({ attempted: true })
+    expect(reported.report?.error).toBeUndefined()
+    const text = fs.readFileSync(path.join(failing, 'report', `${run_id}.txt`), 'utf8')
+    expect(text).toContain('Diagnosis: the run failed.')
+    expect(text).toContain('convergence stalled')
   })
 })

@@ -84,9 +84,11 @@ launch whose output never arrived — is a third thing again, `ERROR`, never
 dressed up as your experiment's verdict.
 
 **A run's report is not its status.** A run can finish and have no report yet;
-a failed run can have a very informative one. The report is where you find out
-what happened, so it has its own states, and cocoa waits to call a run
-`Succeeded` until it has one.
+a failed run can have a very informative one — failure is when you need it
+most, so cocoa runs the report script for a failed run too. The report is
+where you find out what happened, so it has its own states. cocoa waits to call
+a run `Succeeded` until it has one, and a failed run stays `Failed` whatever
+its report does: the cluster's verdict is not the report's to change.
 
 ## Driven by an agent, too
 

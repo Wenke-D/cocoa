@@ -83,6 +83,7 @@ export function job_detail(world: World, name: string): AgentResponse {
         parameters: run.parameters,
         query_health: run.query_health,
         error: run.error,
+        report_error: run.report_error,
         location: {
           run_dir: run_dir,
           record: path.join(run_dir, 'run.json'),

@@ -186,7 +186,8 @@ COCOA_RETURN: UNREACHABLE squeue timed out
 
 The words cocoa accepts: `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`,
 `CANCELLED`, and `UNREACHABLE` (§9). `COMPLETED` means the work finished and
-the report has not been taken yet — cocoa then runs `report` by itself.
+the report has not been taken yet — cocoa then runs `report` by itself. So
+does `FAILED`; only `CANCELLED` ends a run without one.
 `FAILED` and `UNREACHABLE` may carry a reason after the word. `UNREACHABLE`
 is for "I cannot see the cluster right now": cocoa keeps polling, shows the
 last known status, and the next good answer replaces it (§10).
@@ -195,6 +196,22 @@ last known status, and the next good answer replaces it (§10).
 `report/41.txt` (required; `report/41.html` optional beside it) and prints
 nothing to cocoa. A report script that exits 0 without producing the file is
 a failure.
+
+It runs when the poll says `COMPLETED` **and** when it says `FAILED`, with the
+same arguments; `COCOA_RUN_STATUS` in its environment says which (§7.3).
+A failed run is where a report earns its keep — which stage broke, the
+residuals, the tail of the solver log — so write for it:
+
+```python
+if os.environ.get("COCOA_RUN_STATUS") == "FAILED":
+    ...  # say where it broke
+```
+
+A script that ignores the variable still works; it just reports a failed run
+as it would a finished one. Whatever the report does, a `FAILED` run stays
+`FAILED`: a report that fails there is recorded beside the run and shown as
+the report's error, never as cocoa's `ERROR` (§7.3.1). Re-running the report
+by hand overwrites it, for a failed run as for a completed one.
 
 **`cancel`** — `./cancel.sh --submission 5001`. Tells the scheduler to stop
 the run; the next poll reports what actually happened. Cancel requests the
@@ -249,6 +266,9 @@ them. Output rules are the job report's: `report/7.txt` required.
 
 - Values arrive exactly as given — separate argv elements, no shell, no
   expansion, no re-quoting.
+- Scripts inherit the environment cocoa was started with. cocoa adds one
+  variable, `COCOA_RUN_STATUS` (`COMPLETED` or `FAILED`), and only for a
+  job's `report` (§6).
 - Records in `runs/` are readable JSON and safe to read from scripts; they
   are written atomically. Never write them.
 - Timeouts (defaults): launch, poll, cancel 60 s; plan 120 s; report 600 s.

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { is_cancellable, is_terminal, job_run } from '@shared/world'
+  import { is_cancellable, is_deletable, job_run } from '@shared/world'
   import type { Crumb } from '../ui_state'
   import { app, entity_of, request_cancel, request_delete } from '../state.svelte'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
@@ -37,9 +37,10 @@
       >
         <SquareIcon />
       </Button>
-    {:else if is_terminal(run.status) && typeof run.origin === 'string'}
+    {:else if is_deletable(run)}
       <!-- A bench-dispatched run has no Delete here: the fan-out is deleted
-           whole, from the bench run's page (§16.4). -->
+           whole, from the bench run's page (§16.4). Nor has a failed run
+           whose report is still being written (convention §12.1). -->
       <Button
         size="icon-sm"
         variant="destructive"

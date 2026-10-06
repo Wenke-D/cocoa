@@ -89,6 +89,12 @@ detail response points at files — the experiment folder, a run's directory and
 bytes. An agent reads those paths directly; the socket stays a control channel
 and never becomes a file server.
 
+A failed job run has a report too (convention §7.3.1), at the same
+`location.report`, while its `status` stays `Failed`. When that report's
+script failed, the run's `report_error` carries the script's output; it is
+`null` otherwise, and always on the healthy path, where a failed report is the
+run's own `error`.
+
 A refusal carries the workbench's own text, unchanged — an agent reading it sees
 what a person would have been shown — under the status that says who can act:
 `404` for something that is not there, `400` for a request that was refused,

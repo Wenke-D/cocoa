@@ -12,6 +12,12 @@ export interface Invocation {
   stderr: string
 }
 
+/**
+ * Variables cocoa sets for one invocation, over the environment cocoa itself
+ * was started with, which every script inherits (§6).
+ */
+export type Env = Record<string, string>
+
 /** Whether the script "did its job": exited 0 before the timeout. */
 export function invocation_ok(invocation: Invocation): boolean {
   return !invocation.timed_out && invocation.exit === 0
@@ -58,7 +64,7 @@ export class Running {
    * rejects if it could not be started at all. */
   readonly started: Promise<void>
 
-  constructor(cwd: string, argv: string[], timeout_ms: number) {
+  constructor(cwd: string, argv: string[], timeout_ms: number, env: Env = {}) {
     if (argv.length === 0) {
       throw new Error('argv must name the script or interpreter')
     }
@@ -67,6 +73,7 @@ export class Running {
     })
     this.child = spawnProcess(argv[0], argv.slice(1), {
       cwd,
+      env: { ...process.env, ...env },
       stdio: ['ignore', 'pipe', 'pipe']
     })
     this.started = new Promise((resolve, reject) => {
@@ -143,15 +150,25 @@ export class Running {
  * the process cannot be started at all (missing interpreter, bad cwd) — the
  * same distinction the Rust engine draws for a start refusal.
  */
-export async function spawn(cwd: string, argv: string[], timeout_ms: number): Promise<Running> {
-  const running = new Running(cwd, argv, timeout_ms)
+export async function spawn(
+  cwd: string,
+  argv: string[],
+  timeout_ms: number,
+  env: Env = {}
+): Promise<Running> {
+  const running = new Running(cwd, argv, timeout_ms, env)
   await running.started
   return running
 }
 
 /** Runs `argv` to completion. */
-export async function run(cwd: string, argv: string[], timeout_ms: number): Promise<Invocation> {
-  const running = await spawn(cwd, argv, timeout_ms)
+export async function run(
+  cwd: string,
+  argv: string[],
+  timeout_ms: number,
+  env: Env = {}
+): Promise<Invocation> {
+  const running = await spawn(cwd, argv, timeout_ms, env)
   return running.wait()
 }
 

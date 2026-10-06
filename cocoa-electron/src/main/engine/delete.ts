@@ -9,6 +9,7 @@ import path from 'node:path'
 import type { Engine } from './index'
 import { EngineError } from './errors'
 import type { Bench, Job } from './memory'
+import { report_owed } from './record'
 import { is_terminal } from './status'
 
 /**
@@ -17,7 +18,8 @@ import { is_terminal } from './status'
  * a run cocoa cannot see may still be running, and deleting its record would
  * be the one way to never find out. A run a bench dispatched is refused
  * outright, whatever its status: it is part of a fan-out, and the fan-out
- * is deleted whole, from the bench's side.
+ * is deleted whole, from the bench's side. A FAILED run whose report has
+ * not landed yet waits for it.
  */
 export function delete_run(job: Job, run_id: number): void {
   const record = job.runs.record(run_id)
@@ -33,6 +35,9 @@ export function delete_run(job: Job, run_id: number): void {
       `run ${run_id} (${record.status}) is not finished and cannot be deleted; ` +
         `cancel it first, and let the cancellation land`
     )
+  }
+  if (report_owed(record)) {
+    throw EngineError.validation(`${report_running(`run ${run_id}`)}; delete it once it lands`)
   }
   remove_run_files(job.path, run_id)
   job.runs.drop(run_id)
@@ -68,6 +73,12 @@ export function delete_bench_run(engine: Engine, bench: Bench, run_id: number): 
           `(${member.record.status}) is still active; cancel it first`
       )
     }
+    if (member.record !== null && report_owed(member.record)) {
+      throw EngineError.validation(
+        `${report_running(`member run ${member.run_id} of \`${member.job_name}\``)}; ` +
+          `delete the bench run once it lands`
+      )
+    }
   }
   for (const member of members) {
     if (member.job_path !== null && member.record !== null) {
@@ -77,6 +88,15 @@ export function delete_bench_run(engine: Engine, bench: Bench, run_id: number): 
   }
   remove_run_files(bench.path, run_id)
   bench.runs.drop(run_id)
+}
+
+/**
+ * A failed run's report still to land (§7.3.1). Its script writes
+ * `report/<id>.*` when it finishes, and a deletion before then would leave
+ * those files to the next run that takes the id (§5).
+ */
+function report_running(run: string): string {
+  return `${run} is FAILED and its report is still running`
 }
 
 function remove_run_files(folder: string, run_id: number): void {

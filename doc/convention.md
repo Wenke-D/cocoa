@@ -325,6 +325,11 @@ Every script cocoa invokes:
 - receives **only** the arguments this document specifies plus the declared
   params — cocoa never passes anything ad-hoc. Wanting to pass something else
   means editing the manifest first;
+- inherits cocoa's own environment, unchanged but for the variables this
+  document names — today one, `COCOA_RUN_STATUS`, given to a job's `report`
+  (§7.3). It travels in the environment rather than as an argument so that a
+  script written before it existed, which parses every argument it is given,
+  needs no change;
 - has stdout and stderr captured, and can be killed from the UI while running.
 
 **`--run` is passed only where it is needed**: to `launch` (so a script can tag
@@ -489,13 +494,62 @@ Must produce `report/<run_id>.txt`, and may additionally produce
 contents are entirely the script's business.
 
 cocoa runs `report` automatically when a run reaches `COMPLETED`, holding the
-run at `ANALYZING` until it finishes (§9). When the script exits 0, cocoa
-verifies that `report/<run_id>.txt` exists; a missing file is treated as a
-report failure.
+run at `ANALYZING` until it finishes (§9), and when it reaches `FAILED`, beside
+a status it never changes (§7.3.1). When the script exits 0, cocoa verifies
+that `report/<run_id>.txt` exists; a missing file is treated as a report
+failure.
+
+The arguments are the same either way. The cluster's outcome is in the
+environment instead (§6): `COCOA_RUN_STATUS=COMPLETED` or
+`COCOA_RUN_STATUS=FAILED`, so one script can serve both and one written before
+the variable existed keeps working.
 
 Re-running report by hand is available for any run whose cluster outcome was
-`COMPLETED` — including one left at `ERROR` by a failed report — and overwrites
-the output. A successful re-run moves such a run to `SUCCEEDED` (§11).
+`COMPLETED` — including one left at `ERROR` by a failed report — or `FAILED`,
+and overwrites the output. A successful re-run moves a `COMPLETED` run to
+`SUCCEEDED` (§11); a `FAILED` run stays `FAILED` (§7.3.1).
+
+#### 7.3.1 A failed run's report
+
+A failed run is the one most in need of a report: the script is where a person
+finds out which stage broke and why. So `FAILED` gets one too — but beside the
+status, never on it. `FAILED` is the cluster's verdict, and nothing the report
+script does can change it: a report that lands does not make the run
+`SUCCEEDED`, and one that fails does not make it `ERROR`.
+
+The report's state therefore lives in the record, in the bench report's shape
+(§8.2):
+
+```json
+{ "status": "FAILED", "reason": "slurm reported NODE_FAIL",
+  "report": { "attempted": true, "at": "2026-10-06T14:02:40.123+02:00" } }
+```
+
+- **Owed.** The poll answer that moves a run to `FAILED` writes
+  `"report": { "attempted": false }` in the same write. That is the whole of
+  "in flight": the run reads `FAILED` at once, its clock stops there (§9), and
+  it never passes through `ANALYZING`. cocoa runs `report` on the same tick.
+  An owed report survives a close and is taken on the next session's first
+  tick, as an `ANALYZING` run's is.
+- **Landed.** `attempted: true` and `at`, with `report/<run_id>.txt` on disk.
+- **Failed.** `attempted: true`, `at`, and `error` with the script's captured
+  output — a non-zero exit, a timeout, or no `report/<run_id>.txt`. The
+  failure is raised as an operation error as well, like any report's. It is
+  not retried: re-running by hand is the remedy, and a re-run records its
+  own outcome here, success or failure, and moves no status.
+
+Polling stops at `FAILED` as at any terminal status. A run recorded `FAILED`
+without a `report` field predates this rule; it owes nothing, is never
+reported on its own, and can be reported by hand.
+
+A run is not deleted while its report is owed (§12.1): the script would write
+`report/<run_id>.*` after the record had gone, for the next run that takes the
+id to find.
+
+`CANCELLED` still has no report: the run stopped because someone asked, not
+because it broke. And a bench is unchanged: its member's own report runs, but
+a bench with a `FAILED` member still settles `FAILED` with no bench report
+(§8.3, §9.1).
 
 ### 7.4 `cancel`
 
@@ -643,7 +697,8 @@ folders, and are **never null** — see the condition below. Output goes to
 `FAILED`, `CANCELLED` or `ERROR`, the bench terminates at that outcome and no
 bench report is produced — not automatically and not by hand. Every member in
 `members.json` is therefore a succeeded run with a report on disk, which is why
-the field is never null.
+the field is never null. (A `FAILED` member has a report of its own, §7.3.1;
+it is that job's, and does not make one for the bench.)
 
 *(Consequence: there is no aggregate report over a partially failed sweep. If
 that is ever wanted, this is the rule to revisit.)*
@@ -663,7 +718,7 @@ state names at runtime.
 | `COMPLETED` | poll | no | Work finished successfully; report not run yet |
 | `ANALYZING` | cocoa | no | The report script is in flight |
 | `SUCCEEDED` | cocoa | **yes** | Finished and reported |
-| `FAILED` | poll | **yes** | The work finished unsuccessfully |
+| `FAILED` | poll | **yes** | The work finished unsuccessfully; its report runs beside it (§7.3.1) |
 | `CANCELLING` | cocoa | no | Cancel invoked, not yet confirmed by a poll |
 | `CANCELLED` | poll | **yes** | Confirmed cancelled |
 | `UNREACHABLE` | poll / cocoa | no | cocoa cannot currently see this run (§10) |
@@ -675,9 +730,11 @@ The healthy path is:
 STARTING → PENDING → RUNNING → COMPLETED → ANALYZING → SUCCEEDED
 ```
 
-`FAILED` and `CANCELLED` end a run immediately: they skip `ANALYZING`, and such
-a run has no report. `ERROR` likewise never has a report, whatever it came from
-(§11).
+`FAILED` and `CANCELLED` end a run immediately: they skip `ANALYZING`. A
+`CANCELLED` run has no report. A `FAILED` run gets one, run beside its status
+rather than on it: the report has its own state in the record, and the run
+stays `FAILED` whatever the script does (§7.3.1). `ERROR` never has a report,
+whatever it came from (§11).
 
 \* The one healable exception: a run left at `ERROR` by a failed report script
 returns to the healthy path once the script is fixed — a successful manual
@@ -773,17 +830,25 @@ everything on the next tick.
 
 ## 11. Reports
 
-Report progress is part of the status axis, not a second one: `COMPLETED` →
-`ANALYZING` → `SUCCEEDED` *is* the report lifecycle, and a report script that
-fails leaves the run at `ERROR` with its output attached. That `ERROR` is the
-one healable case: fixing the script and re-running report by hand moves the
-run to `SUCCEEDED` — the cluster had already said `COMPLETED`, and `SUCCEEDED`
-is cocoa's word for finished *and* reported (§7.3).
+On the healthy path, report progress is part of the status axis, not a second
+one: `COMPLETED` → `ANALYZING` → `SUCCEEDED` *is* the report lifecycle, and a
+report script that fails leaves the run at `ERROR` with its output attached.
+That `ERROR` is the one healable case: fixing the script and re-running report
+by hand moves the run to `SUCCEEDED` — the cluster had already said
+`COMPLETED`, and `SUCCEEDED` is cocoa's word for finished *and* reported
+(§7.3).
+
+The one report off that axis is a `FAILED` run's. Its status is already
+terminal and is the cluster's to set, so its report keeps its own state —
+owed, landed, failed — in the record's `report` field (§7.3.1).
 
 It follows that:
 
 - a succeeded run always has `report/<run_id>.txt`;
-- a `FAILED`, `CANCELLED` or `ERROR` run has no report;
+- a `FAILED` run has one once its report has landed — not while it is owed,
+  not when its script failed, and not if it was `FAILED` before 2026-10-06
+  until someone reports it by hand;
+- a `CANCELLED` or `ERROR` run has no report;
 - `report/<run_id>.html` is optional and may accompany the text one.
 
 The UI offers one open action per format that exists — the HTML one appears
@@ -832,9 +897,10 @@ pointing at members that are gone, no member naming a bench that is.
 Only a finished run can be deleted. An active run is refused — cancel is how
 work stops — and so is `UNREACHABLE`: a run cocoa cannot see may still be
 running, and deleting its record would be the one way to never find out. A
-bench run must be settled **and** every resolvable member finished: a bench
-settles when one member fails (§9.1) while another may still be running,
-and a running record is never deleted.
+`FAILED` run whose report is still owed is refused until it lands (§7.3.1). A
+bench run must be settled **and** every resolvable member finished, owed
+reports included: a bench settles when one member fails (§9.1) while another
+may still be running, and a running record is never deleted.
 
 Because a run id is derived from the folder's own runs (§5), deleting the
 newest run hands its id, and every id above what remains, back to the next

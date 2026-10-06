@@ -376,6 +376,11 @@ because the user opens the report to find out what happened (§7.1).
 spawned, a launch whose output never arrived, a report script that exits
 non-zero. It must be told apart from `Failed`, which is the experiment's verdict.
 
+That verdict is never overwritten. A `Failed` run gets a report too, run after
+the verdict and beside it rather than on it: it never passes through
+`Analyzing`, and a report script that fails on it leaves it `Failed`, with the
+failure in its report state (§10.5, convention §7.3.1).
+
 `Unknown` is not a status. It should not permanently overwrite the last known
 execution status.
 
@@ -425,11 +430,16 @@ An invalid or missing manifest disables Start.
 ```ts
 export type ReportFormat = 'PlainText' | 'Html'
 
+export interface ReportFile {
+  format: ReportFormat
+  text_bytes: number
+}
+
 export type ReportState =
   | 'Unavailable'
   | 'Generating'
   | 'Missing'
-  | { Available: { format: ReportFormat; text_bytes: number } }
+  | { Available: { files: ReportFile[] } }   // one or both, plain text first
   | { ReadError: { message: string } }
 ```
 
@@ -443,7 +453,18 @@ Format decides presentation, never availability. See §20.
 
 Report state is independent from execution state.
 
-A failed run may have a report.
+A failed run may have a report. cocoa runs the report script when a run turns
+`Failed`, and the run reads `Failed` from that moment on: while the script
+runs, the report is `Generating`; once it lands, it is `Available` like any
+other. A run that was `Failed` before cocoa did this has none until it is
+reported by hand.
+
+`Generating` is a report in flight, whichever path it is on: an `Analyzing`
+run's, or a `Failed` run's.
+
+A job run also carries `report_error: string | null`: why a `Failed` run's
+report script failed — its captured output. On the healthy path a failed
+report is the run's own `Error`, and `report_error` stays `null`.
 
 A succeeded run may temporarily have no report.
 
@@ -1218,7 +1239,8 @@ Where it is offered:
 Only a **finished** run can be deleted. An active run must be cancelled
 first, and the cancellation must land; `UNREACHABLE` is refused too — a run
 cocoa cannot see may still be running, and deleting its record would be the
-one way to never find out.
+one way to never find out. A `Failed` run whose report is still `Generating`
+offers no Delete until the report lands (convention §12.1).
 
 **A fan-out is deleted whole, from the bench's side.** A run a bench
 dispatched offers no Delete anywhere — not on its page, not in the job's
@@ -1352,6 +1374,7 @@ Report is being generated.
 [👁 Text]  [👁 HTML]
 Report is missing.
 Unable to read report: <message>
+Report script failed: <output>
 ```
 
 A report that exists is shown as buttons alone, each opening the Report
@@ -1361,6 +1384,12 @@ the report does not care which format it is, so the format is only the
 tooltip. Two files (`report/<run>.txt` and `report/<run>.html`) are a choice,
 and only then is the format the point: `Text` and `HTML`, plain text first,
 each with the view icon. The same row appears on a Bench run's page (§18).
+
+A `Failed` run's report is shown exactly as a succeeded run's: the same
+buttons, the same viewer. When its script failed, the row says
+`Report script failed:` and the captured output, in the error colour, in
+place of the state — or under the buttons, if the script wrote a file before
+it failed. The status pill stays `Failed` throughout (§10.2).
 
 ---
 

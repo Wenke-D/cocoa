@@ -42,6 +42,7 @@
   <dd>
     <ReportButtons
       report={run.report}
+      error={run.report_error}
       open={(format: ReportFormat) =>
         navigate({ page: 'report', context: report_context, run_id: run.id, format })}
     />

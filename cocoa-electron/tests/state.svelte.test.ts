@@ -56,6 +56,7 @@ function job_run(id: string, job_id: string, extra: Partial<JobRun> = {}): JobRu
     query_health: 'Healthy',
     last_successful_query: '2026-08-19T10:00:03.000+02:00',
     report: 'Missing',
+    report_error: null,
     error: null,
     ...extra
   }
@@ -368,6 +369,7 @@ describe('the journal and the views', () => {
         query_health: 'Healthy',
         last_successful_query: '2026-08-22T22:00:03.000+02:00',
         report: 'Missing',
+        report_error: null,
         error: null
       }
     })

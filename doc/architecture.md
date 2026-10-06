@@ -375,10 +375,13 @@ the rest; `Completed` and `Analyzing` are the report's half (§10.2).
 Also reachable:
 
 ```text
-Running → Failed
+Running → Failed          (its report runs after, beside the status)
 Running → Cancelling → Cancelled
 anywhere → Error          (cocoa could not carry out its own side)
 ```
+
+`Failed` is terminal the moment poll says it, and stays so: the report a failed
+run gets is recorded beside its status and never moves it (convention §7.3.1).
 
 ### 27.2 Bench Start
 

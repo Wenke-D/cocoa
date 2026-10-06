@@ -293,6 +293,9 @@ At minimum, test:
 12. Report generation changes report state to Available.
 13. Starting a Job while runs are active always succeeds and creates an
     independent run.
+14. A Job run that fails is reported and stays `Failed`; a report script that
+    fails on it records the report's error and leaves it `Failed`, never
+    `Error` (convention §7.3.1).
 
 ### 37.2 Route Tests
 
@@ -520,7 +523,8 @@ Confirm:
 The workbench is built. What follows is the standing list, not a build order.
 
 **Working:** the engine port in full — manifests, templates, the job lifecycle,
-the poll protocol, auto and manual reports with ERROR healing, cancel, bench
+the poll protocol, auto and manual reports with ERROR healing, reports for
+failed runs beside their status, cancel, bench
 plan and fan-out, derived bench status, orphan detection, abandonment at close.
 Memory as the truth with write-through; records read once, manifests re-read
 each tick (§26.1); guarded writes, no queue (§26.2). Event-driven

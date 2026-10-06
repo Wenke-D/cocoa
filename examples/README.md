@@ -28,7 +28,7 @@ while the app polls every few seconds.
 |---|---|
 | `jobs/solver-gpu` | Healthy job. `PENDING` → `RUNNING` (15 s) → `COMPLETED` (30 s) → report. Also writes an HTML report. |
 | `jobs/flaky-solver` | Same lifecycle, but between 5–10 s the poll reports `UNREACHABLE` (`squeue: connection timed out`), then recovers. |
-| `jobs/failing-solver` | Launch with `mode=fail` and the poll reports `FAILED` at 8 s; the run then has no report. |
+| `jobs/failing-solver` | Launch with `mode=fail` and the poll reports `FAILED` at 8 s. The run stays `FAILED`, and its report — run with `COCOA_RUN_STATUS=FAILED` — says where it broke. |
 | `benches/nightly-benchmark` | Fans out to three instances (two `solver-gpu`, one `flaky-solver`) at once and produces a bench report when all members succeed. |
 
 The submitted ids look like `slurm-<run id>`; the mock poll reads each run's
