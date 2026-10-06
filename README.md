@@ -1,6 +1,6 @@
 # cocoa
 
-A desktop workbench for experiments that live on your own machine.
+A desktop workbench for monitering experiments status.
 
 An experiment is a **folder**: a `cocoa.toml` manifest and the scripts it names.
 The manifest says how to check that what a run needs is in place and deploy it
@@ -69,4 +69,4 @@ number. [The spec's index](doc/spec/README.md) says which file holds which.
 
 ## Acknowledgement
 
-`cocoa` is vibe-coded, designed and built with [Claude Code](https://claude.com/claude-code).
+`cocoa` is designed and built with ai agents, including claude, chatgpt, deepseek.
