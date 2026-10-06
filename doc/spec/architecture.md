@@ -79,7 +79,7 @@ belongs to somebody else: `fs.statSync`, `app.getPath`, Electron's
 
 The on-disk record format is not part of this rule, though it agrees with it.
 `job_id`, `runs_by_job`, `last_successful_query` were `snake_case` before any
-of it, because they are what serde writes and what `doc/convention.md`
+of it, because they are what serde writes and what `doc/spec/convention.md`
 specifies. They are fixed by the convention; the rest is fixed by this
 paragraph, and the two must not be confused when one of them changes.
 
@@ -577,7 +577,8 @@ Beside it in the repository:
 ```text
 cocoa-mcp/         the MCP server (§43.5) — one binary, serde_json, nothing else
 examples/         the demonstration library: real experiments, no cluster needed
-doc/              this documentation
+doc/manual/       the user manual: the overview, and writing a job or a bench
+doc/spec/         the development specification: this document and its siblings
 ```
 
 Two boundaries are structural rather than stylistic, and must hold:

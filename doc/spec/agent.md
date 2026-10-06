@@ -165,7 +165,7 @@ one JSON message per line) is written out by hand rather than taken from an SDK.
 
 Run with `--help-ai`, the binary prints a pointer instead of serving: one
 paragraph on what cocoa runs, and the URL of the authoring convention
-([authoring.md](authoring.md)) in both page and raw form. The document is
+([authoring.md](../manual/authoring.md)) in both page and raw form. The document is
 deliberately not baked in — it is versioned and reviewed in the repository
 beside the code that enforces it, and a copy in the binary would hand an
 agent whichever revision it happened to have installed. Live state still

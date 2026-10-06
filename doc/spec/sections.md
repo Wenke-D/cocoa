@@ -3,8 +3,10 @@
 Every rule in this documentation has a number, and the source cites those
 numbers: a comment reading `(§15.4)` in `StartRun.svelte` means the Submission
 rules in [screens.md](screens.md). There are around 400 such citations in the
-code, which is why the numbering survived the documents being split up and why
-it should not be renumbered.
+code, which is why the numbering survived the documents being split up — and
+then sorted into this specification and the [user manual](../manual/overview.md)
+— and why it should not be renumbered. The manual carries no numbers of its
+own; where it cites one, the rule is here.
 
 The source writes these two ways, and both mean this table:
 
@@ -17,10 +19,10 @@ If you are looking for a number, this is where it lives.
 
 | § | | |
 |---|---|---|
-| **1** | Mission | [cocoa.md](cocoa.md) |
-| **2** | Product Model | [cocoa.md](cocoa.md) |
-| **3** | Core Backend Operations | [cocoa.md](cocoa.md) |
-| **4** | Scope | [cocoa.md](cocoa.md) |
+| **1** | Mission | [product.md](product.md) |
+| **2** | Product Model | [product.md](product.md) |
+| **3** | Core Backend Operations | [product.md](product.md) |
+| **4** | Scope | [product.md](product.md) |
 | **5** | Technology Baseline | [architecture.md](architecture.md) |
 | **6** | Supported Platforms | [architecture.md](architecture.md) |
 | **7** | Fundamental UX Decisions | [screens.md](screens.md) |

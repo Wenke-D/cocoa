@@ -3,7 +3,7 @@
 # Run it from the repository root — alors reads the tasks.alors in the current
 # directory and never looks upward, so this file is the whole surface.
 #
-# Bare tasks act on `cocoa-electron/`, because that is cocoa (doc/cocoa.md). The
+# Bare tasks act on `cocoa-electron/`, because that is cocoa (doc/spec/product.md). The
 # MCP server lives under its own namespace: `alors mcp ...`.
 #
 # The exit code is the verdict for every task here — read that, not the output.
@@ -108,7 +108,7 @@ drive scenario:
 # --- the MCP server ----------------------------------------------------------
 
 # Build and test it. The binary an agent's MCP client launches; it speaks only
-# the §43.2 socket, so it drives the workbench unchanged (doc/agent.md).
+# the §43.2 socket, so it drives the workbench unchanged (doc/spec/agent.md).
 mcp: mcp::gate
 
 mcp::build:

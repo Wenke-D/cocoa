@@ -47,8 +47,8 @@ cocoa runs experiment folders: jobs (one start = one submission) and benches \
 (a plan fans out over registered jobs). The convention for authoring such a \
 folder — manifest, parameters, scripts, template, reports — is documented at:
 
-  https://github.com/Wenke-D/cocoa/blob/main/doc/authoring.md
-  (raw: https://raw.githubusercontent.com/Wenke-D/cocoa/main/doc/authoring.md)
+  https://github.com/Wenke-D/cocoa/blob/main/doc/manual/authoring.md
+  (raw: https://raw.githubusercontent.com/Wenke-D/cocoa/main/doc/manual/authoring.md)
 
 Live state — registered experiments, their parameters, runs, reports — comes \
 from this server's MCP tools (start with cocoa_help), not from the document.

@@ -3,7 +3,7 @@
 This is the guide for authoring an experiment folder — everything needed to
 build one that cocoa can register, start, watch and report, with nothing else
 required reading. The normative contract, with every edge case and the
-reasoning behind it, is [convention.md](convention.md); section references
+reasoning behind it, is [convention.md](../spec/convention.md); section references
 below (§) point into it. Where this guide and that document disagree, that
 document wins.
 

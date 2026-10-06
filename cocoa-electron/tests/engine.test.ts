@@ -210,7 +210,7 @@ describe('run ids', () => {
     await settle(cocoa)
   })
 
-  // The folder is portable (doc/cocoa.md): carry it to another machine and its
+  // The folder is portable (doc/manual/overview.md): carry it to another machine and its
   // history comes with it. A stored counter knew nothing about the runs that
   // arrived, handed out an id one of them already had, and the start wrote
   // over that run's record.
