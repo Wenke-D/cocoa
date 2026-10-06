@@ -16,7 +16,7 @@ In the Explorer, click the **+** button and pick an experiment folder — one of
 the directories listed below, the one holding the `cocoa.toml`. Repeat for each
 one you want.
 
-> One pick is one folder ([screens.md](../doc/spec/screens.md) §11.5). Picking this
+> One pick is one folder ([screens §11.5](../doc/spec/screens/11-explorer-sidebar.md)). Picking this
 > `examples/` directory itself is refused — it has no manifest of its own.
 
 The scripts simulate a scheduler with timers, so statuses advance on their own

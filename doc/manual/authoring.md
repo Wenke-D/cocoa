@@ -3,7 +3,7 @@
 This is the guide for authoring an experiment folder — everything needed to
 build one that cocoa can register, start, watch and report, with nothing else
 required reading. The normative contract, with every edge case and the
-reasoning behind it, is [convention.md](../spec/convention.md); section references
+reasoning behind it, is [the convention](../spec/convention/README.md); section references
 below (§) point into it. Where this guide and that document disagree, that
 document wins.
 
@@ -54,6 +54,12 @@ kind        = "job"
 name        = "solver-gpu"          # platform-wide unique
 description = "GPU solver sweep"    # optional, shown on the overview page
 
+[check]
+command     = "./check.sh"
+
+[deploy]
+command     = "./deploy.sh"
+
 [render]
 template    = "job.sbatch.tmpl"     # rendered by cocoa before launch
 
@@ -74,17 +80,11 @@ description = "Which GPU to pin to"
 [poll]
 command     = "./poll.py"
 
-[report]
-command     = "./report.py"
-
 [cancel]
 command     = "./cancel.sh"
 
-[check]
-command     = "./check.sh"
-
-[deploy]
-command     = "./deploy.sh"
+[report]
+command     = "./report.py"
 ```
 
 All six scripts are **required**. A run whose status can never update is a

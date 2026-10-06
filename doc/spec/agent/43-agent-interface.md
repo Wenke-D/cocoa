@@ -1,20 +1,10 @@
-# The agent interface
-
-cocoa can be driven by an agent as well as by a person: the same operations,
-the same guarded engine, the same screen, with one word on the record saying
-who asked.
-
-Covered here: §43.
-
----
-
-## 43. Agent Interface
+# 43. Agent Interface
 
 An agent asks cocoa to do things. It never runs an experiment's scripts itself,
 and it never touches the store: cocoa is the one owner, and the owner is the
 window (§9).
 
-### 43.1 Availability
+## 43.1 Availability
 
 The interface exists only while cocoa is running. That is a decision, not a
 limitation to be worked around. A run started through it belongs to the store
@@ -25,7 +15,7 @@ catch up on the way back up: a run in flight when the window closed is polled on
 the first refresh, and if the cluster finished it, the stage that follows runs
 (§10).
 
-### 43.2 Transport
+## 43.2 Transport
 
 A Unix domain socket at a fixed path per build —
 `$HOME/.local/share/cocoa/cocoa.sock`, with `cocoa-dev.sock` beside it for the
@@ -52,7 +42,7 @@ at the path is deleted outright, not probed: a Unix socket cannot listen where
 a file sits, dead or not, and nothing alive can own it — the single-instance
 lock keeps each build to one cocoa, and each build listens on its own path.
 
-### 43.3 Path through the application
+## 43.3 Path through the application
 
 Every request lands on the same engine the screen drives, on the same event
 loop. An agent's start takes the same call a click takes — the same
@@ -65,7 +55,7 @@ they never wait on one. Writes wait, because the engine has one owner and the
 socket thread is not it. A wait that outlives its welcome is answered `503`
 rather than left hanging.
 
-### 43.4 Surface
+## 43.4 Surface
 
 ```text
 GET  /help                         what this is, and every route, from the tool itself
@@ -152,7 +142,7 @@ what a person would have been shown — under the status that says who can act:
 `503` when cocoa did not answer. A name asked for as the wrong kind is pointed at
 the right route rather than flatly refused.
 
-### 43.5 The MCP binary
+## 43.5 The MCP binary
 
 `cocoa-mcp-server` serves this same surface as MCP tools (`cocoa_help`,
 `cocoa_list_jobs`, `cocoa_job`, `cocoa_start`, `cocoa_register`, …) so an agent runtime speaks to
@@ -165,7 +155,7 @@ one JSON message per line) is written out by hand rather than taken from an SDK.
 
 Run with `--help-ai`, the binary prints a pointer instead of serving: one
 paragraph on what cocoa runs, and the URL of the authoring convention
-([authoring.md](../manual/authoring.md)) in both page and raw form. The document is
+([authoring.md](../../manual/authoring.md)) in both page and raw form. The document is
 deliberately not baked in — it is versioned and reviewed in the repository
 beside the code that enforces it, and a copy in the binary would hand an
 agent whichever revision it happened to have installed. Live state still
@@ -189,7 +179,7 @@ It remains the repository's only Rust that is still developed. Porting it to
 Node would remove the last build dependency on a Rust toolchain; nothing
 requires that.
 
-### 43.6 What is not here
+## 43.6 What is not here
 
 No approval step and no separate notification: a run records who asked (§10.6),
 and that record is where the question is answered. No authentication: the socket
@@ -197,5 +187,3 @@ is reachable only by processes that can open the file, and cocoa runs on the
 user's own workstation. No cancel, no unregistration, and no event stream yet
 — each is one route, one request variant, and one worker arm away when a real
 agent needs it.
-
----

@@ -131,7 +131,7 @@ void app.whenReady().then(() => {
   // window on its way out. On macOS `ready` never comes to it: a lost lock
   // pulls the launch Apple Event off the queue to forward it (Chromium's
   // process_singleton_mac.mm), and AppKit's did-finish-launching goes with
-  // it. doc/spec/developing.md, "Settled questions", has the trace.
+  // it. doc/spec/developing/decided.md, "Settled questions", has the trace.
   if (!is_first_one) {
     log.debug('ready fired on the quitting second launch; nothing to do')
     return

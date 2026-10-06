@@ -23,7 +23,7 @@ report, and telling you which of your runs are still alive.
 
 cocoa keeps no database. A run is written into the experiment's own folder, as
 `runs/<id>/run.json`, and its report lands in `report/`. The convention is
-written down in [convention.md](../spec/convention.md) and both implementations follow
+written down in [the convention](../spec/convention/README.md) and both implementations follow
 it byte for byte.
 
 This has consequences worth stating plainly, because they are most of the reason
@@ -97,8 +97,8 @@ its report does: the cluster's verdict is not the report's to change.
 cocoa answers on a Unix socket while its window is open, and an agent can list
 experiments, read runs, and start them through it — the same operations a click
 uses, on the same engine, landing on the same screen. Every run records who
-asked: **you**, an **agent**, or the **bench** that dispatched it. See
-[agent.md](../spec/agent.md).
+asked: **you**, an **agent**, or the **bench** that dispatched it. See the
+[agent interface](../spec/agent/43-agent-interface.md).
 
 ## What it is not
 
@@ -115,8 +115,8 @@ asked: **you**, an **agent**, or the **bench** that dispatched it. See
 |---|---|
 | [authoring.md](authoring.md) | Writing a job or a bench: the folder, the manifest, the six scripts |
 | [examples/](../../examples/README.md) | A library of small, real experiments to try cocoa against — no cluster needed |
-| [agent.md](../spec/agent.md) | Driving cocoa from an agent: the socket, its routes, and the MCP binary |
+| [agent interface](../spec/agent/43-agent-interface.md) | Driving cocoa from an agent: the socket, its routes, and the MCP binary |
 
 Everything else — what each screen must do, how cocoa is built, the full folder
 contract and how to work on it — is the development specification, in
-[`../spec/`](../spec/sections.md).
+[`../spec/`](../spec/README.md).

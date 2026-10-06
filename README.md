@@ -53,17 +53,17 @@ contracts it keeps.
 
 | | |
 |---|---|
-| [product.md](doc/spec/product.md) | The mission, the product model, the core operations, and the scope. |
-| [screens.md](doc/spec/screens.md) | What every page shows and how it behaves. |
-| [architecture.md](doc/spec/architecture.md) | How it is built, and which boundaries are load-bearing. |
-| [convention.md](doc/spec/convention.md) | The folder contract: manifests, scripts, records, statuses. Normative; authoring.md is its guide. |
-| [agent.md](doc/spec/agent.md) | The agent interface: the socket, its routes, and the MCP binary. |
+| [product/](doc/spec/product/README.md) | The mission, the product model, the core operations, and the scope (§1–§4). |
+| [screens/](doc/spec/screens/README.md) | What every page shows and how it behaves (§7–§25, §30, §31, §36). |
+| [architecture/](doc/spec/architecture/README.md) | How it is built, and which boundaries are load-bearing. |
+| [convention/](doc/spec/convention/README.md) | The folder contract: manifests, scripts, records, statuses. Normative; authoring.md is its guide. |
+| [agent/](doc/spec/agent/README.md) | The agent interface: the socket, its routes, and the MCP binary (§43). |
 | [ui-system.md](doc/spec/ui-system.md) | The design system. |
-| [developing.md](doc/spec/developing.md) | Running it, testing it, and what is still outstanding. |
+| [developing/](doc/spec/developing/README.md) | Running it, testing it, and what is still outstanding. |
 
-Sections throughout are numbered, and the source cites them by number: a comment
-reading `(§2.3.1)` means the rule of that number.
-[sections.md](doc/spec/sections.md) says which document holds which.
+Each area is a folder with one file per numbered section, and the source cites
+those sections by number: a comment reading `(§2.3.1)` means the rule of that
+number. [The spec's index](doc/spec/README.md) says which file holds which.
 
 ## Acknowledgement
 
