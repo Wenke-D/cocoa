@@ -17,7 +17,9 @@ import type {
   ReportTarget,
   StartResult,
   DeleteTarget,
-  DeleteResult
+  DeleteResult,
+  RerunReportResult,
+  RerunReportTarget
 } from '@shared/world'
 import type { Engine } from '../engine'
 
@@ -77,6 +79,23 @@ export function delete_run(engine: Engine, target: DeleteTarget): DeleteResult {
     } else {
       engine.delete_bench_run(target.bench_id, Number(target.run_id))
     }
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, message: (error as Error).message }
+  }
+}
+
+/**
+ * Re-runs a job run's report by hand (convention §7.3.2). Accepted means the
+ * report is due — the run reads `Generating` — not that it ran: the refresh
+ * tick runs it, and its outcome arrives the way an automatic report's does.
+ */
+export function rerun_report(engine: Engine, target: RerunReportTarget): RerunReportResult {
+  try {
+    if (!/^\d+$/.test(target.run_id)) {
+      return { ok: false, message: `\`${target.run_id}\` is not a run id` }
+    }
+    engine.request_report(target.job_id, Number(target.run_id))
     return { ok: true }
   } catch (error) {
     return { ok: false, message: (error as Error).message }

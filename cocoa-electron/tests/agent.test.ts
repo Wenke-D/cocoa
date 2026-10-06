@@ -7,7 +7,7 @@ import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { World } from '@shared/world'
+import type { RerunReportTarget, World } from '@shared/world'
 import { empty_world } from '@shared/world'
 import type { AgentDeps } from '../src/main/agent/answer'
 import type { AgentServer } from '../src/main/agent/serve'
@@ -58,6 +58,7 @@ function world(): World {
         last_successful_query: '2026-08-20T10:00:03.000+02:00',
         report: 'Missing',
         report_error: null,
+        report_rerunnable: false,
         error: null
       },
       '1': {
@@ -73,6 +74,7 @@ function world(): World {
         last_successful_query: '2026-08-20T11:05:00.000+02:00',
         report: { Available: { files: [{ format: 'PlainText', text_bytes: 120 }] } },
         report_error: null,
+        report_rerunnable: false,
         error: null
       }
     }
@@ -101,10 +103,11 @@ function world(): World {
   return base
 }
 
-function deps(start?: AgentDeps['start']): AgentDeps {
+function deps(start?: AgentDeps['start'], rerun?: AgentDeps['rerun_report']): AgentDeps {
   return {
     current_world: world,
-    start: start ?? (async () => ({ ok: true, run_id: '7' }))
+    start: start ?? (async () => ({ ok: true, run_id: '7' })),
+    rerun_report: rerun ?? (() => ({ ok: true }))
   }
 }
 
@@ -153,9 +156,15 @@ function request(
 }
 
 /** One request against a freshly served instance, torn down after. */
-async function ask(method: string, url: string, body = '', start?: AgentDeps['start']) {
+async function ask(
+  method: string,
+  url: string,
+  body = '',
+  start?: AgentDeps['start'],
+  rerun?: AgentDeps['rerun_report']
+) {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'cocoa-ask-')))
-  const server = await serve(path.join(dir, 'cocoa.sock'), deps(start))
+  const server = await serve(path.join(dir, 'cocoa.sock'), deps(start, rerun))
   try {
     const answer = await request(
       path.join(dir, 'cocoa.sock'),
@@ -259,6 +268,8 @@ describe('reads', () => {
       report: null
     })
     expect(detail.runs[1].location.report).toBe(`${FOLDER}/report/1.txt`)
+    // What a report re-run is followed by (§43.4).
+    expect(detail.runs[1]).toMatchObject({ report_running: false, report_error: null })
   })
 
   it('gives a bench its calls and its members file', async () => {
@@ -349,6 +360,69 @@ describe('starting a run', () => {
   })
 })
 
+// A report re-run answers once the report is due, not done (§43.4): a script
+// may run for the ten-minute report timeout.
+describe('re-running a report', () => {
+  it('accepts with 202, where the report will land, and where to follow it', async () => {
+    let asked: RerunReportTarget | null = null
+    const { status, json } = await ask(
+      'POST',
+      '/experiments/solver-gpu/runs/1/report',
+      '',
+      undefined,
+      (target) => {
+        asked = target
+        return { ok: true }
+      }
+    )
+    expect(status).toBe(202)
+    expect(json).toEqual({
+      run_id: '1',
+      report_running: true,
+      location: { report: `${FOLDER}/report/1.txt` },
+      follow: '/jobs/solver-gpu'
+    })
+    expect(asked).toEqual({ job_id: FOLDER, run_id: '1' })
+  })
+
+  it('is a 404 for an unknown experiment or run', async () => {
+    const ghost = await ask('POST', '/experiments/ghost/runs/0/report')
+    expect(ghost.status).toBe(404)
+    expect(ghost.json.error).toBe('No such entity: ghost')
+    const missing = await ask('POST', '/experiments/solver-gpu/runs/41/report')
+    expect(missing.status).toBe(404)
+    expect(missing.json.error).toBe('No such run: solver-gpu run 41')
+  })
+
+  it("refuses a bench, and passes the workbench's refusal through as a 400", async () => {
+    const bench = await ask('POST', '/experiments/nightly/runs/2/report')
+    expect(bench.status).toBe(400)
+    expect(bench.json.error).toContain('is a bench')
+
+    const refused = await ask(
+      'POST',
+      '/experiments/solver-gpu/runs/0/report',
+      '',
+      undefined,
+      () => ({ ok: false, message: 'run 0 (RUNNING) cannot be reported' })
+    )
+    expect(refused.status).toBe(400)
+    expect(refused.json.error).toBe('run 0 (RUNNING) cannot be reported')
+  })
+
+  it('answers only POST', async () => {
+    expect((await ask('GET', '/experiments/solver-gpu/runs/1/report')).status).toBe(405)
+  })
+
+  it('names the route in its help', async () => {
+    const { json } = await ask('GET', '/help')
+    const paths = (json as unknown as { endpoints: { path: string }[] }).endpoints.map(
+      (e) => e.path
+    )
+    expect(paths).toContain('/experiments/{name}/runs/{run_id}/report')
+  })
+})
+
 // The routes above are a function; this is the socket a `curl --unix-socket`
 // or the Rust `cocoa_mcp_server` actually reaches.
 describe('the socket', () => {
@@ -390,7 +464,8 @@ describe('the socket', () => {
         start: async () => {
           started = true
           return { ok: true, run_id: '9' }
-        }
+        },
+        rerun_report: () => ({ ok: true })
       })
     )
 
@@ -432,7 +507,8 @@ describe('the socket', () => {
           second_answered = true
           return world()
         },
-        start: async () => ({ ok: true, run_id: '7' })
+        start: async () => ({ ok: true, run_id: '7' }),
+        rerun_report: () => ({ ok: true })
       })
     )
 

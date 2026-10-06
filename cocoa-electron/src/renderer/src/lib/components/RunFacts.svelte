@@ -18,7 +18,7 @@
   } from '@shared/world'
   import type { JobRun, ReportFormat } from '@shared/world'
   import type { ReportContext } from '../../ui_state'
-  import { app, navigate } from '../../state.svelte'
+  import { app, navigate, rerun_report } from '../../state.svelte'
   import ReportButtons from './ReportButtons.svelte'
 
   let {
@@ -45,6 +45,9 @@
       error={run.report_error}
       open={(format: ReportFormat) =>
         navigate({ page: 'report', context: report_context, run_id: run.id, format })}
+      rerun={run.report_rerunnable
+        ? () => rerun_report({ job_id: run.job_id, run_id: run.id })
+        : null}
     />
   </dd>
   {#if !query_available(run.query_health)}

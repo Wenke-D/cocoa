@@ -20,9 +20,10 @@ import type { EngineError } from './errors'
 import { InFlight } from './in_flight'
 import * as del from './delete'
 import * as job from './job'
+import { reportable } from './job'
 import type { PollReport, ReportMode } from './job'
 import { Memory } from './memory'
-import { apply_status, now_stamp, report_owed } from './record'
+import { apply_status, now_stamp } from './record'
 import type { RunOrigin, Trigger } from './record'
 import { is_terminal } from './status'
 import type { Status } from './status'
@@ -96,6 +97,10 @@ export class Engine extends Memory {
 
   async report_run(folder: string, run_id: number, mode: ReportMode): Promise<void> {
     return job.report_run(this, this.job(folder), run_id, mode)
+  }
+
+  request_report(folder: string, run_id: number): void {
+    job.request_report(this.job(folder), run_id)
   }
 
   async cancel_run(folder: string, run_id: number): Promise<void> {
@@ -214,9 +219,10 @@ export class Engine extends Memory {
           }
           continue
         }
-        // A FAILED run's report is due once, when poll said so (§7.3.1); one
-        // that was already FAILED on disk before that rule owes nothing.
-        if (record.status === 'COMPLETED' || record.status === 'ANALYZING' || report_owed(record)) {
+        // Every due report: a completed run's, and a FAILED run's owed one
+        // (§7.3.1) — whether poll or a person (§7.3.2) made it due. A run
+        // already FAILED on disk before that rule owes nothing.
+        if (reportable(record, 'auto')) {
           report.reports_run += 1
           try {
             await this.report_run(job.path, run_view.run_id, 'auto')

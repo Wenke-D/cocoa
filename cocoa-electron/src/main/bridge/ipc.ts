@@ -14,7 +14,9 @@ import type {
   ReportTarget,
   StartResult,
   DeleteTarget,
-  DeleteResult
+  DeleteResult,
+  RerunReportResult,
+  RerunReportTarget
 } from '@shared/world'
 import { empty } from '@shared/maybe'
 import { boot } from '../boot'
@@ -65,6 +67,19 @@ export function register_ipc(): void {
   ipcMain.handle('cocoa:delete_run', (_event, target: DeleteTarget): DeleteResult => {
     const result = operations.delete_run(engine, target)
     publish_cycle(empty())
+    return result
+  })
+
+  // A re-run marks the report due and answers; the run reads `Generating`
+  // before the button's answer arrives. A tick is asked for at once rather
+  // than in up to three seconds — dropped if one is already under way, which
+  // takes the report itself or leaves it to the next.
+  ipcMain.handle('cocoa:rerun_report', (_event, target: RerunReportTarget): RerunReportResult => {
+    const result = operations.rerun_report(engine, target)
+    publish_cycle(empty())
+    if (result.ok) {
+      void refresh_and_publish()
+    }
     return result
   })
 

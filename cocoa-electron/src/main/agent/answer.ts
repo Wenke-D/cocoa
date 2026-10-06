@@ -1,7 +1,7 @@
 // The agent module's shared vocabulary: what the socket needs from the rest
 // of the process, and the one shape every reply takes.
 
-import type { StartResult, World } from '@shared/world'
+import type { RerunReportResult, RerunReportTarget, StartResult, World } from '@shared/world'
 
 /** What the socket needs from the rest of the process, and nothing more. */
 export interface AgentDeps {
@@ -9,6 +9,8 @@ export interface AgentDeps {
   current_world: () => World
   /** Starts an experiment by name, stamped as the agent's (§43). */
   start(name: string, parameters: Record<string, unknown>): Promise<StartResult>
+  /** Re-runs a job run's report by hand: marks it due, as a click does. */
+  rerun_report(target: RerunReportTarget): RerunReportResult
 }
 
 /** A finished answer: the status, and the JSON already serialised. */

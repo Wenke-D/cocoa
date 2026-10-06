@@ -74,6 +74,8 @@ GET  /benches                      every Bench, same shape
 GET  /jobs/{name}                  one Job and its runs, with file locations
 GET  /benches/{name}               one Bench, its runs, their calls and locations
 POST /experiments/{name}/runs      {"parameters": {…}} → 201 {"run_id": "…"}
+POST /experiments/{name}/runs/{run_id}/report
+                                   re-run a job run's report → 202, once it is due
 ```
 
 Experiments are addressed by name, which is unique across the Explorer
@@ -93,7 +95,29 @@ A failed job run has a report too (convention §7.3.1), at the same
 `location.report`, while its `status` stays `Failed`. When that report's
 script failed, the run's `report_error` carries the script's output; it is
 `null` otherwise, and always on the healthy path, where a failed report is the
-run's own `error`.
+run's own `error`. `report_running` is true while a run's report is due or
+running.
+
+**Re-running a report** takes the button's path (convention §7.3.2): the
+report is marked due and the refresh tick runs it. The route answers **`202`
+as soon as it is due**, not when it is done — a report script may run for the
+whole ten-minute report timeout, which is longer than a write waits for the
+engine (§43.3) and longer than the MCP binary waits for an answer:
+
+```json
+{ "run_id": "41", "report_running": true,
+  "location": { "report": "/abs/solver-gpu/report/41.txt" },
+  "follow": "/jobs/solver-gpu" }
+```
+
+Follow `GET /jobs/{name}` until that run's `report_running` is false; the
+outcome is then on the run as on any report: `Succeeded`, or `Error` with its
+`error`, on the healthy path; `Failed` with or without `report_error` for a
+failed run. `404` names an experiment or run that is not there; `400` carries
+the workbench's refusal — a run that cannot be reported, one whose report is
+already running, or a Bench, whose own report is not re-run by hand. Who asked
+is not recorded (convention §7.3.2). The MCP binary does not offer this route
+as a tool yet.
 
 A refusal carries the workbench's own text, unchanged — an agent reading it sees
 what a person would have been shown — under the status that says who can act:

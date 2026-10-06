@@ -523,8 +523,9 @@ Confirm:
 The workbench is built. What follows is the standing list, not a build order.
 
 **Working:** the engine port in full — manifests, templates, the job lifecycle,
-the poll protocol, auto and manual reports with ERROR healing, reports for
-failed runs beside their status, cancel, bench
+the poll protocol, auto and manual reports with ERROR healing — the manual
+re-run reachable from the run page and the agent socket — reports for failed
+runs beside their status, cancel, bench
 plan and fan-out, derived bench status, orphan detection, abandonment at close.
 Memory as the truth with write-through; records read once, manifests re-read
 each tick (§26.1); guarded writes, no queue (§26.2). Event-driven
@@ -542,8 +543,7 @@ folder, cancel with confirmation. An electron-builder package.
   without `app.whenReady()`.
 - The agent interface has no cancel, no registration, and no event stream
   (§43.6).
-- Manual report re-run (IPC plus a button); the query-interruption banner and
-  a per-run retry.
+- The query-interruption banner and a per-run retry.
 - Explorer and run filtering, search, the in-app theme toggle, Settings.
 - Open a report externally; report-viewer virtualisation.
 - `--dump-state`.
@@ -752,7 +752,6 @@ that date.
 
 | Feature                                          | Rust reference                                       | TS engine                                                                                       | Missing piece                                                                                                       |
 | ------------------------------------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Manual report re-run (heals report-failed ERROR) | §11                                                  | `reportRun(folder, id, 'manual')` done                                                          | IPC + button on run detail                                                                                          |
 | Retry query                                      | `RetryQuery` command, status-bar interruption banner | poll happens every tick anyway; the status bar's Refresh now forces one and reports how it went | the interruption banner (world has `query_health`), and aiming a retry at one run rather than refreshing everything |
 
 ### Missing entirely
@@ -926,8 +925,7 @@ convention for display.
 
 ## What is left
 
-- Manual report re-run (IPC + a button); the query-interruption banner and a
-  per-run retry.
+- The query-interruption banner and a per-run retry.
 - Open a report externally; report-viewer virtualisation.
 - Explorer/run filtering and search; the in-app theme toggle; Settings.
 - `--dump-state`.

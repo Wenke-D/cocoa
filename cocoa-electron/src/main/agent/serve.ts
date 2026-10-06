@@ -16,7 +16,7 @@
 // `curl --unix-socket` debugs it either way.
 //
 // The module, file by file: this one owns the socket's lifecycle; `app.ts`
-// the route table; `reads.ts` and `start.ts` the answers; `help.ts` the
+// the route table; `reads.ts`, `start.ts` and `report.ts` the answers; `help.ts` the
 // self-description; `answer.ts` the vocabulary they share.
 
 import { once } from 'node:events'

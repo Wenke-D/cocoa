@@ -464,7 +464,10 @@ run's, or a `Failed` run's.
 
 A job run also carries `report_error: string | null`: why a `Failed` run's
 report script failed — its captured output. On the healthy path a failed
-report is the run's own `Error`, and `report_error` stays `null`.
+report is the run's own `Error`, and `report_error` stays `null`. And
+`report_rerunnable: boolean`: whether its report can be re-run by hand now
+(convention §7.3.2) — the engine would take it, and it is not already
+`Generating`.
 
 A succeeded run may temporarily have no report.
 
@@ -1384,6 +1387,17 @@ the report does not care which format it is, so the format is only the
 tooltip. Two files (`report/<run>.txt` and `report/<run>.html`) are a choice,
 and only then is the format the point: `Text` and `HTML`, plain text first,
 each with the view icon. The same row appears on a Bench run's page (§18).
+
+The row's last action is `Re-run report`, a secondary button with a
+counter-clockwise arrow, on every job run whose `report_rerunnable` is true —
+`Succeeded`, `Failed`, an `Error` its report left, a `Completed` one not yet
+taken — and absent otherwise, including while the report is `Generating`.
+It asks nothing first: a re-run only replaces a file the script will write
+again. Pressed, it is busy (`Re-running…`) until the engine answers, which is
+at once; by then the report is due, and the row reads `Report is being
+generated.` until the outcome lands (convention §7.3.2). A refusal is a
+notice in the error voice; so is a report that then fails, as on the
+automatic path. A bench run's own Report row has no re-run.
 
 A `Failed` run's report is shown exactly as a succeeded run's: the same
 buttons, the same viewer. When its script failed, the row says

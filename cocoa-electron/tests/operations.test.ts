@@ -10,6 +10,7 @@ import {
   cancel,
   read_report,
   remove_folder,
+  rerun_report,
   start_run,
   delete_run
 } from '../src/main/bridge/operations'
@@ -241,6 +242,36 @@ describe('cancel', () => {
     const result = await cancel(cocoa, { kind: 'job_run', job_id: job, run_id: '99' })
     expect(result.ok).toBe(false)
     expect(result.ok === false && result.message).toContain('not found')
+  })
+})
+
+describe('rerun_report', () => {
+  it('answers an accepted re-run, and every refusal, never throwing', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'rerun')
+    const cocoa = engine(dir)
+    cocoa.register(job)
+    const run_id = await cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(cocoa)
+    const target = { job_id: job, run_id: String(run_id) }
+
+    expect(rerun_report(cocoa, target)).toEqual({
+      ok: false,
+      message: `run ${run_id} (STARTING) cannot be reported`
+    })
+
+    write(job, 'poll-state', 'FAILED')
+    await cocoa.refresh()
+    expect(rerun_report(cocoa, target)).toEqual({ ok: true })
+    expect(cocoa.job(job).runs.record(run_id).report).toEqual({ attempted: false })
+    expect(rerun_report(cocoa, target)).toEqual({
+      ok: false,
+      message: `the report of run ${run_id} is already running`
+    })
+
+    expect(rerun_report(cocoa, { job_id: job, run_id: '../0' }).ok).toBe(false)
+    expect(rerun_report(cocoa, { job_id: job, run_id: '41' }).ok).toBe(false)
+    expect(rerun_report(cocoa, { job_id: '/nowhere', run_id: '0' }).ok).toBe(false)
   })
 })
 

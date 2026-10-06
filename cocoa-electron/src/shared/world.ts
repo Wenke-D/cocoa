@@ -81,6 +81,9 @@ export interface JobRun {
    * whatever the report does (convention §7.3.1). Elsewhere a failed report
    * is the run's `Error`, and this is `null`. */
   report_error: string | null
+  /** Whether the report can be re-run by hand now: the engine would take the
+   * run (convention §7.3.2), and its report is not already `Generating`. */
+  report_rerunnable: boolean
   error: string | null
 }
 
@@ -209,6 +212,16 @@ export type DeleteTarget =
   | { kind: 'bench_run'; bench_id: string; run_id: string }
 
 export type DeleteResult = { ok: true } | { ok: false; message: string }
+
+/** A job run whose report to re-run by hand (convention §7.3.2). */
+export interface RerunReportTarget {
+  job_id: string
+  run_id: string
+}
+
+/** Accepted means due: the report runs on the next tick, and the world says
+ * `Generating` until it lands. */
+export type RerunReportResult = { ok: true } | { ok: false; message: string }
 
 /** Which run's report to read, and which of its files. The entity id is the
  * folder it lives in. */

@@ -57,9 +57,10 @@ Commit `package-lock.json`.
 renders what the main process sends and asks for operations by name (§26). Node
 integration stays off and context isolation stays on: the page's entire
 vocabulary is what `src/preload/index.ts` puts on `window.cocoa` through
-`contextBridge`: eight operations — `bootstrap`, `start_run`, `cancel`,
-`add_folder`, `remove_folder`, `report`, `refresh_now`, `save_ui` — and two
-event subscriptions, `on_command` and `on_events`. Nothing else crosses.
+`contextBridge`: nine operations — `bootstrap`, `start_run`, `cancel`,
+`delete_run`, `rerun_report`, `add_folder`, `remove_folder`, `report`,
+`refresh_now` — and one event subscription, `on_events`. Nothing else
+crosses.
 
 **Templates are Jinja on both sides.** The engine renders an experiment's
 templates with nunjucks; the egui implementation used minijinja. Both are
@@ -250,6 +251,7 @@ cancel(engine, target): CancelResult
 addFolder(engine, picked): AddFolderResult
 remove_folder(engine, entity_id): RemoveFolderResult
 report(engine, target): ReportResult
+rerun_report(engine, target): RerunReportResult
 refresh(engine): RefreshReport
 ```
 

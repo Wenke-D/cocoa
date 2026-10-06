@@ -211,13 +211,65 @@ export async function poll_job(engine: Engine, job: Job): Promise<PollReport> {
 }
 
 /**
+ * Whether `report_run` will take the run in `mode` (§7.3, §7.3.1). Automatic
+ * means due: `COMPLETED`, `ANALYZING`, or a `FAILED` run's owed report. By
+ * hand is any run whose cluster outcome was `COMPLETED` — including one left
+ * at `ERROR` by its report — or `FAILED`.
+ */
+export function reportable(record: RunRecord, mode: ReportMode): boolean {
+  if (mode === 'auto') {
+    return record.status === 'COMPLETED' || record.status === 'ANALYZING' || report_owed(record)
+  }
+  return (
+    record.status === 'COMPLETED' ||
+    record.status === 'ANALYZING' ||
+    record.status === 'SUCCEEDED' ||
+    record.status === 'FAILED' ||
+    (record.status === 'ERROR' && record.history.some((change) => change.status === 'COMPLETED'))
+  )
+}
+
+/** Whether the run's report is due or running: `ANALYZING`, or owed (§7.3.1). */
+export function report_in_flight(record: RunRecord): boolean {
+  return record.status === 'ANALYZING' || report_owed(record)
+}
+
+/**
+ * Asks for a run's report again, by hand (§7.3.2). Nothing runs here: the
+ * report is marked due exactly as the automatic path marks it — `ANALYZING`,
+ * or a `FAILED` run's report owed — and the refresh tick takes it from there,
+ * so the outcome lands the way an automatic one does and a report is never
+ * run twice at once. Refuses a run that cannot be reported by hand, and one
+ * whose report is already due or running.
+ */
+export function request_report(job: Job, run_id: number): void {
+  job.usable_manifest()
+  const record = job.runs.record(run_id)
+  if (report_in_flight(record)) {
+    throw EngineError.validation(`the report of run ${run_id} is already running`)
+  }
+  if (!reportable(record, 'manual')) {
+    throw EngineError.validation(`run ${run_id} (${record.status}) cannot be reported`)
+  }
+  if (record.status === 'FAILED') {
+    record.report = { attempted: false }
+  } else {
+    apply_status(record, 'ANALYZING', now_stamp())
+    // The last report's failure is not this one's; the outcome brings its own.
+    delete record.error
+  }
+  job.runs.write(record)
+}
+
+/**
  * Runs the report script for one run (§7.3, §11). The record is the live
  * in-memory truth: a poll advancing the run while the (possibly long)
  * report script runs mutates the same object, so the outcomes compose.
  *
  * A `FAILED` run is reported beside its status, never on it (§7.3.1): it
  * stays `FAILED` whatever the script does, and the outcome lands in its
- * `report` field instead.
+ * `report` field instead. `mode` decides only which runs are taken; the
+ * outcome lands the same way either way (§7.3.2).
  */
 export async function report_run(
   engine: Engine,
@@ -229,16 +281,7 @@ export async function report_run(
   const record = job.runs.record(run_id)
   const failed = record.status === 'FAILED'
 
-  const eligible =
-    mode === 'auto'
-      ? record.status === 'COMPLETED' || record.status === 'ANALYZING' || report_owed(record)
-      : record.status === 'COMPLETED' ||
-        record.status === 'ANALYZING' ||
-        record.status === 'SUCCEEDED' ||
-        failed ||
-        (record.status === 'ERROR' &&
-          record.history.some((change) => change.status === 'COMPLETED'))
-  if (!eligible) {
+  if (!reportable(record, mode)) {
     throw EngineError.validation(`run ${run_id} (${record.status}) cannot be reported`)
   }
 
@@ -291,7 +334,7 @@ export async function report_run(
     apply_status(record, 'SUCCEEDED', now_stamp())
     delete record.error
     job.runs.write(record)
-  } else if (mode === 'auto') {
+  } else {
     apply_status(record, 'ERROR', now_stamp())
     record.error = detail
     job.runs.write(record)

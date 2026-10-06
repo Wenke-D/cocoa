@@ -20,6 +20,9 @@ const api = {
 
   report: (target: unknown): Promise<unknown> => ipcRenderer.invoke('cocoa:report', target),
 
+  rerun_report: (target: unknown): Promise<unknown> =>
+    ipcRenderer.invoke('cocoa:rerun_report', target),
+
   refresh_now: (): Promise<unknown> => ipcRenderer.invoke('cocoa:refresh'),
 
   on_events: (callback: (events: unknown) => void): (() => void) => {

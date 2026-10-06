@@ -211,7 +211,9 @@ A script that ignores the variable still works; it just reports a failed run
 as it would a finished one. Whatever the report does, a `FAILED` run stays
 `FAILED`: a report that fails there is recorded beside the run and shown as
 the report's error, never as cocoa's `ERROR` (§7.3.1). Re-running the report
-by hand overwrites it, for a failed run as for a completed one.
+by hand — `Re-run report` on the run's page, or the agent socket — runs the
+script again and overwrites it, for a failed run as for a completed one: the
+way to regenerate old reports after changing the script (§7.3.2).
 
 **`cancel`** — `./cancel.sh --submission 5001`. Tells the scheduler to stop
 the run; the next poll reports what actually happened. Cancel requests the

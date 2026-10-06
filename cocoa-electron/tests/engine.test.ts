@@ -11,6 +11,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { DEFAULT_CONFIG } from '../src/main/engine'
+import type { Engine } from '../src/main/engine'
+import { build_world } from '../src/main/engine/world'
 import type { RunRecord } from '../src/main/engine/record'
 import { load_store } from '../src/main/engine/store'
 import {
@@ -907,6 +909,105 @@ describe('failed runs', () => {
     expect(cocoa.bench(bench).runs.record(start.run_id).report).toBeUndefined()
     expect(exists(bench, 'report', `${start.run_id}.txt`)).toBe(false)
     expect(await failure(cocoa.bench_report(bench, start.run_id))).toContain('no bench report')
+  })
+})
+
+// A re-run by hand marks the report due, as poll does, and the refresh tick
+// runs it: one path for the outcome, and never two scripts at once (§7.3.2).
+describe('re-running a report by hand', () => {
+  async function at(status: string, name: string): Promise<[string, Engine, number]> {
+    const dir = temp_dir()
+    const job = job_folder(dir, name)
+    telling_report(job)
+    const cocoa = engine(dir)
+    cocoa.register(job)
+    const run_id = await cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(cocoa)
+    write(job, 'poll-state', status)
+    await cocoa.refresh()
+    return [job, cocoa, run_id]
+  }
+
+  it('re-runs a succeeded run through ANALYZING, overwriting its report', async () => {
+    const [job, cocoa, run_id] = await at('COMPLETED', 'rerun-ok')
+    write_script(job, 'report.sh', 'mkdir -p report\necho "second" > "report/$2.txt"\n')
+
+    cocoa.request_report(job, run_id)
+    let record = cocoa.job(job).runs.record(run_id)
+    expect(record.status).toBe('ANALYZING')
+    let run = build_world(cocoa, null).job_runs[job][String(run_id)]
+    expect(run).toMatchObject({ report: 'Generating', report_rerunnable: false })
+    expect(throws(() => cocoa.request_report(job, run_id))).toContain('already running')
+
+    expect((await cocoa.refresh()).reports_run).toBe(1)
+    record = cocoa.job(job).runs.record(run_id)
+    expect(record.status).toBe('SUCCEEDED')
+    expect(read_text(job, 'report', `${run_id}.txt`)).toBe('second\n')
+    run = build_world(cocoa, null).job_runs[job][String(run_id)]
+    expect(run.report_rerunnable).toBe(true)
+    // The run ended when it first succeeded; a re-run does not move that.
+    const first = record.history.find((change) => change.status === 'SUCCEEDED')
+    expect(record.history.filter((change) => change.status === 'SUCCEEDED')).toHaveLength(2)
+    expect(run.ended_at).toBe(first?.at)
+  })
+
+  it('takes a failed re-run as the automatic path does: ERROR, healable again', async () => {
+    const [job, cocoa, run_id] = await at('COMPLETED', 'rerun-breaks')
+    write_script(job, 'report.sh', 'echo "new script broke" >&2\nexit 1\n')
+
+    cocoa.request_report(job, run_id)
+    const tick = await cocoa.refresh()
+    expect(tick.report_errors.map((error) => error.message).join()).toContain('new script broke')
+    let record = cocoa.job(job).runs.record(run_id)
+    expect(record.status).toBe('ERROR')
+    expect(record.error).toContain('new script broke')
+
+    telling_report(job)
+    cocoa.request_report(job, run_id)
+    expect(cocoa.job(job).runs.record(run_id).error).toBeUndefined()
+    await cocoa.refresh()
+    record = cocoa.job(job).runs.record(run_id)
+    expect(record.status).toBe('SUCCEEDED')
+    expect(read_text(job, 'report', `${run_id}.txt`)).toMatch(/^COMPLETED --run /)
+  })
+
+  it('re-runs a failed run beside its status', async () => {
+    const [job, cocoa, run_id] = await at('FAILED', 'rerun-failed')
+    write_script(
+      job,
+      'report.sh',
+      'mkdir -p report\necho "$COCOA_RUN_STATUS again" > "report/$2.txt"\n'
+    )
+
+    cocoa.request_report(job, run_id)
+    expect(cocoa.job(job).runs.record(run_id)).toMatchObject({
+      status: 'FAILED',
+      report: { attempted: false }
+    })
+    expect(build_world(cocoa, null).job_runs[job][String(run_id)].report).toBe('Generating')
+
+    await cocoa.refresh()
+    const record = cocoa.job(job).runs.record(run_id)
+    expect(record.status).toBe('FAILED')
+    expect(record.report?.attempted).toBe(true)
+    expect(read_text(job, 'report', `${run_id}.txt`)).toBe('FAILED again\n')
+  })
+
+  it('refuses what the engine would not report by hand', async () => {
+    const [job, cocoa, run_id] = await at('RUNNING', 'rerun-refused')
+    expect(throws(() => cocoa.request_report(job, run_id))).toContain('cannot be reported')
+    expect(build_world(cocoa, null).job_runs[job][String(run_id)].report_rerunnable).toBe(false)
+
+    write(job, 'poll-state', 'CANCELLED')
+    await cocoa.refresh()
+    expect(throws(() => cocoa.request_report(job, run_id))).toContain('cannot be reported')
+
+    // An ERROR that never completed has nothing to report on.
+    const orphan = await cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    cocoa.abandon_launches()
+    await cocoa.refresh()
+    expect(cocoa.job(job).runs.record(orphan).status).toBe('ERROR')
+    expect(throws(() => cocoa.request_report(job, orphan))).toContain('cannot be reported')
   })
 })
 

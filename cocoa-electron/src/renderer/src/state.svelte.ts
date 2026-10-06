@@ -23,7 +23,9 @@ import type {
   StartResult,
   World,
   DeleteTarget,
-  DeleteResult
+  DeleteResult,
+  RerunReportResult,
+  RerunReportTarget
 } from '@shared/world'
 
 // Re-exported because this module is where the renderer reaches for
@@ -141,6 +143,25 @@ export async function add_folder(): Promise<void> {
   }
   app.route = { page: 'entity', entity_id: result.entity_id }
   notify(result.already ? 'That folder is already in the Explorer.' : 'Folder added.')
+}
+
+/**
+ * Re-runs a job run's report by hand (convention §7.3.2). Accepted, the run
+ * already reads `Generating` — its events precede the answer — so success
+ * says nothing more; a refusal is said, as an error. How the report itself
+ * went arrives later, the way an automatic report's does: on the run, and
+ * as a notice when it failed.
+ */
+export async function rerun_report(target: RerunReportTarget): Promise<void> {
+  let result: RerunReportResult
+  try {
+    result = await window.cocoa.rerun_report(target)
+  } catch (error) {
+    result = { ok: false, message: (error as Error).message }
+  }
+  if (!result.ok) {
+    notify(result.message, 'error')
+  }
 }
 
 export function request_cancel(target: CancelTarget): void {

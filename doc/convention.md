@@ -507,7 +507,8 @@ the variable existed keeps working.
 Re-running report by hand is available for any run whose cluster outcome was
 `COMPLETED` — including one left at `ERROR` by a failed report — or `FAILED`,
 and overwrites the output. A successful re-run moves a `COMPLETED` run to
-`SUCCEEDED` (§11); a `FAILED` run stays `FAILED` (§7.3.1).
+`SUCCEEDED` (§11); a `FAILED` run stays `FAILED` (§7.3.1). How a re-run is
+asked for and lands is §7.3.2.
 
 #### 7.3.1 A failed run's report
 
@@ -526,7 +527,8 @@ The report's state therefore lives in the record, in the bench report's shape
 ```
 
 - **Owed.** The poll answer that moves a run to `FAILED` writes
-  `"report": { "attempted": false }` in the same write. That is the whole of
+  `"report": { "attempted": false }` in the same write; so does a re-run by
+  hand (§7.3.2). That is the whole of
   "in flight": the run reads `FAILED` at once, its clock stops there (§9), and
   it never passes through `ANALYZING`. cocoa runs `report` on the same tick.
   An owed report survives a close and is taken on the next session's first
@@ -535,8 +537,8 @@ The report's state therefore lives in the record, in the bench report's shape
 - **Failed.** `attempted: true`, `at`, and `error` with the script's captured
   output — a non-zero exit, a timeout, or no `report/<run_id>.txt`. The
   failure is raised as an operation error as well, like any report's. It is
-  not retried: re-running by hand is the remedy, and a re-run records its
-  own outcome here, success or failure, and moves no status.
+  not retried: re-running by hand is the remedy (§7.3.2), and a re-run
+  records its own outcome here, success or failure, and moves no status.
 
 Polling stops at `FAILED` as at any terminal status. A run recorded `FAILED`
 without a `report` field predates this rule; it owes nothing, is never
@@ -550,6 +552,41 @@ id to find.
 because it broke. And a bench is unchanged: its member's own report runs, but
 a bench with a `FAILED` member still settles `FAILED` with no bench report
 (§8.3, §9.1).
+
+#### 7.3.2 Re-running a report by hand
+
+A person (the run page's `Re-run report`) or an agent
+(`POST /experiments/{name}/runs/{run_id}/report`) can ask for a job run's
+report again — after rewriting the script, say, to regenerate every report it
+ever wrote. Asking runs nothing. It marks the report **due**, exactly as the
+automatic path marks it: a `COMPLETED`-path run moves to `ANALYZING`, a
+`FAILED` run's report becomes owed (§7.3.1). The refresh tick then runs it
+like any due report — asked for at once rather than at the next tick — so
+there is one way a report runs and one way its outcome lands:
+
+- a `COMPLETED`-path run ends `SUCCEEDED` when the report lands, and `ERROR`
+  with the script's output when it does not — the healable `ERROR` of §11,
+  whatever the run was before. A run that had succeeded keeps its end time:
+  the first terminal change dates it (§9), and a re-run's are later ones;
+- a `FAILED` run stays `FAILED`, its report state recording the outcome.
+
+The answer to the asking is therefore "due", not "done": the run reads its
+report as in flight until the outcome lands, and a failure is raised as an
+operation error then, as an automatic report's is.
+
+Refused, with the reason: a run whose cluster outcome was neither
+`COMPLETED` nor `FAILED` (still running, `CANCELLED`, an `ERROR` that never
+completed); a run whose report is already due or running — two scripts never
+write one run's report at once; and a folder whose manifest does not load.
+
+Who asked is not recorded. The record has one `origin`, for who started the
+run (§8.2 for a bench's), and a status change carries only its status and
+moment; a re-run's `ANALYZING` is in the history like any other, and its
+asker is not a fact any reader of the record has needed.
+
+A bench's own report is not re-run by hand. It dates the bench's end (§8.2),
+which a re-run would move; its members' reports can each be re-run, under
+their own jobs.
 
 ### 7.4 `cancel`
 

@@ -36,7 +36,8 @@ export function help(): AgentResponse {
         path: '/jobs/{name}',
         answers:
           'one Job and its runs, oldest first, each run with the locations to read directly ' +
-          '(run_dir, record, report)'
+          '(run_dir, record, report), whether its report is running (report_running), and ' +
+          'why its report script failed on a FAILED run (report_error)'
       },
       {
         method: 'GET',
@@ -55,6 +56,19 @@ export function help(): AgentResponse {
           'description: a string, or a list of strings for a list, each ' +
           'enum value one of its `values`. The run appears STARTING at once; its ' +
           'submission id and status advance in /jobs/{name} as the scripts answer.'
+      },
+      {
+        method: 'POST',
+        path: '/experiments/{name}/runs/{run_id}/report',
+        answers:
+          'runs a Job run’s report script again, by hand, overwriting its report — for a run ' +
+          'whose cluster outcome was COMPLETED (including one left at ERROR by its report) or ' +
+          'FAILED. 202 with {run_id, report_running, location: {report}, follow} as soon as ' +
+          'the report is due; it runs on cocoa’s next refresh, up to the report timeout. ' +
+          'Follow GET /jobs/{name} until the run’s report_running is false: a COMPLETED-path ' +
+          'run then reads Succeeded, or Error with its error; a FAILED run stays Failed, with ' +
+          'report_error when the script failed. 404 for an unknown experiment or run; 400 ' +
+          'for a Bench, a run that cannot be reported, or one whose report is already running.'
       }
     ]
   })

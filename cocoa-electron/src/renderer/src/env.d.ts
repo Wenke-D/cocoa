@@ -13,7 +13,9 @@ import type {
   ReportTarget,
   StartResult,
   DeleteTarget,
-  DeleteResult
+  DeleteResult,
+  RerunReportResult,
+  RerunReportTarget
 } from '@shared/world'
 
 declare global {
@@ -24,6 +26,7 @@ declare global {
       cancel(target: CancelTarget): Promise<CancelResult>
       delete_run(target: DeleteTarget): Promise<DeleteResult>
       report(target: ReportTarget): Promise<ReportResult>
+      rerun_report(target: RerunReportTarget): Promise<RerunReportResult>
       add_folder(): Promise<AddFolderResult>
       remove_folder(entity_id: string): Promise<RemoveFolderResult>
       refresh_now(): Promise<void>

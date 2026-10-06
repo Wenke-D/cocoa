@@ -59,6 +59,16 @@ function start_agent_server(): void {
       const result = await operations.start_run(engine, name, parameters, 'agent')
       publish_cycle(empty())
       return result
+    },
+    // As the button does (`bridge/ipc.ts`): mark it due, publish, and ask
+    // for a tick rather than wait up to one.
+    rerun_report: (target) => {
+      const result = operations.rerun_report(engine, target)
+      publish_cycle(empty())
+      if (result.ok) {
+        void refresh_and_publish()
+      }
+      return result
     }
   }
 
