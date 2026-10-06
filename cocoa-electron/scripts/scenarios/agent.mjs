@@ -110,7 +110,8 @@ export async function run({ page, shot, log, wait_text, socket_path }) {
   // The window is the same workbench: the run appears in it, stamped agent.
   await page.locator('aside').getByText('solver-gpu').click()
   await wait_text('agent', 20_000)
-  const history = (await page.locator('table').innerText()).replace(/\n/g, ' | ')
+  // The overview's last table is the history; the Parameters table comes first.
+  const history = (await page.locator('table').last().innerText()).replace(/\n/g, ' | ')
   log('history table:', history)
   if (!history.includes('agent')) {
     throw new Error(`the run does not read as the agent's: ${history}`)
@@ -180,7 +181,19 @@ export async function run({ page, shot, log, wait_text, socket_path }) {
     throw new Error(`cocoa_start answered ${start_text}`)
   }
 
-  await wait_text('Running', 25_000)
+  // History rows show a status dot, not its word, so the socket says when.
+  const deadline = Date.now() + 25_000
+  for (;;) {
+    const runs = JSON.parse((await call(socket_path, 'GET', '/jobs/solver-gpu')).text).runs
+    const status = runs.find((candidate) => candidate.id === mcp_run_id)?.status
+    if (status === 'Running') {
+      break
+    }
+    if (Date.now() > deadline) {
+      throw new Error(`run ${mcp_run_id} never read Running; last ${status}`)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
   await shot('after-mcp-start')
   log('the Rust MCP binary drove cocoa-electron unchanged')
 }

@@ -222,7 +222,11 @@ fn call_tool(name: &str, arguments: &Value) -> Result<Value, (i64, String)> {
                 .get("path")
                 .and_then(Value::as_str)
                 .ok_or((-32602, "cocoa_register needs `path`".to_owned()))?;
-            http("POST", "/experiments", Some(json!({ "path": path }).to_string()))
+            http(
+                "POST",
+                "/experiments",
+                Some(json!({ "path": path }).to_string()),
+            )
         }
         other => return Err((-32602, format!("no such tool: {other}"))),
     };
