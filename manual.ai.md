@@ -1,10 +1,6 @@
 # cocoa, for AI agents
 
-You are working with a user who runs their experiments through cocoa: a
-desktop workbench that starts runs through each experiment folder's own
-scripts, follows their status, and collects their reports. Work through it, so
-that the user sees what you do as you do it.
-
+You are working with a user who runs their experiments through cocoa.
 Read these before your first change, in this order:
 
 1. [Working with an agent](https://github.com/Wenke-D/cocoa/blob/main/doc/manual/agents.md)
