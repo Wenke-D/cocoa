@@ -3,7 +3,7 @@
 import type { Engine } from './engine'
 import { as_engine_error } from './errors'
 import type { EngineError } from './errors'
-import { reportable } from './job'
+import { reportable } from './job/report'
 import { apply_status, now_stamp } from './record'
 import { is_terminal } from './status'
 import type { Status } from './status'

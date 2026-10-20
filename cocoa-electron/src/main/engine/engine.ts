@@ -12,8 +12,12 @@ import type { EngineError } from './errors'
 import { Deploys } from './deploys'
 import { InFlight } from './in_flight'
 import * as del from './delete'
-import * as job from './job'
-import type { PollReport, ReportMode } from './job'
+import { cancel_run } from './job/cancel'
+import { poll_job } from './job/poll'
+import type { PollReport } from './job/poll'
+import { report_run, request_report } from './job/report'
+import type { ReportMode } from './job/report'
+import { start_job } from './job/start'
 import { Memory } from './memory'
 import type { RunOrigin, Trigger } from './record'
 import { refresh } from './refresh'
@@ -55,23 +59,23 @@ export class Engine extends Memory {
     by: Trigger
   ): Promise<number> {
     const origin: RunOrigin = by === 'human' ? { by: 'human' } : { by: 'agent' }
-    return job.start_job(this, this.job(folder), render, launch, origin)
+    return start_job(this, this.job(folder), render, launch, origin)
   }
 
   async poll_job(folder: string): Promise<PollReport> {
-    return job.poll_job(this, this.job(folder))
+    return poll_job(this, this.job(folder))
   }
 
   async report_run(folder: string, run_id: number, mode: ReportMode): Promise<void> {
-    return job.report_run(this, this.job(folder), run_id, mode)
+    return report_run(this, this.job(folder), run_id, mode)
   }
 
   request_report(folder: string, run_id: number): void {
-    job.request_report(this.job(folder), run_id)
+    request_report(this.job(folder), run_id)
   }
 
   async cancel_run(folder: string, run_id: number): Promise<void> {
-    return job.cancel_run(this, this.job(folder), run_id)
+    return cancel_run(this, this.job(folder), run_id)
   }
 
   delete_run(folder: string, run_id: number): void {
