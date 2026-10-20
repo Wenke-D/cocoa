@@ -9,9 +9,6 @@
 // store remembers which folders are which, so a folder whose manifest breaks
 // stays what it was, carrying the error, and one whose manifest changes kind
 // moves across.
-//
-// `Engine` (index.ts) extends this with the operations that run scripts over
-// it: `job.ts`, `campaign.ts`, `in_flight.ts`.
 
 import fs from 'node:fs'
 import path from 'node:path'

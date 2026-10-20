@@ -271,9 +271,8 @@ export async function poll_job(engine: Engine, job: Job): Promise<PollReport> {
     // Another operation may land while a script runs — there is no queue.
     // The history length is the record's version: a cancel during this
     // run's (or an earlier run's) poll moves it, and an answer formed
-    // before that move is stale and must not land (`serial` history: a
-    // stale poll used to write the pre-cancel status back over
-    // CANCELLING).
+    // before that move is stale and must not land: it would write the
+    // pre-cancel status back over CANCELLING.
     if (is_terminal(record.status)) {
       continue
     }
@@ -547,5 +546,3 @@ function artifact_name(template_rel: string): string {
   }
   return name
 }
-
-/** Declared params and provided values must be exactly the same set (§2). */

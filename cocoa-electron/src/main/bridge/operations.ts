@@ -1,7 +1,7 @@
 // The operations the renderer can ask for, as plain functions over the
 // engine. They live here rather than inside the `ipcMain.handle` calls so
 // they can be exercised without an Electron app around them — the handlers
-// in `index.ts` are wiring: call one of these, publish, answer.
+// in `ipc.ts` are wiring: call one of these, publish, answer.
 //
 // Every one of them answers rather than throws: a refusal is an outcome the
 // user reads, not a crash.
@@ -107,9 +107,8 @@ export function rerun_report(engine: Engine, target: RerunReportTarget): RerunRe
  * the run moves to `CANCELLING` and only the next poll can call it cancelled.
  *
  * A campaign cancels member by member, and members can disagree: this reports a
- * partial failure as a failure, naming what did not stop. (The Rust adapter
- * discards the per-member results here; a cancel that half worked should not
- * read as done.)
+ * partial failure as a failure, naming what did not stop: a cancel that half
+ * worked should not read as done.
  */
 export async function cancel(engine: Engine, target: CancelTarget): Promise<CancelResult> {
   try {

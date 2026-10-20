@@ -188,7 +188,7 @@ async function ask(
 }
 
 describe('paths', () => {
-  it('puts the socket where the Rust cocoa puts it', () => {
+  it('puts the socket where cocoa_mcp_server looks for it', () => {
     const previous = process.env['COCOA_SOCKET_PATH']
     delete process.env['COCOA_SOCKET_PATH']
     expect(socket_path()).toBe(
@@ -348,8 +348,8 @@ describe('starting a run', () => {
     expect((await ask('POST', '/experiments/solver-gpu/runs', '{oops')).status).toBe(400)
   })
 
-  // The name is answered for before the engine is troubled, so the refusal
-  // reads the same as the Rust interface's — which is what decides the code.
+  // The name is answered for before the engine is troubled, so an unknown
+  // experiment is a 404.
   it('is a 404 for an experiment that is not registered', async () => {
     const { status, json } = await ask('POST', '/experiments/ghost/runs')
     expect(status).toBe(404)
@@ -509,7 +509,7 @@ describe('re-running a report', () => {
 })
 
 // The routes above are a function; this is the socket a `curl --unix-socket`
-// or the Rust `cocoa_mcp_server` actually reaches.
+// or `cocoa_mcp_server` actually reaches.
 describe('the socket', () => {
   const open: AgentServer[] = []
   const dirs: string[] = []

@@ -98,9 +98,8 @@ const PARAM_TYPES: readonly ParamType[] = ['string', 'enum']
 
 /**
  * A `params` list: one table per parameter (convention §2.1), in the order the
- * form will show them. A list of bare names — the form before 2026-08-23 — is
- * refused with the new shape spelled out, since that is the one mistake every
- * older manifest makes.
+ * form will show them. A list of bare names, the shape older manifests use, is
+ * refused with the table shape spelled out.
  */
 function require_params(value: unknown, manifest_path: string, key: string): ParamSpec[] {
   if (value === undefined) {

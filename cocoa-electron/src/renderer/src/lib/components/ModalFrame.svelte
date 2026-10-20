@@ -1,6 +1,5 @@
 <!--
-  The shell every modal shares — port of `ui/overlays/modal_frame`, over
-  shadcn's Dialog (bits-ui underneath: focus trap, Escape, focus restored on
+  The shell every modal shares, over shadcn's Dialog (bits-ui underneath: focus trap, Escape, focus restored on
   close). A modal is a temporary action, not a place (§9): it is dismissible
   and it never becomes an address. While the operation is in flight it cannot
   be dismissed, so its answer has somewhere to land.

@@ -1,5 +1,3 @@
-// The gate the Rust tree had as clippy, and this one did not have at all.
-//
 // Type-aware rules are on: the point of the strict ones below is the class of
 // bug `npm run check` cannot see — a floating promise in the main process, an
 // `any` that quietly turns a typed boundary back into JSON. Formatting is

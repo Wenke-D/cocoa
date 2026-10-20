@@ -43,8 +43,8 @@ export async function start_run(
     }
   }
 
-  // The name is answered for here so the refusal reads the same as the Rust
-  // interface's, which is what decides the status code.
+  // The name is answered for here, before the engine is asked, so an unknown
+  // experiment gets the `No such entity` refusal and its 404.
   const known = deps.current_world().entities.some((entity) => entity.name === name)
   if (!known) {
     return failure(404, `No such entity: ${name}`)

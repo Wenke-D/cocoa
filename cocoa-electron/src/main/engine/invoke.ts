@@ -146,9 +146,8 @@ export class Running {
 }
 
 /**
- * Starts `argv` with `cwd`, capturing output. Throws synchronously only when
- * the process cannot be started at all (missing interpreter, bad cwd) — the
- * same distinction the Rust engine draws for a start refusal.
+ * Starts `argv` with `cwd`, capturing output. Rejects only when the process
+ * cannot be started at all (missing interpreter, bad cwd).
  */
 export async function spawn(
   cwd: string,

@@ -7,16 +7,15 @@
 // In `shared` because a domain object either process holds may carry one.
 // Disk and wire still speak `T | null`: `toJSON` makes `JSON.stringify`
 // write a Maybe as its plain form, and whoever parses revives it on the way
-// in (`sanitize` in `ui.ts`). structuredClone — the IPC channel — grants no
+// in (`sanitize` in `renderer/src/ui_state.ts`). structuredClone — the IPC channel — grants no
 // such courtesy: a Maybe that crosses IPC arrives as a dead plain object, so
 // revive it on arrival or leave it untouched, as the renderer does with
 // `window`.
 //
-// Deliberately not used in `world.ts` — the serde mirror spells `| null` out
+// Deliberately not used in `world.ts` — the view model spells `| null` out
 // byte for byte, so a reader sees what the JSON carries without following an
 // alias — nor in `engine/`, which imports nothing from outside itself: that
-// is what keeps it testable with no app around it and portable between
-// implementations.
+// is what keeps it testable with no app around it.
 
 /** The value that is there. `value` is only reachable on this half. */
 export class Some<T> {

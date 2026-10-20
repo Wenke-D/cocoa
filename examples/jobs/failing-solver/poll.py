@@ -9,7 +9,7 @@ from datetime import datetime
 
 
 def parse_time(text):
-    """chrono writes nanosecond precision; normalize to microseconds."""
+    """Parses a run.json timestamp, cutting its fraction to microseconds."""
     match = re.match(
         r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?([+-]\d{2}:\d{2}|Z)?$",
         text,

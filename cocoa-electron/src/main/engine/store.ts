@@ -5,11 +5,10 @@
 // itself — and remembering the kind is what lets a folder whose manifest
 // breaks stay on the side it was on, carrying the error.
 //
-// It no longer holds a run-id counter. An id is derived from the experiment's
-// own runs instead (`Runs.next_id` in memory.ts), which is the only source that
-// cannot disagree with what is on disk — a counter can, and did: a folder
-// carried over from another machine arrived with runs the counter knew
-// nothing about, and the next start overwrote one of them.
+// It holds no run-id counter. An id is derived from the experiment's own runs
+// (`Runs.next_id` in memory.ts), the only source that cannot disagree with
+// what is on disk: a folder carried over from another machine brings runs a
+// counter would know nothing about, and the next start would overwrite one.
 
 import fs from 'node:fs'
 import path from 'node:path'

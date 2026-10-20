@@ -70,8 +70,7 @@ export interface Notice {
 /**
  * The renderer's whole mutable state (specification §34). Named rather than
  * inferred: written inline, `route` would infer as the literal shape of the
- * empty page and reject every other route, which is why each field used to
- * need widening with `as`.
+ * empty page and reject every other route.
  */
 export interface AppState {
   connected: boolean
@@ -485,8 +484,8 @@ function upsert_run<Run extends { id: string; started_at: string }>(
 }
 
 /**
- * The event names the owner, so this no longer has to search every index for
- * a bare id — which it could only do while ids were globally unique.
+ * The event names the owner: a run id is unique only within its owner, so a
+ * bare id could not be looked up across every index.
  */
 function remove_run(
   runs: RunsByEntity<JobRun> | RunsByEntity<CampaignRun>,
@@ -560,9 +559,9 @@ export function report_owner_id(context: ReportContext, run_id: string): string 
 /**
  * Which job a dispatched run belongs to, read from the campaign run's own plan.
  *
- * The plan is the authoritative link between the two (§2.3.1), and now the
- * only one: a run id means nothing without the experiment it was allocated
- * in, so there is no map to look a bare child id up in.
+ * The plan is the only link between the two (§2.3.1): a run id means nothing
+ * without the experiment it was allocated in, so there is no map to look a
+ * bare child id up in.
  */
 export function dispatched_owner(
   campaign_id: string,

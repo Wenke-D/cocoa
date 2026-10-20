@@ -1,6 +1,6 @@
 // There is no queue on the engine: operations interleave at every `await`,
-// and each write that follows one guards itself. These are the races the
-// old serializer used to forbid — kept as proof the guards hold.
+// and each write that follows one guards itself. These races are run on
+// purpose, as proof the guards hold.
 
 import { afterEach, describe, expect, it } from 'vitest'
 import {

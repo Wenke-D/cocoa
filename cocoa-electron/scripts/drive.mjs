@@ -7,7 +7,7 @@
 //
 // A scenario is a module exporting `run({ page, app, shot, log, wait_text })`.
 // The app is launched against a scratch store (COCOA_STORE_PATH), never the
-// user's real one — the two cocoas must not share a run-id counter.
+// user's real one — a drive run must not register its folders there.
 
 import { _electron as electron } from 'playwright-core'
 import fs from 'node:fs'

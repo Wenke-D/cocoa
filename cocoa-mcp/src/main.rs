@@ -13,10 +13,8 @@
 //! line, and libcurl has been audited by the world instead. No TLS and no
 //! async runtime — a private socket needs neither.
 //!
-//! It is its own crate because it outlived the implementation it was written
-//! in. It speaks only the socket protocol of §43.2, and both cocoas serve that
-//! protocol identically, so it drives the Electron workbench unchanged and
-//! never learns which one is listening.
+//! It is its own crate, and knows nothing of the workbench but the socket
+//! protocol of §43.2: whatever serves that protocol, it drives.
 
 use std::collections::BTreeMap;
 use std::io::{BufRead, Write};

@@ -201,7 +201,7 @@ function campaign_run_of(
     status = map_status(derived.status)
     ended = campaign_ended_at(engine, record, derived.status)
   } catch {
-    // Fall through to Error, as the Rust adapter does.
+    // Fall through to Error.
   }
   return {
     id: String(record.run_id),

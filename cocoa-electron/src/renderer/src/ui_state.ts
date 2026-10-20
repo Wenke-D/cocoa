@@ -2,7 +2,8 @@
 // end: held in `state.svelte.ts` while the page runs, written to localStorage
 // as the page unloads (`flush_ui`), read back at the next launch. The main
 // process never sees any of it; the window's geometry is the main process's
-// own record (`main/window_state.ts`), and the two never meet in one object.
+// own record (`main/shell/window_state.ts`), and the two never meet in one
+// object.
 //
 // Deliberately *not* here: where the user was. A launch always opens on the
 // Explorer with nothing selected (§32) — a day later nobody remembers where
@@ -40,7 +41,7 @@ export type Route =
   | { page: 'report'; context: ReportContext; run_id: string; format: ReportFormat }
 
 /**
- * One breadcrumb — the port of `navigation::Crumb`. `route` is `null` for the
+ * One breadcrumb. `route` is `null` for the
  * trailing crumb: the page you are already on is not a link.
  */
 export interface Crumb {

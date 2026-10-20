@@ -1,6 +1,6 @@
-// TypeScript mirror of cocoa's `src/view_model` as serde serializes it.
-// Serde's externally-tagged enum convention: a unit variant is a bare string,
-// a struct variant is `{ VariantName: { ...fields } }`.
+// The view model the main process sends the renderer. Enums are externally
+// tagged: a unit variant is a bare string, a struct variant is
+// `{ VariantName: { ...fields } }`.
 
 import type { ParamSpec, Params } from './params'
 
@@ -186,9 +186,8 @@ export interface BootstrapPayload {
 }
 
 /**
- * How loudly a notice speaks. `error` is the Rust `TransientMessage`'s
- * `is_error`: it is styled as a failure and, here, stays until it is
- * dismissed or replaced — a message nobody had time to read is the same as
+ * How loudly a notice speaks. `error` is styled as a failure and stays until
+ * it is dismissed or replaced — a message nobody had time to read is the same as
  * no message at all.
  */
 export type NoticeLevel = 'info' | 'error'
@@ -262,7 +261,7 @@ export type ReportResult =
   { ok: true; format: ReportFormat; text: string } | { ok: false; message: string }
 
 // ---------------------------------------------------------------------------
-// Presentation helpers, mirroring the impls on the Rust types.
+// Presentation helpers.
 
 const TERMINAL: readonly RunStatus[] = ['Succeeded', 'Failed', 'Cancelled', 'Error']
 

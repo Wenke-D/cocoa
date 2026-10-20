@@ -73,7 +73,7 @@ export function publish_cycle(refreshed_at: Maybe<string>, extra: CocoaEvent[] =
 }
 
 /**
- * A cycle that also stamps the refresh. `lastRefresh` never leaves this
+ * A cycle that also stamps the refresh. `last_refresh` never leaves this
  * module: it is the publisher's answer to "as of when", and every caller that
  * wanted it was only going to hand it straight back.
  */

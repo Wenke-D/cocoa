@@ -1,5 +1,4 @@
-// The seam an agent drives cocoa through (specification §43) — the port of
-// `src/agent/`.
+// The seam an agent drives cocoa through (specification §43).
 //
 // An agent asks cocoa to do things; it never runs an experiment's scripts
 // itself. Everything it can ask for arrives here and takes exactly the path a
@@ -8,16 +7,12 @@
 // the first — the difference between a click and a call is one word, the
 // trigger stamped on the run.
 //
-// The wire is HTTP/1.1 over a Unix socket, because that is what the Rust cocoa
-// speaks and the bundled `cocoa_mcp_server` binary talks to. Express speaks
+// The wire is HTTP/1.1 over a Unix socket, because that is what the bundled
+// `cocoa_mcp_server` binary talks to. Express speaks
 // the protocol — routing, decoding, the body cap, framing are a library's,
 // audited by its million users rather than by ours — so this stays a
 // transport adapter over `bridge/operations.ts`, not a second implementation.
 // `curl --unix-socket` debugs it either way.
-//
-// The module, file by file: this one owns the socket's lifecycle; `app.ts`
-// the route table; `reads.ts`, `start.ts` and `report.ts` the answers; `help.ts` the
-// self-description; `answer.ts` the vocabulary they share.
 
 import { once } from 'node:events'
 import fs from 'node:fs'

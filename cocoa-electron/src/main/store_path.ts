@@ -1,13 +1,7 @@
-// Where the engine's store lives, and the one-time move that got it there.
-//
-// It used to be `~/.local/share/coco/store.json` — the app was called coco
-// then — hardcoded identically in both implementations so a folder registered
-// in one appeared in the other. That was the point while there were two; there
-// is one now, and the path was the only reason two of them could race each
-// other.
-//
-// It lives in Electron's `userData` instead — the per-app, per-user directory
-// the platform already has an answer for, next to `ui-state.json`.
+// Where the engine's store lives: Electron's `userData`, the per-app,
+// per-user directory the platform already has an answer for, next to
+// `ui-state.json`. A store found at the path the app used under its former
+// name, coco, is carried over once.
 
 import fs from 'node:fs'
 import os from 'node:os'
@@ -17,7 +11,7 @@ import { log_for } from './log'
 
 const log = log_for('store_path')
 
-/** Where it lived until 2026-08-20, under the old name. */
+/** The store's path under the app's former name. */
 export function legacy_store_path(): string {
   return path.join(os.homedir(), '.local', 'share', 'coco', 'store.json')
 }

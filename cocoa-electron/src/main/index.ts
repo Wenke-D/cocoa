@@ -5,23 +5,7 @@
 //
 // This file is the process's lifetime and nothing else: what happens when the
 // app is ready, and what has to finish before it may quit. Each piece of state
-// lives with the module that owns it —
-//
-//   boot.ts           what this launch is: its profile, window, platform
-//   runtime.ts        the engine, its queue, the notice gate
-//   log.ts            how the process prints
-//
-//   shell/            the desktop app around it
-//     window.ts       the window: making it, sending to it, its geometry
-//     window_state.ts how the window was left, and when it is written back
-//     menu.ts         the application menu
-//
-//   bridge/           everything the renderer is told or may ask for
-//     publish.ts      the model, and turning its changes into events
-//     sync.ts         the diff that decides what changed
-//     refresh.ts      the tick
-//     ipc.ts          what the renderer may ask for
-//     notices.ts      which failures are worth saying out loud
+// lives with the module that owns it.
 
 import { app } from 'electron'
 import { restore_window_state, persist_window_state } from './shell/window_state'

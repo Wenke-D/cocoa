@@ -24,8 +24,8 @@ type Errors = Pick<RefreshReport, 'launch_errors' | 'poll_errors' | 'report_erro
 
 /**
  * The one sentence a failed refresh gets: the first error in full, the rest
- * as a count. Mirrors the Rust adapter's `refresh()` — a status bar has room
- * for a sentence, and the run rows carry the detail.
+ * as a count: a status bar has room for a sentence, and the run rows carry
+ * the detail.
  */
 export function refresh_summary(report: Errors): Maybe<string> {
   const errors = [...report.launch_errors, ...report.poll_errors, ...report.report_errors].map(
@@ -73,7 +73,7 @@ export class NoticeGate {
   /**
    * A refresh the user asked for always answers, even when the answer is
    * "nothing was wrong" — a button that can do nothing visible is a button
-   * you cannot tell is working (§8.5, as the Rust worker's `Refresh` does).
+   * you cannot tell is working (§8.5).
    * Its answer also counts as said, so the tick that follows a reported
    * failure does not repeat it.
    */

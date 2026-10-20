@@ -1,6 +1,6 @@
 // The closed status vocabulary (convention §9).
 // Scripts speak this vocabulary; the engine never learns new state names at
-// runtime. Serialized UPPERCASE in run.json, exactly as serde writes it.
+// runtime. Serialized UPPERCASE in run.json.
 
 export type Status =
   | 'DEPLOYING'

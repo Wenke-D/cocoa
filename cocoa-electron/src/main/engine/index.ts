@@ -3,16 +3,6 @@
 // state lives in memory, reads never touch the disk, and writes go through
 // to the experiment folder. Script invocations are async, because the
 // Electron main process must not block.
-//
-// Five files, along the seams the domain has:
-//
-//   memory.ts     the truth — `Job`, `Campaign`, their runs, registration, write-through
-//   job.ts        start / poll / report / cancel, one job (§7, §10, §11)
-//   campaign.ts      plan / start / report / cancel / status, one campaign (§8, §9)
-//   in_flight.ts  the launch scripts not yet answered (§7.1)
-//   deploys.ts    each job's gate: check before a start, deploy when stale (§7.5, §7.6)
-//   index.ts      this: `Engine`, which is the memory plus those operations,
-//                 and the refresh tick that drives them all (§7.5)
 
 import * as campaign from './campaign'
 import type { CampaignStart, CampaignStatusView, MemberCancel, PlanInstance } from './campaign'

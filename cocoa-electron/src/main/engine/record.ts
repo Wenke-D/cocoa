@@ -1,6 +1,5 @@
 // Run and campaign records (convention §7, §8, §12). Field names and enum
-// spellings are the convention's, so a run.json written by an earlier cocoa
-// still reads.
+// spellings are the convention's, so any run.json written to it reads.
 
 import type { Params } from '@shared/params'
 import type { Status } from './status'
@@ -13,7 +12,7 @@ export interface StatusChange {
 
 export type Trigger = 'human' | 'agent'
 
-/** serde: `#[serde(tag = "by", rename_all = "snake_case")]` */
+/** Who started a run, tagged by `by`. */
 export type RunOrigin =
   { by: 'human' } | { by: 'agent' } | { by: 'campaign'; run_id: number; name: string; call: number }
 
@@ -179,7 +178,7 @@ export function all_params(record: RunRecord): Params {
   return { ...record.render, ...record.launch }
 }
 
-/** BTreeMap parity: object keys in sorted order, so JSON output is stable. */
+/** Object keys in sorted order, so JSON output is stable. */
 export function sorted(map: Params): Params {
   const result: Params = {}
   for (const key of Object.keys(map).sort()) {
