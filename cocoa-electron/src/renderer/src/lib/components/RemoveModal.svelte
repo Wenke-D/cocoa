@@ -4,7 +4,8 @@
   survives — because what makes this safe is that nothing on disk is touched.
 -->
 <script lang="ts">
-  import { campaign_run, is_active, job_run } from '@shared/world'
+  import { is_active } from '@shared/run_status'
+  import { campaign_run, job_run } from '@shared/world'
   import { close_overlay, confirm_remove } from '../../overlays.svelte'
   import { app } from '../../state.svelte'
   import { entity_of } from '../../world_queries'

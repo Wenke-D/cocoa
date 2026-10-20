@@ -2,7 +2,7 @@
 
 import type { Params } from '@shared/params'
 import { check_value } from '@shared/params'
-import type { StartResult } from '@shared/world'
+import type { StartResult } from '@shared/protocol'
 import { navigate } from './navigation'
 import { notify } from './notice'
 import { app } from './state.svelte'

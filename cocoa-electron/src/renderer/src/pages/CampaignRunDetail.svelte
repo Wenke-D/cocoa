@@ -1,11 +1,6 @@
 <script lang="ts">
-  import {
-    format_duration,
-    format_started_at,
-    is_cancellable,
-    is_terminal,
-    trigger_label
-  } from '@shared/world'
+  import { is_cancellable, is_terminal } from '@shared/run_status'
+  import { format_duration, format_started_at, trigger_label } from '../format'
   import { campaign_run, job_run } from '@shared/world'
   import type { ReportFormat } from '@shared/world'
   import type { Crumb } from '../route'

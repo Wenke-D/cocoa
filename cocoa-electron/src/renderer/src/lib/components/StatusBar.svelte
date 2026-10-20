@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { format_clock } from '@shared/world'
+  import { format_clock } from '../../format'
   import { refresh_now } from '../../commands'
   import { select_view } from '../../navigation'
   import { app } from '../../state.svelte'

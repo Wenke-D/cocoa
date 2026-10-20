@@ -1,6 +1,6 @@
 // The asks that need no modal: each is answered with a notice at most.
 
-import type { AddFolderResult, RerunReportResult, RerunReportTarget } from '@shared/world'
+import type { AddFolderResult, RerunReportResult, RerunReportTarget } from '@shared/protocol'
 import { notify } from './notice'
 import { app } from './state.svelte'
 

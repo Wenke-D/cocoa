@@ -6,7 +6,7 @@
 
 import { join } from 'node:path'
 import { BrowserWindow } from 'electron'
-import type { CocoaEvent } from '@shared/world'
+import type { CocoaEvent } from '@shared/protocol'
 import type { WindowState } from './window_state'
 import { WINDOW_MIN_SIZE } from './window_state'
 import { some } from '@shared/maybe'

@@ -1,4 +1,4 @@
-import type { NoticeLevel } from '@shared/world'
+import type { NoticeLevel } from '@shared/protocol'
 import { app } from './state.svelte'
 
 /**

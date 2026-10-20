@@ -5,7 +5,8 @@
   running are listed beneath it, indented, as what it is made of.
 -->
 <script lang="ts">
-  import { is_active, job_run } from '@shared/world'
+  import { is_active } from '@shared/run_status'
+  import { job_run } from '@shared/world'
   import type { QueryHealth, RunStatus } from '@shared/world'
   import { navigate } from '../../navigation'
   import { app } from '../../state.svelte'

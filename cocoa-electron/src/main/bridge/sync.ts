@@ -3,7 +3,8 @@
 // and turns the difference into events. The renderer bootstraps once and then
 // only ever hears conclusions.
 
-import type { CocoaEvent, RunsByEntity, World } from '@shared/world'
+import type { CocoaEvent } from '@shared/protocol'
+import type { RunsByEntity, World } from '@shared/world'
 
 /**
  * Entry identity for change detection, with the always-churning

@@ -5,7 +5,8 @@
   the word is one hover away.
 -->
 <script lang="ts">
-  import { display_status, is_active } from '@shared/world'
+  import { is_active } from '@shared/run_status'
+  import { display_status } from '../../format'
   import type { QueryHealth, RunStatus } from '@shared/world'
 
   let {

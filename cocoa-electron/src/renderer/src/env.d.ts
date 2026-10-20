@@ -16,7 +16,7 @@ import type {
   DeleteResult,
   RerunReportResult,
   RerunReportTarget
-} from '@shared/world'
+} from '@shared/protocol'
 
 declare global {
   interface Window {

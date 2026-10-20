@@ -1,7 +1,8 @@
 // The backend's messages, applied to the model: the bootstrap, then event
 // batches.
 
-import type { CampaignRun, CocoaEvent, JobRun, RunsByEntity } from '@shared/world'
+import type { CocoaEvent } from '@shared/protocol'
+import type { CampaignRun, JobRun, RunsByEntity } from '@shared/world'
 import { JOURNAL_LENGTH, sentences_of, stamp } from './journal'
 import type { JournalEntry } from './journal'
 import { notify } from './notice'

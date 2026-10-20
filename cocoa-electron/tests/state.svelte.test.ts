@@ -9,7 +9,8 @@
 // `.active-dot` assertion in `scripts/scenarios/remove-folder.mjs`.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { CampaignPlanStep, CampaignRun, CocoaEvent, Entity, JobRun } from '@shared/world'
+import type { CocoaEvent } from '@shared/protocol'
+import type { CampaignPlanStep, CampaignRun, Entity, JobRun } from '@shared/world'
 import { empty_world } from '@shared/world'
 import { apply_events } from '../src/renderer/src/apply_events'
 import { go_to, navigate, select_view } from '../src/renderer/src/navigation'

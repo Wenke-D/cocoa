@@ -3,7 +3,8 @@
 
 import { describe, expect, it } from 'vitest'
 import { empty_world } from '@shared/world'
-import type { CampaignRun, CocoaEvent, Entity, JobRun, World } from '@shared/world'
+import type { CocoaEvent } from '@shared/protocol'
+import type { CampaignRun, Entity, JobRun, World } from '@shared/world'
 import { sentences_of, tone_of } from '../src/renderer/src/journal'
 
 const AT = '2026-08-22T22:00:00.000+02:00'

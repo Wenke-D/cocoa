@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { is_cancellable, is_deletable, job_run } from '@shared/world'
+  import { is_cancellable, is_deletable } from '@shared/run_status'
+  import { job_run } from '@shared/world'
   import type { Crumb } from '../route'
   import { request_cancel, request_delete } from '../overlays.svelte'
   import { app } from '../state.svelte'

@@ -4,6 +4,7 @@
 import path from 'node:path'
 import type { CampaignRun, Entity, JobRun, ReportState, World } from '@shared/world'
 import { campaign_run, job_run } from '@shared/world'
+import { is_active } from '@shared/run_status'
 import type { Maybe } from '@shared/maybe'
 import { empty, some } from '@shared/maybe'
 import { report_path } from '../engine/report_paths'
@@ -15,10 +16,6 @@ function run_ids_of(world: World, entity: Entity): string[] {
   return index[entity.id] ?? []
 }
 
-function is_active_status(status: string): boolean {
-  return !['Succeeded', 'Failed', 'Cancelled', 'Error'].includes(status)
-}
-
 export function list_entities(world: World, kind: 'Job' | 'Campaign'): AgentResponse {
   const items = world.entities
     .filter((entity) => entity.kind === kind)
@@ -27,7 +24,7 @@ export function list_entities(world: World, kind: 'Job' | 'Campaign'): AgentResp
       const active = ids.filter((id) => {
         const run =
           kind === 'Job' ? job_run(world, entity.id, id) : campaign_run(world, entity.id, id)
-        return run !== undefined && is_active_status(run.status)
+        return run !== undefined && is_active(run.status)
       }).length
       return {
         name: entity.name,

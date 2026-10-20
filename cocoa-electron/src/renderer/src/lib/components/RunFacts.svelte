@@ -16,7 +16,7 @@
     format_started_at,
     origin_label,
     query_available
-  } from '@shared/world'
+  } from '../../format'
   import type { JobRun, ReportFormat } from '@shared/world'
   import type { ReportContext } from '../../route'
   import { rerun_report } from '../../commands'

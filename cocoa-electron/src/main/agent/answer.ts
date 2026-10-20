@@ -5,9 +5,9 @@ import type {
   AddFolderResult,
   RerunReportResult,
   RerunReportTarget,
-  StartResult,
-  World
-} from '@shared/world'
+  StartResult
+} from '@shared/protocol'
+import type { World } from '@shared/world'
 
 /** What the socket needs from the rest of the process, and nothing more. */
 export interface AgentDeps {

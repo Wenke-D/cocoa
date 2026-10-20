@@ -6,8 +6,8 @@
   one the user did (§15.3).
 -->
 <script lang="ts">
-  import { manifest_blocking_reason } from '@shared/world'
-  import type { StartResult } from '@shared/world'
+  import { manifest_blocking_reason } from '../format'
+  import type { StartResult } from '@shared/protocol'
   import { describe_values } from '@shared/params'
   import type { ParamSpec, ParamValue, Params } from '@shared/params'
   import { untrack } from 'svelte'

@@ -3,14 +3,9 @@
   asks first, and the copy states exactly what will and will not be touched.
 -->
 <script lang="ts">
-  import {
-    campaign_run,
-    format_clock,
-    format_duration,
-    is_active,
-    is_terminal,
-    job_run
-  } from '@shared/world'
+  import { is_active, is_terminal } from '@shared/run_status'
+  import { campaign_run, job_run } from '@shared/world'
+  import { format_clock, format_duration } from '../../format'
   import { close_overlay, confirm_cancel } from '../../overlays.svelte'
   import { app } from '../../state.svelte'
   import { entity_of } from '../../world_queries'

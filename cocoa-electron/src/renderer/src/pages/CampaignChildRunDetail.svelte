@@ -9,7 +9,8 @@
   to that job.
 -->
 <script lang="ts">
-  import { campaign_run, is_cancellable, job_run } from '@shared/world'
+  import { is_cancellable } from '@shared/run_status'
+  import { campaign_run, job_run } from '@shared/world'
   import type { Crumb } from '../route'
   import { navigate } from '../navigation'
   import { request_cancel } from '../overlays.svelte'

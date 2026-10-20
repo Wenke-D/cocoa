@@ -8,8 +8,9 @@
   search and copy work on HTML too (§20.5).
 -->
 <script lang="ts">
-  import { format_label } from '@shared/world'
-  import type { ReportFormat, ReportResult } from '@shared/world'
+  import { format_label } from '../format'
+  import type { ReportResult } from '@shared/protocol'
+  import type { ReportFormat } from '@shared/world'
   import type { Crumb } from '../route'
   import { notify } from '../notice'
   import { app } from '../state.svelte'

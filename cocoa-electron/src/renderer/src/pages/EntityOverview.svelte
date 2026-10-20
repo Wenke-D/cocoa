@@ -1,14 +1,13 @@
 <script lang="ts">
+  import { is_deletable, is_terminal } from '@shared/run_status'
   import {
     format_duration,
-    is_deletable,
-    is_terminal,
     format_relative,
     format_started_at,
     manifest_blocking_reason,
     origin_label,
     trigger_label
-  } from '@shared/world'
+  } from '../format'
   import { campaign_run, job_run } from '@shared/world'
   import { describe_values } from '@shared/params'
   import { navigate } from '../navigation'

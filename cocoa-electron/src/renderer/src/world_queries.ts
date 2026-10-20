@@ -1,6 +1,7 @@
 // What the page asks of the world it mirrors.
 
-import { campaign_run, is_active, job_run } from '@shared/world'
+import { is_active } from '@shared/run_status'
+import { campaign_run, job_run } from '@shared/world'
 import type { Entity } from '@shared/world'
 import type { JournalEntry } from './journal'
 import type { ReportContext } from './route'

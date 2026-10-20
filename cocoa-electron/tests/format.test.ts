@@ -3,7 +3,7 @@
 // relative to now, in the largest unit that fits (§22.2).
 
 import { describe, expect, it } from 'vitest'
-import { format_duration, format_relative } from '../src/shared/world'
+import { format_duration, format_relative } from '../src/renderer/src/format'
 
 const STARTED = '2026-08-23T10:00:00Z'
 const at = (seconds: number): string => new Date(Date.parse(STARTED) + seconds * 1000).toISOString()

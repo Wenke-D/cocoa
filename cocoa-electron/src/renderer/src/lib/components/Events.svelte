@@ -4,7 +4,7 @@
   means. An entry about something still listed is a link to it.
 -->
 <script lang="ts">
-  import { format_clock } from '@shared/world'
+  import { format_clock } from '../../format'
   import { go_to } from '../../navigation'
   import { app } from '../../state.svelte'
   import ViewTitle from './ViewTitle.svelte'

@@ -19,7 +19,7 @@ import type {
   DeleteResult,
   RerunReportResult,
   RerunReportTarget
-} from '@shared/world'
+} from '@shared/protocol'
 import type { Engine } from '../engine/engine'
 import { extension_of, report_path } from '../engine/report_paths'
 

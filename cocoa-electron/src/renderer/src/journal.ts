@@ -5,16 +5,9 @@
 // went. Nothing is sent for it, nothing is kept but the last hundred, and a
 // fresh page starts with none.
 
-import { origin_label, trigger_label } from '@shared/world'
-import type {
-  CampaignRun,
-  CocoaEvent,
-  JobRun,
-  QueryHealth,
-  ReportState,
-  RunStatus,
-  World
-} from '@shared/world'
+import { origin_label, trigger_label } from './format'
+import type { CocoaEvent } from '@shared/protocol'
+import type { CampaignRun, JobRun, QueryHealth, ReportState, RunStatus, World } from '@shared/world'
 
 /** Where an entry points, if anywhere: a click on it goes there. */
 export type JournalTarget =

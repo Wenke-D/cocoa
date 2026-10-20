@@ -1,7 +1,7 @@
 // The write route's answer: a start over the socket, refused or queued
 // exactly as a click would be (§43).
 
-import type { StartResult } from '@shared/world'
+import type { StartResult } from '@shared/protocol'
 import type { AgentDeps, AgentResponse } from './answer'
 import { failure, json } from './answer'
 

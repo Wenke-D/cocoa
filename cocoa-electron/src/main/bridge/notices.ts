@@ -14,7 +14,7 @@
 // answer. Announcing a failure once and then holding still is the same
 // silence with the first sentence kept.
 
-import type { CocoaEvent } from '@shared/world'
+import type { CocoaEvent } from '@shared/protocol'
 import type { RefreshReport } from '../engine/refresh'
 import type { Maybe } from '@shared/maybe'
 import { empty, some } from '@shared/maybe'

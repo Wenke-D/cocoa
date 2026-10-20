@@ -17,7 +17,7 @@
   no button, until the outcome lands.
 -->
 <script lang="ts">
-  import { format_label, report_summary } from '@shared/world'
+  import { format_label, report_summary } from '../../format'
   import type { ReportFormat, ReportState } from '@shared/world'
   import { Button } from '$lib/components/ui/button'
   import { Spinner } from '$lib/components/ui/spinner'

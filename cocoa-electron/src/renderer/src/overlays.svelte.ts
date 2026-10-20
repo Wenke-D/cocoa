@@ -6,7 +6,7 @@ import type {
   DeleteResult,
   DeleteTarget,
   RemoveFolderResult
-} from '@shared/world'
+} from '@shared/protocol'
 import { navigate } from './navigation'
 import { notify } from './notice'
 import type { Route } from './route'

@@ -17,7 +17,7 @@ import type {
   DeleteResult,
   RerunReportResult,
   RerunReportTarget
-} from '@shared/world'
+} from '@shared/protocol'
 import { empty } from '@shared/maybe'
 import { boot } from '../boot'
 import * as operations from './operations'

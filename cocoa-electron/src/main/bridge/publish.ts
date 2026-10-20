@@ -6,7 +6,8 @@
 // last time. That comparison happens in `diff_worlds`, entry by entry; the
 // renderer only ever hears its conclusions, as events.
 
-import type { CocoaEvent, World } from '@shared/world'
+import type { CocoaEvent } from '@shared/protocol'
+import type { World } from '@shared/world'
 import { engine, notices } from '../runtime'
 import { now_stamp } from '../engine/record'
 import { build_world } from '../engine/world'
