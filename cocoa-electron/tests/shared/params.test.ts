@@ -1,24 +1,16 @@
-// A parameter's shape (src/shared/params.ts): what a value of each shape may
-// be, and how it goes on the wire — and the engine's check of a whole set
-// (src/main/engine/params.ts), which names every fault at once.
+// A parameter's shape: what a value of each shape may be, and how it goes on
+// the wire.
 
 import { describe, expect, it } from 'vitest'
-import { param_problems } from '../src/main/engine/params'
-import { argv_of, check_value, describe_values, format_params } from '../src/shared/params'
-import type { ParamSpec } from '../src/shared/params'
-
-const spec = (over: Partial<ParamSpec>): ParamSpec => ({
-  name: 'p',
-  type: 'string',
-  values: null,
-  list: false,
-  description: 'a parameter',
-  ...over
-})
+import { argv_of, check_value, describe_values, format_params } from '../../src/shared/params'
+import { spec } from '../support/param_specs'
 
 const STRING = spec({})
+
 const ENUM = spec({ type: 'enum', values: ['a', 'b'] })
+
 const STRINGS = spec({ list: true })
+
 const ENUMS = spec({ type: 'enum', values: ['a', 'b'], list: true })
 
 describe('check_value', () => {
@@ -85,24 +77,5 @@ describe('argv_of', () => {
       '--gpu 0 --profile false --tags a --tags b'
     )
     expect(format_params({})).toBe('')
-  })
-})
-
-describe('param_problems', () => {
-  const declared = [
-    spec({ name: 'gpu', type: 'enum', values: ['0', '1'] }),
-    spec({ name: 'profile', type: 'enum', values: ['true', 'false'] })
-  ]
-
-  it('is silent when the set matches and every value fits', () => {
-    expect(param_problems(declared, { gpu: '1', profile: 'true' })).toEqual([])
-  })
-
-  it('names what is missing, what is extra, and what does not fit — all of it', () => {
-    expect(param_problems(declared, { gpu: '2', mesh: '1' })).toEqual([
-      'missing `profile`',
-      'extra `mesh`',
-      '`gpu` must be one of `0`, `1`, found `2`'
-    ])
   })
 })

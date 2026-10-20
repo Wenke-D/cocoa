@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest'
+import { cancel } from '../../../../src/main/bridge/operations'
 import { engine, settle } from '../../../support/engine'
 import { failure } from '../../../support/failure'
-import { write_script } from '../../../support/files'
+import { write_script, write } from '../../../support/files'
 import { job_folder } from '../../../support/fixtures'
 import { cleanup_temp_dirs, temp_dir } from '../../../support/temp_dir'
 
@@ -49,5 +50,32 @@ describe('polling', () => {
     expect(report.warnings).toHaveLength(1)
     expect(report.warnings[0]).toContain('HYPERDRIVE')
     expect(cocoa.job(job).runs.record(run_id).status).toBe('STARTING')
+  })
+})
+
+// There is no queue on the engine: operations interleave at every `await`.
+// A poll is a process and takes its time. A cancel asked meanwhile finishes
+// first, and the poll's answer — formed before the cancellation existed —
+// must not land on top of it: `poll_job`'s history-length guard drops it.
+describe('a cancel during a refresh', () => {
+  it('survives the poll that was already in flight', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'racy')
+    const cocoa = engine(dir)
+    cocoa.register(job)
+    const run_id = await cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(cocoa)
+    write(job, 'poll-state', 'RUNNING')
+    await cocoa.poll_job(job)
+    // A poll that takes as long as a real one does.
+    write_script(job, 'poll.sh', 'sleep 0.5\necho "COCOA_RETURN: RUNNING"\n')
+
+    const [, result] = await Promise.all([
+      cocoa.refresh(),
+      cancel(cocoa, { kind: 'job_run', job_id: job, run_id: String(run_id) })
+    ])
+
+    expect(result).toEqual({ ok: true })
+    expect(cocoa.job(job).runs.record(run_id).status).toBe('CANCELLING')
   })
 })

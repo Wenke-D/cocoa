@@ -195,3 +195,25 @@ describe('parameters', () => {
     expect(message).toContain('`backends` must list at least one value')
   })
 })
+
+// There is no queue on the engine: operations interleave at every `await`.
+// Two starts at once must not share a run id: the record is reserved in the
+// same synchronous stretch that picked the id, before the spawn's `await`.
+describe('two starts at once', () => {
+  it('hands out distinct run ids', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'busy')
+    const cocoa = engine(dir)
+    cocoa.register(job)
+
+    const [first, second] = await Promise.all([
+      cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human'),
+      cocoa.start_job(job, { size: '2' }, { gpu: '1' }, 'human')
+    ])
+    await settle(cocoa)
+
+    expect(first).not.toBe(second)
+    expect(cocoa.job(job).runs.record(first).submission_id).toBe(`sub-${first}`)
+    expect(cocoa.job(job).runs.record(second).submission_id).toBe(`sub-${second}`)
+  })
+})
