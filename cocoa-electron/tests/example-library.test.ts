@@ -10,15 +10,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { now_stamp } from '../src/main/engine/record'
-import {
-  EXAMPLES_ROOT,
-  cleanup_temp_dirs,
-  engine,
-  hand_edit,
-  record_path,
-  settle,
-  temp_dir
-} from './support'
+import { engine, settle } from './support/engine'
+import { hand_edit } from './support/files'
+import { EXAMPLES_ROOT } from './support/fixtures'
+import { record_path } from './support/run_paths'
+import { cleanup_temp_dirs, temp_dir } from './support/temp_dir'
 
 afterEach(cleanup_temp_dirs)
 

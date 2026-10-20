@@ -5,16 +5,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { build_world } from '../src/main/engine/world'
-import {
-  campaign_folder,
-  cleanup_temp_dirs,
-  engine,
-  job_folder,
-  settle,
-  temp_dir,
-  write,
-  write_script
-} from './support'
+import { engine, settle } from './support/engine'
+import { write, write_script } from './support/files'
+import { campaign_folder, job_folder } from './support/fixtures'
+import { cleanup_temp_dirs, temp_dir } from './support/temp_dir'
 
 afterEach(cleanup_temp_dirs)
 

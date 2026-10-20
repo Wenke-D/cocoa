@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { load_store, save_store, write_atomic } from '../src/main/engine/store'
-import { cleanup_temp_dirs, temp_dir } from './support'
+import { cleanup_temp_dirs, temp_dir } from './support/temp_dir'
 
 afterEach(cleanup_temp_dirs)
 

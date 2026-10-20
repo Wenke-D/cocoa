@@ -3,15 +3,10 @@
 // purpose, as proof the guards hold.
 
 import { afterEach, describe, expect, it } from 'vitest'
-import {
-  cleanup_temp_dirs,
-  engine,
-  job_folder,
-  settle,
-  temp_dir,
-  write,
-  write_script
-} from './support'
+import { engine, settle } from './support/engine'
+import { write, write_script } from './support/files'
+import { job_folder } from './support/fixtures'
+import { cleanup_temp_dirs, temp_dir } from './support/temp_dir'
 import { cancel } from '../src/main/bridge/operations'
 
 afterEach(cleanup_temp_dirs)

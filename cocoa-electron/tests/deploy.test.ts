@@ -7,31 +7,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { RunRecord } from '../src/main/engine/record'
-import {
-  campaign_folder,
-  cleanup_temp_dirs,
-  engine,
-  exists,
-  job_folder,
-  read_text,
-  record_path,
-  settle,
-  temp_dir,
-  write,
-  write_script
-} from './support'
+import { engine, settle } from './support/engine'
+import { failure } from './support/failure'
+import { exists, read_text, write, write_script } from './support/files'
+import { campaign_folder, job_folder } from './support/fixtures'
+import { record_path } from './support/run_paths'
+import { cleanup_temp_dirs, temp_dir } from './support/temp_dir'
 
 afterEach(cleanup_temp_dirs)
-
-/** The message of a rejected promise; fails loudly if it resolves. */
-async function failure(promise: Promise<unknown>): Promise<string> {
-  try {
-    await promise
-  } catch (error) {
-    return (error as Error).message
-  }
-  throw new Error('expected a failure, but the operation succeeded')
-}
 
 /** How many times the fixture's deploy has run. */
 function deploys(job: string): number {
