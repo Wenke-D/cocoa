@@ -5,25 +5,34 @@ import type { Params } from '@shared/params'
 import type { Status } from './status'
 import { is_terminal } from './status'
 
+/** One entry of a run's history: the status it moved to, and when. */
 export interface StatusChange {
   status: Status
   at: string
 }
 
+/** Which surface a start came through: the workbench or the agent interface. */
 export type Trigger = 'human' | 'agent'
 
 /** Who started a run, tagged by `by`. */
 export type RunOrigin =
   { by: 'human' } | { by: 'agent' } | { by: 'campaign'; run_id: number; name: string; call: number }
 
+/** A job run's `runs/<id>/run.json` (§7.1). */
 export interface RunRecord {
   run_id: number
+  /** The launch script's id for the run, opaque to cocoa; poll, report and cancel get it back. */
   submission_id: string
+  /** The params substituted into the template. */
   render: Params
+  /** The params passed to the launch script as `--name value`. */
   launch: Params
   status: Status
+  /** Every status the run has had, oldest first. */
   history: StatusChange[]
+  /** The script's free-text reason, kept while the run is `FAILED` or `UNREACHABLE`. */
   reason?: string
+  /** Why the run is `ERROR`. */
   error?: string
   /** A `FAILED` run's report, which runs beside its status (§7.3.1). */
   report?: RunReport
@@ -46,11 +55,13 @@ export interface RunDeploy {
   error?: string
 }
 
+/** A run a campaign dispatched, by its id in its job's folder. */
 export interface CampaignMember {
   run_id: number
   job: string
 }
 
+/** A plan instance whose launch failed, so no run exists for it (§8.2). */
 export interface LaunchFailure {
   job: string
   params: Params
@@ -81,26 +92,33 @@ export function report_owed(record: RunRecord): boolean {
   return record.report?.attempted === false
 }
 
+/** A campaign run's `runs/<id>/run.json` (§8.2). Its status is derived on every read, never stored. */
 export interface CampaignRecord {
   run_id: number
+  /** The campaign's name. */
   campaign: string
   by: Trigger
   started_at: string
   params: Params
+  /** How many instances the plan produced. */
   planned: number
+  /** What actually launched; the rest are in `launch_failures`. */
   members: CampaignMember[]
   launch_failures: LaunchFailure[]
   report?: CampaignReport
 }
 
+/** One succeeded member, as `members.json` lists it. */
 export interface CampaignMembersFileMember {
   run_id: number
   job: string
   params: Params
   submission_id: string
+  /** The absolute path of the member's `report/<id>.txt`. */
   report: string
 }
 
+/** The `members.json` written for a campaign's report script, so it never goes looking (§8.3). */
 export interface CampaignMembersFile {
   run_id: number
   campaign: string
@@ -110,8 +128,7 @@ export interface CampaignMembersFile {
 
 /**
  * A local-offset timestamp with millisecond precision, e.g.
- * `2026-08-19T17:20:01.123+02:00` — the shape chrono's `DateTime<Local>`
- * writes (at nanosecond precision) and the mock scripts already parse.
+ * `2026-08-19T17:20:01.123+02:00`.
  */
 export function now_stamp(date = new Date()): string {
   const pad = (n: number, width = 2): string => String(n).padStart(width, '0')

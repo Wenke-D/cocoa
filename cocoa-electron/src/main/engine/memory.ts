@@ -36,7 +36,9 @@ interface RecordSlot<R> {
  * `runs/<id>/run.json`.
  */
 export class Runs<R extends { run_id: number }> {
+  /** The experiment folder whose `runs/` this is. */
   private readonly folder: string
+  /** Each run's record, or the error reading it, by run id. */
   private readonly slots = new Map<number, RecordSlot<R>>()
 
   constructor(folder: string) {
@@ -78,6 +80,7 @@ export class Runs<R extends { run_id: number }> {
     return views
   }
 
+  /** The run's record; throws when it is missing or does not parse. */
   record(run_id: number): R {
     const slot = this.slots.get(run_id)
     if (slot === undefined) {
@@ -89,6 +92,7 @@ export class Runs<R extends { run_id: number }> {
     return slot.record
   }
 
+  /** The run's record, or `null` when it is missing or does not parse. */
   find(run_id: number): R | null {
     return this.slots.get(run_id)?.record ?? null
   }
@@ -128,6 +132,7 @@ export class Runs<R extends { run_id: number }> {
 
 /** A registered job folder (§2): its manifest as last read, and its runs. */
 export class Job {
+  /** The canonical folder path the job is keyed by. */
   readonly path: string
   /** `null` while `cocoa.toml` is unusable; `manifest_error` then says why (§4). */
   manifest: JobManifest | null
@@ -151,6 +156,7 @@ export class Job {
 
 /** A registered campaign folder (§3): its manifest as last read, and its runs. */
 export class Campaign {
+  /** The canonical folder path the campaign is keyed by. */
   readonly path: string
   /** `null` while `cocoa.toml` is unusable; `manifest_error` then says why (§4). */
   manifest: CampaignManifest | null
@@ -186,7 +192,9 @@ export interface Registration {
   already: boolean
 }
 
+/** Every registered job and campaign, keyed by folder, and the store that lists them. */
 export class Memory {
+  /** The private store (store.ts) registrations are written to. */
   private readonly store_path: string
   private readonly jobs_by_path = new Map<string, Job>()
   private readonly campaigns_by_path = new Map<string, Campaign>()

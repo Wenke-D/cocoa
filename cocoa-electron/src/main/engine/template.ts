@@ -44,8 +44,11 @@ function is_node(value: unknown): value is AstNode {
   return typeof value === 'object' && value !== null && value instanceof (nodes.Node as never)
 }
 
+/** Walks a template's syntax tree for the experiment data it reads. */
 class Collector {
+  /** Every name read that is not a local, a macro or a builtin. */
   readonly referenced = new Set<string>()
+  /** The names bound locally, innermost scope last. */
   private readonly scopes: Set<string>[] = [new Set()]
   private readonly macros = new Set<string>()
 
@@ -76,6 +79,7 @@ class Collector {
     }
   }
 
+  /** Second pass: adds each name `node` reads to `referenced`. */
   walk(node: AstNode): void {
     const type = type_name(node)
 

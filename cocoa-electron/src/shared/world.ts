@@ -53,29 +53,37 @@ export type ReportState =
   | { Available: { files: ReportFile[] } }
   | { ReadError: { message: string } }
 
+/** A registered job or campaign, as the Explorer lists it. */
 export interface Entity {
+  /** The canonical folder path. */
   id: string
   kind: EntityKind
   name: string
   /** The manifest's `description`, or `null` when it gives none. */
   description: string | null
+  /** The folder path as shown, with the home directory abbreviated. */
   path: string
   manifest: ManifestState
   /** What a start must supply, in the order the form shows them (§17.3). */
   parameters: ParamSpec[]
 }
 
+/** One run in a job's history. */
 export interface JobRun {
+  /** The run id, unique only within its job. */
   id: string
   job_id: string
   origin: RunOrigin
   started_at: string
+  /** When the run reached a terminal status, or `null` while it has not. */
   ended_at: string | null
+  /** Render and launch params together, written out as `--name value`. */
   parameters: string
   /** The same, as given: what a new run from this one would be started with. */
   params: Params
   status: RunStatus
   query_health: QueryHealth
+  /** Stamped on every rebuild, so it is left out of the run's identity. */
   last_successful_query: string
   report: ReportState
   /** Why the report script failed on a `Failed` run, which keeps its status
@@ -88,6 +96,7 @@ export interface JobRun {
   /** How the job was made ready before this run launched (convention §7.5,
    * §7.6); `null` for a run recorded before deploys existed. */
   deploy: RunDeploy | null
+  /** Why the run is `Error`. */
   error: string | null
 }
 

@@ -33,21 +33,27 @@ export interface Waiting {
   script: string
 }
 
+/** A deploy spawned and not yet collected, and the runs waiting on it. */
 interface DeployInFlight {
+  /** The job's folder. */
   path: string
+  /** The deploy command as the manifest spelled it, for its errors. */
   script: string
   running: Running
   waiting: Waiting[]
+  /** Lets the job's gate go once the waiting runs are launched. */
   release: () => void
 }
 
 /** Lets a gate go. Releasing twice is harmless, so every path may. */
 export type Release = () => void
 
+/** Every job's gate, and the deploys spawned and not yet collected (§7.5, §7.6). */
 export class Deploys {
   private readonly engine: Engine
   /** Each job's gate: the last holder's turn, which the next one waits out. */
   private readonly gates = new Map<string, Promise<void>>()
+  /** Deploys spawned and not yet collected by the refresh tick. */
   private deploying: DeployInFlight[] = []
   /** Runs whose deploy is being spawned: held already, so no tick takes them for leftovers. */
   private spawning: { path: string; waiting: Waiting[] }[] = []
