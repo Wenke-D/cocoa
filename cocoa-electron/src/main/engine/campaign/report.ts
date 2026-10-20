@@ -8,6 +8,7 @@ import * as invoke from '../invoke'
 import type { Invocation } from '../invoke'
 import { all_params, now_stamp } from '../record'
 import type { CampaignMembersFile, RunRecord } from '../record'
+import { report_dir, report_path } from '../report_paths'
 import { write_atomic } from '../store'
 import type { Campaign } from './campaign'
 
@@ -51,17 +52,17 @@ export async function campaign_report(
         job: member.job_name,
         params: all_params(member_record),
         submission_id: member_record.submission_id,
-        report: path.join(job_path, 'report', `${member.run_id}.txt`)
+        report: report_path(job_path, member.run_id)
       }
     })
   }
   write_atomic(path.join(run_dir, 'members.json'), JSON.stringify(members_file, null, 2))
 
-  const report_dir = path.join(campaign.path, 'report')
+  const folder = report_dir(campaign.path)
   try {
-    fs.mkdirSync(report_dir, { recursive: true })
+    fs.mkdirSync(folder, { recursive: true })
   } catch (cause) {
-    throw EngineError.io(report_dir, cause)
+    throw EngineError.io(folder, cause)
   }
   const argv = [
     ...manifest.report.words,
@@ -77,8 +78,7 @@ export async function campaign_report(
     throw EngineError.io(campaign.path, cause)
   }
 
-  const report_path = path.join(report_dir, `${run_id}.txt`)
-  const ok = invoke.invocation_ok(invocation) && fs.existsSync(report_path)
+  const ok = invoke.invocation_ok(invocation) && fs.existsSync(report_path(campaign.path, run_id))
   const error = ok
     ? undefined
     : invoke.invocation_ok(invocation)

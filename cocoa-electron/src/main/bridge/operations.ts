@@ -7,7 +7,6 @@
 // user reads, not a crash.
 
 import fs from 'node:fs'
-import path from 'node:path'
 import type {
   AddFolderResult,
   CancelResult,
@@ -22,6 +21,7 @@ import type {
   RerunReportTarget
 } from '@shared/world'
 import type { Engine } from '../engine/engine'
+import { extension_of, report_path } from '../engine/report_paths'
 
 /** Reports larger than this are refused rather than sent over IPC whole. */
 const MAX_REPORT_BYTES = 16 * 1024 * 1024
@@ -148,8 +148,8 @@ export function read_report(engine: Engine, target: ReportTarget): ReportResult 
   if (format !== 'PlainText' && format !== 'Html') {
     return { ok: false, message: `\`${String(format)}\` is not a report format` }
   }
-  const extension = format === 'Html' ? 'html' : 'txt'
-  const file = path.join(target.entity_id, 'report', `${target.run_id}.${extension}`)
+  const extension = extension_of(format)
+  const file = report_path(target.entity_id, target.run_id, format)
   let stat: fs.Stats
   try {
     stat = fs.statSync(file)

@@ -2,7 +2,7 @@
 // or accepted exactly as the Re-run report button would be (convention
 // §7.3.2).
 
-import path from 'node:path'
+import { report_path } from '../engine/report_paths'
 import type { AgentDeps, AgentResponse } from './answer'
 import { failure, json } from './answer'
 
@@ -38,7 +38,7 @@ export function rerun_report(name: string, run_id: string, deps: AgentDeps): Age
   return json(202, {
     run_id,
     report_running: true,
-    location: { report: path.join(entity.id, 'report', `${run_id}.txt`) },
+    location: { report: report_path(entity.id, run_id) },
     follow: `/jobs/${name}`
   })
 }

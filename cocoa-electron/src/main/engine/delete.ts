@@ -11,6 +11,7 @@ import { EngineError } from './errors'
 import type { Campaign } from './campaign/campaign'
 import type { Job } from './job/job'
 import { report_owed } from './record'
+import { report_path } from './report_paths'
 import { is_terminal } from './status'
 
 /**
@@ -103,8 +104,8 @@ function report_running(run: string): string {
 function remove_run_files(folder: string, run_id: number): void {
   try {
     fs.rmSync(path.join(folder, 'runs', String(run_id)), { recursive: true, force: true })
-    fs.rmSync(path.join(folder, 'report', `${run_id}.txt`), { force: true })
-    fs.rmSync(path.join(folder, 'report', `${run_id}.html`), { force: true })
+    fs.rmSync(report_path(folder, run_id, 'PlainText'), { force: true })
+    fs.rmSync(report_path(folder, run_id, 'Html'), { force: true })
   } catch (cause) {
     throw EngineError.io(folder, cause)
   }

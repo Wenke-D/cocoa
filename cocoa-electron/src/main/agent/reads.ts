@@ -6,6 +6,7 @@ import type { CampaignRun, Entity, JobRun, ReportState, World } from '@shared/wo
 import { campaign_run, job_run } from '@shared/world'
 import type { Maybe } from '@shared/maybe'
 import { empty, some } from '@shared/maybe'
+import { report_path } from '../engine/report_paths'
 import type { AgentResponse } from './answer'
 import { failure, json } from './answer'
 
@@ -44,8 +45,7 @@ export function list_entities(world: World, kind: 'Job' | 'Campaign'): AgentResp
 function report_location(folder: string, run_id: string, report: ReportState): Maybe<string> {
   if (typeof report === 'object' && 'Available' in report) {
     // The plain-text file when there is one: it is the required report (§7.3)
-    const extension = report.Available.files[0].format === 'Html' ? 'html' : 'txt'
-    return some(path.join(folder, 'report', `${run_id}.${extension}`))
+    return some(report_path(folder, run_id, report.Available.files[0].format))
   }
   return empty()
 }

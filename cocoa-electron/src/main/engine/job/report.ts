@@ -1,13 +1,13 @@
 // Reporting a job's run (convention §7.3, §11), automatically or by hand.
 
 import fs from 'node:fs'
-import path from 'node:path'
 import type { Engine } from '../engine'
 import { EngineError } from '../errors'
 import * as invoke from '../invoke'
 import type { Invocation } from '../invoke'
 import { apply_status, now_stamp, report_owed } from '../record'
 import type { RunRecord } from '../record'
+import { report_dir, report_on_disk } from '../report_paths'
 import type { Job } from './job'
 
 export type ReportMode = 'auto' | 'manual'
@@ -92,11 +92,11 @@ export async function report_run(
     job.runs.write(record)
   }
 
-  const report_dir = path.join(job.path, 'report')
+  const folder = report_dir(job.path)
   try {
-    fs.mkdirSync(report_dir, { recursive: true })
+    fs.mkdirSync(folder, { recursive: true })
   } catch (cause) {
-    throw EngineError.io(report_dir, cause)
+    throw EngineError.io(folder, cause)
   }
   const argv = [
     ...manifest.report.words,
@@ -150,10 +150,4 @@ export async function report_run(
       detail
     )
   }
-}
-
-/** Whether `report/<run_id>.txt` exists in the folder (§11). */
-export function report_on_disk(folder: string, run_id: number): boolean {
-  const file = path.join(folder, 'report', `${run_id}.txt`)
-  return fs.existsSync(file) && fs.statSync(file).isFile()
 }

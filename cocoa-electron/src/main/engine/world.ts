@@ -17,9 +17,10 @@ import type {
 } from '@shared/world'
 import type { EngineError } from './errors'
 import type { Engine } from './engine'
-import { report_in_flight, report_on_disk, reportable } from './job/report'
+import { report_in_flight, reportable } from './job/report'
 import { all_params, ended_at, started_at } from './record'
 import type { CampaignRecord, RunRecord } from './record'
+import { report_path } from './report_paths'
 import { is_terminal } from './status'
 import type { Status } from './status'
 import type { ParamSpec } from '@shared/params'
@@ -303,11 +304,8 @@ function map_status(status: Status): RunStatus {
 /** Every report file the run wrote, plain text first (§20). */
 function report_state_of(folder: string, run_id: number): ReportState {
   const files: ReportFile[] = []
-  for (const [format, extension] of [
-    ['PlainText', 'txt'],
-    ['Html', 'html']
-  ] as const) {
-    const file = path.join(folder, 'report', `${run_id}.${extension}`)
+  for (const format of ['PlainText', 'Html'] as const) {
+    const file = report_path(folder, run_id, format)
     if (!fs.existsSync(file)) {
       continue
     }
@@ -339,5 +337,3 @@ export function display_path(folder: string): string {
   }
   return folder
 }
-
-export { report_on_disk }

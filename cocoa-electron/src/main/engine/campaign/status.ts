@@ -1,7 +1,7 @@
 // The status a campaign run derives from its members (convention §9.1).
 
 import type { Engine } from '../engine'
-import { report_on_disk } from '../job/report'
+import { report_on_disk } from '../report_paths'
 import type { CampaignRecord, RunRecord } from '../record'
 import { is_terminal } from '../status'
 import type { Status } from '../status'
