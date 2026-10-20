@@ -9,7 +9,7 @@
 -->
 <script lang="ts">
   import { format_label } from '@shared/world'
-  import type { ReportFormat } from '@shared/world'
+  import type { ReportFormat, ReportResult } from '@shared/world'
   import type { Crumb } from '../ui_state'
   import { app, context_entity_id, entity_of, notify, report_owner_id } from '../state.svelte'
   import type { ReportContext } from '../state.svelte'
@@ -84,15 +84,18 @@
   $effect(() => {
     const target = { entity_id: owner_id, run_id, format }
     loading = true
-    void window.cocoa.report(target).then((result) => {
-      loading = false
-      if (result.ok) {
-        text = result.text
-        error = null
-      } else {
-        error = result.message
-      }
-    })
+    void window.cocoa
+      .report(target)
+      .catch((cause: unknown): ReportResult => ({ ok: false, message: (cause as Error).message }))
+      .then((result) => {
+        loading = false
+        if (result.ok) {
+          text = result.text
+          error = null
+        } else {
+          error = result.message
+        }
+      })
   })
 
   const lines = $derived(text.split('\n'))

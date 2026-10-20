@@ -223,6 +223,7 @@ try {
     wait_text,
     relaunch,
     library: path.join(RUN_DIR, 'examples'),
+    store_path: STORE_PATH,
     window_state_path: WINDOW_STATE_PATH,
     socket_path: SOCKET_PATH
   })

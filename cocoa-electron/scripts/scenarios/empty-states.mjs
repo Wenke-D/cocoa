@@ -4,9 +4,8 @@
 // emptied store for the no-experiments state.
 
 import fs from 'node:fs'
-import path from 'node:path'
 
-export async function run({ page, shot, log, wait_text, relaunch }) {
+export async function run({ page, shot, log, wait_text, relaunch, store_path }) {
   // 1. Starting: the bootstrap answer is held by the delay.
   await page.getByText('Reading registered experiment folders').waitFor({ timeout: 10_000 })
   await shot('empty-1-starting')
@@ -19,7 +18,6 @@ export async function run({ page, shot, log, wait_text, relaunch }) {
   log('daily state captured:', await page.locator('.glance').innerText())
 
   // 3. Nothing registered: empty the store and come back up.
-  const store_path = process.env.COCOA_STORE_PATH ?? path.join('.drive', 'store.json')
   fs.writeFileSync(store_path, JSON.stringify({ jobs: [], campaigns: [] }))
   ;({ page } = await relaunch())
   await page.getByText('No experiments are registered').waitFor({ timeout: 20_000 })

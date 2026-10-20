@@ -7,6 +7,7 @@
 -->
 <script lang="ts">
   import { manifest_blocking_reason } from '@shared/world'
+  import type { StartResult } from '@shared/world'
   import { describe_values } from '@shared/params'
   import type { ParamSpec, ParamValue, Params } from '@shared/params'
   import { untrack } from 'svelte'
@@ -95,7 +96,12 @@
     }
     submitting = true
     error = null
-    const result = await window.cocoa.start_run(entity.name, values_of(entity.parameters))
+    let result: StartResult
+    try {
+      result = await window.cocoa.start_run(entity.name, values_of(entity.parameters))
+    } catch (cause) {
+      result = { ok: false, message: (cause as Error).message }
+    }
     submitting = false
     if (result.ok) {
       notify(`Run ${result.run_id} started.`)

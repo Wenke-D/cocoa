@@ -97,4 +97,8 @@ describe('render', () => {
     expect(render('nodes={{ size }}', { size: '256' })).toBe('nodes=256')
     expect(() => render('nodes={{ nope }}', { size: '256' })).toThrow()
   })
+
+  it('reports a failure while rendering as one', () => {
+    expect(() => render('nodes={{ nope }}', { size: '256' })).toThrow('does not render')
+  })
 })

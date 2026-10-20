@@ -272,6 +272,6 @@ export function render(source: string, params: Params): string {
   try {
     return strict_environment.renderString(source, params)
   } catch (cause) {
-    throw new TemplateError(`does not parse: ${(cause as Error).message}`)
+    throw new TemplateError(`does not render: ${(cause as Error).message}`)
   }
 }

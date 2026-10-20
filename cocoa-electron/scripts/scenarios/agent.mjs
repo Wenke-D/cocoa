@@ -133,8 +133,8 @@ export async function run({ page, shot, log, wait_text, socket_path }) {
       id: 1,
       method: 'initialize',
       params: {
-        protocol_version: '2025-06-18',
-        client_info: { name: 'drive', version: '0' },
+        protocolVersion: '2025-06-18',
+        clientInfo: { name: 'drive', version: '0' },
         capabilities: {}
       }
     },
