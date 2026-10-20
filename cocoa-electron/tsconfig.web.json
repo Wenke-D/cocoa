@@ -17,6 +17,6 @@
     "src/renderer/src/**/*.ts",
     "src/renderer/src/**/*.svelte",
     "src/shared/**/*.ts",
-    "tests/**/*.svelte.test.ts"
+    "tests/renderer/**/*.ts"
   ]
 }

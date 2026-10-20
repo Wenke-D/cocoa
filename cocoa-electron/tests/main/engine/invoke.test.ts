@@ -8,9 +8,9 @@ import {
   invocation_output,
   run,
   spawn
-} from '../src/main/engine/invoke'
-import { write_script } from './support/files'
-import { cleanup_temp_dirs, temp_dir } from './support/temp_dir'
+} from '../../../src/main/engine/invoke'
+import { write_script } from '../../support/files'
+import { cleanup_temp_dirs, temp_dir } from '../../support/temp_dir'
 import { afterEach } from 'vitest'
 
 afterEach(cleanup_temp_dirs)

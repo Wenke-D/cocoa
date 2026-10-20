@@ -3,7 +3,7 @@
 // a pass ends.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RefreshReport } from '../src/main/engine/refresh'
+import type { RefreshReport } from '../../../src/main/engine/refresh'
 
 const mocks = vi.hoisted(() => ({
   refresh: vi.fn<() => Promise<RefreshReport>>(),
@@ -11,18 +11,18 @@ const mocks = vi.hoisted(() => ({
   send: vi.fn()
 }))
 
-vi.mock('../src/main/runtime', async () => {
-  const { NoticeGate } = await import('../src/main/bridge/notices')
+vi.mock('../../../src/main/runtime', async () => {
+  const { NoticeGate } = await import('../../../src/main/bridge/notices')
   return { engine: { refresh: mocks.refresh }, notices: new NoticeGate() }
 })
-vi.mock('../src/main/bridge/publish', () => ({
+vi.mock('../../../src/main/bridge/publish', () => ({
   announce: () => [],
   message_of: (error: unknown) => String(error),
   publish_refreshed: mocks.publish_refreshed
 }))
-vi.mock('../src/main/shell/window', () => ({ send: mocks.send }))
+vi.mock('../../../src/main/shell/window', () => ({ send: mocks.send }))
 
-import { refresh_and_publish } from '../src/main/bridge/refresh'
+import { refresh_and_publish } from '../../../src/main/bridge/refresh'
 
 function empty_report(): RefreshReport {
   return {

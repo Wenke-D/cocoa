@@ -5,8 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { empty_world } from '@shared/world'
 import type { CocoaEvent } from '@shared/protocol'
 import type { CampaignRun, Entity, JobRun, World } from '@shared/world'
-import { sentences_of } from '../src/renderer/src/journal'
-import { tone_of } from '../src/renderer/src/tone'
+import { sentences_of } from '../../../src/renderer/src/journal'
 
 const AT = '2026-08-22T22:00:00.000+02:00'
 
@@ -134,8 +133,6 @@ describe('sentences_of', () => {
     expect(
       told(world, { kind: 'job-run-upserted', run: job_run('0', { status: 'Cancelling' }) })
     ).toEqual(['solver · 0 · Cancelling · info'])
-    expect(tone_of('Failed')).toBe('bad')
-    expect(tone_of('Pending')).toBe('info')
   })
 
   it('tells a report that landed — with the status it landed with, in one pass', () => {

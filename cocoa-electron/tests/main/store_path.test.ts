@@ -5,8 +5,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { resolve_store_path } from '../src/main/store_path'
-import { cleanup_temp_dirs, temp_dir } from './support/temp_dir'
+import { resolve_store_path } from '../../src/main/store_path'
+import { cleanup_temp_dirs, temp_dir } from '../support/temp_dir'
 
 afterEach(cleanup_temp_dirs)
 

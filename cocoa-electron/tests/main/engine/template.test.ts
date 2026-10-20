@@ -1,7 +1,7 @@
 // Template analysis and rendering, over nunjucks.
 
 import { describe, expect, it } from 'vitest'
-import { analyze, render } from '../src/main/engine/template'
+import { analyze, render } from '../../../src/main/engine/template'
 
 /** The message of a rejected analyze; fails loudly if it is accepted. */
 function rejected(source: string, params: string[]): string {

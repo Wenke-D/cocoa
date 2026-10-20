@@ -13,11 +13,11 @@ import {
   rerun_report,
   start_run,
   delete_run
-} from '../src/main/bridge/operations'
-import { engine, settle } from './support/engine'
-import { write, write_script } from './support/files'
-import { campaign_folder, job_folder } from './support/fixtures'
-import { cleanup_temp_dirs, temp_dir } from './support/temp_dir'
+} from '../../../src/main/bridge/operations'
+import { engine, settle } from '../../support/engine'
+import { write, write_script } from '../../support/files'
+import { campaign_folder, job_folder } from '../../support/fixtures'
+import { cleanup_temp_dirs, temp_dir } from '../../support/temp_dir'
 
 afterEach(cleanup_temp_dirs)
 

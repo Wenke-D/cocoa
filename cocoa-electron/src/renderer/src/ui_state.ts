@@ -42,16 +42,6 @@ export function default_ui_state(): UiState {
   }
 }
 
-// This module runs in the page, but `tsconfig.node.json` also type-checks it
-// through the unit tests, without the DOM lib. The declaration names just the
-// sliver of the page this module stands on.
-declare const window: {
-  localStorage: {
-    getItem(key: string): string | null
-    setItem(key: string, value: string): void
-  }
-}
-
 const STORAGE_KEY = 'ui-state'
 
 /** The stored state, sanitized — or the defaults when there is nothing yet. */

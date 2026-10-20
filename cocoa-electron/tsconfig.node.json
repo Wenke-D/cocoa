@@ -20,7 +20,7 @@
     "tests/**/*.ts",
     "vitest.config.ts"
   ],
-  // Renderer tests belong to the web config: they reach into `state.svelte.ts`,
-  // which lives in a window.
-  "exclude": ["tests/**/*.svelte.test.ts"]
+  // Renderer tests belong to the web config: they reach into modules that live
+  // in a window.
+  "exclude": ["tests/renderer/**"]
 }

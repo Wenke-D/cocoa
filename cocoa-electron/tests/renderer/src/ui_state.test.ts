@@ -4,7 +4,7 @@
 // trip through storage (`load_ui_state`/`store_ui_state`).
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { UiState } from '../src/renderer/src/ui_state'
+import type { UiState } from '../../../src/renderer/src/ui_state'
 import {
   EXPLORER_DEFAULT_SPLIT,
   EXPLORER_MAX_SPLIT,
@@ -14,7 +14,7 @@ import {
   load_ui_state,
   sanitize,
   store_ui_state
-} from '../src/renderer/src/ui_state'
+} from '../../../src/renderer/src/ui_state'
 
 // The renderer runs in a page; these tests run in node. The stub is the
 // smallest thing `load_ui_state`/`store_ui_state` need a page to be.

@@ -3,9 +3,9 @@
 // of them is announced once, not twenty times a minute.
 
 import { describe, expect, it } from 'vitest'
-import { EngineError } from '../src/main/engine/errors'
-import { empty, some } from '../src/shared/maybe'
-import { NoticeGate, refresh_summary } from '../src/main/bridge/notices'
+import { EngineError } from '../../../src/main/engine/errors'
+import { empty, some } from '../../../src/shared/maybe'
+import { NoticeGate, refresh_summary } from '../../../src/main/bridge/notices'
 
 interface Errors {
   launch_errors: EngineError[]
