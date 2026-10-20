@@ -2,7 +2,7 @@
 // time and the import resolves to its path at runtime.
 //
 // Declared here rather than by referencing `electron-vite/node`, which also
-// marks `ELECTRON_RENDERER_URL` readonly on `ProcessEnv` — and `agent.test.ts`
+// marks `ELECTRON_RENDERER_URL` readonly on `ProcessEnv` — and `serve.test.ts`
 // sets that variable to test the dev-run socket name.
 declare module '*?asset' {
   const path: string
