@@ -13,7 +13,9 @@ cocoa-electron/
 │
 ├── src/
 │   ├── shared/                    # both sides import these; one definition
-│   │   ├── world.ts               #   domain types + the IPC protocol (§10, §26.3)
+│   │   ├── world.ts               #   the view model: domain types (§10)
+│   │   ├── protocol.ts            #   the IPC protocol: events and answers (§26.3)
+│   │   ├── run_status.ts          #   what a status allows: active, cancellable, deletable
 │   │   ├── params.ts              #   a parameter's shape, the one value check, the wire form
 │   │   ├── maybe.ts               #   present-or-absent, so nothing turns on `undefined`
 │   │   └── error.ts               #   what a failure looks like on the wire
@@ -88,8 +90,19 @@ cocoa-electron/
 │           ├── main.ts
 │           ├── App.svelte
 │           ├── state.svelte.ts    #   the one rune (§34)
-│           ├── ui_state.ts        #   Route, UiState, sanitize (§9, §32)
+│           ├── route.ts           #   Route, ReportContext, Crumb (§9)
+│           ├── navigation.ts      #   moving the page, the sidebar's views
+│           ├── apply_events.ts    #   the bootstrap and event batches, applied
+│           ├── world_queries.ts   #   what the page asks of the world
+│           ├── recover.ts         #   repairing an address the world lost
+│           ├── overlays.svelte.ts #   the modals and what confirming one asks
+│           ├── notice.ts          #   the one transient message
+│           ├── commands.ts        #   asks with no modal: add folder, re-run report, refresh
+│           ├── prefill.svelte.ts  #   a past run's parameters, used again (§22.6)
+│           ├── ui_state.ts        #   UiState, sanitize (§32)
 │           ├── journal.ts         #   what happened, in a sentence, from each event (§11.1)
+│           ├── format.ts          #   wording and formatting of the view model
+│           ├── tone.ts            #   what colours a status (§23)
 │           ├── theme.css          #   the palette and cocoa's chrome (ui-system.md)
 │           ├── app.css            #   Tailwind; shadcn's names for theme.css's tokens
 │           ├── lib/
