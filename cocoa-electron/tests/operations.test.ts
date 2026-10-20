@@ -184,8 +184,7 @@ describe('cancel', () => {
     expect(cocoa.campaign_status(campaign, start.run_id).status).toBe('CANCELLING')
   })
 
-  // The Rust adapter drops the per-member results here; a cancel that half
-  // worked should not read as done.
+  // A cancel that half worked should not read as done.
   it('reports a campaign whose members refused, naming one of them', async () => {
     const dir = temp_dir()
     const job = job_folder(dir, 'member')
