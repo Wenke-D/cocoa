@@ -4,8 +4,15 @@
 // to the experiment folder. Script invocations are async, because the
 // Electron main process must not block.
 
-import * as campaign from './campaign'
-import type { CampaignStart, CampaignStatusView, MemberCancel, PlanInstance } from './campaign'
+import { cancel_campaign } from './campaign/cancel'
+import type { MemberCancel } from './campaign/cancel'
+import { plan_campaign } from './campaign/plan'
+import type { PlanInstance } from './campaign/plan'
+import { campaign_report } from './campaign/report'
+import { start_campaign } from './campaign/start'
+import type { CampaignStart } from './campaign/start'
+import { campaign_status } from './campaign/status'
+import type { CampaignStatusView } from './campaign/status'
 import { DEFAULT_CONFIG } from './config'
 import type { Config } from './config'
 import type { EngineError } from './errors'
@@ -91,7 +98,7 @@ export class Engine extends Memory {
   // ------------------------------------------------------------------
 
   async plan_campaign(folder: string, params: Record<string, unknown>): Promise<PlanInstance[]> {
-    return campaign.plan_campaign(this, this.campaign(folder), params)
+    return plan_campaign(this, this.campaign(folder), params)
   }
 
   async start_campaign(
@@ -99,19 +106,19 @@ export class Engine extends Memory {
     params: Record<string, unknown>,
     by: Trigger
   ): Promise<CampaignStart> {
-    return campaign.start_campaign(this, this.campaign(folder), params, by)
+    return start_campaign(this, this.campaign(folder), params, by)
   }
 
   async campaign_report(folder: string, run_id: number): Promise<void> {
-    return campaign.campaign_report(this, this.campaign(folder), run_id)
+    return campaign_report(this, this.campaign(folder), run_id)
   }
 
   async cancel_campaign(folder: string, run_id: number): Promise<MemberCancel[]> {
-    return campaign.cancel_campaign(this, this.campaign(folder), run_id)
+    return cancel_campaign(this, this.campaign(folder), run_id)
   }
 
   campaign_status(folder: string, run_id: number): CampaignStatusView {
-    return campaign.campaign_status(this, this.campaign(folder), run_id)
+    return campaign_status(this, this.campaign(folder), run_id)
   }
 
   // ------------------------------------------------------------------
