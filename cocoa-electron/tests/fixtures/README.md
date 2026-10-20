@@ -39,4 +39,4 @@ A test whose subject is a _broken_ script — a launch that exits 1, a poll that
 cannot reach the cluster — overwrites that one script in its copy. The failure
 is what the test is about, so it belongs in the test, not in here.
 
-Used by `tests/support.ts`.
+Used by `tests/support/fixtures.ts`.

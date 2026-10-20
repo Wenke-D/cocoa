@@ -26,11 +26,29 @@ cocoa-electron/
 │   │   ├── env.ts                 #   env vars: set-but-empty is absent
 │   │   ├── log.ts                 #   how the process prints
 │   │   ├── engine/                #   the domain — no Electron import anywhere
-│   │   │   ├── index.ts           #     the engine proper: Engine, and the refresh tick
+│   │   │   ├── engine.ts          #     Engine: the memory plus the operations over it
+│   │   │   ├── config.ts          #     the script timeouts
+│   │   │   ├── refresh.ts         #     the refresh tick (§7.5, §10)
 │   │   │   ├── memory.ts          #     the in-memory truth, written through to folders
-│   │   │   ├── job.ts             #     start / poll / report / cancel (§7)
-│   │   │   ├── campaign.ts           #     plan / start / report / cancel / status (§8, §9)
+│   │   │   ├── runs.ts            #     one folder's runs/, read once
+│   │   │   ├── job/               #     a job: the Job class, and one file per operation
+│   │   │   │   ├── job.ts
+│   │   │   │   ├── start.ts       #       validate, render, check, launch (§7.1)
+│   │   │   │   ├── check.ts       #       CURRENT / STALE / CONFLICT (§7.5)
+│   │   │   │   ├── poll.ts        #       (§7.2)
+│   │   │   │   ├── report.ts      #       automatic and by hand (§7.3)
+│   │   │   │   └── cancel.ts      #       (§7.4)
+│   │   │   ├── campaign/          #     a campaign: the Campaign class, and its operations
+│   │   │   │   ├── campaign.ts
+│   │   │   │   ├── plan.ts        #       (§8.1)
+│   │   │   │   ├── start.ts       #       (§8.2)
+│   │   │   │   ├── report.ts      #       (§8.3)
+│   │   │   │   ├── cancel.ts      #       (§9.1)
+│   │   │   │   └── status.ts      #       derived from the members (§9.1)
+│   │   │   ├── job_gates.ts       #     one start at a time checks or deploys a job (§7.5)
+│   │   │   ├── deploys.ts         #     deploy scripts not yet answered (§7.6)
 │   │   │   ├── in_flight.ts       #     launch scripts not yet answered (§7.1)
+│   │   │   ├── report_paths.ts    #     report/<id>.txt and .html
 │   │   │   ├── manifest.ts        #     cocoa.toml, fully validated
 │   │   │   ├── params.ts          #     what a start must supply, checked the same on every way in
 │   │   │   ├── template.ts        #     analyze / render (§15.2)
