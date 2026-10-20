@@ -11,25 +11,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CampaignPlanStep, CampaignRun, CocoaEvent, Entity, JobRun } from '@shared/world'
 import { empty_world } from '@shared/world'
+import { apply_events } from '../src/renderer/src/apply_events'
+import { go_to, navigate, select_view } from '../src/renderer/src/navigation'
+import { dismiss_notice, notify } from '../src/renderer/src/notice'
+import { request_delete, confirm_delete } from '../src/renderer/src/overlays.svelte'
+import { prefill_start, start_again, take_prefill } from '../src/renderer/src/prefill.svelte'
+import { recover } from '../src/renderer/src/recover'
+import { app } from '../src/renderer/src/state.svelte'
 import {
-  app,
-  apply_events,
-  dismiss_notice,
-  go_to,
   has_active_run,
   last_change,
-  navigate,
-  notify,
-  prefill_start,
-  recover,
   report_owner_id,
-  select_view,
-  selected_entity_id,
-  start_again,
-  take_prefill,
-  request_delete,
-  confirm_delete
-} from '../src/renderer/src/state.svelte'
+  selected_entity_id
+} from '../src/renderer/src/world_queries'
 
 function entity(id: string, kind: 'Job' | 'Campaign' = 'Job'): Entity {
   return {

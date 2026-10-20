@@ -10,8 +10,11 @@
 -->
 <script lang="ts">
   import { campaign_run, is_cancellable, job_run } from '@shared/world'
-  import type { Crumb } from '../ui_state'
-  import { app, dispatched_owner, entity_of, navigate, request_cancel } from '../state.svelte'
+  import type { Crumb } from '../route'
+  import { navigate } from '../navigation'
+  import { request_cancel } from '../overlays.svelte'
+  import { app } from '../state.svelte'
+  import { dispatched_owner, entity_of } from '../world_queries'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
   import RunFacts from '../lib/components/RunFacts.svelte'
   import StatusPill from '../lib/components/StatusPill.svelte'

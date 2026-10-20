@@ -1,7 +1,9 @@
 <script lang="ts">
   import { is_cancellable, is_deletable, job_run } from '@shared/world'
-  import type { Crumb } from '../ui_state'
-  import { app, entity_of, request_cancel, request_delete } from '../state.svelte'
+  import type { Crumb } from '../route'
+  import { request_cancel, request_delete } from '../overlays.svelte'
+  import { app } from '../state.svelte'
+  import { entity_of } from '../world_queries'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
   import RunFacts from '../lib/components/RunFacts.svelte'
   import StatusPill from '../lib/components/StatusPill.svelte'

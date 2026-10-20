@@ -12,7 +12,9 @@
   (ui-system.md).
 -->
 <script lang="ts">
-  import { active_run_count, add_folder, app } from '../state.svelte'
+  import { add_folder } from '../commands'
+  import { app } from '../state.svelte'
+  import { active_run_count } from '../world_queries'
   import { Button } from '$lib/components/ui/button'
   import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle'
 

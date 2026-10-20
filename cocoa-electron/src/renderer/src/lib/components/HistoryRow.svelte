@@ -8,8 +8,10 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import type { Params } from '@shared/params'
-  import { navigate, prefill_start, request_delete, start_again } from '../../state.svelte'
-  import type { Route } from '../../state.svelte'
+  import { navigate } from '../../navigation'
+  import { request_delete } from '../../overlays.svelte'
+  import { prefill_start, start_again } from '../../prefill.svelte'
+  import type { Route } from '../../route'
   import * as ContextMenu from '$lib/components/ui/context-menu'
 
   let {

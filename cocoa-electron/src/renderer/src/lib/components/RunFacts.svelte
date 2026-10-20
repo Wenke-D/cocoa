@@ -18,8 +18,10 @@
     query_available
   } from '@shared/world'
   import type { JobRun, ReportFormat } from '@shared/world'
-  import type { ReportContext } from '../../ui_state'
-  import { app, navigate, rerun_report } from '../../state.svelte'
+  import type { ReportContext } from '../../route'
+  import { rerun_report } from '../../commands'
+  import { navigate } from '../../navigation'
+  import { app } from '../../state.svelte'
   import ReportButtons from './ReportButtons.svelte'
 
   let {

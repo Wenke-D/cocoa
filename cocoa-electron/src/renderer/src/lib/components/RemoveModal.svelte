@@ -5,8 +5,10 @@
 -->
 <script lang="ts">
   import { campaign_run, is_active, job_run } from '@shared/world'
-  import { app, close_overlay, confirm_remove, entity_of } from '../../state.svelte'
-  import type { Overlay } from '../../state.svelte'
+  import { close_overlay, confirm_remove } from '../../overlays.svelte'
+  import { app } from '../../state.svelte'
+  import { entity_of } from '../../world_queries'
+  import type { Overlay } from '../../overlays.svelte'
   import ModalFrame from './ModalFrame.svelte'
   import { Button } from '$lib/components/ui/button'
   import { Spinner } from '$lib/components/ui/spinner'

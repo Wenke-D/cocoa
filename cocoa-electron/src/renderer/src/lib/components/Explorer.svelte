@@ -4,14 +4,11 @@
   them draggable. Campaigns first — a campaign is what the jobs are for.
 -->
 <script lang="ts">
-  import {
-    add_folder,
-    app,
-    has_active_run,
-    navigate,
-    request_remove,
-    selected_entity_id
-  } from '../../state.svelte'
+  import { add_folder } from '../../commands'
+  import { navigate } from '../../navigation'
+  import { request_remove } from '../../overlays.svelte'
+  import { app } from '../../state.svelte'
+  import { has_active_run, selected_entity_id } from '../../world_queries'
   import { EXPLORER_MAX_SPLIT, EXPLORER_MIN_SPLIT } from '../../ui_state'
   import type { Entity } from '@shared/world'
   import * as ContextMenu from '$lib/components/ui/context-menu'
