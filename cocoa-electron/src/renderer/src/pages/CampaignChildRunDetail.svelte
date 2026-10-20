@@ -15,7 +15,7 @@
   import { navigate } from '../navigation'
   import { request_cancel } from '../overlays.svelte'
   import { app } from '../state.svelte'
-  import { dispatched_owner, entity_of } from '../world_queries'
+  import { dispatched_owner, entity_name, entity_of } from '../world_queries'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
   import RunFacts from '../lib/components/RunFacts.svelte'
   import StatusPill from '../lib/components/StatusPill.svelte'
@@ -42,7 +42,7 @@
    * settles the case where even those are identical.
    */
   const leaf = $derived.by(() => {
-    const name = job?.name ?? '(removed)'
+    const name = entity_name(job)
     if (step === undefined) {
       return name
     }
@@ -51,7 +51,7 @@
   })
 
   const crumbs = $derived<Crumb[]>([
-    { label: campaign?.name ?? '(removed)', route: { page: 'entity', entity_id: campaign_id } },
+    { label: entity_name(campaign), route: { page: 'entity', entity_id: campaign_id } },
     {
       label: campaign_run_id,
       route: { page: 'campaign_run', campaign_id, run_id: campaign_run_id },
@@ -94,7 +94,7 @@
             class="job-link"
             onclick={() => navigate({ page: 'entity', entity_id: step.job_id })}
           >
-            {job?.name ?? '(removed)'}
+            {entity_name(job)}
           </button>
         {:else}
           (not in the plan)

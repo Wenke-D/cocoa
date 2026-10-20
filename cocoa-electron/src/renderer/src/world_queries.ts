@@ -11,6 +11,11 @@ export function entity_of(id: string): Entity | undefined {
   return app.world.entities.find((entity) => entity.id === id)
 }
 
+/** An entity's name, or what stands in for one the Explorer no longer lists. */
+export function entity_name(entity: Entity | undefined): string {
+  return entity?.name ?? '(removed)'
+}
+
 /**
  * Which Explorer row stays highlighted — `Route::selected_entity`.
  *

@@ -7,7 +7,7 @@
   import { navigate } from '../navigation'
   import { request_cancel, request_delete } from '../overlays.svelte'
   import { app } from '../state.svelte'
-  import { entity_of } from '../world_queries'
+  import { entity_name, entity_of } from '../world_queries'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
   import ReportButtons from '../lib/components/ReportButtons.svelte'
   import StatusPill from '../lib/components/StatusPill.svelte'
@@ -21,7 +21,7 @@
   const campaign = $derived(entity_of(campaign_id))
 
   const crumbs = $derived<Crumb[]>([
-    { label: campaign?.name ?? '(removed)', route: { page: 'entity', entity_id: campaign_id } },
+    { label: entity_name(campaign), route: { page: 'entity', entity_id: campaign_id } },
     { label: run_id, route: null, mono: true }
   ])
 
@@ -115,7 +115,7 @@
     <tbody>
       {#each run.plan.steps as step (step.index)}
         {@const child = job_run(app.world, step.job_id, step.run_id)}
-        {@const job_name = entity_of(step.job_id)?.name ?? '(removed)'}
+        {@const job_name = entity_name(entity_of(step.job_id))}
         <!-- The campaign's context, not the job's: same run, other address
              (§2.3.1), and the Explorer stays on the campaign (§19). -->
         <tr

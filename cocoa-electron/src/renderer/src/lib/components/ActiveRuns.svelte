@@ -10,7 +10,7 @@
   import type { QueryHealth, RunStatus } from '@shared/world'
   import { navigate } from '../../navigation'
   import { app } from '../../state.svelte'
-  import { entity_of } from '../../world_queries'
+  import { entity_name, entity_of } from '../../world_queries'
   import type { Route } from '../../route'
   import StatusPill from './StatusPill.svelte'
   import ViewTitle from './ViewTitle.svelte'
@@ -34,7 +34,7 @@
         if (is_active(run.status) && (run.origin === 'Human' || run.origin === 'Agent')) {
           rows.push({
             key: `job ${run.job_id} ${run.id}`,
-            name: entity_of(run.job_id)?.name ?? '(removed)',
+            name: entity_name(entity_of(run.job_id)),
             id: run.id,
             started_at: run.started_at,
             status: run.status,
@@ -56,7 +56,7 @@
           if (member !== undefined && is_active(member.status)) {
             members.push({
               key: `member ${step.job_id} ${step.run_id}`,
-              name: entity_of(step.job_id)?.name ?? '(removed)',
+              name: entity_name(entity_of(step.job_id)),
               id: member.id,
               started_at: member.started_at,
               status: member.status,
@@ -74,7 +74,7 @@
         }
         rows.push({
           key: `campaign ${run.campaign_id} ${run.id}`,
-          name: entity_of(run.campaign_id)?.name ?? '(removed)',
+          name: entity_name(entity_of(run.campaign_id)),
           id: run.id,
           started_at: run.started_at,
           status: run.status,

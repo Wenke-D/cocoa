@@ -8,7 +8,7 @@
   import { format_clock, format_duration } from '../../format'
   import { close_overlay, confirm_cancel } from '../../overlays.svelte'
   import { app } from '../../state.svelte'
-  import { entity_of } from '../../world_queries'
+  import { entity_name, entity_of } from '../../world_queries'
   import type { Overlay } from '../../overlays.svelte'
   import ModalFrame from './ModalFrame.svelte'
   import { Button } from '$lib/components/ui/button'
@@ -25,7 +25,7 @@
       }
       return {
         title: 'Cancel this Job run?',
-        subject: entity_of(target.job_id)?.name ?? '(removed)',
+        subject: entity_name(entity_of(target.job_id)),
         lines: [
           `Started at ${format_clock(run.started_at)}`,
           `Running for ${format_duration(run.started_at, run.ended_at, app.now_ms)}.`,
@@ -46,7 +46,7 @@
     const finished = children.filter((child) => is_terminal(child.status)).length
     return {
       title: 'Cancel this Campaign run?',
-      subject: entity_of(target.campaign_id)?.name ?? '(removed)',
+      subject: entity_name(entity_of(target.campaign_id)),
       lines: [
         `All ${active} runs still active will be cancelled.`,
         `${finished} runs have already finished and keep their results.`,

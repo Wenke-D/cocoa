@@ -4,7 +4,7 @@
   import type { Crumb } from '../route'
   import { request_cancel, request_delete } from '../overlays.svelte'
   import { app } from '../state.svelte'
-  import { entity_of } from '../world_queries'
+  import { entity_name, entity_of } from '../world_queries'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
   import RunFacts from '../lib/components/RunFacts.svelte'
   import StatusPill from '../lib/components/StatusPill.svelte'
@@ -18,7 +18,7 @@
   const job = $derived(entity_of(job_id))
 
   const crumbs = $derived<Crumb[]>([
-    { label: job?.name ?? '(removed)', route: { page: 'entity', entity_id: job_id } },
+    { label: entity_name(job), route: { page: 'entity', entity_id: job_id } },
     { label: run_id, route: null, mono: true }
   ])
 </script>

@@ -14,7 +14,7 @@
   import type { Crumb } from '../route'
   import { notify } from '../notice'
   import { app } from '../state.svelte'
-  import { context_entity_id, entity_of, report_owner_id } from '../world_queries'
+  import { context_entity_id, entity_name, entity_of, report_owner_id } from '../world_queries'
   import type { ReportContext } from '../route'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
   import { Button } from '$lib/components/ui/button'
@@ -37,9 +37,7 @@
    * the campaign run in between (§20.1, §2.3.1).
    */
   const crumbs = $derived.by<Crumb[]>(() => {
-    const trail: Crumb[] = [
-      { label: entity?.name ?? '(removed)', route: { page: 'entity', entity_id } }
-    ]
+    const trail: Crumb[] = [{ label: entity_name(entity), route: { page: 'entity', entity_id } }]
     if (context.kind === 'campaign_child') {
       trail.push({
         label: context.campaign_run_id,

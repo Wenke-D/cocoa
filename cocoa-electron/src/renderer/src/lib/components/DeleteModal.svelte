@@ -8,7 +8,7 @@
   import { campaign_run, job_run } from '@shared/world'
   import { close_overlay, confirm_delete } from '../../overlays.svelte'
   import { app } from '../../state.svelte'
-  import { entity_of } from '../../world_queries'
+  import { entity_name, entity_of } from '../../world_queries'
   import type { Overlay } from '../../overlays.svelte'
   import ModalFrame from './ModalFrame.svelte'
   import { Button } from '$lib/components/ui/button'
@@ -25,7 +25,7 @@
       }
       return {
         title: `Delete run ${run.id} for good?`,
-        subject: entity_of(target.job_id)?.name ?? '(removed)',
+        subject: entity_name(entity_of(target.job_id)),
         lines: [
           'It disappears from the history forever, and its report goes with it.',
           'This cannot be undone.'
@@ -38,7 +38,7 @@
     }
     return {
       title: `Delete campaign run ${run.id} for good?`,
-      subject: entity_of(target.campaign_id)?.name ?? '(removed)',
+      subject: entity_name(entity_of(target.campaign_id)),
       lines: [
         `This campaign run and the ${run.plan.steps.length} runs it dispatched disappear`,
         'from their histories forever, reports included.',
