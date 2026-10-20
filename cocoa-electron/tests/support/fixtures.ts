@@ -4,6 +4,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { exists, read_text } from './files'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
 
@@ -51,4 +52,9 @@ function copy_fixture(fixture: 'job' | 'campaign', dir: string, name: string): s
     fs.readFileSync(manifest, 'utf8').replace(`"fixture-${fixture}"`, `"${name}"`)
   )
   return folder
+}
+
+/** How many times the fixture's deploy has run. */
+export function deploys(job: string): number {
+  return exists(job, 'deploys') ? read_text(job, 'deploys').trim().split('\n').length : 0
 }
