@@ -2,7 +2,10 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import type { CheckAnswer, Release, Waiting } from '../deploys'
+import type { Waiting } from '../deploys'
+import type { Release } from '../job_gates'
+import { check } from './check'
+import type { CheckAnswer } from './check'
 import type { Engine } from '../engine'
 import { EngineError } from '../errors'
 import * as invoke from '../invoke'
@@ -79,10 +82,10 @@ export async function start_job(
 ): Promise<number> {
   const manifest = job.usable_manifest()
   const prepared = prepare_start(job, manifest, render_given, launch_given, origin)
-  const release = await engine.deploys.acquire(job.path)
+  const release = await engine.gates.acquire(job.path)
   let answer: CheckAnswer
   try {
-    answer = await engine.deploys.check(job, manifest)
+    answer = await check(engine, job, manifest)
   } catch (cause) {
     release()
     throw cause

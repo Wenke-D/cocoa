@@ -1,7 +1,9 @@
 // Starting a campaign (convention §8.2): its start is job starts, one per
 // planned call.
 
-import type { CheckAnswer, Release } from '../deploys'
+import { check } from '../job/check'
+import type { CheckAnswer } from '../job/check'
+import type { Release } from '../job_gates'
 import type { Engine } from '../engine'
 import { EngineError } from '../errors'
 import { dispatch, prepare_start } from '../job/start'
@@ -44,11 +46,11 @@ export async function start_campaign(
     for (const job_path of paths) {
       const job = engine.job(job_path)
       const job_manifest = job.usable_manifest()
-      const release = await engine.deploys.acquire(job_path)
+      const release = await engine.gates.acquire(job_path)
       const gate: { release: Release; answer: CheckAnswer | null } = { release, answer: null }
       checked.set(job_path, gate)
       try {
-        gate.answer = await engine.deploys.check(job, job_manifest)
+        gate.answer = await check(engine, job, job_manifest)
       } catch (cause) {
         problems.push(`job \`${job_manifest.name}\`: ${(cause as Error).message}`)
       }

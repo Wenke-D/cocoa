@@ -18,6 +18,7 @@ import type { Config } from './config'
 import type { EngineError } from './errors'
 import { Deploys } from './deploys'
 import { InFlight } from './in_flight'
+import { JobGates } from './job_gates'
 import * as del from './delete'
 import { cancel_run } from './job/cancel'
 import { poll_job } from './job/poll'
@@ -45,7 +46,9 @@ export class Engine extends Memory {
   readonly config: Config
   /** The launch scripts this engine is still waiting on. */
   readonly in_flight: InFlight
-  /** Each job's gate, and the deploys this engine is still waiting on. */
+  /** Each job's gate: one start at a time checks or deploys a job (§7.5). */
+  readonly gates = new JobGates()
+  /** The deploys this engine is still waiting on. */
   readonly deploys: Deploys
 
   constructor(store_path: string, config: Config = DEFAULT_CONFIG) {

@@ -1,15 +1,6 @@
-// Making a job ready before it launches (convention §7.5, §7.6). Every start
-// asks the job's `check` script first: `CURRENT` launches at once, `STALE`
-// runs `deploy` and launches once it is done, `CONFLICT` refuses the start.
-//
-// One job is checked and deployed by one start at a time — its *gate*. A
-// start that finds the gate held waits for it and then checks afresh, so two
-// starts never deploy over each other, and the second one sees what the
-// first deployed. A deploy holds the gate until its runs are launched.
-//
-// Like a launch (`in_flight.ts`), a deploy is spawned rather than waited
-// for: its runs are recorded `DEPLOYING` at once, and the refresh tick
-// collects the script's outcome.
+// A job's deploy (convention §7.6). Like a launch (`in_flight.ts`), a deploy
+// is spawned rather than waited for: its runs are recorded `DEPLOYING` at
+// once, and the refresh tick collects the script's outcome.
 
 import { EngineError } from './errors'
 import type { Engine } from './engine'
@@ -17,13 +8,8 @@ import * as invoke from './invoke'
 import type { Invocation, Running } from './invoke'
 import type { Job } from './job/job'
 import type { JobManifest } from './manifest'
+import type { Release } from './job_gates'
 import { apply_status, now_stamp } from './record'
-
-/** What `check` said, when it allows a start at all (§7.5). */
-export interface CheckAnswer {
-  word: 'CURRENT' | 'STALE'
-  reason?: string
-}
 
 /** A run waiting on its job's deploy: the launch it takes once that is done. */
 export interface Waiting {
@@ -45,14 +31,9 @@ interface DeployInFlight {
   release: () => void
 }
 
-/** Lets a gate go. Releasing twice is harmless, so every path may. */
-export type Release = () => void
-
-/** Every job's gate, and the deploys spawned and not yet collected (§7.5, §7.6). */
+/** The deploys spawned and not yet collected (§7.6). */
 export class Deploys {
   private readonly engine: Engine
-  /** Each job's gate: the last holder's turn, which the next one waits out. */
-  private readonly gates = new Map<string, Promise<void>>()
   /** Deploys spawned and not yet collected by the refresh tick. */
   private deploying: DeployInFlight[] = []
   /** Runs whose deploy is being spawned: held already, so no tick takes them for leftovers. */
@@ -60,83 +41,6 @@ export class Deploys {
 
   constructor(engine: Engine) {
     this.engine = engine
-  }
-
-  /**
-   * Waits for the job's gate and holds it. Whoever holds it is the only
-   * start checking or deploying that job; the answer lets it go.
-   */
-  async acquire(path: string): Promise<Release> {
-    const before = this.gates.get(path) ?? Promise.resolve()
-    let open!: () => void
-    const turn = new Promise<void>((resolve) => {
-      open = resolve
-    })
-    const tail = before.then(() => turn)
-    this.gates.set(path, tail)
-    await before
-    let released = false
-    return () => {
-      if (released) {
-        return
-      }
-      released = true
-      open()
-      if (this.gates.get(path) === tail) {
-        this.gates.delete(path)
-      }
-    }
-  }
-
-  /**
-   * Runs the job's `check` (§7.5). Answers `CURRENT` or `STALE`; a
-   * `CONFLICT`, and a check that could not say, refuse the start by
-   * throwing — with nothing recorded, since no run exists yet.
-   */
-  async check(job: Job, manifest: JobManifest): Promise<CheckAnswer> {
-    const script = manifest.check.display
-    let invocation: Invocation
-    try {
-      invocation = await invoke.run(
-        job.path,
-        [...manifest.check.words],
-        this.engine.config.check_timeout
-      )
-    } catch (cause) {
-      throw EngineError.io(job.path, cause)
-    }
-    if (!invoke.invocation_ok(invocation)) {
-      throw EngineError.invocation(
-        script,
-        invocation.exit,
-        invocation.timed_out,
-        invoke.invocation_output(invocation)
-      )
-    }
-    const lines = invoke.cocoa_return_lines(invocation.stdout)
-    if (lines.length !== 1) {
-      const said = lines.length === 0 ? 'nothing' : `${lines.length} lines`
-      throw EngineError.validation(
-        `\`${script}\` answered ${said}; a check answers exactly one line`
-      )
-    }
-    const match = lines[0].match(/^(\S+)(?:\s+(.*))?$/)
-    const word = match?.[1] ?? ''
-    const reason = match?.[2]?.trim() || undefined
-    if (word === 'CURRENT' || word === 'STALE') {
-      return reason !== undefined ? { word, reason } : { word }
-    }
-    if (word === 'CONFLICT') {
-      // The script's own judgement, and the whole of it: cocoa does not know
-      // what a deploy would collide with, only that the folder says it would.
-      throw EngineError.validation(
-        `\`${manifest.name}\` cannot start now: deploying it would conflict` +
-          (reason !== undefined ? ` — ${reason}` : '')
-      )
-    }
-    throw EngineError.validation(
-      `\`${script}\` answered \`${lines[0]}\`; a check answers CURRENT, STALE or CONFLICT`
-    )
   }
 
   /**
