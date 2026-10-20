@@ -6,8 +6,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Engine } from '../src/main/engine'
-import type { Config } from '../src/main/engine'
+import { Engine } from '../src/main/engine/engine'
+import type { Config } from '../src/main/engine/config'
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 

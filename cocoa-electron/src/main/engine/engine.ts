@@ -6,52 +6,18 @@
 
 import * as campaign from './campaign'
 import type { CampaignStart, CampaignStatusView, MemberCancel, PlanInstance } from './campaign'
-import { as_engine_error } from './errors'
+import { DEFAULT_CONFIG } from './config'
+import type { Config } from './config'
 import type { EngineError } from './errors'
 import { Deploys } from './deploys'
 import { InFlight } from './in_flight'
 import * as del from './delete'
 import * as job from './job'
-import { reportable } from './job'
 import type { PollReport, ReportMode } from './job'
 import { Memory } from './memory'
-import { apply_status, now_stamp } from './record'
 import type { RunOrigin, Trigger } from './record'
-import { is_terminal } from './status'
-import type { Status } from './status'
-
-/** Timeouts (convention §6), in milliseconds. */
-export interface Config {
-  launch_timeout: number
-  poll_timeout: number
-  cancel_timeout: number
-  plan_timeout: number
-  report_timeout: number
-  check_timeout: number
-  deploy_timeout: number
-}
-
-export const DEFAULT_CONFIG: Config = {
-  launch_timeout: 60_000,
-  poll_timeout: 60_000,
-  cancel_timeout: 60_000,
-  plan_timeout: 120_000,
-  report_timeout: 600_000,
-  check_timeout: 60_000,
-  // A deploy may build what it puts in place; it gets the report's allowance.
-  deploy_timeout: 600_000
-}
-
-export interface RefreshReport {
-  polls: number
-  poll_changes: [number, Status][]
-  poll_warnings: string[]
-  poll_errors: EngineError[]
-  reports_run: number
-  report_errors: EngineError[]
-  /** Launches that failed, and deploys that failed the launches waiting on them. */
-  launch_errors: EngineError[]
-}
+import { refresh } from './refresh'
+import type { RefreshReport } from './refresh'
 
 /**
  * The engine: the truth (`Memory`) with the convention's operations over it.
@@ -79,7 +45,7 @@ export class Engine extends Memory {
   }
 
   // ------------------------------------------------------------------
-  // Job operations — job.ts
+  // Job operations
   // ------------------------------------------------------------------
 
   async start_job(
@@ -117,7 +83,7 @@ export class Engine extends Memory {
   }
 
   // ------------------------------------------------------------------
-  // Campaign operations — campaign.ts
+  // Campaign operations
   // ------------------------------------------------------------------
 
   async plan_campaign(folder: string, params: Record<string, unknown>): Promise<PlanInstance[]> {
@@ -145,7 +111,7 @@ export class Engine extends Memory {
   }
 
   // ------------------------------------------------------------------
-  // Launches and deploys — in_flight.ts, deploys.ts
+  // Launches and deploys
   // ------------------------------------------------------------------
 
   harvest_launches(): EngineError[] {
@@ -182,102 +148,8 @@ export class Engine extends Memory {
   // Refresh
   // ------------------------------------------------------------------
 
-  /**
-   * One refresh tick (§7.5, §10): harvest, reconcile disk → memory, poll,
-   * auto-report, campaign reports. Deploys are harvested before launches: a
-   * deploy that landed spawns the launches waiting on it.
-   */
+  /** One refresh tick (§7.5, §10). */
   async refresh(): Promise<RefreshReport> {
-    const deploy_errors = await this.deploys.harvest()
-    const report: RefreshReport = {
-      polls: 0,
-      poll_changes: [],
-      poll_warnings: [],
-      poll_errors: [],
-      reports_run: 0,
-      report_errors: [],
-      launch_errors: [...deploy_errors, ...this.in_flight.harvest()]
-    }
-
-    this.reconcile()
-
-    for (const job of this.jobs()) {
-      if (job.manifest === null) {
-        continue
-      }
-      report.polls += 1
-      try {
-        const poll = await this.poll_job(job.path)
-        report.poll_changes.push(...poll.changed)
-        report.poll_warnings.push(...poll.warnings)
-      } catch (cause) {
-        report.poll_errors.push(as_engine_error(job.path, cause))
-      }
-      for (const run_view of job.runs.all()) {
-        const record = run_view.record
-        if (record === null) {
-          continue
-        }
-        // A run still "launching" whose script this engine is not holding
-        // is a previous session's leftover (§10): the stdout that carried
-        // its submission id died with that process. One still deploying is
-        // the same, a stage earlier: nothing will launch it now (§7.6).
-        if (
-          record.submission_id === '' &&
-          !is_terminal(record.status) &&
-          !this.in_flight.holds(job.path, run_view.run_id) &&
-          !this.deploys.holds(job.path, run_view.run_id)
-        ) {
-          const deploying = record.status === 'DEPLOYING'
-          apply_status(record, 'ERROR', now_stamp())
-          record.error = deploying
-            ? 'cocoa closed while the deploy script was running; the run was never launched'
-            : 'cocoa closed while the launch script was running; the submission id is lost'
-          try {
-            job.runs.write(record)
-          } catch (cause) {
-            report.report_errors.push(as_engine_error(job.path, cause))
-          }
-          continue
-        }
-        // Every due report: a completed run's, and a FAILED run's owed one
-        // (§7.3.1) — whether poll or a person (§7.3.2) made it due. A run
-        // already FAILED on disk before that rule owes nothing.
-        if (reportable(record, 'auto')) {
-          report.reports_run += 1
-          try {
-            await this.report_run(job.path, run_view.run_id, 'auto')
-          } catch (cause) {
-            report.report_errors.push(as_engine_error(job.path, cause))
-          }
-        }
-      }
-    }
-
-    for (const campaign of this.campaigns()) {
-      if (campaign.manifest === null) {
-        continue
-      }
-      for (const run_view of campaign.runs.all()) {
-        const record = run_view.record
-        if (record === null) {
-          continue
-        }
-        const needs_report = record.report === undefined || !record.report.attempted
-        if (!needs_report) {
-          continue
-        }
-        try {
-          const status = this.campaign_status(campaign.path, run_view.run_id)
-          if (status.status === 'ANALYZING') {
-            report.reports_run += 1
-            await this.campaign_report(campaign.path, run_view.run_id)
-          }
-        } catch (cause) {
-          report.report_errors.push(as_engine_error(campaign.path, cause))
-        }
-      }
-    }
-    return report
+    return refresh(this)
   }
 }

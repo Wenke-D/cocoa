@@ -16,7 +16,7 @@ import type {
   World
 } from '@shared/world'
 import type { EngineError } from './errors'
-import type { Engine } from './index'
+import type { Engine } from './engine'
 import { report_in_flight, report_on_disk, reportable } from './job'
 import { all_params, ended_at, started_at } from './record'
 import type { CampaignRecord, RunRecord } from './record'

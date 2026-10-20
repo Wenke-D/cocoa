@@ -6,7 +6,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import type { Engine } from './index'
+import type { Engine } from './engine'
 import { EngineError } from './errors'
 import type { Campaign, Job } from './memory'
 import { report_owed } from './record'

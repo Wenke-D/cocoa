@@ -12,7 +12,7 @@
 // collects the script's outcome.
 
 import { EngineError } from './errors'
-import type { Engine } from './index'
+import type { Engine } from './engine'
 import * as invoke from './invoke'
 import type { Invocation, Running } from './invoke'
 import type { Job } from './memory'

@@ -5,7 +5,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import type { Engine } from './index'
+import type { Engine } from './engine'
 import { EngineError } from './errors'
 import * as invoke from './invoke'
 import type { Invocation } from './invoke'

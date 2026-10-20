@@ -6,7 +6,7 @@
 // these two are genuinely process-wide singletons.
 
 import { boot } from './boot'
-import { Engine } from './engine'
+import { Engine } from './engine/engine'
 import { NoticeGate } from './bridge/notices'
 import { resolve_store_path } from './store_path'
 

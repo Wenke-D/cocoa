@@ -3,7 +3,7 @@
 // a pass ends.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RefreshReport } from '../src/main/engine'
+import type { RefreshReport } from '../src/main/engine/refresh'
 
 const mocks = vi.hoisted(() => ({
   refresh: vi.fn<() => Promise<RefreshReport>>(),
