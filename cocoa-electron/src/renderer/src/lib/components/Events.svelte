@@ -6,6 +6,7 @@
 <script lang="ts">
   import { format_clock } from '../../format'
   import { go_to } from '../../navigation'
+  import { tone_color } from '../../tone'
   import { app } from '../../state.svelte'
   import ViewTitle from './ViewTitle.svelte'
 
@@ -16,11 +17,11 @@
   <span class="at mono">{format_clock(entry.at)}</span>
   {#if entry.name === ''}
     <!-- Nobody's news — a refresh that failed — is one line. -->
-    <span class="what {entry.tone}">{entry.what}</span>
+    <span class="what" style="color: {tone_color(entry.tone)}">{entry.what}</span>
   {:else}
     <span class="name">{entry.name}</span>
     <span class="run mono">{entry.run === null ? '' : `run ${entry.run}`}</span>
-    <span class="what {entry.tone}">{entry.what}</span>
+    <span class="what" style="color: {tone_color(entry.tone)}">{entry.what}</span>
   {/if}
 {/snippet}
 
@@ -91,26 +92,6 @@
   .what {
     font-weight: 600;
     overflow-wrap: anywhere;
-  }
-
-  .neutral {
-    color: var(--chart-gray);
-  }
-
-  .info {
-    color: var(--chart-blue);
-  }
-
-  .good {
-    color: var(--chart-green);
-  }
-
-  .bad {
-    color: var(--chart-red);
-  }
-
-  .warn {
-    color: var(--chart-yellow);
   }
 
   .empty {

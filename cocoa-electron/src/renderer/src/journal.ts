@@ -6,17 +6,16 @@
 // fresh page starts with none.
 
 import { origin_label, trigger_label } from './format'
+import { tone_of } from './tone'
+import type { Tone } from './tone'
 import type { CocoaEvent } from '@shared/protocol'
-import type { CampaignRun, JobRun, QueryHealth, ReportState, RunStatus, World } from '@shared/world'
+import type { CampaignRun, JobRun, QueryHealth, ReportState, World } from '@shared/world'
 
 /** Where an entry points, if anywhere: a click on it goes there. */
 export type JournalTarget =
   | { kind: 'entity'; entity_id: string }
   | { kind: 'job_run'; job_id: string; run_id: string }
   | { kind: 'campaign_run'; campaign_id: string; run_id: string }
-
-/** What an event means, which is what colours it: good news, bad, a warning, or just news. */
-export type Tone = 'neutral' | 'info' | 'good' | 'bad' | 'warn'
 
 /** One thing that happened: when, to what, and what. */
 export interface JournalEntry {
@@ -148,20 +147,6 @@ function run_moves(
   if (!available(old.report) && available(run.report)) {
     tell(name, run.id, 'report ready', 'good', target)
   }
-}
-
-/** A status's tone — the same reading `StatusPill` gives its dot. */
-export function tone_of(status: RunStatus): Tone {
-  if (status === 'Succeeded') {
-    return 'good'
-  }
-  if (status === 'Failed' || status === 'Error') {
-    return 'bad'
-  }
-  if (status === 'Cancelled' || status === 'Cancelling') {
-    return 'neutral'
-  }
-  return 'info'
 }
 
 /** An experiment's name, or the last path segment when it is not listed. */

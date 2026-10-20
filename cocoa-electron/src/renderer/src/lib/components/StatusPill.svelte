@@ -7,6 +7,7 @@
 <script lang="ts">
   import { is_active } from '@shared/run_status'
   import { display_status } from '../../format'
+  import { tone_color, tone_of } from '../../tone'
   import type { QueryHealth, RunStatus } from '@shared/world'
 
   let {
@@ -17,21 +18,8 @@
 
   const label = $derived(display_status(status, health))
 
-  const color = $derived.by(() => {
-    if (label === 'Unknown') {
-      return 'var(--chart-yellow)'
-    }
-    if (status === 'Succeeded') {
-      return 'var(--chart-green)'
-    }
-    if (status === 'Failed' || status === 'Error') {
-      return 'var(--chart-red)'
-    }
-    if (status === 'Cancelled') {
-      return 'var(--chart-gray)'
-    }
-    return 'var(--chart-blue)'
-  })
+  // A status nobody can currently see is a warning, whatever it last was.
+  const color = $derived(tone_color(label === 'Unknown' ? 'warn' : tone_of(status)))
 </script>
 
 <span
