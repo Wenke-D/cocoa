@@ -1,9 +1,8 @@
 # The agent interface (§43) as an MCP server: an agent's MCP client launches
 # this and speaks stdio; each tool call becomes one request over cocoa's socket.
 #
-# Its own crate because it is the one Rust artifact still in use. It speaks the
-# socket protocol and nothing else, so it drives either implementation — see
-# the module docs in src/main.rs.
+# Its own crate: it speaks the socket protocol and nothing else — see the
+# module docs in src/main.rs.
 
 [package]
 name = "cocoa-mcp"
