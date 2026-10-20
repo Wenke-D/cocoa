@@ -15,7 +15,7 @@ import { EngineError } from './errors'
 import type { Engine } from './engine'
 import * as invoke from './invoke'
 import type { Invocation, Running } from './invoke'
-import type { Job } from './memory'
+import type { Job } from './job/job'
 import type { JobManifest } from './manifest'
 import { apply_status, now_stamp } from './record'
 
