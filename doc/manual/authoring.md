@@ -31,6 +31,7 @@ records inside the folder — copy the folder and the history comes along.
       run.json           # record: arguments, submission id, status history
       job.sbatch         # the rendered template (jobs)
       members.json       # the fan-out (campaigns)
+      report/attachment/ # the report's attachments, when it brings any
   report/                # report output, at the folder root
     <run_id>.txt         # required
     <run_id>.html        # optional
@@ -242,10 +243,17 @@ does `FAILED`; only `CANCELLED` ends a run without one.
 is for "I cannot see the cluster right now": cocoa keeps polling, shows the
 last known status, and the next good answer replaces it (§10).
 
-**`report`** — `./report.py --run 41 --submission 5001`. Writes
-`report/41.txt` (required; `report/41.html` optional beside it) and prints
-nothing to cocoa. A report script that exits 0 without producing the file is
-a failure.
+**`report`** — `./report.py --run 41 --submission 5001 --attachment-dir
+runs/41/report/attachment`. Writes `report/41.txt` (required; `report/41.html`
+optional beside it) and prints nothing to cocoa. A report script that exits 0
+without producing the file is a failure.
+
+Anything else the report brings — plots, CSV tables, a copy of the solver's
+output directory — goes in the `--attachment-dir` directory, which cocoa
+creates empty before every run of the script and removes again if nothing
+was put there. The run's page then has an `Attachments` button that opens it
+in the file manager. Attaching is optional; a script that ignores the
+argument still works.
 
 It runs when the poll says `COMPLETED` **and** when it says `FAILED`, with the
 same arguments; `COCOA_RUN_STATUS` in its environment says which (§7.3).
@@ -311,10 +319,12 @@ at once (§8.1). A plan that produces no instances fails the start. `plan`
 takes no run id, which is what lets it double as the dry run cocoa shows
 before dispatching.
 
-**`report`** — `./report.py --run 7 --members runs/7/members.json`. The
-members file lists every dispatched run — its job, arguments, submission id,
-and where that job's report landed — so the campaign's report can aggregate
-them. Output rules are the job report's: `report/7.txt` required.
+**`report`** — `./report.py --run 7 --members runs/7/members.json
+--attachment-dir runs/7/report/attachment`. The members file lists every
+dispatched run — its job, arguments, submission id, where that job's report
+landed, and its attachment directory when it has one — so the campaign's
+report can aggregate them. Output rules are the job report's: `report/7.txt`
+required, attachments optional.
 
 ## 7. What to count on, and what not to
 
@@ -327,7 +337,8 @@ them. Output rules are the job report's: `report/7.txt` required.
   are written atomically. Never write them.
 - Timeouts (defaults): check, launch, poll, cancel 60 s; plan 120 s; deploy,
   report 600 s.
-- A run cocoa deletes takes `runs/<id>/` and `report/<id>.*` with it — for a
+- A run cocoa deletes takes `runs/<id>/` (its attachments included) and
+  `report/<id>.*` with it — for a
   campaign run, its dispatched runs too (§12.1); run ids otherwise never repeat.
 - Nothing else in the folder is cocoa's business: keep source, data and
   scratch wherever suits the scripts.

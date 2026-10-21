@@ -9,6 +9,7 @@
 import fs from 'node:fs'
 import type {
   AddFolderResult,
+  AttachmentsTarget,
   CancelResult,
   CancelTarget,
   RemoveFolderResult,
@@ -20,6 +21,7 @@ import type {
   RerunReportResult,
   RerunReportTarget
 } from '@shared/protocol'
+import { attachment_count, attachment_dir } from '../engine/attachments'
 import type { Engine } from '../engine/engine'
 import { extension_of, report_path } from '../engine/report_paths'
 
@@ -130,6 +132,26 @@ export async function cancel(engine: Engine, target: CancelTarget): Promise<Canc
   } catch (error) {
     return { ok: false, message: (error as Error).message }
   }
+}
+
+/**
+ * The directory a run's report attachments are in, to hand to the file
+ * manager: refused when the run's report attached nothing.
+ */
+export function attachments_location(
+  engine: Engine,
+  target: AttachmentsTarget
+): { ok: true; dir: string } | { ok: false; message: string } {
+  if (!engine.registered(target.entity_id)) {
+    return { ok: false, message: `no experiment is registered at ${target.entity_id}` }
+  }
+  if (!/^\d+$/.test(target.run_id)) {
+    return { ok: false, message: `\`${target.run_id}\` is not a run id` }
+  }
+  if (attachment_count(target.entity_id, target.run_id) === 0) {
+    return { ok: false, message: `run ${target.run_id} has no report attachments` }
+  }
+  return { ok: true, dir: attachment_dir(target.entity_id, target.run_id) }
 }
 
 /**

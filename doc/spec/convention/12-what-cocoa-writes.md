@@ -7,6 +7,9 @@ To be exhaustive, inside a registered folder cocoa creates and maintains only:
 - `runs/<run_id>/members.json` — campaigns, before a campaign report;
 - `report/` — the directory, created before a report script runs. Its
   **contents** are the script's.
+- `runs/<run_id>/report/attachment/` — emptied and created before a report
+  script runs, and removed again if the script left it empty (§7.3). Its
+  **contents** are the script's.
 
 Records are written atomically: temp file, then rename.
 
@@ -23,7 +26,8 @@ cocoa never edits a script, a template, or a report.
 ## 12.1 Deleting a run
 
 Deletion is the one operation that removes what cocoa wrote, and it is exact:
-`runs/<run_id>/` goes whole — record, rendered artifact, `members.json` —
+`runs/<run_id>/` goes whole — record, rendered artifact, `members.json`,
+report attachments —
 and so do `report/<run_id>.txt` and `report/<run_id>.html`. The folder's
 other runs stay.
 

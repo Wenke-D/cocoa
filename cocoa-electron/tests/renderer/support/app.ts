@@ -43,6 +43,7 @@ export function job_run(id: string, job_id: string, extra: Partial<JobRun> = {})
     report: 'Missing',
     report_error: null,
     report_rerunnable: false,
+    attachments: 0,
     deploy: null,
     error: null,
     ...extra
@@ -72,6 +73,7 @@ export function campaign_run(
     query_health: 'Healthy',
     last_successful_query: '2026-08-19T10:00:03.000+02:00',
     report: 'Missing',
+    attachments: 0,
     error: null
   }
 }

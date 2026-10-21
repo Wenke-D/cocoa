@@ -19,8 +19,12 @@ It follows that:
   not when its script failed, and not if it was `FAILED` before 2026-10-06
   until someone reports it by hand;
 - a `CANCELLED` or `ERROR` run has no report;
-- `report/<run_id>.html` is optional and may accompany the text one.
+- `report/<run_id>.html` is optional and may accompany the text one;
+- `runs/<run_id>/report/attachment/` exists only when the last report
+  attached something (§7.3).
 
 The UI offers one open action per format that exists — the HTML one appears
 only when that file is there. Plain text renders in the app; HTML is handed to
-the system browser, the only thing that renders it faithfully.
+the system browser, the only thing that renders it faithfully. Attachments
+are any kind of file, so they are the system file manager's to show: the UI
+offers to open their directory there.

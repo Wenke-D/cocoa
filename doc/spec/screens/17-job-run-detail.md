@@ -113,6 +113,12 @@ tooltip. Two files (`report/<run>.txt` and `report/<run>.html`) are a choice,
 and only then is the format the point: `Text` and `HTML`, plain text first,
 each with the view icon. The same row appears on a Campaign run's page (§18).
 
+When the report attached anything (convention §7.3), an `Attachments`
+button with an open-folder icon follows the view buttons and opens the
+attachment directory in the system file manager; its tooltip counts the
+entries. Attachments may be any kind of file and any size, so the app does
+not show them itself. The button is absent while the report is `Generating`.
+
 The row's last action is `Re-run report`, a secondary button with a
 counter-clockwise arrow, on every job run whose `report_rerunnable` is true —
 `Succeeded`, `Failed`, an `Error` its report left, a `Completed` one not yet

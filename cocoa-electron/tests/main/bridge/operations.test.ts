@@ -7,6 +7,7 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   add_folder,
+  attachments_location,
   cancel,
   read_report,
   remove_folder,
@@ -14,6 +15,7 @@ import {
   start_run,
   delete_run
 } from '../../../src/main/bridge/operations'
+import { attachment_dir } from '../../../src/main/engine/attachments'
 import { engine, settle } from '../../support/engine'
 import { write, write_script } from '../../support/files'
 import { campaign_folder, job_folder } from '../../support/fixtures'
@@ -359,6 +361,35 @@ describe('read_report', () => {
     })
     expect(result.ok).toBe(false)
     expect(result.ok === false && result.message).toContain('is not a run id')
+  })
+})
+
+describe('attachments_location', () => {
+  it('answers the directory of a run whose report attached something, and refuses the rest', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'attached')
+    const cocoa = engine(dir)
+    cocoa.register(job)
+    const run_id = await cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(cocoa)
+    const target = { entity_id: job, run_id: String(run_id) }
+    expect(attachments_location(cocoa, target)).toEqual({
+      ok: false,
+      message: `run ${run_id} has no report attachments`
+    })
+
+    fs.mkdirSync(attachment_dir(job, run_id), { recursive: true })
+    fs.writeFileSync(path.join(attachment_dir(job, run_id), 'loss.png'), '')
+    expect(attachments_location(cocoa, target)).toEqual({
+      ok: true,
+      dir: attachment_dir(job, run_id)
+    })
+
+    expect(attachments_location(cocoa, { ...target, run_id: '../0' })).toEqual({
+      ok: false,
+      message: '`../0` is not a run id'
+    })
+    expect(attachments_location(cocoa, { ...target, entity_id: '/etc' }).ok).toBe(false)
   })
 })
 

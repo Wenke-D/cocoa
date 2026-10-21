@@ -4,10 +4,12 @@
 import type { Params } from '@shared/params'
 import type {
   AddFolderResult,
+  AttachmentsTarget,
   BootstrapPayload,
   CancelResult,
   CancelTarget,
   CocoaEvent,
+  OpenAttachmentsResult,
   RemoveFolderResult,
   ReportResult,
   ReportTarget,
@@ -27,6 +29,7 @@ declare global {
       delete_run(target: DeleteTarget): Promise<DeleteResult>
       report(target: ReportTarget): Promise<ReportResult>
       rerun_report(target: RerunReportTarget): Promise<RerunReportResult>
+      open_attachments(target: AttachmentsTarget): Promise<OpenAttachmentsResult>
       add_folder(): Promise<AddFolderResult>
       remove_folder(entity_id: string): Promise<RemoveFolderResult>
       refresh_now(): Promise<void>

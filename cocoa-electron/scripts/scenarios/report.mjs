@@ -25,6 +25,15 @@ export async function run({ page, shot, log, wait_text, library }) {
   )
   await shot('run-succeeded')
 
+  // The mock also attaches its status history (convention §7.3); the button
+  // opens the file manager, which is not driven here.
+  const attachments = page.getByRole('button', { name: 'Attachments', exact: true })
+  log('attachments:', await attachments.getAttribute('title'))
+  log(
+    'attached:',
+    fs.readdirSync(path.join(library, 'jobs/solver-gpu/runs/0/report/attachment')).join(', ')
+  )
+
   await page.getByRole('button', { name: 'Text', exact: true }).click()
   await page.locator('pre.body').waitFor({ timeout: 10_000 })
   log('report head:', (await page.locator('pre.body').innerText()).split('\n')[0])

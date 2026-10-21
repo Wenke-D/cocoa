@@ -116,6 +116,8 @@ export interface CampaignMembersFileMember {
   submission_id: string
   /** The absolute path of the member's `report/<id>.txt`. */
   report: string
+  /** The absolute path of the member's report attachment directory, or `null` when its report attached nothing. */
+  attachments: string | null
 }
 
 /** The `members.json` written for a campaign's report script, so it never goes looking (§8.3). */

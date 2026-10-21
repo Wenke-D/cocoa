@@ -11,6 +11,10 @@
   says so in place of the state, or under the buttons when the script left
   files behind before it failed.
 
+  `attachments` is how many entries the report script left in its
+  attachment directory (convention §7.3); when there are any, a button
+  opens the directory in the system file manager.
+
   `rerun`, when the run may have its report re-run by hand (convention
   §7.3.2), is the last action in the row. It is busy only until the engine
   answers: by then the report is due and the row reads `Generating`, with
@@ -22,17 +26,22 @@
   import { Button } from '$lib/components/ui/button'
   import { Spinner } from '$lib/components/ui/spinner'
   import EyeIcon from '@lucide/svelte/icons/eye'
+  import FolderOpenIcon from '@lucide/svelte/icons/folder-open'
   import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw'
 
   let {
     report,
     error = null,
     open,
+    attachments = 0,
+    open_attachments = null,
     rerun = null
   }: {
     report: ReportState
     error?: string | null
     open: (format: ReportFormat) => void
+    attachments?: number
+    open_attachments?: (() => Promise<void>) | null
     rerun?: (() => Promise<void>) | null
   } = $props()
 
@@ -81,6 +90,17 @@
     {/if}
   {:else if error === null}
     <span>{report_summary(report)}</span>
+  {/if}
+  {#if attachments > 0 && open_attachments !== null}
+    <Button
+      variant="secondary"
+      title="Open the {attachments} {attachments === 1
+        ? 'item'
+        : 'items'} the report attached in the file manager"
+      onclick={open_attachments}
+    >
+      <FolderOpenIcon />Attachments
+    </Button>
   {/if}
   {#if rerun !== null}
     <Button

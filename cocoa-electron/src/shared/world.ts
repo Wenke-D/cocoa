@@ -93,6 +93,9 @@ export interface JobRun {
   /** Whether the report can be re-run by hand now: the engine would take the
    * run (convention §7.3.2), and its report is not already `Generating`. */
   report_rerunnable: boolean
+  /** How many entries the report attached in its attachment directory
+   * (convention §7.3); 0 when it attached nothing, and while it runs. */
+  attachments: number
   /** How the job was made ready before this run launched (convention §7.5,
    * §7.6); `null` for a run recorded before deploys existed. */
   deploy: RunDeploy | null
@@ -130,6 +133,8 @@ export interface CampaignRun {
   query_health: QueryHealth
   last_successful_query: string
   report: ReportState
+  /** How many entries the campaign's report attached (convention §8.3). */
+  attachments: number
   error: string | null
 }
 

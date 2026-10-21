@@ -4,6 +4,7 @@
   import { campaign_run, job_run } from '@shared/world'
   import type { ReportFormat } from '@shared/world'
   import type { Crumb } from '../route'
+  import { open_attachments } from '../commands'
   import { navigate } from '../navigation'
   import { request_cancel, request_delete } from '../overlays.svelte'
   import { app } from '../state.svelte'
@@ -88,6 +89,8 @@
             run_id: run.id,
             format
           })}
+        attachments={run.attachments}
+        open_attachments={() => open_attachments({ entity_id: campaign_id, run_id: run.id })}
       />
     </dd>
     {#if run.error !== null}

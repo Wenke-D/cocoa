@@ -37,7 +37,8 @@ describe('reads', () => {
     expect(detail.runs[0].location).toEqual({
       run_dir: `${FOLDER}/runs/0`,
       record: `${FOLDER}/runs/0/run.json`,
-      report: null
+      report: null,
+      attachments: null
     })
     expect(detail.runs[1].location.report).toBe(`${FOLDER}/report/1.txt`)
     // What a report re-run is followed by (§43.4).

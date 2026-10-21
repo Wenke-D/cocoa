@@ -78,7 +78,8 @@ describe('failed runs', () => {
     expect(record.report?.error).toBeUndefined()
     // The arguments a completed run's report gets; the outcome in the env.
     expect(read_text(job, 'report', `${run_id}.txt`)).toBe(
-      `FAILED --run ${run_id} --submission sub-${run_id}\n`
+      `FAILED --run ${run_id} --submission sub-${run_id} ` +
+        `--attachment-dir runs/${run_id}/report/attachment\n`
     )
 
     // Terminal: no more polls, and no second report.

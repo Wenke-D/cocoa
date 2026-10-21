@@ -2,6 +2,13 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import {
+  attachment_arg,
+  attachment_count,
+  attachment_dir,
+  prepare_attachments,
+  settle_attachments
+} from '../attachments'
 import type { Engine } from '../engine'
 import { EngineError } from '../errors'
 import * as invoke from '../invoke'
@@ -52,7 +59,11 @@ export async function campaign_report(
         job: member.job_name,
         params: all_params(member_record),
         submission_id: member_record.submission_id,
-        report: report_path(job_path, member.run_id)
+        report: report_path(job_path, member.run_id),
+        attachments:
+          attachment_count(job_path, member.run_id) > 0
+            ? attachment_dir(job_path, member.run_id)
+            : null
       }
     })
   }
@@ -64,18 +75,23 @@ export async function campaign_report(
   } catch (cause) {
     throw EngineError.io(folder, cause)
   }
+  prepare_attachments(campaign.path, run_id)
   const argv = [
     ...manifest.report.words,
     '--run',
     String(run_id),
     '--members',
-    `runs/${run_id}/members.json`
+    `runs/${run_id}/members.json`,
+    '--attachment-dir',
+    attachment_arg(run_id)
   ]
   let invocation: Invocation
   try {
     invocation = await invoke.run(campaign.path, argv, engine.config.report_timeout)
   } catch (cause) {
     throw EngineError.io(campaign.path, cause)
+  } finally {
+    settle_attachments(campaign.path, run_id)
   }
 
   const ok = invoke.invocation_ok(invocation) && fs.existsSync(report_path(campaign.path, run_id))

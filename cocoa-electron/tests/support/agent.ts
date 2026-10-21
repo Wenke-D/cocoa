@@ -58,6 +58,7 @@ export function world(): World {
         report: 'Missing',
         report_error: null,
         report_rerunnable: false,
+        attachments: 0,
         deploy: null,
         error: null
       },
@@ -75,6 +76,7 @@ export function world(): World {
         report: { Available: { files: [{ format: 'PlainText', text_bytes: 120 }] } },
         report_error: null,
         report_rerunnable: false,
+        attachments: 0,
         deploy: null,
         error: null
       }
@@ -95,6 +97,7 @@ export function world(): World {
         query_health: 'Healthy',
         last_successful_query: '2026-08-20T12:00:03.000+02:00',
         report: 'Unavailable',
+        attachments: 0,
         error: null
       }
     }

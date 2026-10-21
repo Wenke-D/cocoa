@@ -1,6 +1,7 @@
 // Reporting a job's run (convention §7.3, §11), automatically or by hand.
 
 import fs from 'node:fs'
+import { attachment_arg, prepare_attachments, settle_attachments } from '../attachments'
 import type { Engine } from '../engine'
 import { EngineError } from '../errors'
 import * as invoke from '../invoke'
@@ -98,12 +99,15 @@ export async function report_run(
   } catch (cause) {
     throw EngineError.io(folder, cause)
   }
+  prepare_attachments(job.path, run_id)
   const argv = [
     ...manifest.report.words,
     '--run',
     String(run_id),
     '--submission',
-    record.submission_id
+    record.submission_id,
+    '--attachment-dir',
+    attachment_arg(run_id)
   ]
   // The cluster's outcome, so one script can serve both (§6, §7.3.1).
   const env = { COCOA_RUN_STATUS: failed ? 'FAILED' : 'COMPLETED' }
@@ -112,6 +116,8 @@ export async function report_run(
     invocation = await invoke.run(job.path, argv, engine.config.report_timeout, env)
   } catch (cause) {
     throw EngineError.io(job.path, cause)
+  } finally {
+    settle_attachments(job.path, run_id)
   }
 
   const ok = invoke.invocation_ok(invocation) && report_on_disk(job.path, run_id)

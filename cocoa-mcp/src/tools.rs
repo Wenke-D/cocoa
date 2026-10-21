@@ -32,7 +32,7 @@ pub(crate) fn tools() -> Value {
         },
         {
             "name": "cocoa_job",
-            "description": "One Job and its runs, oldest first. Each run carries file locations (run_dir, record, report) to read directly from disk.",
+            "description": "One Job and its runs, oldest first. Each run carries file locations (run_dir, record, report, attachments) to read directly from disk.",
             "inputSchema": by_name,
         },
         {

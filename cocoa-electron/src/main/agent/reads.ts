@@ -7,6 +7,7 @@ import { campaign_run, job_run } from '@shared/world'
 import { is_active } from '@shared/run_status'
 import type { Maybe } from '@shared/maybe'
 import { empty, some } from '@shared/maybe'
+import { attachment_dir } from '../engine/attachments'
 import { report_path } from '../engine/report_paths'
 import type { AgentResponse } from './answer'
 import { failure, json } from './answer'
@@ -45,6 +46,11 @@ function report_location(folder: string, run_id: string, report: ReportState): M
     return some(report_path(folder, run_id, report.Available.files[0].format))
   }
   return empty()
+}
+
+/** Where the report's attachments are, when it attached any. */
+function attachments_location(folder: string, run_id: string, attachments: number): string | null {
+  return attachments > 0 ? attachment_dir(folder, run_id) : null
 }
 
 function find_entity(world: World, name: string, kind: 'Job' | 'Campaign'): Entity | undefined {
@@ -87,7 +93,8 @@ export function job_detail(world: World, name: string): AgentResponse {
         location: {
           run_dir: run_dir,
           record: path.join(run_dir, 'run.json'),
-          report: report_location(folder, run.id, run.report).or_null()
+          report: report_location(folder, run.id, run.report).or_null(),
+          attachments: attachments_location(folder, run.id, run.attachments)
         }
       }
     })
@@ -139,7 +146,8 @@ export function campaign_detail(world: World, name: string): AgentResponse {
           run_dir: run_dir,
           record: path.join(run_dir, 'run.json'),
           members: path.join(run_dir, 'members.json'),
-          report: report_location(folder, run.id, run.report).or_null()
+          report: report_location(folder, run.id, run.report).or_null(),
+          attachments: attachments_location(folder, run.id, run.attachments)
         }
       }
     })

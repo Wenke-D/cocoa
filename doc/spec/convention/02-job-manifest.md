@@ -40,7 +40,7 @@ description = "Run under nsys"
 command     = "./poll.py"           # gets --submission
 
 [report]
-command     = "./report.py"         # gets --run and --submission
+command     = "./report.py"         # gets --run, --submission and --attachment-dir
 
 [cancel]
 command     = "./cancel.sh"         # gets --submission

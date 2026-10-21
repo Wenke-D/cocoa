@@ -75,6 +75,14 @@ export interface ReportTarget {
   format: ReportFormat
 }
 
+/** Which run's report attachments to open in the system file manager. */
+export interface AttachmentsTarget {
+  entity_id: string
+  run_id: string
+}
+
+export type OpenAttachmentsResult = { ok: true } | { ok: false; message: string }
+
 export type AddFolderResult =
   /** `already` distinguishes "registered it" from "it was already there" —
    * a folder already in the Explorer is a no-op, never a duplicate (§11.5). */

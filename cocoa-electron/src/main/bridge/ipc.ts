@@ -3,12 +3,14 @@
 //
 // Every handler is registered in one call from `index.ts`, at whenReady.
 
-import { dialog, ipcMain } from 'electron'
+import { dialog, ipcMain, shell } from 'electron'
 import type {
   AddFolderResult,
+  AttachmentsTarget,
   BootstrapPayload,
   CancelResult,
   CancelTarget,
+  OpenAttachmentsResult,
   RemoveFolderResult,
   ReportResult,
   ReportTarget,
@@ -109,6 +111,20 @@ export function register_ipc(): void {
   // synchronous look at the disk.
   ipcMain.handle('cocoa:report', (_event, target: ReportTarget): ReportResult =>
     operations.read_report(engine, target)
+  )
+
+  // Attachments are whatever a report script brought, of any kind and size, so
+  // they are the file manager's to show, not the app's.
+  ipcMain.handle(
+    'cocoa:open_attachments',
+    async (_event, target: AttachmentsTarget): Promise<OpenAttachmentsResult> => {
+      const location = operations.attachments_location(engine, target)
+      if (!location.ok) {
+        return location
+      }
+      const error = await shell.openPath(location.dir)
+      return error === '' ? { ok: true } : { ok: false, message: error }
+    }
   )
 
   // The status bar's refresh: it waits out a tick already under way and says

@@ -80,12 +80,20 @@ than a status word, cocoa cannot currently see this run — see §10.
 ## 7.3 `report`
 
 ```
-./report.py --run 41 --submission 5001
+./report.py --run 41 --submission 5001 --attachment-dir runs/41/report/attachment
 ```
 
 Must produce `report/<run_id>.txt`, and may additionally produce
 `report/<run_id>.html`. cocoa creates the `report/` directory beforehand; its
 contents are entirely the script's business.
+
+**Attachments.** What a report brings beside its text — plots, tables, a
+copied output tree — goes in the directory `--attachment-dir` names, relative
+to the folder like every path cocoa passes: `runs/<run_id>/report/attachment/`.
+cocoa empties and creates it before every run of the script, so a re-run
+replaces the attachments as it replaces the report, and removes it again
+(with `runs/<run_id>/report/`) when the script left it empty. Attaching is
+optional and never checked: a report with nothing attached is a whole report.
 
 cocoa runs `report` automatically when a run reaches `COMPLETED`, holding the
 run at `ANALYZING` until it finishes (§9), and when it reaches `FAILED`, beside

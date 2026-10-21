@@ -15,6 +15,7 @@ import type {
   RunStatus,
   World
 } from '@shared/world'
+import { attachment_count } from './attachments'
 import type { EngineError } from './errors'
 import type { Engine } from './engine'
 import { report_in_flight, reportable } from './job/report'
@@ -158,6 +159,7 @@ function job_run_of(engine: Engine, job_path: string, record: RunRecord, now_iso
     report: report_in_flight(record) ? 'Generating' : report_state_of(job_path, record.run_id),
     report_error: record.report?.error ?? null,
     report_rerunnable: !report_in_flight(record) && reportable(record, 'manual'),
+    attachments: report_in_flight(record) ? 0 : attachment_count(job_path, record.run_id),
     deploy:
       record.deploy === undefined
         ? null
@@ -228,6 +230,7 @@ function campaign_run_of(
     query_health: 'Healthy',
     last_successful_query: now_iso,
     report: report_state_of(campaign_path, record.run_id),
+    attachments: attachment_count(campaign_path, record.run_id),
     error: null
   }
 }

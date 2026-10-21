@@ -104,7 +104,8 @@ where the description and the behaviour cannot drift apart unnoticed.
 
 **Locations, not contents.** Every caller is on this machine (§43.2), so a
 detail response points at files — the experiment folder, a run's directory and
-`run.json`, the report file when one exists — rather than carrying their
+`run.json`, the report file when one exists, the report's attachment
+directory (`location.attachments`) when it attached anything — rather than carrying their
 bytes. An agent reads those paths directly; the socket stays a control channel
 and never becomes a file server.
 

@@ -19,7 +19,7 @@ values      = ["coarse", "fine"]
 description = "Which mesh family to sweep"
 
 [report]
-command     = "./report.py"         # gets --run and --members
+command     = "./report.py"         # gets --run, --members and --attachment-dir
 ```
 
 A campaign has no template, no launch, no poll and no cancel of its own:

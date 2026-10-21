@@ -21,7 +21,8 @@ Every script cocoa invokes:
 
 **`--run` is passed only where it is needed**: to `launch` (so a script can tag
 its submission) and to both `report` scripts (the report filename is the run
-id). `poll` is job-scoped rather than run-scoped — it speaks for many runs at
+id), which also get `--attachment-dir`, the directory their attachments go
+in (§7.3). `poll` is job-scoped rather than run-scoped — it speaks for many runs at
 once — and `cancel` and `plan` need no run id. `check` and `deploy` get no
 arguments at all: they speak for the job, not for any run (§7.5).
 

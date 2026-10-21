@@ -103,7 +103,7 @@ your notes.)*
 ## 8.3 `report`
 
 ```
-./report.py --run 41 --members runs/41/members.json
+./report.py --run 41 --members runs/41/members.json --attachment-dir runs/41/report/attachment
 ```
 
 The campaign's own report over its members' results. Because members live in
@@ -119,14 +119,17 @@ looking:
     { "run_id": 42, "job": "solver-gpu",
       "params": { "mesh": "256", "gpu": "0" },
       "submission_id": "5001",
-      "report": "/abs/path/to/solver-gpu/report/42.txt" }
+      "report": "/abs/path/to/solver-gpu/report/42.txt",
+      "attachments": "/abs/path/to/solver-gpu/runs/42/report/attachment" }
   ]
 }
 ```
 
 Member `report` paths are **absolute**, since they point into the member jobs'
-folders, and are **never null** — see the condition below. Output goes to
-`report/<run_id>.txt` plus an optional `.html`, as for a job.
+folders, and are **never null** — see the condition below. A member's
+`attachments` is the absolute path of its attachment directory (§7.3), or
+`null` when its report attached nothing. Output goes to `report/<run_id>.txt`
+plus an optional `.html`, and attachments to `--attachment-dir`, as for a job.
 
 **A campaign reports only when every member succeeded.** If any member ends
 `FAILED`, `CANCELLED` or `ERROR`, the campaign terminates at that outcome and no

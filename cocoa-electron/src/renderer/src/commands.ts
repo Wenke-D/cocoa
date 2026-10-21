@@ -1,6 +1,12 @@
 // The asks that need no modal: each is answered with a notice at most.
 
-import type { AddFolderResult, RerunReportResult, RerunReportTarget } from '@shared/protocol'
+import type {
+  AddFolderResult,
+  AttachmentsTarget,
+  OpenAttachmentsResult,
+  RerunReportResult,
+  RerunReportTarget
+} from '@shared/protocol'
 import { notify } from './notice'
 import { app } from './state.svelte'
 
@@ -39,6 +45,22 @@ export async function rerun_report(target: RerunReportTarget): Promise<void> {
   let result: RerunReportResult
   try {
     result = await window.cocoa.rerun_report(target)
+  } catch (error) {
+    result = { ok: false, message: (error as Error).message }
+  }
+  if (!result.ok) {
+    notify(result.message, 'error')
+  }
+}
+
+/**
+ * Opens a run's report attachments in the system file manager. Opening says
+ * nothing; a refusal, or a file manager that would not open, is said.
+ */
+export async function open_attachments(target: AttachmentsTarget): Promise<void> {
+  let result: OpenAttachmentsResult
+  try {
+    result = await window.cocoa.open_attachments(target)
   } catch (error) {
     result = { ok: false, message: (error as Error).message }
   }
