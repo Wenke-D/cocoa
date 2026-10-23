@@ -34,6 +34,30 @@ export async function run({ page, shot, log, wait_text, library }) {
     fs.readdirSync(path.join(library, 'jobs/solver-gpu/runs/0/report/attachment')).join(', ')
   )
 
+  // The mock's viewer opens a browser, which is not driven here: a stand-in
+  // records what it was given (convention §7.7), then one that fails shows
+  // the notice a broken viewer gets.
+  const solver = path.join(library, 'jobs/solver-gpu')
+  const viewer = path.join(solver, 'visualize.py')
+  const visualized = path.join(solver, 'visualized')
+  fs.writeFileSync(
+    viewer,
+    `import sys\nopen(${JSON.stringify(visualized)}, "w").write(" ".join(sys.argv[1:]))\n`
+  )
+  const visualize = page.getByRole('button', { name: 'Visualize', exact: true })
+  log('visualize:', await visualize.getAttribute('title'))
+  await shot('run-visualize')
+  await visualize.click()
+  for (let waited = 0; !fs.existsSync(visualized) && waited < 10_000; waited += 100) {
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  log('visualized with:', fs.readFileSync(visualized, 'utf8'))
+  fs.writeFileSync(viewer, 'import sys\nsys.exit("no display to open")\n')
+  await visualize.click()
+  await wait_text('no display to open', 10_000)
+  log('viewer failure notice shown')
+  await shot('visualize-failed')
+
   await page.getByRole('button', { name: 'Text', exact: true }).click()
   await page.locator('pre.body').waitFor({ timeout: 10_000 })
   log('report head:', (await page.locator('pre.body').innerText()).split('\n')[0])

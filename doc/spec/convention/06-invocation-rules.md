@@ -17,12 +17,14 @@ Every script cocoa invokes:
   (§7.3). It travels in the environment rather than as an argument so that a
   script written before it existed, which parses every argument it is given,
   needs no change;
-- has stdout and stderr captured, and can be killed from the UI while running.
+- has stdout and stderr captured, and can be killed from the UI while running
+  — all but `visualize`, a viewer cocoa starts and lets go (§7.7).
 
 **`--run` is passed only where it is needed**: to `launch` (so a script can tag
 its submission) and to both `report` scripts (the report filename is the run
 id), which also get `--attachment-dir`, the directory their attachments go
-in (§7.3). `poll` is job-scoped rather than run-scoped — it speaks for many runs at
+in (§7.3), and to `visualize`, which gets `--report-dir` and
+`--attachment-dir` beside it (§7.7). `poll` is job-scoped rather than run-scoped — it speaks for many runs at
 once — and `cancel` and `plan` need no run id. `check` and `deploy` get no
 arguments at all: they speak for the job, not for any run (§7.5).
 
@@ -47,9 +49,10 @@ are expected depends on the script:
 | `plan` | one or more | one JSON instance object |
 | `report` | none | — |
 | `cancel` | none | — |
+| `visualize` | none (not read) | — |
 
 **Timeouts** (defaults, tunable later): check, launch, poll and cancel 60 s;
-plan 120 s; deploy and report 600 s.
+plan 120 s; deploy and report 600 s. `visualize` has none: it is a viewer, and a person closes it (§7.7).
 
 ## 6.1 Template rendering
 

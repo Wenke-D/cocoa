@@ -405,6 +405,31 @@ params = []
     expect(manifest.kind === 'job' && manifest.deploy.words).toEqual(['./deploy.sh'])
   })
 
+  it('takes an optional visualize, a command and nothing else, on a job or a campaign (§7.7, §8.4)', () => {
+    const dir = temp_dir()
+    write(dir, 'job.sbatch.tmpl', TEMPLATE)
+    write(dir, 'cocoa.toml', VALID_JOB)
+    expect(load_manifest(dir).visualize).toBeNull()
+
+    write(dir, 'cocoa.toml', VALID_JOB + '\n[visualize]\ncommand = "python3 view.py --dark"\n')
+    expect(load_manifest(dir).visualize?.words).toEqual(['python3', 'view.py', '--dark'])
+
+    write(dir, 'cocoa.toml', VALID_JOB + '\n[visualize]\n')
+    expect(refused(dir)).toContain('missing required key `[visualize].command`')
+    write(dir, 'cocoa.toml', VALID_JOB + '\n[visualize]\ncommand = "./v"\ntimeout = 5\n')
+    expect(refused(dir)).toContain('unknown field `timeout`')
+    write(dir, 'cocoa.toml', VALID_JOB.replace('kind ', 'visualize = "./v"\nkind '))
+    expect(refused(dir)).toContain('`visualize` must be a table')
+
+    write(
+      dir,
+      'cocoa.toml',
+      'kind = "campaign"\nname = "c"\n[plan]\ncommand = "./p"\nparams = []\n' +
+        '[report]\ncommand = "./r"\n[visualize]\ncommand = "./v"\n'
+    )
+    expect(load_manifest(dir).visualize?.words).toEqual(['./v'])
+  })
+
   it('rejects a command that does not split into words', () => {
     const dir = temp_dir()
     write(

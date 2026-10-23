@@ -5,7 +5,9 @@ import type {
   AttachmentsTarget,
   OpenAttachmentsResult,
   RerunReportResult,
-  RerunReportTarget
+  RerunReportTarget,
+  VisualizeResult,
+  VisualizeTarget
 } from '@shared/protocol'
 import { notify } from './notice'
 import { app } from './state.svelte'
@@ -61,6 +63,23 @@ export async function open_attachments(target: AttachmentsTarget): Promise<void>
   let result: OpenAttachmentsResult
   try {
     result = await window.cocoa.open_attachments(target)
+  } catch (error) {
+    result = { ok: false, message: (error as Error).message }
+  }
+  if (!result.ok) {
+    notify(result.message, 'error')
+  }
+}
+
+/**
+ * Opens the experiment's viewer on a run. Starting says nothing — the viewer
+ * appearing is the answer; a refusal, or a viewer that would not start, is
+ * said. One that fails later arrives as a notice from the backend.
+ */
+export async function visualize(target: VisualizeTarget): Promise<void> {
+  let result: VisualizeResult
+  try {
+    result = await window.cocoa.visualize(target)
   } catch (error) {
     result = { ok: false, message: (error as Error).message }
   }

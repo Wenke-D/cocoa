@@ -119,6 +119,15 @@ attachment directory in the system file manager; its tooltip counts the
 entries. Attachments may be any kind of file and any size, so the app does
 not show them itself. The button is absent while the report is `Generating`.
 
+When the run's `visualizable` is true — its job has a `[visualize]` script,
+and the run a report that is not `Generating` (convention §7.7) — a
+`Visualize` button with a line-chart icon follows. Pressed, it is busy
+(`Opening…`) until the script has started, so one click opens one viewer;
+the viewer appearing is the answer, and nothing else is said. A refusal, a
+script that cannot be started, and a viewer that later exits non-zero are
+each a notice in the error voice. A campaign run's Report row has the same
+button, for the campaign's own script (convention §8.4).
+
 The row's last action is `Re-run report`, a secondary button with a
 counter-clockwise arrow, on every job run whose `report_rerunnable` is true —
 `Succeeded`, `Failed`, an `Error` its report left, a `Completed` one not yet

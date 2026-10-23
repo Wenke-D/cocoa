@@ -59,6 +59,7 @@ export function world(): World {
         report_error: null,
         report_rerunnable: false,
         attachments: 0,
+        visualizable: false,
         deploy: null,
         error: null
       },
@@ -77,6 +78,7 @@ export function world(): World {
         report_error: null,
         report_rerunnable: false,
         attachments: 0,
+        visualizable: false,
         deploy: null,
         error: null
       }
@@ -98,6 +100,7 @@ export function world(): World {
         last_successful_query: '2026-08-20T12:00:03.000+02:00',
         report: 'Unavailable',
         attachments: 0,
+        visualizable: false,
         error: null
       }
     }

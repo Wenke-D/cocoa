@@ -19,7 +19,7 @@
   } from '../../format'
   import type { JobRun, ReportFormat } from '@shared/world'
   import type { ReportContext } from '../../route'
-  import { open_attachments, rerun_report } from '../../commands'
+  import { open_attachments, rerun_report, visualize } from '../../commands'
   import { navigate } from '../../navigation'
   import { app } from '../../state.svelte'
   import ReportButtons from './ReportButtons.svelte'
@@ -58,6 +58,9 @@
         navigate({ page: 'report', context: report_context, run_id: run.id, format })}
       attachments={run.attachments}
       open_attachments={() => open_attachments({ entity_id: run.job_id, run_id: run.id })}
+      visualize={run.visualizable
+        ? () => visualize({ entity_id: run.job_id, run_id: run.id })
+        : null}
       rerun={run.report_rerunnable
         ? () => rerun_report({ job_id: run.job_id, run_id: run.id })
         : null}

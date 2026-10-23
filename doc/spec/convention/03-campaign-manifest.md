@@ -20,6 +20,9 @@ description = "Which mesh family to sweep"
 
 [report]
 command     = "./report.py"         # gets --run, --members and --attachment-dir
+
+[visualize]                         # optional
+command     = "./visualize.py"      # gets --run, --report-dir and --attachment-dir; by hand
 ```
 
 A campaign has no template, no launch, no poll and no cancel of its own:

@@ -35,6 +35,8 @@ export interface JobManifest {
   check: Command
   /** Puts it in place when `check` says it is stale (§7.6). */
   deploy: Command
+  /** Opens a viewer on a reported run, by hand; `null` when the job has none (§7.7). */
+  visualize: Command | null
 }
 
 export interface CampaignManifest {
@@ -44,6 +46,8 @@ export interface CampaignManifest {
   plan: Command
   plan_params: ParamSpec[]
   report: Command
+  /** Opens a viewer on a reported run, by hand; `null` when the campaign has none (§8.4). */
+  visualize: Command | null
 }
 
 export type Manifest = JobManifest | CampaignManifest
@@ -59,6 +63,23 @@ function parse_command(raw: string, manifest_path: string, key: string): Command
     throw EngineError.manifest(manifest_path, `${key} command is empty`)
   }
   return { words, display: raw }
+}
+
+/** An optional script's `[key]` table: its command, or `null` when the table is absent. */
+function optional_command(value: unknown, manifest_path: string, key: string): Command | null {
+  if (value === undefined) {
+    return null
+  }
+  const table = as_table(value)
+  if (table === null) {
+    throw EngineError.manifest(manifest_path, `\`${key}\` must be a table`)
+  }
+  reject_unknown_keys(table, ['command'], manifest_path)
+  return parse_command(
+    require_string(table.command, manifest_path, `[${key}].command`),
+    manifest_path,
+    `[${key}].command`
+  )
 }
 
 type TomlTable = Record<string, unknown>
@@ -282,7 +303,8 @@ function load_job(folder: string, manifest_path: string, raw: TomlTable): JobMan
       'report',
       'cancel',
       'check',
-      'deploy'
+      'deploy',
+      'visualize'
     ],
     manifest_path
   )
@@ -371,12 +393,17 @@ function load_job(folder: string, manifest_path: string, raw: TomlTable): JobMan
       require_string(deploy.command, manifest_path, '[deploy].command'),
       manifest_path,
       '[deploy].command'
-    )
+    ),
+    visualize: optional_command(raw.visualize, manifest_path, 'visualize')
   }
 }
 
 function load_campaign(manifest_path: string, raw: TomlTable): CampaignManifest {
-  reject_unknown_keys(raw, ['kind', 'name', 'description', 'plan', 'report'], manifest_path)
+  reject_unknown_keys(
+    raw,
+    ['kind', 'name', 'description', 'plan', 'report', 'visualize'],
+    manifest_path
+  )
 
   const name = require_name(raw.name, manifest_path)
   const plan = require_table(raw.plan, manifest_path, 'plan')
@@ -398,6 +425,7 @@ function load_campaign(manifest_path: string, raw: TomlTable): CampaignManifest 
       require_string(report.command, manifest_path, '[report].command'),
       manifest_path,
       '[report].command'
-    )
+    ),
+    visualize: optional_command(raw.visualize, manifest_path, 'visualize')
   }
 }

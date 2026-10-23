@@ -16,6 +16,7 @@ import type { CampaignStatusView } from './campaign/status'
 import { DEFAULT_CONFIG } from './config'
 import type { Config } from './config'
 import type { EngineError } from './errors'
+import { visualize } from './visualize'
 import { Deploys } from './deploys'
 import { InFlight } from './in_flight'
 import { JobGates } from './job_gates'
@@ -122,6 +123,19 @@ export class Engine extends Memory {
 
   campaign_status(folder: string, run_id: number): CampaignStatusView {
     return campaign_status(this, this.campaign(folder), run_id)
+  }
+
+  /**
+   * Opens a job's or a campaign's viewer on one reported run (§7.7, §8.4);
+   * `on_failure` hears of a viewer that exits non-zero, whenever that is.
+   */
+  async visualize(
+    folder: string,
+    run_id: number,
+    on_failure: (error: EngineError) => void
+  ): Promise<void> {
+    const entity = this.jobs().find((job) => job.path === folder) ?? this.campaign(folder)
+    return visualize(entity, run_id, on_failure)
   }
 
   // ------------------------------------------------------------------

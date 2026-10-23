@@ -109,6 +109,10 @@ directory (`location.attachments`) when it attached anything — rather than car
 bytes. An agent reads those paths directly; the socket stays a control channel
 and never becomes a file server.
 
+A folder's `visualize` script (convention §7.7) is not on the surface: it
+opens a window for a person. An agent looks at a run through the locations
+above.
+
 A failed job run has a report too (convention §7.3.1), at the same
 `location.report`, while its `status` stays `Failed`. When that report's
 script failed, the run's `report_error` carries the script's output; it is

@@ -23,6 +23,7 @@ import { all_params, ended_at, started_at } from './record'
 import type { CampaignRecord, RunRecord } from './record'
 import { report_path } from './report_paths'
 import { is_terminal } from './status'
+import { visualizable } from './visualize'
 import type { Status } from './status'
 import type { ParamSpec } from '@shared/params'
 import { format_params } from '@shared/params'
@@ -160,6 +161,7 @@ function job_run_of(engine: Engine, job_path: string, record: RunRecord, now_iso
     report_error: record.report?.error ?? null,
     report_rerunnable: !report_in_flight(record) && reportable(record, 'manual'),
     attachments: report_in_flight(record) ? 0 : attachment_count(job_path, record.run_id),
+    visualizable: visualizable(engine.job(job_path), record.run_id),
     deploy:
       record.deploy === undefined
         ? null
@@ -231,6 +233,7 @@ function campaign_run_of(
     last_successful_query: now_iso,
     report: report_state_of(campaign_path, record.run_id),
     attachments: attachment_count(campaign_path, record.run_id),
+    visualizable: visualizable(engine.campaign(campaign_path), record.run_id),
     error: null
   }
 }

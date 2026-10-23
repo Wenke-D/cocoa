@@ -83,6 +83,15 @@ export interface AttachmentsTarget {
 
 export type OpenAttachmentsResult = { ok: true } | { ok: false; message: string }
 
+/** Which run to open the experiment's `[visualize]` script on. */
+export interface VisualizeTarget {
+  entity_id: string
+  run_id: string
+}
+
+/** Started, or refused; a viewer that fails later is a notice of its own. */
+export type VisualizeResult = { ok: true } | { ok: false; message: string }
+
 export type AddFolderResult =
   /** `already` distinguishes "registered it" from "it was already there" —
    * a folder already in the Explorer is a no-op, never a duplicate (§11.5). */

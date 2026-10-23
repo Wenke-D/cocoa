@@ -13,7 +13,8 @@ import {
   remove_folder,
   rerun_report,
   start_run,
-  delete_run
+  delete_run,
+  visualize
 } from '../../../src/main/bridge/operations'
 import { attachment_dir } from '../../../src/main/engine/attachments'
 import { engine, settle } from '../../support/engine'
@@ -390,6 +391,28 @@ describe('attachments_location', () => {
       message: '`../0` is not a run id'
     })
     expect(attachments_location(cocoa, { ...target, entity_id: '/etc' }).ok).toBe(false)
+  })
+})
+
+describe('visualize', () => {
+  it('answers a refusal rather than throwing it', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'unviewed')
+    const cocoa = engine(dir)
+    cocoa.register(job)
+    const run_id = await cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(cocoa)
+    const target = { entity_id: job, run_id: String(run_id) }
+
+    expect(await visualize(cocoa, target, () => {})).toEqual({
+      ok: false,
+      message: '`unviewed` has no visualize script'
+    })
+    expect(await visualize(cocoa, { ...target, run_id: '../0' }, () => {})).toEqual({
+      ok: false,
+      message: '`../0` is not a run id'
+    })
+    expect((await visualize(cocoa, { ...target, entity_id: '/etc' }, () => {})).ok).toBe(false)
   })
 })
 

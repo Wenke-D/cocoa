@@ -299,3 +299,40 @@ it. A *crash* leaves runs at `DEPLOYING` with nothing to finish them; the next
 session's first tick moves them to `ERROR`, as it does a launch left
 unanswered (§10). What a killed deploy had already put in place is the
 folder's: the next check says whether it is current.
+
+## 7.7 `visualize`
+
+```
+./visualize.py --run 41 --report-dir report --attachment-dir runs/41/report/attachment
+```
+
+**Optional** — the one script a manifest may leave out. It opens a viewer on
+one reported run: a plotting window, ParaView on the output tree, a dashboard
+in the browser — whatever looking at a run takes beyond reading its report.
+`--report-dir` is the folder's report directory, where `<run_id>.txt` and
+`<run_id>.html` are (§7.3); `--attachment-dir` is the run's attachment
+directory, which exists only when the report attached something.
+
+cocoa never runs it on its own. A person asks for it — the run page's
+`Visualize` — once the run has a report, `report/<run_id>.txt` on disk, and
+not while that report is being generated. Any status will do: a `FAILED`
+run's landed report is looked at as a succeeded run's is. Refused, with the
+reason: a folder with no `[visualize]`, a run with no report, and a folder
+whose manifest does not load.
+
+A viewer is the person's to drive and to close, so it is not a script cocoa
+waits for:
+
+- it starts in a session of its own, and the asking is answered as soon as
+  it has started. A script that cannot be started at all is refused with
+  the reason;
+- it has **no timeout**, and a close leaves it open;
+- nothing is recorded: the run, its status and its report are untouched, and
+  several viewers may be open at once, on one run or many;
+- its stdout and stderr go to a temporary file outside the folder, not read
+  for `COCOA_RETURN:` lines. When it exits non-zero — at once, or an hour
+  later while cocoa is still open — that is raised as an operation error
+  with the end of its output. Exit 0 says nothing.
+
+It is a person's action: the agent interface does not offer it (§43), since
+what it opens is a window.

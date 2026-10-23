@@ -19,10 +19,13 @@ import type {
   DeleteTarget,
   DeleteResult,
   RerunReportResult,
-  RerunReportTarget
+  RerunReportTarget,
+  VisualizeResult,
+  VisualizeTarget
 } from '@shared/protocol'
 import { attachment_count, attachment_dir } from '../engine/attachments'
 import type { Engine } from '../engine/engine'
+import type { EngineError } from '../engine/errors'
 import { extension_of, report_path } from '../engine/report_paths'
 
 /** Reports larger than this are refused rather than sent over IPC whole. */
@@ -152,6 +155,27 @@ export function attachments_location(
     return { ok: false, message: `run ${target.run_id} has no report attachments` }
   }
   return { ok: true, dir: attachment_dir(target.entity_id, target.run_id) }
+}
+
+/**
+ * Opens the experiment's `[visualize]` script on one reported run (convention
+ * §7.7, §8.4). Answered once the script has started: a viewer is the
+ * person's to close, and one that exits non-zero later is `on_failure`'s.
+ */
+export async function visualize(
+  engine: Engine,
+  target: VisualizeTarget,
+  on_failure: (error: EngineError) => void
+): Promise<VisualizeResult> {
+  try {
+    if (!/^\d+$/.test(target.run_id)) {
+      return { ok: false, message: `\`${target.run_id}\` is not a run id` }
+    }
+    await engine.visualize(target.entity_id, Number(target.run_id), on_failure)
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, message: (error as Error).message }
+  }
 }
 
 /**

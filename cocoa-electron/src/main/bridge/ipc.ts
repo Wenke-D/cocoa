@@ -18,7 +18,9 @@ import type {
   DeleteTarget,
   DeleteResult,
   RerunReportResult,
-  RerunReportTarget
+  RerunReportTarget,
+  VisualizeResult,
+  VisualizeTarget
 } from '@shared/protocol'
 import { empty } from '@shared/maybe'
 import { boot } from '../boot'
@@ -26,6 +28,7 @@ import * as operations from './operations'
 import { current_world, publish_cycle } from './publish'
 import { refresh_and_publish } from './refresh'
 import { engine } from '../runtime'
+import { send } from '../shell/window'
 
 /**
  * Define message between main process and render process
@@ -125,6 +128,14 @@ export function register_ipc(): void {
       const error = await shell.openPath(location.dir)
       return error === '' ? { ok: true } : { ok: false, message: error }
     }
+  )
+
+  // A viewer is the person's to close, so the answer is "started". One that
+  // exits non-zero — at once, or an hour later — is said as a notice of its own.
+  ipcMain.handle('cocoa:visualize', (_event, target: VisualizeTarget): Promise<VisualizeResult> =>
+    operations.visualize(engine, target, (error) =>
+      send([{ kind: 'notice', level: 'error', text: error.message }])
+    )
   )
 
   // The status bar's refresh: it waits out a tick already under way and says

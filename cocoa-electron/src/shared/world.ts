@@ -96,6 +96,9 @@ export interface JobRun {
   /** How many entries the report attached in its attachment directory
    * (convention §7.3); 0 when it attached nothing, and while it runs. */
   attachments: number
+  /** Whether the job's `[visualize]` script can be opened on this run now: it
+   * has one, and the run has a report that is not `Generating` (§7.7). */
+  visualizable: boolean
   /** How the job was made ready before this run launched (convention §7.5,
    * §7.6); `null` for a run recorded before deploys existed. */
   deploy: RunDeploy | null
@@ -135,6 +138,9 @@ export interface CampaignRun {
   report: ReportState
   /** How many entries the campaign's report attached (convention §8.3). */
   attachments: number
+  /** Whether the campaign's `[visualize]` script can be opened on this run
+   * now: it has one, and the run has a report (convention §8.4). */
+  visualizable: boolean
   error: string | null
 }
 

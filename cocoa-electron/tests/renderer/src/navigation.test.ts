@@ -36,6 +36,7 @@ describe('the views', () => {
         report_error: null,
         report_rerunnable: false,
         attachments: 0,
+        visualizable: false,
         deploy: null,
         error: null
       }

@@ -40,6 +40,7 @@ function job_run(id: string, extra: Partial<JobRun> = {}): JobRun {
     report_error: null,
     report_rerunnable: false,
     attachments: 0,
+    visualizable: false,
     deploy: null,
     error: null,
     ...extra
@@ -61,6 +62,7 @@ function campaign_run(id: string, extra: Partial<CampaignRun> = {}): CampaignRun
     last_successful_query: '2026-08-19T10:00:03.000+02:00',
     report: 'Missing',
     attachments: 0,
+    visualizable: false,
     error: null,
     ...extra
   }

@@ -50,9 +50,12 @@ command     = "./check.sh"          # gets nothing; asked before every start
 
 [deploy]
 command     = "./deploy.sh"         # gets nothing; run when check says STALE
+
+[visualize]                         # optional
+command     = "./visualize.py"      # gets --run, --report-dir and --attachment-dir; by hand
 ```
 
-All six scripts are **required**. A run whose status can never update is a
+All six scripts are **required**; `visualize` is the one that is not (§7.7). A run whose status can never update is a
 dead end in a monitoring tool, and a run that cannot be stopped is worse. A
 start that cannot ask whether what it runs is in place may launch against a
 half-copied executable, which is worse than either (§7.5).

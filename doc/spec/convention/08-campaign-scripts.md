@@ -140,3 +140,14 @@ it is that job's, and does not make one for the campaign.)
 
 *(Consequence: there is no aggregate report over a partially failed sweep. If
 that is ever wanted, this is the rule to revisit.)*
+
+## 8.4 `visualize`
+
+```
+./visualize.py --run 41 --report-dir report --attachment-dir runs/41/report/attachment
+```
+
+A campaign's viewer, exactly as a job's (§7.7): optional, opened by hand once
+the campaign's own report has landed, and let go. `runs/<run_id>/members.json`
+stays beside it, so a viewer over the whole sweep finds every member's report
+and attachments without going looking.

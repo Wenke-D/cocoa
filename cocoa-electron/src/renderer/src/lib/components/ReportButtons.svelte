@@ -15,6 +15,10 @@
   attachment directory (convention §7.3); when there are any, a button
   opens the directory in the system file manager.
 
+  `visualize`, when the experiment has a `[visualize]` script and the run a
+  report (convention §7.7), opens the script's viewer. It is busy only until
+  the script has started, so one click opens one viewer.
+
   `rerun`, when the run may have its report re-run by hand (convention
   §7.3.2), is the last action in the row. It is busy only until the engine
   answers: by then the report is due and the row reads `Generating`, with
@@ -26,6 +30,7 @@
   import { Button } from '$lib/components/ui/button'
   import { Spinner } from '$lib/components/ui/spinner'
   import EyeIcon from '@lucide/svelte/icons/eye'
+  import ChartLineIcon from '@lucide/svelte/icons/chart-line'
   import FolderOpenIcon from '@lucide/svelte/icons/folder-open'
   import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw'
 
@@ -35,6 +40,7 @@
     open,
     attachments = 0,
     open_attachments = null,
+    visualize = null,
     rerun = null
   }: {
     report: ReportState
@@ -42,6 +48,7 @@
     open: (format: ReportFormat) => void
     attachments?: number
     open_attachments?: (() => Promise<void>) | null
+    visualize?: (() => Promise<void>) | null
     rerun?: (() => Promise<void>) | null
   } = $props()
 
@@ -57,6 +64,21 @@
       await rerun()
     } finally {
       asking = false
+    }
+  }
+
+  /** Held from the click until the viewer has started. */
+  let starting = $state(false)
+
+  async function ask_visualize(): Promise<void> {
+    if (visualize === null || starting) {
+      return
+    }
+    starting = true
+    try {
+      await visualize()
+    } finally {
+      starting = false
     }
   }
 
@@ -100,6 +122,16 @@
       onclick={open_attachments}
     >
       <FolderOpenIcon />Attachments
+    </Button>
+  {/if}
+  {#if visualize !== null}
+    <Button
+      variant="secondary"
+      title="Open this run's report in the experiment's viewer"
+      disabled={starting}
+      onclick={ask_visualize}
+    >
+      {#if starting}<Spinner />Opening…{:else}<ChartLineIcon />Visualize{/if}
     </Button>
   {/if}
   {#if rerun !== null}

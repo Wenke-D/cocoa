@@ -86,9 +86,12 @@ command     = "./cancel.sh"
 
 [report]
 command     = "./report.py"
+
+[visualize]                         # optional
+command     = "./visualize.py"
 ```
 
-All six scripts are **required**. A run whose status can never update is a
+All six scripts are **required**; `visualize` is the one optional script. A run whose status can never update is a
 dead end in a monitoring tool, and a run that cannot be stopped is worse — a
 folder that truly has nothing to cancel still declares a `cancel` script,
 even one that only exits 0. Likewise a folder with nothing to deploy declares
@@ -278,6 +281,16 @@ way to regenerate old reports after changing the script (§7.3.2).
 the run; the next poll reports what actually happened. Cancel requests the
 stop, poll confirms it.
 
+**`visualize`** (optional) — `./visualize.py --run 41 --report-dir report
+--attachment-dir runs/41/report/attachment`. Opens a viewer on a reported
+run: a plotting window, ParaView on the attachments, the HTML report in a
+browser. cocoa never runs it by itself; the run's page gets a `Visualize`
+button once the run has a report, and pressing it starts the script and lets
+it go — no timeout, nothing recorded, and closing cocoa leaves the viewer
+open (§7.7). Print freely; only a non-zero exit is shown, as an error with
+the end of the output. The attachment directory is absent when the report
+attached nothing, so check before reading it.
+
 ## 6. A campaign's manifest and scripts
 
 ```toml
@@ -326,6 +339,10 @@ landed, and its attachment directory when it has one — so the campaign's
 report can aggregate them. Output rules are the job report's: `report/7.txt`
 required, attachments optional.
 
+**`visualize`** (optional) — as a job's, with `--run 7`, once the campaign's
+report has landed. `runs/7/members.json` is still there to find every
+member's report and attachments.
+
 ## 7. What to count on, and what not to
 
 - Values arrive exactly as given — separate argv elements, no shell, no
@@ -336,7 +353,7 @@ required, attachments optional.
 - Records in `runs/` are readable JSON and safe to read from scripts; they
   are written atomically. Never write them.
 - Timeouts (defaults): check, launch, poll, cancel 60 s; plan 120 s; deploy,
-  report 600 s.
+  report 600 s; visualize none — a person closes it.
 - A run cocoa deletes takes `runs/<id>/` (its attachments included) and
   `report/<id>.*` with it — for a
   campaign run, its dispatched runs too (§12.1); run ids otherwise never repeat.

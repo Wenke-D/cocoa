@@ -11,6 +11,9 @@ To be exhaustive, inside a registered folder cocoa creates and maintains only:
   script runs, and removed again if the script left it empty (§7.3). Its
   **contents** are the script's.
 
+`visualize` (§7.7) adds nothing here: what it prints goes to a temporary file
+outside the folder, removed when it exits.
+
 Records are written atomically: temp file, then rename.
 
 A launch that fails leaves its rendered artifact in place and writes no record
