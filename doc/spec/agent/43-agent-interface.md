@@ -67,6 +67,9 @@ POST /experiments                  {"path": "/abs/folder"} → 201 {"name", "kin
 POST /experiments/{name}/runs      {"parameters": {…}} → 201 {"run_id": "…"}
 POST /experiments/{name}/runs/{run_id}/report
                                    re-run a job run's report → 202, once it is due
+POST /experiments/{name}/runs/{run_id}/cancel
+                                   cancel a job or campaign run → 202, once its
+                                   cancel script accepts
 ```
 
 Experiments are addressed by name, which is unique across the Explorer
@@ -141,6 +144,30 @@ already running, or a Campaign, whose own report is not re-run by hand. Who aske
 is not recorded (convention §7.3.2). The MCP binary does not offer this route
 as a tool yet.
 
+**Cancelling a run** takes the modal's confirm path (convention §7.4): the same
+`cancel` operation, aimed by the experiment's name at a job run, or at a
+campaign run — which cancels each of its still-active members (convention
+§3). A member run cancelled under its own job leaves its campaign run and
+siblings running. There is no confirmation on this route: the modal guards
+a person against a stray click, and an agent that asks has decided — when it
+may is the manual's rule, not the socket's. The route answers **`202` once
+the cancel script has accepted**: the run reads `Cancelling`, and only a later
+poll can call it `Cancelled`:
+
+```json
+{ "run_id": "41", "follow": "/jobs/solver-gpu" }
+```
+
+Follow the named route until the run reads `Cancelled`. `404` names an
+experiment or run that is not there; `400` carries the workbench's refusal — a
+run that has ended, is waiting on its deploy or still launching, is already
+`Cancelling`, or whose cancel script failed, leaving its status as it was; for
+a campaign, the member that did not stop. A campaign run that no longer reads
+`Starting` or `Running` is refused by the engine itself, as the window offers
+no Cancel there. A cancel script may run for the whole cancel timeout, longer
+than a write waits (§43.3), so a `503` here means cocoa did not answer in
+time, not that nothing happened: read the run. Who asked is not recorded.
+
 A refusal carries the workbench's own text, unchanged — an agent reading it sees
 what a person would have been shown — under the status that says who can act:
 `404` for something that is not there, `400` for a request that was refused,
@@ -150,7 +177,7 @@ the right route rather than flatly refused.
 ## 43.5 The MCP binary
 
 `cocoa-mcp-server` serves this same surface as MCP tools (`cocoa_help`,
-`cocoa_list_jobs`, `cocoa_job`, `cocoa_start`, `cocoa_register`, …) so an agent runtime speaks to
+`cocoa_list_jobs`, `cocoa_job`, `cocoa_start`, `cocoa_register`, `cocoa_cancel`, …) so an agent runtime speaks to
 cocoa through its own tool protocol instead of raw HTTP. An agent's MCP client
 launches the binary and speaks JSON-RPC over stdio; every tool call becomes
 one request over the socket, and the socket's answers pass through verbatim.
@@ -192,6 +219,6 @@ requires that.
 No approval step and no separate notification: a run records who asked (§10.6),
 and that record is where the question is answered. No authentication: the socket
 is reachable only by processes that can open the file, and cocoa runs on the
-user's own workstation. No cancel, no unregistration, and no event stream yet
-— each is one route, one request variant, and one worker arm away when a real
-agent needs it.
+user's own workstation. No unregistration and no event stream yet — each is
+one route, one request variant, and one worker arm away when a real agent
+needs it.

@@ -195,5 +195,42 @@ export async function run({ page, shot, log, wait_text, socket_path }) {
     await new Promise((resolve) => setTimeout(resolve, 500))
   }
   await shot('after-mcp-start')
+
+  // It stops the way it started — through the binary, with no modal to
+  // confirm — and reads Cancelling until the mock cluster's poll says Cancelled.
+  const [cancel_reply] = await mcp(socket_path, [
+    {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/call',
+      params: { name: 'cocoa_cancel', arguments: { experiment: 'solver-gpu', run_id: mcp_run_id } }
+    }
+  ])
+  const cancel_text = cancel_reply?.result?.content?.[0]?.text ?? ''
+  log('mcp cocoa_cancel →', JSON.stringify(cancel_text))
+  if (cancel_reply?.result?.isError !== false) {
+    throw new Error(`cocoa_cancel failed: ${JSON.stringify(cancel_reply)}`)
+  }
+  const statuses = []
+  const cancel_deadline = Date.now() + 25_000
+  for (;;) {
+    const runs = JSON.parse((await call(socket_path, 'GET', '/jobs/solver-gpu')).text).runs
+    const status = runs.find((candidate) => candidate.id === mcp_run_id)?.status
+    if (statuses.at(-1) !== status) {
+      statuses.push(status)
+    }
+    if (status === 'Cancelled') {
+      break
+    }
+    if (Date.now() > cancel_deadline) {
+      throw new Error(`run ${mcp_run_id} never read Cancelled; went ${statuses.join(' → ')}`)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250))
+  }
+  log('run', mcp_run_id, 'after cocoa_cancel:', statuses.join(' → '))
+  if (statuses[0] !== 'Cancelling') {
+    throw new Error(`an accepted cancel should read Cancelling first: ${statuses.join(' → ')}`)
+  }
+  await shot('after-mcp-cancel')
   log('the Rust MCP binary drove cocoa-electron unchanged')
 }

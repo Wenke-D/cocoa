@@ -216,16 +216,20 @@ describe('cancel', () => {
   // is still the cluster's to stop.
   it('leaves finished members alone', async () => {
     const dir = temp_dir()
-    const job = job_folder(dir, 'member')
-    const campaign = campaign_folder(dir, 'sweep', ['member'])
+    const done = job_folder(dir, 'done')
+    const busy = job_folder(dir, 'busy')
+    const campaign = campaign_folder(dir, 'sweep', ['done', 'busy'])
     const cocoa = engine(dir)
-    cocoa.register(job)
+    cocoa.register(done)
+    cocoa.register(busy)
     cocoa.register(campaign)
     const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
     await settle(cocoa)
-    write(job, 'poll-state', 'COMPLETED')
-    await cocoa.poll_job(job)
-    await cocoa.report_run(job, start.members[0].run_id, 'auto')
+    write(done, 'poll-state', 'COMPLETED')
+    await cocoa.poll_job(done)
+    await cocoa.report_run(done, start.members[0].run_id, 'auto')
+    write(busy, 'poll-state', 'RUNNING')
+    await cocoa.poll_job(busy)
 
     expect(
       await cancel(cocoa, {
@@ -234,7 +238,8 @@ describe('cancel', () => {
         run_id: String(start.run_id)
       })
     ).toEqual({ ok: true })
-    expect(cocoa.job(job).runs.record(start.members[0].run_id).status).toBe('SUCCEEDED')
+    expect(cocoa.job(done).runs.record(start.members[0].run_id).status).toBe('SUCCEEDED')
+    expect(cocoa.job(busy).runs.record(start.members[1].run_id).status).toBe('CANCELLING')
   })
 
   it('answers rather than throws for a run that is not there', async () => {

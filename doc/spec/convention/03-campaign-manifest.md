@@ -30,4 +30,5 @@ A campaign has no template, no launch, no poll and no cancel of its own:
 - it **launches** through its member jobs' own `launch`;
 - its **status** is derived from its members, never polled (§9.1);
 - it is **cancelled** by cancelling its still-active members, each through that
-  member job's own `cancel`.
+  member job's own `cancel` — and only while it reads `STARTING` or `RUNNING`
+  (§9.1); a cancel of a campaign run in any other status is refused.

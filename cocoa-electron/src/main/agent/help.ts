@@ -92,6 +92,22 @@ export function help(): AgentResponse {
           'run then reads Succeeded, or Error with its error; a FAILED run stays Failed, with ' +
           'report_error when the script failed. 404 for an unknown experiment or run; 400 ' +
           'for a Campaign, a run that cannot be reported, or one whose report is already running.'
+      },
+      {
+        method: 'POST',
+        path: '/experiments/{name}/runs/{run_id}/cancel',
+        answers:
+          'cancels a Job or Campaign run through the Job’s own cancel script, as the window’s ' +
+          'Cancel does — but with no confirmation: asking is deciding. A Campaign run cancels ' +
+          'each of its still-active member runs; members that finished keep their results, and ' +
+          'runs of the same Jobs started outside it are untouched. Cancelling one member run, ' +
+          'under its own Job, leaves the Campaign run and its other members running. 202 with ' +
+          '{run_id, follow} once the cancel script has accepted: the run reads Cancelling until ' +
+          'a poll confirms it Cancelled — follow GET /jobs/{name} or /campaigns/{name}. 404 for ' +
+          'an unknown experiment or run; 400 with the reason for a run that has already ended, ' +
+          'is still deploying or launching, is already Cancelling, or whose cancel script ' +
+          'failed (the run keeps its status) — for a Campaign, naming the member that did not ' +
+          'stop.'
       }
     ]
   })

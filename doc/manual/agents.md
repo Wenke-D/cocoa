@@ -1,7 +1,7 @@
 # Working with an agent
 
 An AI agent can drive cocoa as you do: register an experiment, start runs,
-follow them, re-run a report. It reaches the same engine your window drives,
+follow them, cancel them, re-run a report. It reaches the same engine your window drives,
 and everything it does lands on your screen, stamped `agent`. This page is how
 to connect one, and the rules it should work by. The routes and their exact
 answers are the [agent interface](../spec/agent/43-agent-interface.md).
@@ -26,7 +26,8 @@ while its window is open**. An agent reaches it one of two ways:
   ```
 
   Its tools are `cocoa_help`, `cocoa_list_jobs`, `cocoa_list_campaigns`,
-  `cocoa_job`, `cocoa_campaign`, `cocoa_start` and `cocoa_register`.
+  `cocoa_job`, `cocoa_campaign`, `cocoa_start`, `cocoa_register` and
+  `cocoa_cancel`.
   `cocoa-mcp-server --help-ai` prints where this guidance lives.
 
 - **Over HTTP on the socket**, for a script or a quick look:
@@ -42,9 +43,10 @@ reads a run's record and report straight from disk.
 ## The rules
 
 1. **Everything goes through cocoa.** Start runs with `cocoa_start`, follow
-   them with `cocoa_job`, re-run a report through the socket. Never submit
-   work by hand — no `sbatch`, no `ssh` to launch — so that you and the agent
-   look at the same runs. A quick test is still a cocoa experiment: make a
+   them with `cocoa_job`, stop them with `cocoa_cancel`, re-run a report
+   through the socket. Never submit or stop work by hand — no `sbatch`, no
+   `scancel`, no `ssh` to launch — so that you and the agent look at the same
+   runs. A quick test is still a cocoa experiment: make a
    small smoke job for it and register it with `cocoa_register`.
 2. **If cocoa is not answering, ask.** The socket exists only while the window
    is open. When a tool says cocoa is not answering, ask the user to open it;
@@ -60,9 +62,14 @@ reads a run's record and report straight from disk.
    one. See [authoring §5](authoring.md#5-the-job-scripts).
 5. **Leave `runs/` and `report/` alone.** They are cocoa's. Read them; never
    edit them.
-6. **What the socket cannot do yet, ask the user to do in the window.** There
-   is no cancel route, and no way to take an experiment out of the Explorer:
-   ask, naming the run or the folder.
+6. **Cancel only what you were asked to stop, or started yourself.** The
+   window asks a person to confirm a cancel; `cocoa_cancel` does not. Cancel a
+   run the user named, or one of your own that has gone wrong, and say which
+   run you cancelled and why. Cancelling a campaign run stops every member
+   still running; to stop just one, cancel it under its own job.
+7. **What the socket cannot do yet, ask the user to do in the window.** There
+   is no way to take an experiment out of the Explorer: ask, naming the
+   folder.
 
 How to write the scripts themselves — and what a report should say — is
 [authoring.md](authoring.md).

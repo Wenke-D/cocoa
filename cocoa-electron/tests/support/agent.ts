@@ -113,13 +113,15 @@ export function world(): World {
 export function deps(
   start?: AgentDeps['start'],
   rerun?: AgentDeps['rerun_report'],
-  register?: AgentDeps['register']
+  register?: AgentDeps['register'],
+  cancel?: AgentDeps['cancel']
 ): AgentDeps {
   return {
     current_world: world,
     start: start ?? (async () => ({ ok: true, run_id: '7' })),
     rerun_report: rerun ?? (() => ({ ok: true })),
-    register: register ?? ((folder) => ({ ok: true, entity_id: folder, already: false }))
+    register: register ?? ((folder) => ({ ok: true, entity_id: folder, already: false })),
+    cancel: cancel ?? (async () => ({ ok: true }))
   }
 }
 
@@ -174,10 +176,11 @@ export async function ask(
   body = '',
   start?: AgentDeps['start'],
   rerun?: AgentDeps['rerun_report'],
-  register?: AgentDeps['register']
+  register?: AgentDeps['register'],
+  cancel?: AgentDeps['cancel']
 ) {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'cocoa-ask-')))
-  const server = await serve(path.join(dir, 'cocoa.sock'), deps(start, rerun, register))
+  const server = await serve(path.join(dir, 'cocoa.sock'), deps(start, rerun, register, cancel))
   try {
     const answer = await request(
       path.join(dir, 'cocoa.sock'),

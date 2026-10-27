@@ -6,6 +6,7 @@
 import express from 'express'
 import type { AgentDeps, AgentResponse } from './answer'
 import { failure } from './answer'
+import { cancel_run } from './cancel'
 import { help } from './help'
 import { campaign_detail, job_detail, list_entities } from './reads'
 import { register_folder } from './register'
@@ -65,6 +66,9 @@ export function agent_app(deps: AgentDeps): express.Express {
   app.post('/experiments/:name/runs/:run_id/report', (request, response) =>
     reply(response, rerun_report(request.params.name, request.params.run_id, deps))
   )
+  app.post('/experiments/:name/runs/:run_id/cancel', async (request, response) =>
+    reply(response, await cancel_run(request.params.name, request.params.run_id, deps))
+  )
 
   // A place spoken to with the wrong verb, then everything that is no place.
   const surface = [
@@ -75,7 +79,8 @@ export function agent_app(deps: AgentDeps): express.Express {
     '/campaigns/:name',
     '/experiments',
     '/experiments/:name/runs',
-    '/experiments/:name/runs/:run_id/report'
+    '/experiments/:name/runs/:run_id/report',
+    '/experiments/:name/runs/:run_id/cancel'
   ]
   app.all(surface, (_request, response) => reply(response, failure(405, 'unsupported method')))
   app.use((_request, response) => reply(response, failure(404, 'no such endpoint')))

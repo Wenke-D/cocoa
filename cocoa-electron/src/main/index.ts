@@ -59,6 +59,13 @@ function start_agent_server(): void {
       const result = operations.add_folder(engine, folder)
       publish_cycle(empty())
       return result
+    },
+    // As the cancel modal's confirm does (`bridge/ipc.ts`): an accepted
+    // cancel has moved the run to `CANCELLING`, and the next poll settles it.
+    cancel: async (target) => {
+      const result = await operations.cancel(engine, target)
+      publish_cycle(empty())
+      return result
     }
   }
 

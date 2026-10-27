@@ -72,6 +72,18 @@ pub(crate) fn tools() -> Value {
                 "required": ["path"],
             },
         },
+        {
+            "name": "cocoa_cancel",
+            "description": "Cancel a Job or Campaign run through the Job's own cancel script, as the window's Cancel does but with no confirmation — cancel only a run the user asked you to stop, or one you started yourself. A Campaign run cancels each of its still-active member runs; finished members keep their results. A member run cancelled under its own Job leaves its Campaign run and siblings running. Accepted means the run reads Cancelling: follow it with cocoa_job or cocoa_campaign until a poll confirms Cancelled. Refused, with the reason, for a run that has ended, is still deploying or launching, is already Cancelling, or whose cancel script failed (the run keeps its status).",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "experiment": { "type": "string", "description": "The Job's or Campaign's name." },
+                    "run_id": { "type": "string", "description": "The run's id, as cocoa_job or cocoa_campaign lists it (ids are per experiment)." },
+                },
+                "required": ["experiment", "run_id"],
+            },
+        },
     ])
 }
 
@@ -111,6 +123,26 @@ pub(crate) fn call_tool(name: &str, arguments: &Value) -> Result<Value, (i64, St
                 "POST",
                 "/experiments",
                 Some(json!({ "path": path }).to_string()),
+            )
+        }
+        "cocoa_cancel" => {
+            let experiment = arguments
+                .get("experiment")
+                .and_then(Value::as_str)
+                .ok_or((-32602, "cocoa_cancel needs `experiment`".to_owned()))?;
+            let run_id = arguments
+                .get("run_id")
+                .and_then(Value::as_str)
+                .ok_or((-32602, "cocoa_cancel needs `run_id`".to_owned()))?;
+            http(
+                "POST",
+                &format!(
+                    "/experiments/{}/runs/{}/cancel",
+                    percent_encode(experiment),
+                    percent_encode(run_id)
+                ),
+                // Empty, but there: a body is what makes the request a POST.
+                Some(String::new()),
             )
         }
         other => return Err((-32602, format!("no such tool: {other}"))),

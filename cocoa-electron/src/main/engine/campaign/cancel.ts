@@ -5,6 +5,7 @@ import { EngineError } from '../errors'
 import { WAITING_ON_DEPLOY, cancel_run } from '../job/cancel'
 import { is_cancellable } from '../status'
 import type { Campaign } from './campaign'
+import { campaign_status } from './status'
 
 /** How one member took a campaign's cancel (§9.1). */
 export interface MemberCancel {
@@ -21,6 +22,13 @@ export async function cancel_campaign(
   run_id: number
 ): Promise<MemberCancel[]> {
   const record = campaign.runs.record(run_id)
+  // The window offers Cancel only on a cancellable run; a caller with no
+  // button to hide — the agent socket — is refused here instead, rather than
+  // told a settled campaign was cancelled when nothing was asked of anyone.
+  const status = campaign_status(engine, campaign, run_id).status
+  if (!is_cancellable(status)) {
+    throw EngineError.validation(`campaign run ${run_id} (${status}) cannot be cancelled`)
+  }
   const results: MemberCancel[] = []
   for (const member of record.members) {
     const job = engine.find_job_by_name(member.job)

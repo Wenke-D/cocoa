@@ -1,32 +1,8 @@
 // The write route's answer: a start over the socket, refused or queued
 // exactly as a click would be (§43).
 
-import type { StartResult } from '@shared/protocol'
 import type { AgentDeps, AgentResponse } from './answer'
-import { failure, json } from './answer'
-
-/**
- * How long a caller waits for the engine's queue before being told cocoa is not
- * answering. Generous: a start runs the experiment's own launch script, which
- * talks to a cluster.
- */
-const REPLY_TIMEOUT_MS = 30_000
-
-/**
- * Which failure this was, as far as the wire is concerned. The engine's errors
- * are sentences meant for a person, so this reads them rather than inventing a
- * parallel set of codes. Anything unrecognised is a `400`: the request was
- * refused, and the caller is the one who can act.
- */
-function status_for(message: string): number {
-  if (message.startsWith('No such entity')) {
-    return 404
-  }
-  if (message.includes('did not answer in time')) {
-    return 503
-  }
-  return 400
-}
+import { failure, json, status_for, with_timeout } from './answer'
 
 export async function start_run(
   name: string,
@@ -57,25 +33,4 @@ export async function start_run(
     return failure(status_for(result.message), result.message)
   }
   return json(201, { run_id: result.run_id })
-}
-
-/**
- * What keeps a caller from hanging forever if the engine is wedged. In the
- * normal case a start is one queue turn away.
- */
-async function with_timeout(work: Promise<StartResult>): Promise<StartResult> {
-  let timer: NodeJS.Timeout | undefined
-  const expiry = new Promise<StartResult>((resolve) => {
-    timer = setTimeout(
-      () => resolve({ ok: false, message: 'cocoa did not answer in time' }),
-      REPLY_TIMEOUT_MS
-    )
-  })
-  try {
-    return await Promise.race([work, expiry])
-  } finally {
-    if (timer !== undefined) {
-      clearTimeout(timer)
-    }
-  }
 }

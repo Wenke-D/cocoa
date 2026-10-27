@@ -58,6 +58,9 @@ fn serve() -> Stub {
             let (status, body) = match request.as_str() {
                 "GET /jobs" => (200, json!([{ "name": "solver" }]).to_string()),
                 "POST /experiments/solver/runs" => (201, json!({ "run_id": "9" }).to_string()),
+                "POST /experiments/my%20solver/runs/9/cancel" => {
+                    (202, json!({ "run_id": "9" }).to_string())
+                }
                 // Echoes what arrived, so the test sees the body cross intact.
                 "POST /experiments" => (201, json!({ "received": received }).to_string()),
                 _ => (404, json!({ "error": "no such route" }).to_string()),
@@ -183,6 +186,7 @@ fn the_mcp_binary_serves_the_socket_as_tools() {
         "cocoa_campaign",
         "cocoa_start",
         "cocoa_register",
+        "cocoa_cancel",
     ] {
         assert!(names.contains(&expected), "{names:?} misses {expected}");
     }
@@ -234,6 +238,26 @@ fn the_mcp_binary_serves_the_socket_as_tools() {
         &mut stdin,
         json!({ "jsonrpc": "2.0", "id": 6, "method": "tools/call",
                 "params": { "name": "cocoa_register", "arguments": {} } }),
+    );
+    let reply = read_reply(&mut lines);
+    assert_eq!(reply["error"]["code"], -32602, "{reply}");
+
+    // A cancel is a POST to the run, its name escaped like any other.
+    send(
+        &mut stdin,
+        json!({ "jsonrpc": "2.0", "id": 7, "method": "tools/call",
+                "params": { "name": "cocoa_cancel",
+                            "arguments": { "experiment": "my solver", "run_id": "9" } } }),
+    );
+    let reply = read_reply(&mut lines);
+    assert_eq!(reply["result"]["isError"], false, "{reply}");
+
+    // Without the run there is nothing to cancel.
+    send(
+        &mut stdin,
+        json!({ "jsonrpc": "2.0", "id": 8, "method": "tools/call",
+                "params": { "name": "cocoa_cancel",
+                            "arguments": { "experiment": "my solver" } } }),
     );
     let reply = read_reply(&mut lines);
     assert_eq!(reply["error"]["code"], -32602, "{reply}");
