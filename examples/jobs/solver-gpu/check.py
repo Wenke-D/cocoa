@@ -39,8 +39,8 @@ for entry in sorted(os.listdir(runs)) if os.path.isdir(runs) else []:
         continue
 
 if deployed is None:
-    print("COCOA_RETURN: STALE mock: nothing deployed yet")
+    print("COCOA_RETURN: STALE Nothing has been deployed yet.")
 elif active:
-    print(f"COCOA_RETURN: CONFLICT mock: solver.cfg changed while run {active[0]} is active")
+    print(f"COCOA_RETURN: CONFLICT solver.cfg has changed, and run {active[0]} still uses the deployed one.")
 else:
-    print("COCOA_RETURN: STALE mock: solver.cfg changed since the last deploy")
+    print("COCOA_RETURN: STALE solver.cfg has changed since the last deploy.")

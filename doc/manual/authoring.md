@@ -180,9 +180,15 @@ what the runs use — the executable, its configuration, any auxiliary material
 
 ```
 COCOA_RETURN: CURRENT
-COCOA_RETURN: STALE solver.cfg changed since the last deploy
-COCOA_RETURN: CONFLICT solver binary is in use by run 38
+COCOA_RETURN: STALE The config file solver.cfg has changed since the last deploy.
+COCOA_RETURN: CONFLICT The solver binary is in use by run 38.
 ```
+
+Write the reason after `STALE` or `CONFLICT` as **one full sentence saying
+why**, for a person who reads it on its own: the run page shows it as the *why*
+of the run's deploy, and a refused start quotes it. `Nothing has been deployed
+yet.` reads well there; `nothing deployed yet`, next to `Deployed 10:32`, reads
+as if the deploy did nothing.
 
 `CURRENT` launches at once. `STALE` means it must be put in place and nothing
 running is harmed by that — say, a new config file: cocoa runs `deploy`, then

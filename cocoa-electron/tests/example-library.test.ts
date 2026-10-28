@@ -101,7 +101,7 @@ describe('bundled example library', () => {
     fs.appendFileSync(path.join(solver, 'solver.cfg'), 'damping = 0.5\n')
     const before = cocoa.job(solver).runs.all().length
     await expect(cocoa.start_job(solver, { nodes: '64' }, { gpu: '0' }, 'human')).rejects.toThrow(
-      /cannot start now: deploying it would conflict — mock: solver.cfg changed while run \d+ is active/
+      /cannot start now: deploying it would conflict\. Why: solver\.cfg has changed, and run \d+ still uses the deployed one\./
     )
     expect(cocoa.job(solver).runs.all()).toHaveLength(before)
   })

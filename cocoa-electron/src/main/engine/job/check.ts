@@ -52,7 +52,7 @@ export async function check(engine: Engine, job: Job, manifest: JobManifest): Pr
     // what a deploy would collide with, only that the folder says it would.
     throw EngineError.validation(
       `\`${manifest.name}\` cannot start now: deploying it would conflict` +
-        (reason !== undefined ? ` — ${reason}` : '')
+        (reason !== undefined ? `. Why: ${reason}` : '')
     )
   }
   throw EngineError.validation(

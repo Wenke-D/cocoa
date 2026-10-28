@@ -70,11 +70,11 @@ describe('a start checks its job first', () => {
     const job = job_folder(dir, 'solver')
     const cocoa = engine(dir)
     cocoa.register(job)
-    write(job, 'check-state', 'CONFLICT solver binary in use by run 3')
+    write(job, 'check-state', 'CONFLICT The solver binary is in use by run 3.')
 
     const message = await failure(cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human'))
     expect(message).toBe(
-      '`solver` cannot start now: deploying it would conflict — solver binary in use by run 3'
+      '`solver` cannot start now: deploying it would conflict. Why: The solver binary is in use by run 3.'
     )
     expect(cocoa.job(job).runs.all()).toEqual([])
     expect(exists(job, 'runs', '0')).toBe(false)

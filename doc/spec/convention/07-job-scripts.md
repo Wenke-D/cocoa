@@ -214,8 +214,8 @@ place, and may it be put there now? It answers exactly one line:
 
 ```
 COCOA_RETURN: CURRENT
-COCOA_RETURN: STALE solver.cfg changed since the last deploy
-COCOA_RETURN: CONFLICT solver binary is in use by run 38
+COCOA_RETURN: STALE The config file solver.cfg has changed since the last deploy.
+COCOA_RETURN: CONFLICT The solver binary is in use by run 38.
 ```
 
 | Word | Means | cocoa |
@@ -224,8 +224,14 @@ COCOA_RETURN: CONFLICT solver binary is in use by run 38
 | `STALE` | something must be put in place, and nothing running is harmed by that | runs `deploy` (§7.6), then launches |
 | `CONFLICT` | something must be put in place, but doing it now would race with work in progress | refuses the start |
 
-Everything after the word is a free-text reason, kept and shown as-is. The
-judgement is the script's alone: cocoa does not know what a deploy touches or
+Everything after the word is the reason, kept and shown as-is: on the run, as
+the *why* of its deploy, and to whoever a `CONFLICT` refused. It is read on its
+own, away from the word and the script, so it is **one full sentence saying
+why** — `Nothing has been deployed yet.`, not `nothing deployed yet`, which
+beside the run's `Deployed 10:32` reads as the deploy's outcome. `CURRENT`
+needs no reason, and one given is not shown.
+
+The judgement is the script's alone: cocoa does not know what a deploy touches or
 what a running run reads — whether a new config file is harmless while runs
 are going and a new binary is not is exactly the kind of thing only the folder
 knows. A check may read `runs/` to see what is active (§12); its records are
@@ -258,7 +264,7 @@ A run records what its check said:
 
 ```json
 { "run_id": 42, "status": "STARTING",
-  "deploy": { "check": "STALE", "reason": "solver.cfg changed",
+  "deploy": { "check": "STALE", "reason": "The config file solver.cfg has changed since the last deploy.",
               "at": "2026-10-06T15:02:40.123+02:00" } }
 ```
 
