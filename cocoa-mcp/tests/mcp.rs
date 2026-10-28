@@ -44,7 +44,11 @@ impl Drop for Stub {
 /// Answers the routes this test exercises, and 404s the rest — the subset
 /// of §43.2 the binary speaks: one request, one response, connection closed.
 fn serve() -> Stub {
-    let path = socket_path();
+    serve_at(socket_path())
+}
+
+fn serve_at(path: std::path::PathBuf) -> Stub {
+    let _ = std::fs::remove_file(&path);
     let listener = UnixListener::bind(&path).unwrap();
     let listening = path.clone();
 
@@ -180,6 +184,7 @@ fn the_mcp_binary_serves_the_socket_as_tools() {
         .collect();
     for expected in [
         "cocoa_help",
+        "cocoa_launch",
         "cocoa_list_jobs",
         "cocoa_list_campaigns",
         "cocoa_job",
@@ -288,7 +293,127 @@ fn a_tool_call_without_a_running_cocoa_says_so() {
     let message = reply["error"]["message"].as_str().unwrap();
     assert!(message.contains("cocoa is not answering"), "{message}");
     assert!(message.contains("window is running"), "{message}");
+    assert!(
+        message.contains("cocoa_launch"),
+        "the answer names the way out: {message}"
+    );
 
     drop(stdin);
     let _ = child.wait();
+}
+
+/// A scratch home of its own under `/tmp` — a socket path must stay short —
+/// with the directory every profile's socket is in.
+fn scratch_home(name: &str) -> std::path::PathBuf {
+    let home = std::path::PathBuf::from(format!("/tmp/cocoa-mcp-{name}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&home);
+    std::fs::create_dir_all(home.join(".local/share/cocoa")).unwrap();
+    home
+}
+
+/// A stand-in for the app: it records how it was started, which is the
+/// moment the test brings the socket up in its place.
+fn fake_app(home: &std::path::Path) -> std::path::PathBuf {
+    use std::os::unix::fs::PermissionsExt;
+    let app = home.join("fake-cocoa");
+    std::fs::write(
+        &app,
+        "#!/bin/sh\necho \"$* ${ELECTRON_RUN_AS_NODE:-unset}\" > \"$0.ran\"\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&app, std::fs::Permissions::from_mode(0o755)).unwrap();
+    app
+}
+
+fn call(stdin: &mut ChildStdin, id: u64, name: &str) {
+    send(
+        stdin,
+        json!({ "jsonrpc": "2.0", "id": id, "method": "tools/call",
+                "params": { "name": name, "arguments": {} } }),
+    );
+}
+
+/// cocoa not running is no longer a dead end: the agent may open it, as the
+/// user would — the installed app, for the profile the socket belongs to —
+/// and the tool answers once cocoa does.
+#[test]
+fn cocoa_launch_opens_a_silent_cocoa_and_waits_for_it() {
+    let home = scratch_home("launch");
+    let socket = home.join(".local/share/cocoa/cocoa-dev.sock");
+    let app = fake_app(&home);
+    let ran = home.join("fake-cocoa.ran");
+    let mut child = Command::new(env!("CARGO_BIN_EXE_cocoa-mcp-server"))
+        .env("HOME", &home)
+        .env("COCOA_SOCKET_PATH", &socket)
+        .env("COCOA_APP", &app)
+        .env("ELECTRON_RUN_AS_NODE", "1")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
+
+    call(&mut stdin, 1, "cocoa_launch");
+    // The app has started when it has written down how; cocoa answers soon after.
+    let started = std::time::Instant::now();
+    while !ran.exists() {
+        assert!(
+            started.elapsed() < std::time::Duration::from_secs(10),
+            "the app was never started"
+        );
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    let stub = serve_at(socket.clone());
+
+    let reply = read_reply(&mut lines);
+    assert_eq!(reply["result"]["isError"], false, "{reply}");
+    let text = reply["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.starts_with("Started cocoa"), "{text}");
+    assert_eq!(
+        std::fs::read_to_string(&ran).unwrap().trim(),
+        "--profile dev unset",
+        "the profile is the socket's, and Electron is not told to be Node"
+    );
+
+    // A cocoa that answers is left alone.
+    std::fs::remove_file(&ran).unwrap();
+    call(&mut stdin, 2, "cocoa_launch");
+    let reply = read_reply(&mut lines);
+    let text = reply["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("already running"), "{text}");
+    assert!(!ran.exists(), "a running cocoa was launched again");
+
+    drop(stdin);
+    let _ = child.wait();
+    drop(stub);
+    let _ = std::fs::remove_dir_all(&home);
+}
+
+/// An app that cannot be started is the agent's to report, with the way to
+/// point the tool at the right one.
+#[test]
+fn cocoa_launch_says_so_when_cocoa_cannot_start() {
+    let home = scratch_home("no-app");
+    let mut child = Command::new(env!("CARGO_BIN_EXE_cocoa-mcp-server"))
+        .env("HOME", &home)
+        .env_remove("COCOA_SOCKET_PATH")
+        .env("COCOA_APP", home.join("no-such-cocoa"))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let mut lines = BufReader::new(child.stdout.take().unwrap()).lines();
+
+    call(&mut stdin, 1, "cocoa_launch");
+    let reply = read_reply(&mut lines);
+    assert_eq!(reply["result"]["isError"], true, "{reply}");
+    let text = reply["result"]["content"][0]["text"].as_str().unwrap();
+    assert!(text.contains("could not start cocoa"), "{text}");
+    assert!(text.contains("COCOA_APP"), "{text}");
+
+    drop(stdin);
+    let _ = child.wait();
+    let _ = std::fs::remove_dir_all(&home);
 }

@@ -95,9 +95,10 @@ its report does: the cluster's verdict is not the report's to change.
 
 ## Driven by an agent, too
 
-cocoa answers on a Unix socket while its window is open, and an agent can list
-experiments, read runs, and start them through it — the same operations a click
-uses, on the same engine, landing on the same screen. Every run records who
+cocoa answers on a Unix socket while its window is open — and when it is not,
+an agent may open the window itself — and an agent can list experiments, read
+runs, and start them through it — the same operations a click uses, on the same
+engine, landing on the same screen. Every run records who
 asked: **you**, an **agent**, or the **campaign** that dispatched it.
 
 That is what makes it worth giving an agent: the agent works where you can see

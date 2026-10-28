@@ -9,7 +9,7 @@ answers are the [agent interface](../spec/agent/43-agent-interface.md).
 ## Connecting
 
 cocoa answers on a Unix socket, `~/.local/share/cocoa/cocoa.sock`, **only
-while its window is open**. A cocoa started with `--profile <name>` answers on
+while its window is open** — though an agent may open it (rule 2). A cocoa started with `--profile <name>` answers on
 `cocoa-<name>.sock` beside it instead; point an agent there with
 `COCOA_SOCKET_PATH`. An agent reaches it one of two ways:
 
@@ -29,7 +29,10 @@ while its window is open**. A cocoa started with `--profile <name>` answers on
 
   Its tools are `cocoa_help`, `cocoa_list_jobs`, `cocoa_list_campaigns`,
   `cocoa_job`, `cocoa_campaign`, `cocoa_start`, `cocoa_register`,
-  `cocoa_cancel` and `cocoa_lock_report`.
+  `cocoa_cancel` and `cocoa_lock_report` — and `cocoa_launch`, which opens
+  cocoa when it is not running (rule 2). It starts `cocoa` from the `PATH`
+  (the app bundle on macOS); set `COCOA_APP` in the server's environment to
+  the cocoa executable when it lives elsewhere.
   `cocoa-mcp-server --help-ai` prints where this guidance lives.
 
 - **Over HTTP on the socket**, for a script or a quick look:
@@ -53,9 +56,15 @@ extension.
    `scancel`, no `ssh` to launch — so that you and the agent look at the same
    runs. A quick test is still a cocoa experiment: make a
    small smoke job for it and register it with `cocoa_register`.
-2. **If cocoa is not answering, ask.** The socket exists only while the window
-   is open. When a tool says cocoa is not answering, ask the user to open it;
-   do not work around it.
+2. **If cocoa is not answering, open it, and say so.** The socket exists only
+   while the window is open. When a tool says cocoa is not answering, call
+   `cocoa_launch`: it opens the user's own cocoa window, on their screen, and
+   returns once cocoa answers. Over raw HTTP, start the app the same way,
+   detached — `setsid cocoa >/dev/null 2>&1 &` (`open -a cocoa` on macOS),
+   with `--profile <name>` for a named profile's socket — then wait for the
+   socket. Tell the user you opened it, and leave it open. Never use it to
+   restart or replace a cocoa that is running, and never run cocoa hidden or
+   headless to get around the window.
 3. **Change an experiment in its folder, deliberately.** The folder is the
    experiment: edit its manifest and scripts there, keep its `description` and
    its report in step with its purpose, and say what changed. Never patch

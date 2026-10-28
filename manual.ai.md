@@ -14,7 +14,8 @@ The rules, in short — each is explained in the first document:
 
 - Launch, follow and report through cocoa; never `sbatch` or `ssh` a run by
   hand. A quick test is a small smoke experiment.
-- If cocoa does not answer, ask the user to open its window.
+- If cocoa does not answer, open it with `cocoa_launch` and tell the user;
+  never restart or replace a cocoa that is running.
 - Change an experiment in its folder, and say what you changed.
 - Put executables and their material in place through `check` and `deploy`.
 - Never edit `runs/` or `report/`.

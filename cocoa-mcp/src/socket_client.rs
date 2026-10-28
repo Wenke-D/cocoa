@@ -7,14 +7,18 @@ use std::time::Duration;
 /// the default profile (§43.2); a named profile's is reached through
 /// `COCOA_SOCKET_PATH`. Copied rather than imported: this crate must build
 /// without the workbench it talks to.
-fn socket_path() -> PathBuf {
+pub(crate) fn socket_path() -> PathBuf {
     if let Ok(path) = std::env::var("COCOA_SOCKET_PATH") {
         return PathBuf::from(path);
     }
-    if let Ok(home) = std::env::var("HOME") {
-        return PathBuf::from(home).join(".local/share/cocoa/cocoa.sock");
-    }
-    PathBuf::from("cocoa.sock")
+    socket_dir().map_or_else(|| PathBuf::from("cocoa.sock"), |dir| dir.join("cocoa.sock"))
+}
+
+/// The directory every profile's socket is in, when `HOME` says where that is.
+pub(crate) fn socket_dir() -> Option<PathBuf> {
+    std::env::var("HOME")
+        .ok()
+        .map(|home| PathBuf::from(home).join(".local/share/cocoa"))
 }
 
 /// One request, one response — libcurl over the Unix socket (§43.2), the
@@ -29,7 +33,7 @@ pub(crate) fn http(
         if error.is_couldnt_connect() {
             format!(
                 "cocoa is not answering on {} ({error}); the interface exists only while \
-                 the cocoa window is running",
+                 the cocoa window is running. cocoa_launch opens it.",
                 socket.display()
             )
         } else {

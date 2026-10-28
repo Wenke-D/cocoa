@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
 
+use crate::launch::launch;
 use crate::percent_encode::percent_encode;
 use crate::socket_client::http;
 
@@ -18,6 +19,11 @@ pub(crate) fn tools() -> Value {
         {
             "name": "cocoa_help",
             "description": "What cocoa is and everything this interface answers. Call this first.",
+            "inputSchema": no_arguments,
+        },
+        {
+            "name": "cocoa_launch",
+            "description": "Open cocoa when it is not running — when another cocoa tool answered that cocoa is not answering. Starts the user's installed cocoa, its window on their screen, as they would open it themselves, and waits until it answers (up to 30 s); the window stays open after you are done. Changes nothing if cocoa is already running. Never use it to restart or replace a cocoa the user has open.",
             "inputSchema": no_arguments,
         },
         {
@@ -102,6 +108,17 @@ pub(crate) fn tools() -> Value {
 
 pub(crate) fn call_tool(name: &str, arguments: &Value) -> Result<Value, (i64, String)> {
     let outcome = match name {
+        // Not a request over the socket: the socket is what is missing.
+        "cocoa_launch" => {
+            let (text, is_error) = match launch() {
+                Ok(text) => (text, false),
+                Err(text) => (text, true),
+            };
+            return Ok(json!({
+                "content": [{ "type": "text", "text": text }],
+                "isError": is_error,
+            }));
+        }
         "cocoa_help" => http("GET", "/help", None),
         "cocoa_list_jobs" => http("GET", "/jobs", None),
         "cocoa_list_campaigns" => http("GET", "/campaigns", None),

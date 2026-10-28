@@ -61,7 +61,8 @@ pub(crate) fn dispatch(method: &str, params: &Value) -> Result<Value, (i64, Stri
                  reports are written. Call cocoa_help first: it explains the tool and \
                  every operation. Responses carry file locations rather than file \
                  contents — cocoa is local-only, so read those paths directly. cocoa must \
-                 be running (its window open) for these tools to answer."
+                 be running (its window open) for these tools to answer; when it is not, \
+                 cocoa_launch opens it."
             ),
         })),
         "ping" => Ok(json!({})),

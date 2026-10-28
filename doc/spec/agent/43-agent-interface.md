@@ -10,10 +10,18 @@ The interface exists only while cocoa is running. That is a decision, not a
 limitation to be worked around. A run started through it belongs to the store
 the user is looking at, and appears there exactly as a click's run does.
 
-An agent therefore cannot act while cocoa is closed. What cocoa must do instead is
-catch up on the way back up: a run in flight when the window closed is polled on
-the first refresh, and if the cluster finished it, the stage that follows runs
-(§10).
+An agent cannot act through a closed cocoa, but it may open one. The MCP
+binary's `cocoa_launch` (§43.5) starts the user's installed cocoa — its window,
+on their screen, for the profile the socket belongs to — and answers once the
+socket does; an agent on raw HTTP starts the app the same way, detached. That
+keeps the decision rather than working around it: what answers is the window,
+never a hidden or headless engine, and it stays open after the agent is done,
+for the user to see what was done and to close. A cocoa already running is
+left alone; launching is never a restart.
+
+What cocoa must do on the way back up is catch up: a run in flight when the
+window closed is polled on the first refresh, and if the cluster finished it,
+the stage that follows runs (§10).
 
 ## 43.2 Transport
 
@@ -201,12 +209,25 @@ the right route rather than flatly refused.
 
 `cocoa-mcp-server` serves this same surface as MCP tools (`cocoa_help`,
 `cocoa_list_jobs`, `cocoa_job`, `cocoa_start`, `cocoa_register`, `cocoa_cancel`,
-`cocoa_lock_report`, …) so an agent runtime speaks to
+`cocoa_lock_report`, …), plus `cocoa_launch`, so an agent runtime speaks to
 cocoa through its own tool protocol instead of raw HTTP. An agent's MCP client
 launches the binary and speaks JSON-RPC over stdio; every tool call becomes
 one request over the socket, and the socket's answers pass through verbatim.
-It decides nothing — it is a translator, and the window must still be running
-for it to answer. The MCP subset it needs (initialize, tools/list, tools/call,
+It decides nothing — it is a translator, and the window must be running for it
+to answer.
+
+The one exception is `cocoa_launch`, which is not a request over the socket:
+the socket is what is missing (§43.1). When the socket does not answer, it runs
+`COCOA_APP` if that is set, otherwise the installed app — `cocoa` on the `PATH`,
+or `open -a cocoa` on macOS — with `--profile <name>` when the socket is the
+named profile's `cocoa-<name>.sock`. The app starts detached, in a process group
+of its own with no stdio, so it outlives the agent's session and prints nothing
+into the JSON-RPC stream, and without an inherited `ELECTRON_RUN_AS_NODE`, which
+an editor's terminal leaks and which turns Electron into Node. The tool answers
+once the socket does, or after 30 s with why not; a cocoa that already answers
+is left alone. Every other tool's not-answering error names `cocoa_launch`.
+
+The MCP subset it needs (initialize, tools/list, tools/call,
 one JSON message per line) is written out by hand rather than taken from an SDK.
 
 Run with `--help-ai`, the binary prints a pointer instead of serving: one

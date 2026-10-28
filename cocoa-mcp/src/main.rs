@@ -4,7 +4,8 @@
 //! stdio; every tool call becomes one HTTP request over cocoa's Unix socket
 //! (§43.2). Nothing is decided here: this is a translator, and the socket's
 //! answers pass through verbatim, so an agent reading a refusal sees the same
-//! sentence a person would have been shown.
+//! sentence a person would have been shown. The one thing it does that is not
+//! a translation is open cocoa when the socket is silent (`launch.rs`, §43.1).
 //!
 //! The MCP subset needed — initialize, tools/list, tools/call, one line of
 //! JSON per message — is written out rather than taken as a dependency. HTTP
@@ -16,6 +17,7 @@
 //! It is its own crate, and knows nothing of the workbench but the socket
 //! protocol of §43.2: whatever serves that protocol, it drives.
 
+mod launch;
 mod manual;
 mod percent_encode;
 mod rpc;
