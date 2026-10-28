@@ -9,8 +9,8 @@ above the wordmark `cocoa`, together at the optical centre of the main
 region, and one line of state hanging beneath them. The Explorer still
 holds the next action — the line points there — but the daily open earns
 a moment of identity before the work starts. Everything else about the
-page's restraint stands: no enclosing panel, no shadow, no decorative
-divider. The mark is the exception to "no illustration", and only
+page's restraint stands: no enclosing panel around the brand, no
+decorative divider. The mark is the exception to "no illustration", and only
 because it is not one: it is the same object the dock shows, at 76px,
 inline from `build/icon.svg` and painted from `--mark-tile` /
 `--mark-bean` — the one pair identical in both schemes, because an icon
@@ -24,8 +24,9 @@ competing to be looked at first. Neither is selectable. The pair sits in
 the middle row of a 1fr / auto / 1.618fr grid, the golden section (~38%
 down), and does not move between states; only the line under it changes,
 with no transition. State lines are 14px/22 in the muted colour, centred,
-max-width 460px, 18px below the wordmark. This page alone escapes the
-900px reading column: it centres in the whole visible region.
+max-width 520px, 18px below the wordmark. This page alone escapes the
+reading column: it centres in the whole visible region. The activity
+bar's small mark (§8.2) comes back here from anywhere.
 
 **Starting** — the backend has not answered yet. An inline 14px
 `LoaderCircle` leads the line, turning once per 1600ms (static under
@@ -51,16 +52,18 @@ No experiments are registered. Add a folder that contains
 ```
 
 **Experiments exist, none selected** — the state seen every day. Below
-the line, at a distance (28px), an at-a-glance line: 12px muted, tabular
-numerals, not clickable, no badges or status colours. Zero-value segments
-stay, so the line keeps one shape from launch to launch; screen readers
-hear commas rather than the middle dots. When both counts are zero this
-state never shows — the previous one does.
+the line, at a distance (28px), the glance: three small panels in a row,
+each a sign, a number and its noun — campaigns and jobs with their kind's
+sign in the kind's colour (§11.4), active runs with the activity sign,
+turning blue while anything runs. Not clickable. Zero-value tiles stay,
+so the row keeps one shape from launch to launch; screen readers hear
+one list, `2 campaigns, 4 jobs, 1 active run`. When both counts are zero
+this state never shows — the previous one does.
 
 ```text
                     ▣
                   cocoa
 Select an experiment in the Explorer to begin.
 
-       2 campaigns · 4 jobs · 1 active run
+  [≋ 2 campaigns]  [⚗ 4 jobs]  [∿ 1 active run]
 ```

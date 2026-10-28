@@ -17,25 +17,31 @@ different, and the drift is invisible until both are on screen at once.
 
 | Place | Owns |
 |---|---|
-| `src/renderer/src/theme.css` | The palette, both schemes — the one place a colour is chosen — and cocoa's own chrome: body type, `table.runs`, `code` |
+| `src/renderer/src/theme.css` | The palette, both schemes — the one place a colour is chosen — and cocoa's own chrome: body type, scrollbars, `.panel`, `.eyebrow`, `.section-title`, `dl.facts`, `table.runs`, `.params`, `code` |
 | `src/renderer/src/app.css` | Tailwind, and the shadcn names for cocoa's tokens: `bg-primary` *is* `--accent`, `bg-popover` *is* `--widget-bg`. No second palette |
 | `src/renderer/src/lib/components/ui/` | shadcn-svelte's components — Button, Dialog, ContextMenu, Input, Label, Spinner, and for the Start form's shapes Select, Checkbox, Textarea (Separator rides along with Select). Copied-in source, owned and edited here, not a package |
-| `src/renderer/src/lib/components/` | cocoa's own widgets: `ModalFrame`, `StatusPill`, `Breadcrumbs`, `RunFacts`, `Sidebar`, `StatusBar` |
+| `src/renderer/src/lib/components/` | cocoa's own widgets: `ModalFrame`, `StatusPill`, `RunHeader`, `KindIcon`, `Breadcrumbs`, `RunFacts`, `Sidebar`, `StatusBar` |
 | `src/renderer/src/pages/` | One component per page of the specification |
 
 ## Colour
 
-The palette is VS Code's: Light Modern and Dark Modern, as CSS custom
-properties on `:root`, the dark set under `prefers-color-scheme`. A caller
-names a purpose and gets whatever colour that purpose owns:
+The palette is the product mark's (§24.3): cocoa brown for the frame, latte
+and warm paper for the grounds, caramel for what can be acted on, cool status
+colours. It is CSS custom properties on `:root`, the dark set under
+`prefers-color-scheme`. A caller names a purpose and gets whatever colour that
+purpose owns:
 
 ```css
---editor-bg  --side-bar-bg  --status-bar-bg  --widget-bg   /* a region's own ground */
+--editor-bg  --side-bar-bg  --status-bar-bg  --widget-bg   /* a region's own ground; a panel is --widget-bg */
+--chrome-bg  --chrome-fg  --chrome-muted                   /* the frame: activity bar and status bar */
+--chrome-hover  --chrome-active                            /* an item's ground on the frame */
 --foreground  --strong-foreground  --description           /* text, by weight of voice */
 --accent  --on-accent  --link                              /* the one colour meaning "interactive" */
 --row-hover  --row-selected  --row-selected-fg             /* a list row's ground */
 --error  --warning                                         /* how loudly we are speaking */
 --chart-*                                                  /* a run status */
+--kind-job  --kind-campaign                                /* what an experiment is: its sign, its tile */
+--panel-shadow                                             /* a panel's lift off the page */
 --search-match  --search-match-current                     /* washes behind report text */
 --code-bg  --code-inline-bg                                /* code's ground: a block, and a chip, heavier for being small */
 --mark-tile  --mark-bean                                   /* the product mark, the one pair identical in both schemes */
@@ -53,6 +59,11 @@ and saying what it means — then, if a utility class needs it, a line in
 `app.css`. It never means a hex value at a call site, or a Tailwind colour
 (`bg-blue-600`) that belongs to no palette.
 
+**A wash** — a status chip's ground, a tile's, a callout's — is mixed from the
+purpose it belongs to, not chosen: `color-mix(in srgb, var(--tone) 14%,
+transparent)`. It follows its colour across schemes for free, and a wash with a
+hex of its own would be a second colour for one meaning.
+
 ## Type
 
 The app is 13px Inter; `app.css` makes that what `text-sm` means, so the
@@ -62,13 +73,13 @@ mean different things, so that either can change alone:
 
 | Role | Where |
 |---|---|
-| Page title | `h1` in the page, 18–20px/600, `--strong-foreground` |
-| Section heading | `h2` in the page, 13px/600, `--strong-foreground` |
-| Eyebrow, panel header | 11px, letter-spaced, `--description`: `JOB`, `EXPLORER` |
+| Page title | `h1` in the page, 20–22px/600, `--strong-foreground` |
+| Section heading | `h2.section-title`, 13px/600, `--strong-foreground`, an optional `.tally` beside it |
+| Eyebrow, panel header | `.eyebrow`: 11px/600, uppercase, letter-spaced, `--description`: `JOB RUN`, `EXPLORER`, a table's headings |
 | Caption, note | `--description` at body size |
 | A value worth copying | `.mono` (`code`, run ids, parameters) |
-| Status | `StatusPill` — label and colour chosen together, never colour alone (§23) |
-| Feedback | `--warning` / `--error` text; the error callout is a bordered block |
+| Status | `StatusPill`, a chip — label and colour chosen together, never colour alone (§23) |
+| Feedback | `--warning` / `--error` text; the callout is a block on the colour's wash, bordered in it |
 
 ## Controls
 
@@ -78,9 +89,9 @@ owned sources, noted at the top of each file).
 
 ```svelte
 <Button>Start</Button>                                  <!-- the one primary action on a surface -->
-<Button variant="secondary">Keep Running</Button>
+<Button variant="secondary">Keep Running</Button>       <!-- a raised outline on the panel's ground -->
 <Button variant="ghost" size="icon-xs" aria-label="Refresh now"><RefreshIcon /></Button>
-<Button disabled={busy}>{#if busy}<Spinner />Starting…{:else}Start{/if}</Button>
+<Button disabled={busy}>{#if busy}<Spinner />Launching…{:else}Launch{/if}</Button>
 <Label><span class="text-description">{name}</span><Input bind:value /></Label>
 ```
 
@@ -101,11 +112,19 @@ are for composing the components and for one-off placement next to them
 (`ml-auto`, `mt-3`); a page's own layout is written as CSS, where a rule can
 carry a comment saying why.
 
-- **Facts** go in a `<dl>` grid, labels in `--description`; `RunFacts` is the
-  shared one.
-- **A history** is `table.runs`: fixed layout, declared column widths, the
-  remainder column last (§22). The rule is global in `theme.css` because it was
-  on its third copy.
+- **A page** is a reading column 1120px wide, padded 22px / 32px, on the warm
+  page ground; the report viewer takes the whole region.
+- **A panel** (`.panel`) holds what belongs together: a run's facts, a table,
+  a form. It draws the edge, so what is inside it does not.
+- **Facts** go in a `<dl class="facts panel">`, each pair wrapped in a
+  `div.fact` so a row is one box with one rule under it; labels in
+  `--description`. `RunFacts` is the shared one.
+- **A history** is `table.runs` in a `.panel`: fixed layout, declared column
+  widths, the remainder column last (§22). The rule is global in `theme.css`
+  because it was on its third copy.
+- **A page's identity** is a tile: the kind's sign on the kind's wash on an
+  overview (`KindIcon`), the status's sign on the status's wash on a run page
+  (`RunHeader`).
 - **Empty states** are a heading and a sentence in `--description`; they must
   never look like errors (§12).
 - **Spacing**: 4 / 8 / 16 / 24 — between a label and its field, between rows,
@@ -113,11 +132,13 @@ carry a comment saying why.
 
 ## Drawing a new screen
 
-1. Identity first: the eyebrow for the kind, `h1` for the name.
-2. Break the body into `h2` sections. One action per section at most.
-3. Facts go in a `<dl>`; a list of runs is `table.runs`.
-4. Something the reader must notice: a bordered callout in `--warning` or
-   `--error`. Something they may skip: a line in `--description`.
+1. Identity first: the tile, the eyebrow for the kind, `h1` for the name, the
+   page's actions at the head's right.
+2. Break the body into `h2.section-title` sections. One action per section at
+   most.
+3. Facts go in a `dl.facts`; a list of runs is `table.runs`; each in a `.panel`.
+4. Something the reader must notice: a callout on the `--warning` or `--error`
+   wash. Something they may skip: a line in `--description`.
 5. Actions are `<Button>`s; at most one primary per surface.
 6. Reach for margin only between sections. Inside one, the widget owns its
    spacing.

@@ -2,7 +2,10 @@
   shadcn-svelte's button, owned here (the CLI copies source, it does not
   install a package). Edited: the default size is cocoa's 28px control, the
   type size is the app's — see app.css for what `text-sm` means — and the
-  cursor is the pointer, as on every clickable row in this app.
+  cursor is the pointer, as on every clickable row in this app. The primary
+  carries a faint shadow, and the secondary is a raised outline on the
+  panel's ground rather than a grey fill, so the two read as buttons on a
+  warm page instead of as patches of it.
 -->
 <script lang="ts" module>
   import { type VariantProps, tv } from 'tailwind-variants'
@@ -13,11 +16,12 @@
     base: "cursor-pointer rounded-lg border border-transparent bg-clip-padding text-sm font-medium focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg:not([class*='size-'])]:size-4 group/button inline-flex shrink-0 items-center justify-center whitespace-nowrap transition-all outline-none select-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground [a]:hover:bg-primary/80',
+        default:
+          'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 [a]:hover:bg-primary/80',
         outline:
           'border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50',
         secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
+          'border-border bg-card text-secondary-foreground shadow-xs hover:border-input hover:bg-secondary aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
         ghost:
           'hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50',
         destructive:

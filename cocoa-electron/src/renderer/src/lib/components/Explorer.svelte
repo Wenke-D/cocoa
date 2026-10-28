@@ -12,7 +12,9 @@
   import { EXPLORER_MAX_SPLIT, EXPLORER_MIN_SPLIT } from '../../ui_state'
   import type { Entity } from '@shared/world'
   import * as ContextMenu from '$lib/components/ui/context-menu'
+  import KindIcon from './KindIcon.svelte'
   import ViewTitle from './ViewTitle.svelte'
+  import PlusIcon from '@lucide/svelte/icons/plus'
 
   const jobs = $derived(app.world.entities.filter((entity) => entity.kind === 'Job'))
   const campaigns = $derived(app.world.entities.filter((entity) => entity.kind === 'Campaign'))
@@ -70,6 +72,7 @@
             class:selected={entity.id === selected}
             onclick={() => open(entity)}
           >
+            <KindIcon kind={entity.kind} size={15} />
             <span class="name">{entity.name}</span>
             {#if has_active_run(entity)}
               <span class="active-dot" title="has an active run"></span>
@@ -81,7 +84,7 @@
         {/snippet}
       </ContextMenu.Trigger>
       <ContextMenu.Content>
-        <ContextMenu.Item onSelect={() => request_remove(entity.id)}>
+        <ContextMenu.Item variant="destructive" onSelect={() => request_remove(entity.id)}>
           Remove from Explorer
         </ContextMenu.Item>
       </ContextMenu.Content>
@@ -93,13 +96,15 @@
 
 <ViewTitle title="EXPLORER">
   {#snippet actions()}
-    <button class="add" title="Add folder" aria-label="Add folder" onclick={add_folder}>+</button>
+    <button class="add" title="Add folder" aria-label="Add folder" onclick={add_folder}>
+      <PlusIcon size={16} strokeWidth={1.75} />
+    </button>
   {/snippet}
 </ViewTitle>
 
 <div class="panes" bind:this={panes}>
   <section class="pane" style="flex-grow: {app.explorer_split}">
-    <h3 class="section">CAMPAIGNS</h3>
+    <h3 class="section">CAMPAIGNS <span class="tally">{campaigns.length}</span></h3>
     <div class="list">{@render rows(campaigns)}</div>
   </section>
   <div
@@ -110,7 +115,7 @@
     onpointerdown={start_drag}
   ></div>
   <section class="pane" style="flex-grow: {1 - app.explorer_split}">
-    <h3 class="section">JOBS</h3>
+    <h3 class="section">JOBS <span class="tally">{jobs.length}</span></h3>
     <div class="list">{@render rows(jobs)}</div>
   </section>
 </div>
@@ -120,16 +125,17 @@
     margin-left: auto;
     width: 22px;
     height: 22px;
+    display: grid;
+    place-items: center;
     border: none;
-    border-radius: 3px;
+    border-radius: 4px;
     background: none;
-    color: var(--foreground);
-    font-size: 15px;
-    line-height: 1;
+    color: var(--description);
     cursor: pointer;
   }
 
   .add:hover {
+    color: var(--strong-foreground);
     background: var(--row-hover);
   }
 
@@ -151,25 +157,33 @@
 
   /* A heading, not a band: bold, uppercase and flush left, its rows indented
      under it, as VS Code draws its sections. It has no ground of its own, so
-     the one ground in the list is the selection's (§8.3). */
+     the one ground in the list is the selection's (§8.3). The count says how
+     much is folded under it. */
   .section {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    height: 22px;
+    gap: 6px;
+    height: 26px;
     margin: 0;
-    padding: 0 8px;
+    padding: 0 12px;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;
     color: var(--strong-foreground);
   }
 
+  .tally {
+    font-weight: 500;
+    letter-spacing: 0;
+    color: var(--description);
+  }
+
   .list {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 2px 0;
+    padding: 0 6px 4px;
   }
 
   /* The divider is drawn as the lower pane's top edge, so there is a line to
@@ -193,19 +207,26 @@
     background: var(--accent);
   }
 
+  /* Inset from the sidebar's edges, with rounded ends: the selection is a
+     shape on the latte ground, not a stripe across it. */
   .row {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     width: 100%;
-    height: 24px;
-    padding: 0 16px;
+    height: 26px;
+    padding: 0 8px 0 12px;
     border: none;
+    border-radius: 5px;
     background: none;
     color: var(--foreground);
     text-align: left;
     cursor: pointer;
     white-space: nowrap;
+  }
+
+  .row :global(svg) {
+    flex-shrink: 0;
   }
 
   .row:hover {
@@ -215,6 +236,7 @@
   .row.selected {
     background: var(--row-selected);
     color: var(--row-selected-fg);
+    font-weight: 500;
   }
 
   .name {
@@ -228,6 +250,7 @@
     height: 7px;
     border-radius: 50%;
     background: var(--chart-blue);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--chart-blue) 22%, transparent);
     flex-shrink: 0;
   }
 
@@ -238,7 +261,7 @@
   }
 
   .empty {
-    padding: 2px 16px;
+    padding: 2px 12px;
     color: var(--description);
     font-style: italic;
   }

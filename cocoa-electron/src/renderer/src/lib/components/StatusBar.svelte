@@ -35,7 +35,9 @@
   {#if app.connected}
     <span>cocoa engine</span>
     <span class="sep">·</span>
-    <span>{active} active {active === 1 ? 'run' : 'runs'}</span>
+    <span class="active" class:running={active > 0}
+      >{active} active {active === 1 ? 'run' : 'runs'}</span
+    >
     {#if last !== null}
       <span class="sep">·</span>
       <!-- A clock time, not a count that ticks: it changes only when something
@@ -47,7 +49,7 @@
     <Button
       variant="ghost"
       size="icon-xs"
-      class="refresh ml-0.5 size-5 text-description hover:text-strong"
+      class="refresh ml-0.5 size-5"
       title="Refresh now"
       aria-label="Refresh now"
       onclick={refresh}
@@ -65,16 +67,16 @@
 </footer>
 
 <style>
+  /* The frame's lower edge, in its cocoa brown (§8.5). */
   footer {
-    height: 22px;
+    height: 24px;
     display: flex;
     align-items: center;
     gap: 6px;
     padding: 0 12px;
     background: var(--status-bar-bg);
-    border-top: 1px solid var(--border);
     font-size: 11px;
-    color: var(--description);
+    color: var(--chrome-muted);
     flex-shrink: 0;
   }
 
@@ -93,6 +95,12 @@
     opacity: 0.5;
   }
 
+  /* Something running is the one thing here worth the full colour. */
+  .active.running {
+    color: var(--chrome-fg);
+    font-weight: 600;
+  }
+
   .change {
     border: none;
     background: none;
@@ -103,10 +111,19 @@
   }
 
   .change:hover {
-    color: var(--strong-foreground);
+    color: var(--chrome-fg);
   }
 
   .clock {
     font-variant-numeric: tabular-nums;
+  }
+
+  footer :global(.refresh) {
+    color: var(--chrome-muted);
+  }
+
+  footer :global(.refresh:hover) {
+    color: var(--chrome-fg);
+    background: var(--chrome-hover);
   }
 </style>

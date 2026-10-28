@@ -18,7 +18,7 @@
   import { dispatched_owner, entity_name, entity_of } from '../world_queries'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
   import RunFacts from '../lib/components/RunFacts.svelte'
-  import StatusPill from '../lib/components/StatusPill.svelte'
+  import RunHeader from '../lib/components/RunHeader.svelte'
   import { Button } from '$lib/components/ui/button'
   import SquareIcon from '@lucide/svelte/icons/square'
 
@@ -65,60 +65,53 @@
 {#if run !== undefined}
   <Breadcrumbs {crumbs} />
 
-  <header>
-    <h1 class="mono">{run.id}</h1>
-    <StatusPill status={run.status} health={run.query_health} />
-    <!--
-      Cancelling here stops this one run. It is not the campaign's cancel, and it
-      does not touch the siblings (§19, §2.3.3) — which is why the target is
-      the job run, exactly as it is on the job's own page.
-    -->
-    {#if is_cancellable(run.status) && step !== undefined}
-      <Button
-        variant="secondary"
-        class="cancel ml-auto"
-        onclick={() => request_cancel({ kind: 'job_run', job_id: step.job_id, run_id: run.id })}
-      >
-        <SquareIcon />Cancel Run
-      </Button>
-    {/if}
-  </header>
+  <RunHeader
+    kind="Job run · campaign call"
+    id={run.id}
+    status={run.status}
+    health={run.query_health}
+  >
+    {#snippet actions()}
+      <!--
+        Cancelling here stops this one run. It is not the campaign's cancel, and it
+        does not touch the siblings (§19, §2.3.3) — which is why the target is
+        the job run, exactly as it is on the job's own page.
+      -->
+      {#if is_cancellable(run.status) && step !== undefined}
+        <Button
+          variant="secondary"
+          class="cancel"
+          onclick={() => request_cancel({ kind: 'job_run', job_id: step.job_id, run_id: run.id })}
+        >
+          <SquareIcon />Cancel Run
+        </Button>
+      {/if}
+    {/snippet}
+  </RunHeader>
 
   <RunFacts {run} report_context={{ kind: 'campaign_child', campaign_id, campaign_run_id }}>
     {#snippet leading()}
-      <dt>Job</dt>
-      <dd>
-        {#if step !== undefined}
-          <!-- Explicit navigation: arriving through the campaign must not move the
-               Explorer selection, but asking for the job by name may (§19). -->
-          <button
-            class="job-link"
-            onclick={() => navigate({ page: 'entity', entity_id: step.job_id })}
-          >
-            {entity_name(job)}
-          </button>
-        {:else}
-          (not in the plan)
-        {/if}
-      </dd>
-      <dt>Call</dt>
-      <dd class="mono">{step?.index ?? '—'}</dd>
+      <div class="fact">
+        <dt>Job</dt>
+        <dd>
+          {#if step !== undefined}
+            <!-- Explicit navigation: arriving through the campaign must not move the
+                 Explorer selection, but asking for the job by name may (§19). -->
+            <button
+              class="job-link"
+              onclick={() => navigate({ page: 'entity', entity_id: step.job_id })}
+            >
+              {entity_name(job)}
+            </button>
+          {:else}
+            (not in the plan)
+          {/if}
+        </dd>
+      </div>
+      <div class="fact">
+        <dt>Call</dt>
+        <dd class="mono">{step?.index ?? '—'}</dd>
+      </div>
     {/snippet}
   </RunFacts>
 {/if}
-
-<style>
-  header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 24px;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--strong-foreground);
-  }
-</style>

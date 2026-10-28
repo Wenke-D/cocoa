@@ -28,11 +28,12 @@
   --text-base: 14px;
   --text-base--line-height: 1.4;
 
-  /* VS Code's corners: tight on controls, a little rounder on surfaces. */
-  --radius-sm: 2px;
-  --radius-md: 2px;
-  --radius-lg: 3px;
-  --radius-xl: 5px;
+  /* Corners: tight on controls, a little rounder on surfaces — a panel is
+     8px, so a control inside one is a step below it. */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 5px;
+  --radius-xl: 8px;
 
   /* shadcn's names for cocoa's tokens. */
   --color-background: var(--editor-bg);
@@ -61,6 +62,8 @@
   --color-link: var(--link);
   --color-warning: var(--warning);
   --color-error: var(--error);
+  --color-chrome: var(--chrome-bg);
+  --color-chrome-foreground: var(--chrome-fg);
 }
 
 @layer base {

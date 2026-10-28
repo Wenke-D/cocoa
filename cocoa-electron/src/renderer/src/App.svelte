@@ -91,7 +91,12 @@
     {/if}
     <main>
       {#key page_key}
-        <div class="page" class:centered={app.route.page === 'empty'} in:fade={{ duration: 120 }}>
+        <div
+          class="page"
+          class:centered={app.route.page === 'empty'}
+          class:wide={app.route.page === 'report'}
+          in:fade={{ duration: 120 }}
+        >
           {#if app.route.page === 'empty'}
             <Empty />
           {:else if app.route.page === 'entity'}
@@ -188,9 +193,15 @@
     background: var(--editor-bg);
   }
 
+  /* A reading column wide enough for a history's six columns, set on the
+     warm page ground; the report takes the whole region (§8.4). */
   .page {
-    padding: 20px;
-    max-width: 900px;
+    padding: 22px 32px 40px;
+    max-width: 1120px;
+  }
+
+  .page.wide {
+    max-width: none;
   }
 
   /* The empty page (§12) centres its wordmark in the whole visible region,
@@ -212,11 +223,11 @@
     gap: 12px;
     background: var(--widget-bg);
     border: 1px solid var(--border);
-    border-left: 3px solid var(--border);
-    border-radius: 4px;
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
     padding: 8px 12px;
     color: var(--strong-foreground);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 6px 18px rgba(40, 20, 5, 0.18);
   }
 
   .notice.error {

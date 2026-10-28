@@ -18,8 +18,10 @@
   .title {
     display: flex;
     align-items: center;
-    padding: 10px 8px 6px 8px;
+    height: 38px;
+    padding: 0 8px 0 12px;
     font-size: 11px;
+    font-weight: 600;
     letter-spacing: 0.08em;
     color: var(--description);
   }

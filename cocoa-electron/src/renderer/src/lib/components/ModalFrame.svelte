@@ -57,8 +57,9 @@
   .error {
     margin: 14px 0 0;
     padding: 10px 12px;
-    border: 1px solid var(--error);
-    border-radius: 3px;
+    border: 1px solid color-mix(in srgb, var(--error) 50%, transparent);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--error) 8%, transparent);
     color: var(--error);
     user-select: text;
   }

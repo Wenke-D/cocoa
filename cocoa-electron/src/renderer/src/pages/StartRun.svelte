@@ -22,6 +22,8 @@
   import * as Select from '$lib/components/ui/select'
   import { Spinner } from '$lib/components/ui/spinner'
   import { Textarea } from '$lib/components/ui/textarea'
+  import KindIcon from '../lib/components/KindIcon.svelte'
+  import PlayIcon from '@lucide/svelte/icons/play'
 
   let { entity_id }: { entity_id: string } = $props()
 
@@ -126,15 +128,17 @@
       {entity.name}
     </button>
     <span class="crumb-sep">›</span>
-    <span>Start</span>
+    <span>Launch</span>
   </nav>
 
-  <h1>{entity.kind === 'Job' ? 'Start Job' : 'Start Campaign'}</h1>
+  <!-- The verb alone, as on the overview's button: the crumb above and the
+       sign say what is being launched. -->
+  <h1><KindIcon kind={entity.kind} size={20} />Launch</h1>
 
   {#if manifest_blocking_reason(entity.manifest) !== null}
     <p class="blocking">{manifest_blocking_reason(entity.manifest)}</p>
   {:else}
-    <form onsubmit={submit}>
+    <form class="panel" onsubmit={submit}>
       {#each entity.parameters as spec (spec.name)}
         {@const id = `param-${spec.name}`}
         <div class="field">
@@ -199,7 +203,7 @@
 
       <div class="actions">
         <Button type="submit" disabled={submitting}>
-          {#if submitting}<Spinner />Starting…{:else}Start{/if}
+          {#if submitting}<Spinner />Launching…{:else}<PlayIcon />Launch{/if}
         </Button>
       </div>
     </form>
@@ -223,23 +227,34 @@
     cursor: pointer;
   }
 
+  .crumb:hover {
+    text-decoration: underline;
+  }
+
   .crumb-sep {
     opacity: 0.6;
   }
 
   h1 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin: 0 0 16px;
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 600;
     color: var(--strong-foreground);
   }
 
+  /* One panel holds the whole draft, its fields ruled apart, the submit at
+     its foot: what is being started is one thing. */
   form {
-    max-width: 460px;
+    max-width: 560px;
+    padding: 4px 20px 16px;
   }
 
   .field {
-    margin-bottom: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
   }
 
   .field :global(.name),
@@ -251,6 +266,10 @@
 
   .type {
     margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--code-inline-bg);
+    font-size: 11px;
     font-weight: 400;
     color: var(--description);
   }
@@ -274,10 +293,11 @@
   }
 
   .error {
-    margin: 12px 0;
+    margin: 14px 0 0;
     padding: 10px 12px;
-    border: 1px solid var(--error);
-    border-radius: 3px;
+    border: 1px solid color-mix(in srgb, var(--error) 50%, transparent);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--error) 8%, transparent);
     color: var(--error);
   }
 

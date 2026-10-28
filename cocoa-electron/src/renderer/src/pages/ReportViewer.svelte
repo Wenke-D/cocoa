@@ -249,7 +249,7 @@
 
   h1 {
     margin: 0;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
     color: var(--strong-foreground);
   }
@@ -260,6 +260,10 @@
   }
 
   .format {
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--code-inline-bg);
+    font-size: 12px;
     color: var(--description);
   }
 
@@ -291,10 +295,11 @@
 
   .body {
     margin: 0;
-    padding: 12px;
-    background: var(--code-bg);
+    padding: 14px 16px;
+    background: var(--widget-bg);
     border: 1px solid var(--border);
-    border-radius: 3px;
+    border-radius: 8px;
+    box-shadow: var(--panel-shadow);
     max-height: calc(100vh - 220px);
     overflow: auto;
     user-select: text;
@@ -332,15 +337,16 @@
     width: 100%;
     height: calc(100vh - 190px);
     border: 1px solid var(--border);
-    border-radius: 3px;
+    border-radius: 8px;
     background: #ffffff;
   }
 
   .error {
     margin: 0;
     padding: 10px 12px;
-    border: 1px solid var(--error);
-    border-radius: 3px;
+    border: 1px solid color-mix(in srgb, var(--error) 50%, transparent);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--error) 8%, transparent);
     color: var(--error);
   }
 

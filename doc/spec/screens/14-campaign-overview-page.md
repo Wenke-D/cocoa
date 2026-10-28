@@ -4,8 +4,11 @@ The Campaign overview follows the same hierarchy as the Job overview.
 
 ## 14.1 Header
 
-As §13.1, with the campaign's own parameters — what its plan takes — under the
-same `Parameters` heading, and the same `Actions` row below:
+As §13.1 — the tile with the campaign's layers sign, `Launch` at the head's
+right, the description held to three lines, the summary panels once there is a
+history, `Remove` at the foot (`Take this campaign out of the Explorer. …`) —
+with the campaign's own parameters, what its plan takes, under the same
+`Parameters` heading:
 
 - Campaign display name.
 - The manifest's `description`, when it gives one.
@@ -26,7 +29,7 @@ Parameters
 Name      Values         Description
 sweep     quick / full   How much of the suite to run
 
-[▶] [⊟]
+[▶ Launch]
 ```
 
 For a Campaign that has never run:
@@ -40,7 +43,7 @@ Parameters
 Name      Values         Description
 sweep     quick / full   How much of the suite to run
 
-[▶] [⊟]
+[▶ Launch]
 ```
 
 Never display a fixed job count as if it were a property of the Campaign.

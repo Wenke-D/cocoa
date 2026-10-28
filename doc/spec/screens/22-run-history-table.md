@@ -43,24 +43,28 @@ it is the one worth the leftover width.
 Job history:
 
 ```text
-            22    the status dot (§23), under no heading
+            38    the status dot (§23), under no heading; with the panel's 14px inset
 Run         54    a run id, flush right, so the digits line up, with room after it
 Arguments    —    remainder; the run's arguments, as given, on code's ground
 Duration   100    `HH:MM:SS` while it runs, `1h 12m 33s` once it ended
-Started    116    `2 days ago`; the locale date and time on hover
-By          80    `you`, `agent`, or a campaign name and call number, truncated
+Started    124    `2 days ago`; the locale date and time on hover
+By          96    `you`, `agent`, or a campaign name and call number, truncated
 ```
 
 Campaign history:
 
 ```text
-            22
+            38
 Run         54
 Arguments    —    remainder
 Duration   100
-Started    116
-By          80
+Started    124
+By          96
 ```
+
+Every run table sits in a panel (§24): the panel draws the edge, the
+heading row is small uppercase on the panel's ground, and the first column
+carries the panel's 14px inset on top of its own width.
 
 A campaign history has no Calls column: how many members a run dispatched is
 the plan's business, on the run's own page (§18), and it was the one count
@@ -69,9 +73,9 @@ in a row of facts.
 Campaign dispatch:
 
 ```text
-#          54    the call index, flush right, with room after it
+#          68    the call index, flush right, with room after it; with the panel's inset
 Job       180    an experiment name
-Status    116
+Status    124    the status chip (§23)
 Arguments   —    remainder
 ```
 

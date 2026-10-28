@@ -19,7 +19,7 @@ async function pick(app, folder) {
 export const seed = 'library-only'
 
 export async function run({ app, page, shot, log, wait_text, library }) {
-  await wait_text('No jobs or campaigns have been added', 20_000)
+  await wait_text('No experiments are registered', 20_000)
   await shot('empty')
 
   // Cancelling the picker does nothing at all.

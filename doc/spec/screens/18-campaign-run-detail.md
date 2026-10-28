@@ -4,6 +4,8 @@ This page must use the full main-content width.
 
 ## 18.1 Header
 
+The run head of §17.1, with `N / M finished` after the status chip.
+
 Show:
 
 - Breadcrumbs.
@@ -33,6 +35,12 @@ Example:
 
 [######################------------] 4 / 6 finished
 ```
+
+As built, the bar sits over the dispatch table and has one segment per call,
+in plan order, each in its call's status colour — so a fan-out half
+finished, or one call failed among running ones, shows before a row is read.
+A call not listed is grey. The counts are the header's `N / M finished` and
+the table's chips.
 
 There is no pending count after a successful start. Every call is dispatched
 immediately, so a call is never waiting for its turn.

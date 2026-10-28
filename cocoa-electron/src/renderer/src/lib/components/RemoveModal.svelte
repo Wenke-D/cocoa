@@ -61,7 +61,12 @@
     {/snippet}
     {#snippet actions()}
       <Button variant="secondary" onclick={close_overlay} disabled={overlay.busy}>Keep</Button>
-      <Button class="confirm" onclick={confirm_remove} disabled={overlay.busy}>
+      <Button
+        variant="destructive"
+        class="confirm"
+        onclick={confirm_remove}
+        disabled={overlay.busy}
+      >
         {#if overlay.busy}<Spinner />Removing…{:else}Remove from Explorer{/if}
       </Button>
     {/snippet}

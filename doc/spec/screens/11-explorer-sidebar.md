@@ -54,8 +54,14 @@ Use an icon or text together with semantic color.
 ## 11.4 Selected Row
 
 The selected row must have a clear background highlight: a light wash of the
-theme's accent blue, not a grey — grey is the hover's colour, and a selection
-that is the hover with a little more weight is not clear.
+theme's caramel accent, not a grey — grey is the hover's colour, and a selection
+that is the hover with a little more weight is not clear. Rows are inset from
+the sidebar's edges with rounded ends, so the selection is a shape on the latte
+ground rather than a stripe across it, and its name is set a weight heavier.
+
+The type indicator (§11.3) is the kind's sign in the kind's colour — a flask for
+a job, stacked layers for a campaign — the same sign that leads the overview's
+tile (§13.1). Each section heading carries its count beside it.
 
 It must remain selected when viewing:
 

@@ -12,11 +12,14 @@
   import { app } from '../../state.svelte'
   import { entity_name, entity_of } from '../../world_queries'
   import type { Route } from '../../route'
+  import type { EntityKind } from '@shared/world'
+  import KindIcon from './KindIcon.svelte'
   import StatusPill from './StatusPill.svelte'
   import ViewTitle from './ViewTitle.svelte'
 
   interface Row {
     key: string
+    kind: EntityKind
     name: string
     id: string
     started_at: string
@@ -34,6 +37,7 @@
         if (is_active(run.status) && (run.origin === 'Human' || run.origin === 'Agent')) {
           rows.push({
             key: `job ${run.job_id} ${run.id}`,
+            kind: 'Job',
             name: entity_name(entity_of(run.job_id)),
             id: run.id,
             started_at: run.started_at,
@@ -56,6 +60,7 @@
           if (member !== undefined && is_active(member.status)) {
             members.push({
               key: `member ${step.job_id} ${step.run_id}`,
+              kind: 'Job',
               name: entity_name(entity_of(step.job_id)),
               id: member.id,
               started_at: member.started_at,
@@ -74,6 +79,7 @@
         }
         rows.push({
           key: `campaign ${run.campaign_id} ${run.id}`,
+          kind: 'Campaign',
           name: entity_name(entity_of(run.campaign_id)),
           id: run.id,
           started_at: run.started_at,
@@ -91,6 +97,9 @@
 
 {#snippet row(entry: Row, member: boolean)}
   <button class="row" class:member onclick={() => navigate(entry.route)}>
+    {#if !member}
+      <KindIcon kind={entry.kind} size={15} />
+    {/if}
     <span class="name">{entry.name}</span>
     <span class="id mono">{entry.id}</span>
     <StatusPill status={entry.status} health={entry.health} />
@@ -114,7 +123,7 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding-bottom: 12px;
+    padding: 0 6px 12px;
   }
 
   .row {
@@ -122,9 +131,10 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    height: 26px;
-    padding: 0 16px;
+    height: 28px;
+    padding: 0 8px 0 12px;
     border: none;
+    border-radius: 5px;
     background: none;
     color: var(--foreground);
     text-align: left;
@@ -132,9 +142,13 @@
     white-space: nowrap;
   }
 
+  .row :global(svg) {
+    flex-shrink: 0;
+  }
+
   .row.member {
-    padding-left: 32px;
-    height: 24px;
+    padding-left: 35px;
+    height: 26px;
     color: var(--description);
   }
 
@@ -153,7 +167,7 @@
   }
 
   .empty {
-    padding: 2px 16px;
+    padding: 2px 12px;
     color: var(--description);
     font-style: italic;
   }

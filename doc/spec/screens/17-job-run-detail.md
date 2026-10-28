@@ -4,6 +4,12 @@ Clicking a Job history row opens a full Job run-detail page in the main region.
 
 ## 17.1 Header
 
+The head every run page shares (§18.1, §19), drawn by one component: the
+status tile (§23) at the left; over the run id, the kind of run in small
+uppercase — `JOB RUN`, `CAMPAIGN RUN`, `JOB RUN · CAMPAIGN CALL`; beside the
+id, the status chip; the page's one action at the right. The facts below sit
+in a panel, one row per fact, a hairline between rows.
+
 Show:
 
 - Breadcrumbs.

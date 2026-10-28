@@ -34,10 +34,11 @@ The app must remain functional at the minimum size.
 
 ## 8.2 Activity Bar
 
-A fixed-width icon strip on the far left, spanning the full height above the status bar.
+A fixed-width icon strip on the far left, spanning the full height above the status bar, on the frame's cocoa brown (`--chrome-bg`, §24.3) — with the status bar under it, the brown is the window's frame, and the frame is where the product's colour lives.
 
 It contains, top to bottom:
 
+0. The product mark, small: a button back to the empty page (§12), tooltip `cocoa`.
 1. `Explorer` view icon.
 2. `Active Runs` view icon, carrying the active-run count as a badge.
 3. `Events` view icon.
@@ -47,7 +48,7 @@ Behavior:
 
 - Clicking an item that is not currently open selects that sidebar view and opens the sidebar.
 - Clicking the item that is already open collapses the sidebar.
-- The open item sits on the same accent wash as the Explorer's selected row, and hover is the rows' hover wash (§11.4): one way of saying "the one that is open", whether it is a view or a folder. Not VS Code's edge rule — that would be a second idiom for the same thing.
+- Items are cream at reduced strength on the brown; hover brings an item to full strength on a faint lighter wash. The open item is at full strength on a stronger wash, with a short caramel accent rule on its left edge — on the dark frame a wash alone is too quiet to find at a glance, so the edge rule earns its place here, and only here.
 - Every item has a tooltip.
 
 The badge:
@@ -108,6 +109,8 @@ It must support:
 - Full-width report viewer.
 
 ## 8.5 Bottom Status Bar
+
+The frame's lower edge, on the same cocoa brown as the activity bar, its text cream at reduced strength. The active-run count goes to full strength, bold, while anything is running: it is the one item here worth noticing without looking for it.
 
 Three standing items:
 

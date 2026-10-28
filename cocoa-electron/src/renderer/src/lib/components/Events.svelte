@@ -30,9 +30,13 @@
   {#each entries as entry (entry)}
     {#if entry.target !== null}
       {@const target = entry.target}
-      <button class="entry link" onclick={() => go_to(target)}>{@render body(entry)}</button>
+      <button
+        class="entry link"
+        style="--tone: {tone_color(entry.tone)}"
+        onclick={() => go_to(target)}>{@render body(entry)}</button
+      >
     {:else}
-      <div class="entry">{@render body(entry)}</div>
+      <div class="entry" style="--tone: {tone_color(entry.tone)}">{@render body(entry)}</div>
     {/if}
   {:else}
     <div class="empty">Nothing has happened yet.</div>
@@ -58,8 +62,9 @@
     column-gap: 10px;
     row-gap: 1px;
     width: 100%;
-    padding: 6px 16px;
+    padding: 7px 12px 7px 10px;
     border: none;
+    border-left: 3px solid var(--tone);
     border-bottom: 1px solid var(--border);
     background: none;
     color: var(--foreground);
@@ -95,7 +100,7 @@
   }
 
   .empty {
-    padding: 2px 16px;
+    padding: 2px 12px;
     color: var(--description);
     font-style: italic;
   }

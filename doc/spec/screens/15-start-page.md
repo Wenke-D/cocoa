@@ -1,7 +1,10 @@
 # 15. Start Page
 
 Starting must happen on a page of its own, reached from the experiment and
-addressed as `experiment > Start` in the breadcrumbs (§9.2).
+addressed as `experiment > Launch` in the breadcrumbs (§9.2). The page keeps
+its name here — the Start page, the `start` route — but the word a person
+sees for the act, on the overview's button, this page's heading and its
+submit, is `Launch`, the verb alone (§13.1).
 
 Do not permanently display the parameter field on the overview page.
 
@@ -33,7 +36,7 @@ The Start page contains:
 - Active-run notice when applicable, informational only and never blocking.
 - Inline validation error.
 - Back button, returning to the experiment's overview.
-- Primary Start button.
+- Primary `Launch` button.
 
 The form keeps a measure of its own rather than filling the editor's width: a
 declared parameter is a short value, and a field the width of the window invites
@@ -66,11 +69,11 @@ PARAMETERS  (all required)                          [history]
   Backends to try, in order
   [ ] cuda   [ ] hip
 
-Cancel                                            Start Job
+Cancel                                               Launch
 ```
 
 Every field opens empty and stays that way until a person touches it (§15.3).
-Start stays disabled until each one has a value.
+Launch stays disabled until each one has a value.
 
 The field is the shape (convention §2.2):
 
@@ -145,8 +148,8 @@ what was typed last, and the page says what it filled — and what it could not.
 
 On submission:
 
-1. Disable the Start button.
-2. Show `Starting…`.
+1. Disable the Launch button.
+2. Show `Launching…`.
 3. Call the Start operation (§26).
 4. On success:
    - Close the modal.

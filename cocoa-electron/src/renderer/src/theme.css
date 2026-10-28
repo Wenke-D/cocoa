@@ -1,50 +1,68 @@
 /* cocoa's visual system.
-   Light = VS Code Light Modern, Dark = VS Code Dark Modern. */
+   The palette is the product mark's: cocoa brown for the window's frame,
+   latte and warm paper for its grounds, caramel for what can be acted on.
+   Light is milk chocolate, dark is dark chocolate; the status colours are
+   the one set that stays cool, so a run's state never reads as decoration. */
 
 :root {
-  --editor-bg: #ffffff;
-  --side-bar-bg: #f8f8f8;
-  --status-bar-bg: #f8f8f8;
-  --widget-bg: #f8f8f8;
+  --editor-bg: #faf7f3;
+  --side-bar-bg: #f3ece3;
+  --widget-bg: #ffffff;
 
-  --border: #e5e5e5;
-  --control-border: #cecece;
+  /* The frame: activity bar and status bar, one brown in both schemes'
+     spirit — the bean's colour, deepened so cream reads on it. */
+  --chrome-bg: #3a2a20;
+  --chrome-fg: #f6ede3;
+  --chrome-muted: rgba(246, 237, 227, 0.58);
+  --chrome-hover: rgba(246, 237, 227, 0.08);
+  --chrome-active: rgba(246, 237, 227, 0.15);
+  --status-bar-bg: var(--chrome-bg);
 
-  --foreground: #3b3b3b;
-  --strong-foreground: #1e1e1e;
-  --description: #717171;
+  --border: #e7ddd1;
+  --control-border: #d5c7b7;
 
-  --accent: #005fb8;
+  --foreground: #3b2f27;
+  --strong-foreground: #22170f;
+  --description: #85766a;
+
+  --accent: #b0541a;
   --on-accent: #ffffff;
-  --link: #005fb8;
+  --link: #a14c15;
 
   --input-bg: #ffffff;
-  --secondary-bg: #e5e5e5;
-  --secondary-hover-bg: #cccccc;
+  --secondary-bg: #f1e9df;
+  --secondary-hover-bg: #e8ddd0;
 
-  --row-hover: #f2f2f2;
-  /* The one departure from VS Code's list colours: its selection is grey with
-     a blue focus ring, and cocoa's Explorer has no ring, so the selection
-     carries the accent itself, as a wash — a grey selection would be the
-     hover's colour with a little more weight, and the two could not be told
-     apart. */
-  --row-selected: rgba(0, 95, 184, 0.12);
-  --row-selected-fg: #000000;
+  --row-hover: rgba(110, 72, 40, 0.07);
+  /* The selection carries the accent, as a wash — a grey selection would be
+     the hover's colour with a little more weight, and the two could not be
+     told apart. */
+  --row-selected: rgba(176, 84, 26, 0.15);
+  --row-selected-fg: #22170f;
 
-  --error: #e51400;
-  --warning: #bf8803;
+  --error: #c4321c;
+  --warning: #a36b00;
 
-  --chart-blue: #1076bc;
-  --chart-green: #388a34;
-  --chart-red: #a1260d;
-  --chart-yellow: #bf8803;
-  --chart-gray: #717171;
+  --chart-blue: #2f6bd6;
+  --chart-green: #2f8a43;
+  --chart-red: #cf3a2a;
+  --chart-yellow: #c08a00;
+  --chart-gray: #8f8277;
 
-  --code-bg: rgba(34, 0, 0, 0.04);
-  --code-inline-bg: rgba(34, 0, 0, 0.1);
+  /* What an experiment is, as a colour: the Explorer's row icons and an
+     overview's tile. Hues no status uses, so a kind is never read as a
+     state. */
+  --kind-job: #2c7a83;
+  --kind-campaign: #8b4aa3;
+
+  --code-bg: rgba(80, 50, 20, 0.045);
+  --code-inline-bg: rgba(80, 50, 20, 0.08);
 
   --search-match: #f8e3a1;
   --search-match-current: #f6b73c;
+
+  /* A panel's lift off the page: enough to see the edge, not a card. */
+  --panel-shadow: 0 1px 2px rgba(60, 40, 20, 0.06), 0 1px 0 rgba(60, 40, 20, 0.03);
 
   /* The product mark (§12): the tile and the bean of `build/icon.svg`. The
      one pair that is identical in both schemes — an app's icon is the same
@@ -56,44 +74,54 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --editor-bg: #1f1f1f;
-    --side-bar-bg: #181818;
-    --status-bar-bg: #181818;
-    --widget-bg: #202020;
+    --editor-bg: #1c1714;
+    --side-bar-bg: #171310;
+    --widget-bg: #241e1a;
 
-    --border: #2b2b2b;
-    --control-border: #3c3c3c;
+    --chrome-bg: #110d0a;
+    --chrome-fg: #f3eae1;
+    --chrome-muted: rgba(243, 234, 225, 0.48);
+    --chrome-hover: rgba(243, 234, 225, 0.06);
+    --chrome-active: rgba(243, 234, 225, 0.12);
 
-    --foreground: #cccccc;
-    --strong-foreground: #e7e7e7;
-    --description: #9d9d9d;
+    --border: #352c26;
+    --control-border: #4a3e35;
 
-    --accent: #0078d4;
-    --on-accent: #ffffff;
-    --link: #4daafc;
+    --foreground: #dacec2;
+    --strong-foreground: #f3eae1;
+    --description: #9f9083;
 
-    --input-bg: #313131;
-    --secondary-bg: #313131;
-    --secondary-hover-bg: #3c3c3c;
+    --accent: #e0894a;
+    --on-accent: #1d120a;
+    --link: #eda06a;
 
-    --row-hover: #2a2d2e;
-    --row-selected: rgba(0, 120, 212, 0.3);
+    --input-bg: #2a231e;
+    --secondary-bg: #2f2722;
+    --secondary-hover-bg: #3a302a;
+
+    --row-hover: rgba(255, 235, 215, 0.05);
+    --row-selected: rgba(224, 137, 74, 0.2);
     --row-selected-fg: #ffffff;
 
-    --error: #f85149;
-    --warning: #cca700;
+    --error: #f2735f;
+    --warning: #e3b341;
 
-    --chart-blue: #3794ff;
-    --chart-green: #89d185;
-    --chart-red: #f14c4c;
-    --chart-yellow: #cca700;
-    --chart-gray: #9d9d9d;
+    --chart-blue: #6aa5ff;
+    --chart-green: #63c77a;
+    --chart-red: #f26b5b;
+    --chart-yellow: #e3b341;
+    --chart-gray: #9f9083;
 
-    --code-bg: rgba(255, 255, 255, 0.06);
-    --code-inline-bg: rgba(255, 255, 255, 0.12);
+    --kind-job: #5bbcc6;
+    --kind-campaign: #c592de;
+
+    --code-bg: rgba(255, 240, 225, 0.04);
+    --code-inline-bg: rgba(255, 240, 225, 0.085);
 
     --search-match: #623315;
     --search-match-current: #9e6a03;
+
+    --panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 
     /* The product mark (§12): the tile and the bean of `build/icon.svg`. The
        one pair that is identical in both schemes — an app's icon is the same
@@ -132,6 +160,37 @@ body {
   height: 100%;
 }
 
+/* The browser's own parts — scrollbars, a native checkbox — follow the
+   scheme too, or a dark sidebar scrolls on a white track. */
+:root {
+  color-scheme: light dark;
+}
+
+/* Slim, and drawn in the text's own colour thinned, so a scrollbar is a
+   mark on the ground it scrolls rather than a grey channel beside it. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--description) 35%, transparent) padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--description) 60%, transparent) padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* Buttons, inputs and overlays are shadcn-svelte components (see app.css
    and `lib/components/ui/`); what follows is cocoa's own chrome. */
 
@@ -141,9 +200,79 @@ code,
   font-size: 12px;
 }
 
+/* A surface that groups what belongs together — the facts of a run, a
+   history, a form — lifted off the page by its edge. Global because every
+   page has one; dense inside, never a marketing card. */
+.panel {
+  background: var(--widget-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--panel-shadow);
+}
+
+/* The small uppercase label that says what kind of thing follows: `RUN`
+   over a run id, `CAMPAIGNS` over a list. */
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--description);
+}
+
+/* A section's heading on a page, with an optional count beside it. */
+.section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 28px 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--strong-foreground);
+}
+
+.section-title .tally {
+  font-weight: 400;
+  color: var(--description);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The facts of a run (§17.3), wherever a run is shown: one row per fact,
+   label and value, a hairline between rows. Each pair is wrapped in a
+   `div.fact` — valid inside a `dl` — so a row is one box: its rule runs
+   under both cells, and the label sits on the value's first baseline
+   whether the value is a word or a row of buttons. */
+dl.facts {
+  margin: 0;
+  padding: 2px 16px;
+}
+
+dl.facts .fact {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  align-items: baseline;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+dl.facts .fact:last-child {
+  border-bottom: none;
+}
+
+dl.facts dt {
+  color: var(--description);
+}
+
+dl.facts dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--foreground);
+}
+
 /* The one run-table treatment: job history, campaign history, dispatch calls
    (specification §22). Global for the same reason the buttons are: three
-   pages share it.
+   pages share it. It sits in a `.panel`, which draws its edge.
 
    `table-layout: fixed` on declared `<col>` widths is the whole point. Under
    automatic layout every column is measured from its content, so a status
@@ -153,10 +282,12 @@ code,
 
    Widths are set per table, since the column sets differ. The convention:
    every column is fixed except the one §22.2 calls the remainder, which is
-   left without a width and takes what is left. */
+   left without a width and takes what is left. The first column carries
+   the panel's inset on top of its own width. */
 table.runs {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
 }
 
@@ -167,23 +298,42 @@ table.runs th {
   top: 0;
   z-index: 1;
   text-align: left;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--description);
-  background: var(--editor-bg);
+  background: var(--widget-bg);
   border-bottom: 1px solid var(--border);
-  padding: 4px 10px 4px 0;
+  padding: 9px 10px 8px 0;
+}
+
+table.runs th:first-child {
+  border-top-left-radius: 8px;
+}
+
+table.runs th:last-child {
+  border-top-right-radius: 8px;
 }
 
 /* Truncation is the rule, not the exception: a fixed column cannot grow, so
    anything longer than its width ends in an ellipsis and carries the full
    value as hover text (§22.3, §36). */
 table.runs td {
-  padding: 7px 10px 7px 0;
+  padding: 8px 10px 8px 0;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+table.runs th:first-child,
+table.runs td:first-child {
+  padding-left: 14px;
+}
+
+table.runs tbody tr:last-child td {
+  border-bottom: none;
 }
 
 /* A number that names the row — a run id, a call index — sits flush right
@@ -194,8 +344,17 @@ table.runs .num {
   padding-right: 20px;
 }
 
+table.runs td.num {
+  color: var(--strong-foreground);
+  font-weight: 500;
+}
+
 table.runs tbody tr {
   cursor: pointer;
+}
+
+table.runs tbody tr:hover td {
+  background: var(--row-hover);
 }
 
 /* A run's parameters as given — `--gpu 0 --mesh 1024` — on inline
@@ -211,8 +370,9 @@ table.runs tbody tr {
   width: fit-content;
   max-width: 100%;
   background: var(--code-inline-bg);
-  border-radius: 3px;
-  padding: 4px 8px;
+  color: var(--strong-foreground);
+  border-radius: 4px;
+  padding: 3px 8px;
   user-select: text;
 }
 
@@ -226,8 +386,4 @@ table.runs .params {
 
 table.runs th.over-params {
   padding-left: 6px;
-}
-
-table.runs tbody tr:hover {
-  background: var(--row-hover);
 }

@@ -5,7 +5,7 @@
 1. Launch the app on macOS.
 2. Select `Solver GPU`.
 3. Confirm the overview shows active runs and history.
-4. Click `Start Job`.
+4. Click `Launch`.
 5. Enter parameters.
 6. Submit with Command + Enter.
 7. Confirm the modal closes.

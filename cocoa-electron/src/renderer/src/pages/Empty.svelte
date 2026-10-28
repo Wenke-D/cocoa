@@ -16,6 +16,8 @@
   import { app } from '../state.svelte'
   import { active_run_count } from '../world_queries'
   import { Button } from '$lib/components/ui/button'
+  import KindIcon from '../lib/components/KindIcon.svelte'
+  import ActivityIcon from '@lucide/svelte/icons/activity'
   import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle'
 
   const campaigns = $derived(
@@ -74,7 +76,25 @@
   {:else}
     <section class="state">
       <p class="line">Select an experiment in the Explorer to begin.</p>
-      <p class="glance" aria-label={glance.replaceAll(' · ', ', ')}>{glance}</p>
+      <!-- Zero-value tiles stay, for the same reason the line's segments
+           did: one shape from launch to launch. -->
+      <ul class="glance" aria-label={glance.replaceAll(' · ', ', ')}>
+        <li class="panel">
+          <KindIcon kind="Campaign" size={16} />
+          <span class="value">{campaigns}</span>
+          <span class="label">{campaigns === 1 ? 'campaign' : 'campaigns'}</span>
+        </li>
+        <li class="panel">
+          <KindIcon kind="Job" size={16} />
+          <span class="value">{jobs}</span>
+          <span class="label">{jobs === 1 ? 'job' : 'jobs'}</span>
+        </li>
+        <li class="panel" class:running={active > 0}>
+          <ActivityIcon size={16} strokeWidth={1.75} aria-hidden="true" />
+          <span class="value">{active}</span>
+          <span class="label">{active === 1 ? 'active run' : 'active runs'}</span>
+        </li>
+      </ul>
     </section>
   {/if}
 </div>
@@ -116,7 +136,7 @@
   .state {
     grid-row: 3;
     padding-top: 18px;
-    max-width: 460px;
+    max-width: 520px;
     text-align: center;
   }
 
@@ -151,10 +171,38 @@
   }
 
   .glance {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
     margin: 28px 0 0;
-    font-size: 12px;
-    line-height: 18px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .glance li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
     color: var(--description);
+  }
+
+  .glance li :global(svg) {
+    flex-shrink: 0;
+  }
+
+  .glance .value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--strong-foreground);
     font-variant-numeric: tabular-nums;
+  }
+
+  .glance .running {
+    color: var(--chart-blue);
+  }
+
+  .glance .running .value {
+    color: var(--chart-blue);
   }
 </style>
