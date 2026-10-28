@@ -48,7 +48,7 @@ export function trigger_label(by: Trigger): string {
 /** What a run's start found and did about its job's deploy (§7.5, §7.6). */
 export function deploy_summary(deploy: RunDeploy): string {
   if (deploy.check === 'CURRENT') {
-    return 'Up to date — nothing deployed'
+    return 'Up to date'
   }
   if (deploy.error !== null) {
     return 'Deploy failed'

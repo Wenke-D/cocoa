@@ -23,6 +23,7 @@
   import { navigate } from '../../navigation'
   import { app } from '../../state.svelte'
   import ReportButtons from './ReportButtons.svelte'
+  import CircleQuestionMarkIcon from '@lucide/svelte/icons/circle-question-mark'
 
   let {
     run,
@@ -43,10 +44,22 @@
   <dd class="mono params">{run.parameters === '' ? '(none)' : run.parameters}</dd>
   {#if run.deploy !== null}
     <dt>Deploy</dt>
+    <!-- The check's reason says why a deploy was needed. Printed beside the
+         outcome it reads as one ("Deployed … nothing deployed yet"), so it
+         sits behind a question mark, labelled as the why. An up-to-date
+         check needed no deploy, and has no why to give. -->
     <dd>
-      {deploy_summary(run.deploy)}{#if run.deploy.reason !== null}<span class="reason"
-          >{` — ${run.deploy.reason}`}</span
-        >{/if}
+      {deploy_summary(run.deploy)}
+      {#if run.deploy.check === 'STALE' && run.deploy.reason !== null}
+        <span
+          class="why"
+          role="img"
+          title="Why: {run.deploy.reason}"
+          aria-label="Why: {run.deploy.reason}"
+        >
+          <CircleQuestionMarkIcon />
+        </span>
+      {/if}
     </dd>
   {/if}
   <dt>Report</dt>
@@ -111,8 +124,17 @@
   }
 
   /* What the check said beside its word: the folder's words, not cocoa's. */
-  .reason {
+  .why {
+    display: inline-flex;
+    vertical-align: -2px;
+    margin-left: 4px;
     color: var(--description);
+    cursor: help;
+  }
+
+  .why :global(svg) {
+    width: 14px;
+    height: 14px;
   }
 
   .error {
