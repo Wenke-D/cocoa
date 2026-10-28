@@ -9,7 +9,9 @@ answers are the [agent interface](../spec/agent/43-agent-interface.md).
 ## Connecting
 
 cocoa answers on a Unix socket, `~/.local/share/cocoa/cocoa.sock`, **only
-while its window is open**. An agent reaches it one of two ways:
+while its window is open**. A cocoa started with `--profile <name>` answers on
+`cocoa-<name>.sock` beside it instead; point an agent there with
+`COCOA_SOCKET_PATH`. An agent reaches it one of two ways:
 
 - **Through MCP**, the usual way. Build the bundled server (`alors mcp::build`,
   or `cargo build` in `cocoa-mcp/`) and register the binary with your agent's

@@ -19,11 +19,26 @@ on:
 The implementation must not contain architecture-specific code that prevents
 either Apple Silicon or Intel macOS builds.
 
-The application is single-instance per machine: the engine is the store's and
+The application is single-instance per profile: the engine is the store's and
 the agent socket's single owner, so a second launch hands over to the running
 cocoa — which brings its window to the front — and quits. The instance lock
 follows `userData`, so a drive run's private profile runs alongside a real
 cocoa rather than refusing to start.
+
+`--profile <name>` (or `--profile=<name>`) starts a named profile: `userData`
+moves to the default directory with `-<name>` appended
+(`~/.config/cocoa-<name>` on Linux), and with it the store, the window state
+and the lock; the agent socket becomes `cocoa-<name>.sock` (§43.2), and the
+window is titled `cocoa (<name>)`. Two profiles therefore run side by side —
+`alors dev` is the `dev` profile, so a dev build opens beside an installed
+cocoa. A name is letters, digits, `-` and `_`; any other refuses the launch
+rather than open the default profile. A named profile starts with nothing
+registered.
+
+A profile separates cocoa's own state, not the experiment folders: a folder
+registered in two running profiles is polled, reported and started from by
+both, and two starts can take the same run id. Look at a shared folder from the
+second profile; act on it from one.
 
 ## 6.2 macOS Requirements
 

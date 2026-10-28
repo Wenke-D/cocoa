@@ -1,27 +1,54 @@
 // What this launch is: the facts settled before anything runs, read from the
-// environment and the platform once, here, and asked for by name from then
-// on. The store and socket overrides are not here — they are read where they
-// are used, because the tests of those modules set them per case.
+// command line, the environment and the platform once, here, and asked for by
+// name from then on. The store and socket overrides are not here — they are
+// read where they are used, because the tests of those modules set them per
+// case.
 //
 // Settled at import rather than by a call from `index.ts`: imports evaluate
 // before that file's body, and `runtime.ts` builds the engine during them,
 // so the profile has to be decided by the time anyone imports this.
 
 import { app } from 'electron'
+import type { Maybe } from '@shared/maybe'
 import { env_var } from './env'
+import { log_for } from './log'
+import { in_profile, profile_of } from './profile'
+
+const log = log_for('boot')
+
+// A mistyped profile must not open the default one: that is the cocoa the
+// person was trying to stay out of.
+function read_profile(): Maybe<string> {
+  try {
+    return profile_of(process.argv)
+  } catch (error) {
+    log.error((error as Error).message)
+    process.exit(2)
+  }
+}
+
+const profile = read_profile()
 
 // A drive run redirects everything the app keeps per-user — the window state
 // file, the renderer's localStorage — so it never touches the real profile
-// (`scripts/drive.mjs`). Before ready, or the default profile is already open.
+// (`scripts/drive.mjs`); a named profile moves it beside the default one, so
+// the single-instance lock, which follows it, lets the two run at once.
+// Before ready, or the default directory is already open.
 const user_data_override = env_var('COCOA_USER_DATA_DIR')
 if (user_data_override.is_present()) {
   app.setPath('userData', user_data_override.value)
+} else if (profile.is_present()) {
+  app.setPath('userData', in_profile(app.getPath('userData'), profile))
 }
 
 export const boot = Object.freeze({
+  /** `--profile <name>`, or empty for the default profile (`profile.ts`). */
+  profile,
+
   /**
    * The per-user directory: the store, the window state, the renderer's
-   * localStorage. Electron's default, unless `COCOA_USER_DATA_DIR` moved it.
+   * localStorage. Electron's default, `<default>-<profile>` for a named
+   * profile, unless `COCOA_USER_DATA_DIR` moved it.
    */
   user_data: app.getPath('userData'),
 

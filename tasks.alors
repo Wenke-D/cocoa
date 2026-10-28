@@ -16,11 +16,14 @@ mcp := cocoa-mcp
 
 # --- the workbench -----------------------------------------------------------
 
-# Run it. `env -u` because VSCode terminals leak ELECTRON_RUN_AS_NODE, which
-# makes Electron start as a bare node and never open a window.
+# Run it, as the `dev` profile: its own store, lock and socket, so it opens
+# beside an installed cocoa rather than handing over to it. A folder added to
+# both is acted on by both. `env -u` because VSCode terminals leak
+# ELECTRON_RUN_AS_NODE, which makes Electron start as a bare node and never
+# open a window.
 dev:
     cd {{electron}}
-    env -u ELECTRON_RUN_AS_NODE npm run dev
+    env -u ELECTRON_RUN_AS_NODE npm run dev -- -- --profile dev
 
 # The gate before committing: format, lint, types, tests, cheapest failure
 # first. npm owns the sequence so there is one definition of it, not two.

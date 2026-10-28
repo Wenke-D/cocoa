@@ -21,8 +21,10 @@ holds:
 
 It lives in Electron's per-app, per-user data directory, beside `ui-state.json`
 — on macOS `~/Library/Application Support/cocoa/store.json`, on Linux
-`~/.config/cocoa/store.json`. `COCOA_STORE_PATH` overrides it, which is how a
-drive run keeps its hands off the real one.
+`~/.config/cocoa/store.json`. A named profile has its own, in its own data
+directory (`~/.config/cocoa-<name>/store.json`, §6.1 of the architecture).
+`COCOA_STORE_PATH` overrides it, which is how a drive run keeps its hands off
+the real one.
 
 > It used to live at `~/.local/share/cocoa/store.json`, the same path hardcoded
 > in both implementations so that a folder registered in one appeared in the

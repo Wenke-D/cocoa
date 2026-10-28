@@ -31,7 +31,7 @@ const log = log_for('index')
  * Either way the caller has nothing to hold and nothing to clean up.
  */
 function start_agent_server(): void {
-  const socket_file = socket_path()
+  const socket_file = socket_path(boot.profile)
   const agent_server_input: AgentDeps = {
     // Reads are answered from the model the window renders from, so they
     // never wait on the engine — at most one pass old, which is what a read
@@ -100,8 +100,9 @@ function launch_window(user_data_dir: string): void {
  * Whether this launch is the machine's one cocoa: the holder of the
  * single-instance lock.
  *
- * One cocoa instance per user machine, by design: cocoa monitors the
- * experiments the user launches, and a second instance is useless for that.
+ * One cocoa instance per profile, by design: cocoa monitors the experiments
+ * the user launches, and a second instance is useless for that. The lock
+ * follows `userData`, which a named profile moves (`boot.ts`).
  */
 const is_first_one = app.requestSingleInstanceLock()
 if (is_first_one) {

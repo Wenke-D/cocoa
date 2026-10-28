@@ -3,9 +3,10 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-/// Where the socket lives — the same resolution cocoa's own server uses
-/// (§43.2). Copied rather than imported: this crate must build without the
-/// workbench it talks to.
+/// Where the socket lives — the same resolution cocoa's own server uses for
+/// the default profile (§43.2); a named profile's is reached through
+/// `COCOA_SOCKET_PATH`. Copied rather than imported: this crate must build
+/// without the workbench it talks to.
 fn socket_path() -> PathBuf {
     if let Ok(path) = std::env::var("COCOA_SOCKET_PATH") {
         return PathBuf::from(path);

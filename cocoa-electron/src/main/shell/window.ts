@@ -34,7 +34,7 @@ export function create_window(old_win: WindowState, on_closing: () => void): voi
     ...position,
     minWidth: WINDOW_MIN_SIZE.width,
     minHeight: WINDOW_MIN_SIZE.height,
-    title: 'cocoa (electron)',
+    title: boot.profile.is_present() ? `cocoa (${boot.profile.value})` : 'cocoa',
     icon,
     backgroundColor: '#1f1f1f',
     webPreferences: {
@@ -47,6 +47,10 @@ export function create_window(old_win: WindowState, on_closing: () => void): voi
   // link). Report content is doubly barred — its iframe sandbox grants
   // scripts, not popups (`ReportViewer.svelte`).
   opened.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+
+  // The page's `<title>` would replace the profile's name in the title bar,
+  // the one place two cocoas side by side tell themselves apart.
+  opened.on('page-title-updated', (event) => event.preventDefault())
 
   // `close` is the last moment the geometry can be read — the window leaves
   // the registry at `closed` — so the persist inside `on_closing` still finds

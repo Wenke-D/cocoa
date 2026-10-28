@@ -18,23 +18,24 @@ import { once } from 'node:events'
 import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
+import type { Maybe } from '@shared/maybe'
 import { env_var } from '../env'
+import { in_profile } from '../profile'
 import type { AgentDeps } from './answer'
 import { agent_app } from './app'
 
 /**
- * Where the socket lives. One fixed path per build: an agent should not have
- * to discover a port or be told a number (§43). The dev build gets a file of
- * its own — hacking on cocoa must not steal the packaged cocoa's socket, and
- * the single-instance lock cannot referee across builds.
+ * Where the socket lives. One fixed path per profile: an agent should not have
+ * to discover a port or be told a number (§43). It follows the profile as the
+ * single-instance lock does, so the one cocoa that holds a profile's lock is
+ * the one answering on its socket.
  */
-export function socket_path(): string {
+export function socket_path(profile: Maybe<string>): string {
   const override = env_var('COCOA_SOCKET_PATH')
   if (override.is_present()) {
     return override.value
   }
-  // The dev-server URL is electron-vite's mark on a dev run (`shell/window.ts`).
-  const file = env_var('ELECTRON_RENDERER_URL').is_present() ? 'cocoa-dev.sock' : 'cocoa.sock'
+  const file = `${in_profile('cocoa', profile)}.sock`
   const home = env_var('HOME')
   if (home.is_present()) {
     return path.join(home.value, '.local/share/cocoa', file)

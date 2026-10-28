@@ -6,6 +6,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import type { Maybe } from '@shared/maybe'
 import { env_var } from './env'
 import { log_for } from './log'
 
@@ -22,14 +23,16 @@ export function legacy_store_path(): string {
  * `COCOA_STORE_PATH` wins outright and skips the move: a drive run points at a
  * scratch store, and must not touch the real one on the way past.
  */
-export function resolve_store_path(user_data_dir: string, legacy = legacy_store_path()): string {
+export function resolve_store_path(user_data_dir: string, legacy: Maybe<string>): string {
   const override = env_var('COCOA_STORE_PATH')
   if (override.is_present()) {
     return override.value
   }
 
   const target = path.join(user_data_dir, 'store.json')
-  carry_over(legacy, target)
+  if (legacy.is_present()) {
+    carry_over(legacy.value, target)
+  }
   return target
 }
 

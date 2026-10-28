@@ -8,7 +8,8 @@
 import { boot } from './boot'
 import { Engine } from './engine/engine'
 import { NoticeGate } from './bridge/notices'
-import { resolve_store_path } from './store_path'
+import { empty, some } from '@shared/maybe'
+import { legacy_store_path, resolve_store_path } from './store_path'
 
 /**
  * The engine. Constructed here, at import: `store.json` is read exactly once.
@@ -23,7 +24,14 @@ import { resolve_store_path } from './store_path'
  * itself against the world having moved (`poll_job`'s history check,
  * `cancel_run`'s recheck, `start_job`'s reservation).
  */
-export const engine = new Engine(resolve_store_path(boot.user_data))
+export const engine = new Engine(
+  // The store from the app's former name was the default profile's; a named
+  // profile starts with nothing registered.
+  resolve_store_path(
+    boot.user_data,
+    boot.profile.is_present() ? empty() : some(legacy_store_path())
+  )
+)
 
 /** What the user hears about a refresh, and how often; see `bridge/notices.ts`. */
 export const notices = new NoticeGate()

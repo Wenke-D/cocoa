@@ -3,6 +3,7 @@
 ```bash
 cd cocoa-electron
 env -u ELECTRON_RUN_AS_NODE npm run dev     # VSCode terminals leak ELECTRON_RUN_AS_NODE; it breaks Electron
+env -u ELECTRON_RUN_AS_NODE npm run dev -- -- --profile dev   # ... as the `dev` profile, beside an installed cocoa
 
 npm run gate                                # format:check → lint → check → test
 npm run format                              # prettier --write .
@@ -17,6 +18,13 @@ npm run package                             # electron-builder → release/ (uns
 npm run package:dir                         # unpacked .app only, for driving
 DRIVE_PACKAGED=1 npm run drive scripts/scenarios/agent.mjs    # drive the packaged app
 ```
+
+A dev run on the default profile shares the installed cocoa's store and lock,
+so while that one is open it only hands over to it and quits. The `dev`
+profile has its own (architecture §6.1): it opens beside it, titled
+`cocoa (dev)`, with nothing registered. Add a folder there to preview it on
+the working tree, and leave starting, cancelling and deleting in that folder to
+one cocoa — both act on a folder they both have.
 
 From the repository root, `alors install` packages and then puts the build
 where the desktop can find it, for this user and without root: the AppImage as
@@ -44,7 +52,7 @@ file, so run it **from the root**:
 
 ```bash
 alors                       # list the tasks
-alors dev                   # the workbench, with ELECTRON_RUN_AS_NODE unset for you
+alors dev                   # the workbench as the `dev` profile, with ELECTRON_RUN_AS_NODE unset for you
 alors gate                  # the workbench's gate
 alors gate all              # both trees
 alors drive cancel          # build, then drive a scenario

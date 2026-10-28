@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { empty, some } from '@shared/maybe'
 import type { AgentServer } from '../../../src/main/agent/serve'
 import { serve, socket_path } from '../../../src/main/agent/serve'
 import { deps, request, world } from '../../support/agent'
@@ -10,11 +11,11 @@ describe('paths', () => {
   it('puts the socket where cocoa_mcp_server looks for it', () => {
     const previous = process.env['COCOA_SOCKET_PATH']
     delete process.env['COCOA_SOCKET_PATH']
-    expect(socket_path()).toBe(
+    expect(socket_path(empty())).toBe(
       path.join(process.env['HOME'] ?? '', '.local/share/cocoa/cocoa.sock')
     )
     process.env['COCOA_SOCKET_PATH'] = '/tmp/elsewhere.sock'
-    expect(socket_path()).toBe('/tmp/elsewhere.sock')
+    expect(socket_path(some('dev'))).toBe('/tmp/elsewhere.sock')
     if (previous === undefined) {
       delete process.env['COCOA_SOCKET_PATH']
     } else {
@@ -22,25 +23,18 @@ describe('paths', () => {
     }
   })
 
-  // The dev build must not take the packaged cocoa's socket: the
-  // single-instance lock cannot referee across builds, so the paths diverge.
-  it('gives the dev build a socket of its own', () => {
-    const previous_override = process.env['COCOA_SOCKET_PATH']
-    const previous_url = process.env['ELECTRON_RENDERER_URL']
+  // The socket follows the profile as the single-instance lock does: a
+  // second profile running beside the default one answers on its own.
+  it('gives a named profile a socket of its own', () => {
+    const previous = process.env['COCOA_SOCKET_PATH']
     delete process.env['COCOA_SOCKET_PATH']
-    process.env['ELECTRON_RENDERER_URL'] = 'http://localhost:5173'
-    expect(socket_path()).toBe(
+    expect(socket_path(some('dev'))).toBe(
       path.join(process.env['HOME'] ?? '', '.local/share/cocoa/cocoa-dev.sock')
     )
-    if (previous_override === undefined) {
+    if (previous === undefined) {
       delete process.env['COCOA_SOCKET_PATH']
     } else {
-      process.env['COCOA_SOCKET_PATH'] = previous_override
-    }
-    if (previous_url === undefined) {
-      delete process.env['ELECTRON_RENDERER_URL']
-    } else {
-      process.env['ELECTRON_RENDERER_URL'] = previous_url
+      process.env['COCOA_SOCKET_PATH'] = previous
     }
   })
 })

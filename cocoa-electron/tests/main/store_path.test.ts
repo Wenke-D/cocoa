@@ -5,6 +5,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { empty, some } from '@shared/maybe'
 import { resolve_store_path } from '../../src/main/store_path'
 import { cleanup_temp_dirs, temp_dir } from '../support/temp_dir'
 
@@ -34,7 +35,7 @@ describe('resolve_store_path', () => {
     const user_data = temp_dir()
     const legacy = legacy_with(['/exp/solver'])
 
-    const resolved = resolve_store_path(user_data, legacy)
+    const resolved = resolve_store_path(user_data, some(legacy))
 
     expect(resolved).toBe(path.join(user_data, 'store.json'))
     expect(JSON.parse(fs.readFileSync(resolved, 'utf8'))).toEqual({ entities: ['/exp/solver'] })
@@ -48,14 +49,25 @@ describe('resolve_store_path', () => {
     const target = path.join(user_data, 'store.json')
     fs.writeFileSync(target, JSON.stringify({ entities: ['/exp/current'] }))
 
-    resolve_store_path(user_data, legacy)
+    resolve_store_path(user_data, some(legacy))
 
     expect(JSON.parse(fs.readFileSync(target, 'utf8'))).toEqual({ entities: ['/exp/current'] })
   })
 
   it('writes nothing when there is no old store', () => {
     const user_data = temp_dir()
-    const resolved = resolve_store_path(user_data, path.join(temp_dir(), 'absent.json'))
+    const resolved = resolve_store_path(user_data, some(path.join(temp_dir(), 'absent.json')))
+    expect(resolved).toBe(path.join(user_data, 'store.json'))
+    expect(fs.existsSync(resolved)).toBe(false)
+  })
+
+  // A named profile is not where the old store went: it starts empty.
+  it('carries nothing over when given no old store', () => {
+    const user_data = temp_dir()
+    legacy_with(['/exp/solver'])
+
+    const resolved = resolve_store_path(user_data, empty())
+
     expect(resolved).toBe(path.join(user_data, 'store.json'))
     expect(fs.existsSync(resolved)).toBe(false)
   })
@@ -66,7 +78,7 @@ describe('resolve_store_path', () => {
     const legacy = legacy_with(['/exp/solver'])
     process.env.COCOA_STORE_PATH = '/tmp/scratch/store.json'
 
-    expect(resolve_store_path(user_data, legacy)).toBe('/tmp/scratch/store.json')
+    expect(resolve_store_path(user_data, some(legacy))).toBe('/tmp/scratch/store.json')
     expect(fs.existsSync(path.join(user_data, 'store.json'))).toBe(false)
   })
 })

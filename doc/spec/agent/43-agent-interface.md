@@ -17,11 +17,12 @@ the first refresh, and if the cluster finished it, the stage that follows runs
 
 ## 43.2 Transport
 
-A Unix domain socket at a fixed path per build —
-`$HOME/.local/share/cocoa/cocoa.sock`, with `cocoa-dev.sock` beside it for the
-dev build, overridable with `COCOA_SOCKET_PATH`. The dev build's own file keeps
-hacking on cocoa from stealing the packaged cocoa's socket; the single-instance
-lock cannot referee across builds.
+A Unix domain socket at a fixed path per profile —
+`$HOME/.local/share/cocoa/cocoa.sock` for the default one, `cocoa-<name>.sock`
+beside it for a cocoa started with `--profile <name>` (§6.1), overridable with
+`COCOA_SOCKET_PATH`. The socket follows the profile as the single-instance lock
+does, so the cocoa holding a profile's lock is the one answering on its socket,
+and a second profile running beside the default one never takes it.
 
 A socket rather than a TCP port: there is no port to discover, publish, or
 collide over, nothing else on the machine reaches it by accident, and the
