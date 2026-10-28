@@ -31,28 +31,22 @@
     <StatusPill status={run.status} health={run.query_health} />
     {#if is_cancellable(run.status)}
       <Button
-        size="icon-sm"
         variant="secondary"
         class="cancel ml-auto"
-        title="Cancel Run"
-        aria-label="Cancel Run"
         onclick={() => request_cancel({ kind: 'job_run', job_id, run_id: run.id })}
       >
-        <SquareIcon />
+        <SquareIcon />Cancel Run
       </Button>
     {:else if is_deletable(run)}
       <!-- A campaign-dispatched run has no Delete here: the fan-out is deleted
            whole, from the campaign run's page (§16.4). Nor has a failed run
            whose report is still being written (convention §12.1). -->
       <Button
-        size="icon-sm"
         variant="destructive"
         class="ml-auto"
-        title="Delete Run…"
-        aria-label="Delete Run"
         onclick={() => request_delete({ kind: 'job_run', job_id, run_id: run.id })}
       >
-        <Trash2Icon />
+        <Trash2Icon />Delete Run…
       </Button>
     {/if}
   </header>

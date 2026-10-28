@@ -20,6 +20,7 @@
   import RunFacts from '../lib/components/RunFacts.svelte'
   import StatusPill from '../lib/components/StatusPill.svelte'
   import { Button } from '$lib/components/ui/button'
+  import SquareIcon from '@lucide/svelte/icons/square'
 
   let {
     campaign_id,
@@ -78,7 +79,7 @@
         class="cancel ml-auto"
         onclick={() => request_cancel({ kind: 'job_run', job_id: step.job_id, run_id: run.id })}
       >
-        Cancel Run
+        <SquareIcon />Cancel Run
       </Button>
     {/if}
   </header>

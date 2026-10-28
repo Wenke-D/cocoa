@@ -46,25 +46,19 @@
     <span class="progress">{finished} / {run.plan.steps.length} finished</span>
     {#if is_cancellable(run.status)}
       <Button
-        size="icon-sm"
         variant="secondary"
         class="cancel ml-auto"
-        title="Cancel Campaign"
-        aria-label="Cancel Campaign"
         onclick={() => request_cancel({ kind: 'campaign_run', campaign_id, run_id: run.id })}
       >
-        <SquareIcon />
+        <SquareIcon />Cancel Campaign
       </Button>
     {:else if is_terminal(run.status)}
       <Button
-        size="icon-sm"
         variant="destructive"
         class="ml-auto"
-        title="Delete Run…"
-        aria-label="Delete Run"
         onclick={() => request_delete({ kind: 'campaign_run', campaign_id, run_id: run.id })}
       >
-        <Trash2Icon />
+        <Trash2Icon />Delete Run…
       </Button>
     {/if}
   </header>
