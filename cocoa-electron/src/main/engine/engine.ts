@@ -8,7 +8,7 @@ import { cancel_campaign } from './campaign/cancel'
 import type { MemberCancel } from './campaign/cancel'
 import { plan_campaign } from './campaign/plan'
 import type { PlanInstance } from './campaign/plan'
-import { campaign_report } from './campaign/report'
+import { campaign_report, request_campaign_report } from './campaign/report'
 import { start_campaign } from './campaign/start'
 import type { CampaignStart } from './campaign/start'
 import { campaign_status } from './campaign/status'
@@ -24,12 +24,13 @@ import * as del from './delete'
 import { cancel_run } from './job/cancel'
 import { poll_job } from './job/poll'
 import type { PollReport } from './job/poll'
-import { report_run, request_report } from './job/report'
+import { report_in_flight, report_run, request_report } from './job/report'
 import type { ReportMode } from './job/report'
 import { start_job } from './job/start'
 import { Memory } from './memory'
 import type { RunOrigin, Trigger } from './record'
 import { refresh } from './refresh'
+import { set_report_lock } from './report_lock'
 import type { RefreshReport } from './refresh'
 
 /**
@@ -81,8 +82,30 @@ export class Engine extends Memory {
     return report_run(this, this.job(folder), run_id, mode)
   }
 
+  /** Asks for a job run's or a campaign run's report again, by hand (§7.3.2, §8.3). */
   request_report(folder: string, run_id: number): void {
-    request_report(this.job(folder), run_id)
+    const job = this.jobs().find((candidate) => candidate.path === folder)
+    if (job !== undefined) {
+      request_report(job, run_id)
+    } else {
+      request_campaign_report(this, this.campaign(folder), run_id)
+    }
+  }
+
+  /** Locks or unlocks a job run's or a campaign run's report (§7.3.3). */
+  set_report_lock(folder: string, run_id: number, locked: boolean): void {
+    const job = this.jobs().find((candidate) => candidate.path === folder)
+    if (job !== undefined) {
+      set_report_lock(folder, job.runs, run_id, locked, report_in_flight)
+    } else {
+      set_report_lock(
+        folder,
+        this.campaign(folder).runs,
+        run_id,
+        locked,
+        (record) => record.report?.attempted === false
+      )
+    }
   }
 
   async cancel_run(folder: string, run_id: number): Promise<void> {

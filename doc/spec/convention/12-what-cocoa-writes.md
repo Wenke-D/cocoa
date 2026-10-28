@@ -45,10 +45,12 @@ pointing at members that are gone, no member naming a campaign that is.
 Only a finished run can be deleted. An active run is refused — cancel is how
 work stops — and so is `UNREACHABLE`: a run cocoa cannot see may still be
 running, and deleting its record would be the one way to never find out. A
-`FAILED` run whose report is still owed is refused until it lands (§7.3.1). A
+`FAILED` run whose report is still owed is refused until it lands (§7.3.1), and
+a run whose report is locked until it is unlocked (§7.3.3). A
 campaign run must be settled **and** every resolvable member finished, owed
 reports included: a campaign settles when one member fails (§9.1) while another
-may still be running, and a running record is never deleted.
+may still be running, and a running record is never deleted. A locked report
+holds it too, the campaign's own or any member's.
 
 Because a run id is derived from the folder's own runs (§5), deleting the
 newest run hands its id, and every id above what remains, back to the next

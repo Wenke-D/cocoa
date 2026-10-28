@@ -8,6 +8,7 @@ import type { AgentDeps, AgentResponse } from './answer'
 import { failure } from './answer'
 import { cancel_run } from './cancel'
 import { help } from './help'
+import { lock_report } from './lock'
 import { campaign_detail, job_detail, list_entities } from './reads'
 import { register_folder } from './register'
 import { rerun_report } from './report'
@@ -66,6 +67,12 @@ export function agent_app(deps: AgentDeps): express.Express {
   app.post('/experiments/:name/runs/:run_id/report', (request, response) =>
     reply(response, rerun_report(request.params.name, request.params.run_id, deps))
   )
+  app.post('/experiments/:name/runs/:run_id/report/lock', (request, response) =>
+    reply(
+      response,
+      lock_report(request.params.name, request.params.run_id, text_of(request.body), deps)
+    )
+  )
   app.post('/experiments/:name/runs/:run_id/cancel', async (request, response) =>
     reply(response, await cancel_run(request.params.name, request.params.run_id, deps))
   )
@@ -80,6 +87,7 @@ export function agent_app(deps: AgentDeps): express.Express {
     '/experiments',
     '/experiments/:name/runs',
     '/experiments/:name/runs/:run_id/report',
+    '/experiments/:name/runs/:run_id/report/lock',
     '/experiments/:name/runs/:run_id/cancel'
   ]
   app.all(surface, (_request, response) => reply(response, failure(405, 'unsupported method')))

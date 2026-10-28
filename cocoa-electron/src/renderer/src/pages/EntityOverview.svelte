@@ -139,7 +139,7 @@
               {entity_id}
               run_id={run.id}
               params={run.params}
-              deletable={is_deletable(run)}
+              deletable={is_deletable(run) && !run.report_locked}
               route={{ page: 'job_run', job_id: entity_id, run_id: run.id }}
             >
               <td><StatusPill status={run.status} health={run.query_health} compact /></td>
@@ -182,7 +182,7 @@
             {entity_id}
             run_id={run.id}
             params={run.params}
-            deletable={is_terminal(run.status)}
+            deletable={is_terminal(run.status) && !run.report_locked}
             route={{ page: 'campaign_run', campaign_id: entity_id, run_id: run.id }}
           >
             <td><StatusPill status={run.status} health={run.query_health} compact /></td>

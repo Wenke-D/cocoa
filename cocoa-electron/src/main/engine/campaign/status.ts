@@ -90,6 +90,10 @@ function derive_campaign_status(
   if (members.some((m) => m.status === 'CANCELLED')) {
     return 'CANCELLED'
   }
+  // Due again, by hand (§8.3): the report on disk is the one being replaced.
+  if (campaign.report?.attempted === false) {
+    return 'ANALYZING'
+  }
   if (campaign.report !== undefined && campaign.report.attempted) {
     if (campaign.report.error !== undefined) {
       return 'ERROR'

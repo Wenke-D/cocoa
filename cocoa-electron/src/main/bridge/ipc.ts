@@ -3,7 +3,8 @@
 //
 // Every handler is registered in one call from `index.ts`, at whenReady.
 
-import { dialog, ipcMain, shell } from 'electron'
+import path from 'node:path'
+import { app, dialog, ipcMain, shell } from 'electron'
 import type {
   AddFolderResult,
   AttachmentsTarget,
@@ -17,8 +18,12 @@ import type {
   StartResult,
   DeleteTarget,
   DeleteResult,
+  LockReportResult,
+  LockReportTarget,
   RerunReportResult,
   RerunReportTarget,
+  SaveReportResult,
+  SaveReportTarget,
   VisualizeResult,
   VisualizeTarget
 } from '@shared/protocol'
@@ -88,6 +93,13 @@ export function register_ipc(): void {
     return result
   })
 
+  // A lock is a field on the record: written, published, answered.
+  ipcMain.handle('cocoa:lock_report', (_event, target: LockReportTarget): LockReportResult => {
+    const result = operations.lock_report(engine, target)
+    publish_cycle(empty())
+    return result
+  })
+
   // Nothing stands between the click and the picker, and a path is never typed
   // by hand (§11.5). The registration itself is synchronous: atomic on the
   // event loop, whatever else is in flight.
@@ -127,6 +139,26 @@ export function register_ipc(): void {
       }
       const error = await shell.openPath(location.dir)
       return error === '' ? { ok: true } : { ok: false, message: error }
+    }
+  )
+
+  // The person names where the copy goes, a new folder suggested in their
+  // home; nothing is written until they have said so.
+  ipcMain.handle(
+    'cocoa:save_report',
+    async (_event, target: SaveReportTarget): Promise<SaveReportResult> => {
+      const name =
+        current_world().entities.find((entity) => entity.id === target.entity_id)?.name ??
+        path.basename(target.entity_id)
+      const picked = await dialog.showSaveDialog({
+        title: 'Save report as',
+        defaultPath: path.join(app.getPath('home'), `${name}-run-${target.run_id}-report`),
+        buttonLabel: 'Save'
+      })
+      if (picked.canceled || picked.filePath === undefined || picked.filePath === '') {
+        return { ok: false, cancelled: true, message: '' }
+      }
+      return operations.save_report(engine, target, picked.filePath)
     }
   )
 

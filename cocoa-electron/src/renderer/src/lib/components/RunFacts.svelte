@@ -19,7 +19,13 @@
   } from '../../format'
   import type { JobRun, ReportFormat } from '@shared/world'
   import type { ReportContext } from '../../route'
-  import { open_attachments, rerun_report, visualize } from '../../commands'
+  import {
+    lock_report,
+    open_attachments,
+    rerun_report,
+    save_report,
+    visualize
+  } from '../../commands'
   import { navigate } from '../../navigation'
   import { app } from '../../state.svelte'
   import ReportButtons from './ReportButtons.svelte'
@@ -74,8 +80,18 @@
       visualize={run.visualizable
         ? () => visualize({ entity_id: run.job_id, run_id: run.id })
         : null}
+      save={typeof run.report === 'object' && 'Available' in run.report
+        ? () => save_report({ entity_id: run.job_id, run_id: run.id })
+        : null}
+      lock={(typeof run.report === 'object' && 'Available' in run.report) || run.report_locked
+        ? {
+            locked: run.report_locked,
+            toggle: () =>
+              lock_report({ entity_id: run.job_id, run_id: run.id, locked: !run.report_locked })
+          }
+        : null}
       rerun={run.report_rerunnable
-        ? () => rerun_report({ job_id: run.job_id, run_id: run.id })
+        ? () => rerun_report({ entity_id: run.job_id, run_id: run.id })
         : null}
     />
   </dd>

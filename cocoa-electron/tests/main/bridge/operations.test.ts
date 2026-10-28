@@ -9,9 +9,11 @@ import {
   add_folder,
   attachments_location,
   cancel,
+  lock_report,
   read_report,
   remove_folder,
   rerun_report,
+  save_report,
   start_run,
   delete_run,
   visualize
@@ -262,7 +264,7 @@ describe('rerun_report', () => {
     cocoa.register(job)
     const run_id = await cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
     await settle(cocoa)
-    const target = { job_id: job, run_id: String(run_id) }
+    const target = { entity_id: job, run_id: String(run_id) }
 
     expect(rerun_report(cocoa, target)).toEqual({
       ok: false,
@@ -278,9 +280,68 @@ describe('rerun_report', () => {
       message: `the report of run ${run_id} is already running`
     })
 
-    expect(rerun_report(cocoa, { job_id: job, run_id: '../0' }).ok).toBe(false)
-    expect(rerun_report(cocoa, { job_id: job, run_id: '41' }).ok).toBe(false)
-    expect(rerun_report(cocoa, { job_id: '/nowhere', run_id: '0' }).ok).toBe(false)
+    expect(rerun_report(cocoa, { entity_id: job, run_id: '../0' }).ok).toBe(false)
+    expect(rerun_report(cocoa, { entity_id: job, run_id: '41' }).ok).toBe(false)
+    expect(rerun_report(cocoa, { entity_id: '/nowhere', run_id: '0' }).ok).toBe(false)
+  })
+})
+
+describe('lock_report', () => {
+  it('answers a lock and an unlock, and every refusal, never throwing', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'kept')
+    const cocoa = engine(dir)
+    cocoa.register(job)
+    const run_id = await cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(cocoa)
+    const target = { entity_id: job, run_id: String(run_id) }
+
+    expect(lock_report(cocoa, { ...target, locked: true })).toEqual({
+      ok: false,
+      message: `run ${run_id} has no report to lock`
+    })
+
+    write(job, 'poll-state', 'COMPLETED')
+    await cocoa.refresh()
+    expect(lock_report(cocoa, { ...target, locked: true })).toEqual({ ok: true })
+    expect(cocoa.job(job).runs.record(run_id).report_locked).toBe(true)
+    expect(rerun_report(cocoa, target)).toEqual({
+      ok: false,
+      message: `the report of run ${run_id} is locked; unlock it to regenerate it`
+    })
+    expect(lock_report(cocoa, { ...target, locked: false })).toEqual({ ok: true })
+    expect(cocoa.job(job).runs.record(run_id).report_locked).toBeUndefined()
+
+    expect(lock_report(cocoa, { entity_id: job, run_id: '../0', locked: true }).ok).toBe(false)
+    expect(lock_report(cocoa, { entity_id: job, run_id: '41', locked: true }).ok).toBe(false)
+    expect(lock_report(cocoa, { entity_id: '/nowhere', run_id: '0', locked: true }).ok).toBe(false)
+  })
+})
+
+describe('save_report', () => {
+  it('saves a reported run’s copy, and answers every refusal', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'kept')
+    const cocoa = engine(dir)
+    cocoa.register(job)
+    const run_id = await cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(cocoa)
+    const target = { entity_id: job, run_id: String(run_id) }
+    const destination = path.join(temp_dir(), 'copy')
+
+    expect(save_report(cocoa, target, destination)).toEqual({
+      ok: false,
+      cancelled: false,
+      message: `run ${run_id} has no report to save`
+    })
+
+    write(job, 'poll-state', 'COMPLETED')
+    await cocoa.refresh()
+    expect(save_report(cocoa, target, destination)).toEqual({ ok: true, path: destination })
+    expect(fs.existsSync(path.join(destination, 'report', `${run_id}.txt`))).toBe(true)
+
+    expect(save_report(cocoa, { entity_id: job, run_id: '../0' }, destination).ok).toBe(false)
+    expect(save_report(cocoa, { entity_id: '/nowhere', run_id: '0' }, destination).ok).toBe(false)
   })
 })
 

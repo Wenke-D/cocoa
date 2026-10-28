@@ -39,6 +39,8 @@ export interface RunRecord {
   /** What `check` answered at the start, and the deploy it led to (§7.5). */
   deploy?: RunDeploy
   origin: RunOrigin
+  /** The report is locked: not regenerated, and the run not deleted (§7.3.3). */
+  report_locked?: true
 }
 
 /**
@@ -70,7 +72,9 @@ export interface LaunchFailure {
 
 /**
  * The campaign's own report, once attempted (§8.3). `at` is when — the moment the
- * campaign ended, for a person reading its history (§8.2).
+ * campaign ended, for a person reading its history (§8.2). A regenerate marks
+ * it `attempted: false` again and keeps `at`: the report changes, the end does
+ * not.
  */
 export interface CampaignReport {
   attempted: boolean
@@ -106,6 +110,8 @@ export interface CampaignRecord {
   members: CampaignMember[]
   launch_failures: LaunchFailure[]
   report?: CampaignReport
+  /** The campaign's own report is locked, as a job run's can be (§7.3.3). */
+  report_locked?: true
 }
 
 /** One succeeded member, as `members.json` lists it. */

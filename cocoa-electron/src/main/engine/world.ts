@@ -18,6 +18,7 @@ import type {
 import { attachment_count } from './attachments'
 import type { EngineError } from './errors'
 import type { Engine } from './engine'
+import { campaign_report_rerunnable } from './campaign/report'
 import { report_in_flight, reportable } from './job/report'
 import { all_params, ended_at, started_at } from './record'
 import type { CampaignRecord, RunRecord } from './record'
@@ -160,6 +161,7 @@ function job_run_of(engine: Engine, job_path: string, record: RunRecord, now_iso
     report: report_in_flight(record) ? 'Generating' : report_state_of(job_path, record.run_id),
     report_error: record.report?.error ?? null,
     report_rerunnable: !report_in_flight(record) && reportable(record, 'manual'),
+    report_locked: record.report_locked === true,
     attachments: report_in_flight(record) ? 0 : attachment_count(job_path, record.run_id),
     visualizable: visualizable(engine.job(job_path), record.run_id),
     deploy:
@@ -231,8 +233,12 @@ function campaign_run_of(
     status,
     query_health: 'Healthy',
     last_successful_query: now_iso,
-    report: report_state_of(campaign_path, record.run_id),
-    attachments: attachment_count(campaign_path, record.run_id),
+    // `ANALYZING` is the campaign's report in flight, a regenerate's
+    // included: the file still on disk is the one being replaced.
+    report: status === 'Analyzing' ? 'Generating' : report_state_of(campaign_path, record.run_id),
+    report_rerunnable: campaign_report_rerunnable(engine, record),
+    report_locked: record.report_locked === true,
+    attachments: status === 'Analyzing' ? 0 : attachment_count(campaign_path, record.run_id),
     visualizable: visualizable(engine.campaign(campaign_path), record.run_id),
     error: null
   }
@@ -244,11 +250,12 @@ function campaign_run_of(
  * settled without one (§9.1: a member failed or was cancelled), when its last
  * member ended; and a campaign that ended without members ending (every launch
  * failed, a member cocoa cannot resolve) is dated by its start, so that its
- * clock at least stops. Records written before `report.at` existed fall
- * through to the members.
+ * clock at least stops. A regenerate keeps `report.at`, so the end stays put
+ * while it runs. Records written before `report.at` existed fall through to
+ * the members.
  */
 function campaign_ended_at(engine: Engine, record: CampaignRecord, status: Status): string | null {
-  if (record.report?.attempted === true && record.report.at !== undefined) {
+  if (record.report?.at !== undefined) {
     return record.report.at
   }
   if (!is_terminal(status)) {

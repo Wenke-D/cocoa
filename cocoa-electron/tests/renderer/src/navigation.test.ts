@@ -35,6 +35,7 @@ describe('the views', () => {
         report: 'Missing',
         report_error: null,
         report_rerunnable: false,
+        report_locked: false,
         attachments: 0,
         visualizable: false,
         deploy: null,

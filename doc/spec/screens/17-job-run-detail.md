@@ -98,7 +98,7 @@ Possible states:
 ```text
 Report is not yet available.
 Report is being generated.
-[👁 View report]
+[👁 View]
 [👁 Text]  [👁 HTML]
 Report is missing.
 Unable to read report: <message>
@@ -107,7 +107,7 @@ Report script failed: <output>
 
 A report that exists is shown as buttons alone, each opening the Report
 Viewer on one file; no sentence says a report is available, since the
-buttons do. One file is one action, `View report`: someone who wants to read
+buttons do. One file is one action, `View`: someone who wants to read
 the report does not care which format it is, so the format is only the
 tooltip. Two files (`report/<run>.txt` and `report/<run>.html`) are a choice,
 and only then is the format the point: `Text` and `HTML`, plain text first,
@@ -128,16 +128,36 @@ script that cannot be started, and a viewer that later exits non-zero are
 each a notice in the error voice. A campaign run's Report row has the same
 button, for the campaign's own script (convention §8.4).
 
-The row's last action is `Re-run report`, a secondary button with a
+Where the run has a report, `Save as…` follows, with a save icon. It asks
+where in a save dialog, suggesting `<experiment>-run-<id>-report` in the home
+directory, and copies the run's report files and attachments into that new
+folder at the same relative paths they have in the experiment —
+`report/<id>.*` and `runs/<id>/report/attachment/` — so an HTML report's links
+into its attachments still resolve. The copy is the person's: a later
+regenerate or delete leaves it alone. A name that already exists is refused
+rather than written into. Saved, a notice says where; closing the dialog says
+nothing. A campaign run's Report row has the same button.
+
+Where the run has a report, or a locked one, a `Lock` toggle follows: `Lock`
+with an open padlock while the report is unlocked, `Locked` with a closed one,
+pressed, while it is locked (convention §7.3.3). Its tooltip says what the lock
+holds back. Locked, `Regenerate` stays in the row but disabled, and so does the
+page's `Delete`, each with a tooltip saying to unlock the report first. A
+refusal is a notice in the error voice. A campaign run's Report row has the
+same toggle, for the campaign's own report.
+
+The row's last action is `Regenerate`, a secondary button with a
 counter-clockwise arrow, on every job run whose `report_rerunnable` is true —
 `Succeeded`, `Failed`, an `Error` its report left, a `Completed` one not yet
 taken — and absent otherwise, including while the report is `Generating`.
 It asks nothing first: a re-run only replaces a file the script will write
-again. Pressed, it is busy (`Re-running…`) until the engine answers, which is
+again. Pressed, it is busy (`Regenerating…`) until the engine answers, which is
 at once; by then the report is due, and the row reads `Report is being
 generated.` until the outcome lands (convention §7.3.2). A refusal is a
 notice in the error voice; so is a report that then fails, as on the
-automatic path. A campaign run's own Report row has no re-run.
+automatic path. A campaign run's own Report row has the same button once its
+report has run, landed or failed — `report_rerunnable` on the campaign run —
+and regenerates the campaign's report (convention §8.3).
 
 A `Failed` run's report is shown exactly as a succeeded run's: the same
 buttons, the same viewer. When its script failed, the row says

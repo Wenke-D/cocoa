@@ -18,14 +18,19 @@ import type {
   StartResult,
   DeleteTarget,
   DeleteResult,
+  LockReportResult,
+  LockReportTarget,
   RerunReportResult,
   RerunReportTarget,
+  SaveReportResult,
+  SaveReportTarget,
   VisualizeResult,
   VisualizeTarget
 } from '@shared/protocol'
 import { attachment_count, attachment_dir } from '../engine/attachments'
 import type { Engine } from '../engine/engine'
 import type { EngineError } from '../engine/errors'
+import { copy_report } from '../engine/report_copy'
 import { extension_of, report_path } from '../engine/report_paths'
 
 /** Reports larger than this are refused rather than sent over IPC whole. */
@@ -91,16 +96,34 @@ export function delete_run(engine: Engine, target: DeleteTarget): DeleteResult {
 }
 
 /**
- * Re-runs a job run's report by hand (convention §7.3.2). Accepted means the
- * report is due — the run reads `Generating` — not that it ran: the refresh
- * tick runs it, and its outcome arrives the way an automatic report's does.
+ * Regenerates a job run's or a campaign run's report by hand (convention
+ * §7.3.2, §8.3). Accepted means the report is due — the run reads
+ * `Generating` — not that it ran: the refresh tick runs it, and its outcome
+ * arrives the way an automatic report's does.
  */
 export function rerun_report(engine: Engine, target: RerunReportTarget): RerunReportResult {
   try {
     if (!/^\d+$/.test(target.run_id)) {
       return { ok: false, message: `\`${target.run_id}\` is not a run id` }
     }
-    engine.request_report(target.job_id, Number(target.run_id))
+    engine.request_report(target.entity_id, Number(target.run_id))
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, message: (error as Error).message }
+  }
+}
+
+/**
+ * Locks or unlocks a job run's or a campaign run's report (convention
+ * §7.3.3). Synchronous: the record carries the lock, and the world says so on
+ * the next publish.
+ */
+export function lock_report(engine: Engine, target: LockReportTarget): LockReportResult {
+  try {
+    if (!/^\d+$/.test(target.run_id)) {
+      return { ok: false, message: `\`${target.run_id}\` is not a run id` }
+    }
+    engine.set_report_lock(target.entity_id, Number(target.run_id), target.locked)
     return { ok: true }
   } catch (error) {
     return { ok: false, message: (error as Error).message }
@@ -155,6 +178,33 @@ export function attachments_location(
     return { ok: false, message: `run ${target.run_id} has no report attachments` }
   }
   return { ok: true, dir: attachment_dir(target.entity_id, target.run_id) }
+}
+
+/**
+ * Saves a copy of one run's report into `destination`, a directory the
+ * person named and that does not exist yet (`engine/report_copy.ts`).
+ */
+export function save_report(
+  engine: Engine,
+  target: SaveReportTarget,
+  destination: string
+): SaveReportResult {
+  if (!engine.registered(target.entity_id)) {
+    return {
+      ok: false,
+      cancelled: false,
+      message: `no experiment is registered at ${target.entity_id}`
+    }
+  }
+  if (!/^\d+$/.test(target.run_id)) {
+    return { ok: false, cancelled: false, message: `\`${target.run_id}\` is not a run id` }
+  }
+  try {
+    copy_report(target.entity_id, Number(target.run_id), destination)
+    return { ok: true, path: destination }
+  } catch (error) {
+    return { ok: false, cancelled: false, message: (error as Error).message }
+  }
 }
 
 /**

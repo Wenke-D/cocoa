@@ -54,6 +54,12 @@ function start_agent_server(): void {
       }
       return result
     },
+    // As the report row's Lock does (`bridge/ipc.ts`).
+    lock_report: (target) => {
+      const result = operations.lock_report(engine, target)
+      publish_cycle(empty())
+      return result
+    },
     // As the Explorer's `+` does with the folder it picked (`bridge/ipc.ts`).
     register: (folder) => {
       const result = operations.add_folder(engine, folder)

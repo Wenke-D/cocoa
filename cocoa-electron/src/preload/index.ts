@@ -23,6 +23,12 @@ const api = {
   rerun_report: (target: unknown): Promise<unknown> =>
     ipcRenderer.invoke('cocoa:rerun_report', target),
 
+  lock_report: (target: unknown): Promise<unknown> =>
+    ipcRenderer.invoke('cocoa:lock_report', target),
+
+  save_report: (target: unknown): Promise<unknown> =>
+    ipcRenderer.invoke('cocoa:save_report', target),
+
   open_attachments: (target: unknown): Promise<unknown> =>
     ipcRenderer.invoke('cocoa:open_attachments', target),
 

@@ -4,7 +4,7 @@
   import { campaign_run, job_run } from '@shared/world'
   import type { ReportFormat } from '@shared/world'
   import type { Crumb } from '../route'
-  import { open_attachments, visualize } from '../commands'
+  import { lock_report, open_attachments, rerun_report, save_report, visualize } from '../commands'
   import { navigate } from '../navigation'
   import { request_cancel, request_delete } from '../overlays.svelte'
   import { app } from '../state.svelte'
@@ -25,6 +25,22 @@
     { label: entity_name(campaign), route: { page: 'entity', entity_id: campaign_id } },
     { label: run_id, route: null, mono: true }
   ])
+
+  /** Why Delete is unavailable: a locked report it would take with it, or `null`. */
+  const delete_lock = $derived.by(() => {
+    if (run === undefined) {
+      return null
+    }
+    if (run.report_locked) {
+      return 'The report is locked; unlock it to delete this run'
+    }
+    const member = run.plan.steps.find(
+      (step) => job_run(app.world, step.job_id, step.run_id)?.report_locked === true
+    )
+    return member === undefined
+      ? null
+      : `The report of member run ${member.run_id} is locked; unlock it to delete this run`
+  })
 
   const finished = $derived.by(() => {
     if (run === undefined) {
@@ -53,13 +69,18 @@
         <SquareIcon />Cancel Campaign
       </Button>
     {:else if is_terminal(run.status)}
-      <Button
-        variant="destructive"
-        class="ml-auto"
-        onclick={() => request_delete({ kind: 'campaign_run', campaign_id, run_id: run.id })}
-      >
-        <Trash2Icon />Delete Run…
-      </Button>
+      <!-- Deleting takes the members with it, so any locked report among
+           them keeps it, the campaign's own included (convention §7.3.3);
+           the span takes the pointer a disabled button does not, to say why. -->
+      <span class="ml-auto" title={delete_lock ?? undefined}>
+        <Button
+          variant="destructive"
+          disabled={delete_lock !== null}
+          onclick={() => request_delete({ kind: 'campaign_run', campaign_id, run_id: run.id })}
+        >
+          <Trash2Icon />Delete
+        </Button>
+      </span>
     {/if}
   </header>
 
@@ -87,6 +108,19 @@
         open_attachments={() => open_attachments({ entity_id: campaign_id, run_id: run.id })}
         visualize={run.visualizable
           ? () => visualize({ entity_id: campaign_id, run_id: run.id })
+          : null}
+        save={typeof run.report === 'object' && 'Available' in run.report
+          ? () => save_report({ entity_id: campaign_id, run_id: run.id })
+          : null}
+        lock={(typeof run.report === 'object' && 'Available' in run.report) || run.report_locked
+          ? {
+              locked: run.report_locked,
+              toggle: () =>
+                lock_report({ entity_id: campaign_id, run_id: run.id, locked: !run.report_locked })
+            }
+          : null}
+        rerun={run.report_rerunnable
+          ? () => rerun_report({ entity_id: campaign_id, run_id: run.id })
           : null}
       />
     </dd>

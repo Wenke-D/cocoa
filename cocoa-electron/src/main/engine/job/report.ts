@@ -9,6 +9,7 @@ import type { Invocation } from '../invoke'
 import { apply_status, now_stamp, report_owed } from '../record'
 import type { RunRecord } from '../record'
 import { report_dir, report_on_disk } from '../report_paths'
+import { locked_refusal } from '../report_lock'
 import type { Job } from './job'
 
 export type ReportMode = 'auto' | 'manual'
@@ -53,6 +54,9 @@ export function request_report(job: Job, run_id: number): void {
   }
   if (!reportable(record, 'manual')) {
     throw EngineError.validation(`run ${run_id} (${record.status}) cannot be reported`)
+  }
+  if (record.report_locked === true) {
+    throw locked_refusal(`run ${run_id}`, 'regenerate it')
   }
   if (record.status === 'FAILED') {
     record.report = { attempted: false }

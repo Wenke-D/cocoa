@@ -71,8 +71,8 @@ not a field in the record and not cached in the UI. In order:
    ended `CANCELLED` makes it `CANCELLED`. No campaign report runs in any of these
    cases (§8.3).
 5. All members succeeded and nothing failed to launch → the campaign's own report
-   decides: in flight → `ANALYZING`, on disk → `SUCCEEDED`, script failed →
-   `ERROR`.
+   decides: in flight → `ANALYZING` (a regenerate's too, §8.3, though the old
+   report is still on disk), on disk → `SUCCEEDED`, script failed → `ERROR`.
 
 A failing member never aborts its siblings — instances are independent — so the
 campaign stays active until every member is terminal.

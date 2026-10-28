@@ -82,6 +82,7 @@ describe('the socket', () => {
           return { ok: true, run_id: '9' }
         },
         rerun_report: () => ({ ok: true }),
+        lock_report: () => ({ ok: true }),
         register: () => ({ ok: false, cancelled: false, message: 'unused' }),
         cancel: async () => ({ ok: false, message: 'unused' })
       })
@@ -127,6 +128,7 @@ describe('the socket', () => {
         },
         start: async () => ({ ok: true, run_id: '7' }),
         rerun_report: () => ({ ok: true }),
+        lock_report: () => ({ ok: true }),
         register: () => ({ ok: false, cancelled: false, message: 'unused' }),
         cancel: async () => ({ ok: false, message: 'unused' })
       })

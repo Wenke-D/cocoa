@@ -41,8 +41,12 @@ describe('reads', () => {
       attachments: null
     })
     expect(detail.runs[1].location.report).toBe(`${FOLDER}/report/1.txt`)
-    // What a report re-run is followed by (§43.4).
-    expect(detail.runs[1]).toMatchObject({ report_running: false, report_error: null })
+    // What a report re-run is followed by (§43.4), and whether it may be.
+    expect(detail.runs[1]).toMatchObject({
+      report_running: false,
+      report_error: null,
+      report_locked: false
+    })
   })
 
   it('gives a campaign its calls and its members file', async () => {

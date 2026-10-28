@@ -28,8 +28,8 @@ while its window is open**. A cocoa started with `--profile <name>` answers on
   ```
 
   Its tools are `cocoa_help`, `cocoa_list_jobs`, `cocoa_list_campaigns`,
-  `cocoa_job`, `cocoa_campaign`, `cocoa_start`, `cocoa_register` and
-  `cocoa_cancel`.
+  `cocoa_job`, `cocoa_campaign`, `cocoa_start`, `cocoa_register`,
+  `cocoa_cancel` and `cocoa_lock_report`.
   `cocoa-mcp-server --help-ai` prints where this guidance lives.
 
 - **Over HTTP on the socket**, for a script or a quick look:
@@ -69,7 +69,12 @@ reads a run's record and report straight from disk.
    run the user named, or one of your own that has gone wrong, and say which
    run you cancelled and why. Cancelling a campaign run stops every member
    still running; to stop just one, cancel it under its own job.
-7. **What the socket cannot do yet, ask the user to do in the window.** There
+7. **A locked report is the user's.** A run's report can be locked, in the
+   window or with `cocoa_lock_report`; while it is, it is not regenerated and
+   its run is not deleted (`report_locked` on the run says so). Lock or unlock
+   one only when the user asks. When something you were asked to do is
+   refused because a report is locked, say so and leave the lock alone.
+8. **What the socket cannot do yet, ask the user to do in the window.** There
    is no way to take an experiment out of the Explorer: ask, naming the
    folder.
 

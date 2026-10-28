@@ -122,10 +122,12 @@ A failed job run has a report too (convention §7.3.1), at the same
 script failed, the run's `report_error` carries the script's output; it is
 `null` otherwise, and always on the healthy path, where a failed report is the
 run's own `error`. `report_running` is true while a run's report is due or
-running.
+running, and `report_locked` while it is locked (convention §7.3.3), on job
+and campaign runs alike.
 
-**Re-running a report** takes the button's path (convention §7.3.2): the
-report is marked due and the refresh tick runs it. The route answers **`202`
+**Regenerating a report** takes the `Regenerate` button's path, for a job run
+(convention §7.3.2) or a campaign run (§8.3): the report is marked due and the
+refresh tick runs it. The route answers **`202`
 as soon as it is due**, not when it is done — a report script may run for the
 whole ten-minute report timeout, which is longer than a write waits for the
 engine (§43.3) and longer than the MCP binary waits for an answer:
@@ -136,14 +138,31 @@ engine (§43.3) and longer than the MCP binary waits for an answer:
   "follow": "/jobs/solver-gpu" }
 ```
 
-Follow `GET /jobs/{name}` until that run's `report_running` is false; the
-outcome is then on the run as on any report: `Succeeded`, or `Error` with its
-`error`, on the healthy path; `Failed` with or without `report_error` for a
-failed run. `404` names an experiment or run that is not there; `400` carries
-the workbench's refusal — a run that cannot be reported, one whose report is
-already running, or a Campaign, whose own report is not re-run by hand. Who asked
-is not recorded (convention §7.3.2). The MCP binary does not offer this route
+Follow the `follow` read — `GET /jobs/{name}`, or `GET /campaigns/{name}` for a
+campaign run — until that run's `report_running` is false; the outcome is then
+on the run as on any report: `Succeeded`, or `Error` with its `error`, on the
+healthy path; `Failed` with or without `report_error` for a failed job run.
+`404` names an experiment or run that is not there; `400` carries the
+workbench's refusal — a run that cannot be reported (a campaign run with a
+member that did not succeed among them), or one whose report is already
+running. Who asked is not recorded (convention §7.3.2). The MCP binary does not offer this route
 as a tool yet.
+
+**Locking a report** takes the `Lock` button's path (convention §7.3.3):
+`POST /experiments/{name}/runs/{run_id}/report/lock` with `{"locked": true}`
+or `{"locked": false}`, for a job run or a campaign run. It answers `200` with
+the state the report is now in:
+
+```json
+{ "run_id": "41", "report_locked": true }
+```
+
+Asking for the state the report is already in changes nothing and answers the
+same way. `400` is a body without a boolean `locked`, or the workbench's
+refusal — no report to lock, or one being generated; `404` names an experiment
+or run that is not there. A locked report refuses a regenerate, and its run a
+delete, until it is unlocked. The lock is the user's: the agent manual asks an
+agent to lock or unlock only when told to.
 
 **Cancelling a run** takes the modal's confirm path (convention §7.4): the same
 `cancel` operation, aimed by the experiment's name at a job run, or at a
@@ -178,7 +197,8 @@ the right route rather than flatly refused.
 ## 43.5 The MCP binary
 
 `cocoa-mcp-server` serves this same surface as MCP tools (`cocoa_help`,
-`cocoa_list_jobs`, `cocoa_job`, `cocoa_start`, `cocoa_register`, `cocoa_cancel`, …) so an agent runtime speaks to
+`cocoa_list_jobs`, `cocoa_job`, `cocoa_start`, `cocoa_register`, `cocoa_cancel`,
+`cocoa_lock_report`, …) so an agent runtime speaks to
 cocoa through its own tool protocol instead of raw HTTP. An agent's MCP client
 launches the binary and speaks JSON-RPC over stdio; every tool call becomes
 one request over the socket, and the socket's answers pass through verbatim.

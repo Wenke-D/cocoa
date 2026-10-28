@@ -84,6 +84,19 @@ pub(crate) fn tools() -> Value {
                 "required": ["experiment", "run_id"],
             },
         },
+        {
+            "name": "cocoa_lock_report",
+            "description": "Lock or unlock a Job run's or a Campaign run's report, as the report row's Lock button does. A locked report is the user's to keep: it is not regenerated, and its run is not deleted (nor, for a Campaign member, its Campaign run) until it is unlocked. Lock or unlock one only when the user asks. Returns the state the report is now in; asking for the state it is already in changes nothing. Refused, with the reason, for a run with no report to lock, or one whose report is being generated.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "experiment": { "type": "string", "description": "The Job's or Campaign's name." },
+                    "run_id": { "type": "string", "description": "The run's id, as cocoa_job or cocoa_campaign lists it (ids are per experiment)." },
+                    "locked": { "type": "boolean", "description": "true to lock the report, false to unlock it." },
+                },
+                "required": ["experiment", "run_id", "locked"],
+            },
+        },
     ])
 }
 
@@ -143,6 +156,29 @@ pub(crate) fn call_tool(name: &str, arguments: &Value) -> Result<Value, (i64, St
                 ),
                 // Empty, but there: a body is what makes the request a POST.
                 Some(String::new()),
+            )
+        }
+        "cocoa_lock_report" => {
+            let experiment = arguments
+                .get("experiment")
+                .and_then(Value::as_str)
+                .ok_or((-32602, "cocoa_lock_report needs `experiment`".to_owned()))?;
+            let run_id = arguments
+                .get("run_id")
+                .and_then(Value::as_str)
+                .ok_or((-32602, "cocoa_lock_report needs `run_id`".to_owned()))?;
+            let locked = arguments.get("locked").and_then(Value::as_bool).ok_or((
+                -32602,
+                "cocoa_lock_report needs `locked`, true or false".to_owned(),
+            ))?;
+            http(
+                "POST",
+                &format!(
+                    "/experiments/{}/runs/{}/report/lock",
+                    percent_encode(experiment),
+                    percent_encode(run_id)
+                ),
+                Some(json!({ "locked": locked }).to_string()),
             )
         }
         other => return Err((-32602, format!("no such tool: {other}"))),

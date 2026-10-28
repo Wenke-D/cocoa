@@ -64,7 +64,10 @@ Only a **finished** run can be deleted. An active run must be cancelled
 first, and the cancellation must land; `UNREACHABLE` is refused too — a run
 cocoa cannot see may still be running, and deleting its record would be the
 one way to never find out. A `Failed` run whose report is still `Generating`
-offers no Delete until the report lands (convention §12.1).
+offers no Delete until the report lands (convention §12.1). A run whose report
+is locked keeps its Delete, disabled, with "unlock it to delete this run" as
+its tooltip, and its history row's `Delete…` disabled; a campaign run is held
+the same way by its own locked report or any member's (convention §7.3.3).
 
 **A fan-out is deleted whole, from the campaign's side.** A run a campaign
 dispatched offers no Delete anywhere — not on its page, not in the job's

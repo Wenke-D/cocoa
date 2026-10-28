@@ -27,7 +27,9 @@ The UI offers one open action per format that exists — the HTML one appears
 only when that file is there. Plain text renders in the app; HTML is handed to
 the system browser, the only thing that renders it faithfully. Attachments
 are any kind of file, so they are the system file manager's to show: the UI
-offers to open their directory there.
+offers to open their directory there. It also offers to save a copy of a
+run's report, files and attachments, into a new folder the person picks,
+outside cocoa's reach.
 
 A folder with a `[visualize]` script gets one more action on a reported run:
 `Visualize`, which starts that script on it (§7.7, §8.4) — for whatever

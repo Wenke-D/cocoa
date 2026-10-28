@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RerunReportTarget } from '@shared/protocol'
-import { FOLDER, ask } from '../../support/agent'
+import { CAMPAIGN_FOLDER, FOLDER, ask } from '../../support/agent'
 
 // A report re-run answers once the report is due, not done (§43.4): a script
 // may run for the ten-minute report timeout.
@@ -24,7 +24,29 @@ describe('re-running a report', () => {
       location: { report: `${FOLDER}/report/1.txt` },
       follow: '/jobs/solver-gpu'
     })
-    expect(asked).toEqual({ job_id: FOLDER, run_id: '1' })
+    expect(asked).toEqual({ entity_id: FOLDER, run_id: '1' })
+  })
+
+  it('regenerates a campaign run’s report, followed under /campaigns', async () => {
+    let asked: RerunReportTarget | null = null
+    const { status, json } = await ask(
+      'POST',
+      '/experiments/nightly/runs/2/report',
+      '',
+      undefined,
+      (target) => {
+        asked = target
+        return { ok: true }
+      }
+    )
+    expect(status).toBe(202)
+    expect(json).toEqual({
+      run_id: '2',
+      report_running: true,
+      location: { report: `${CAMPAIGN_FOLDER}/report/2.txt` },
+      follow: '/campaigns/nightly'
+    })
+    expect(asked).toEqual({ entity_id: CAMPAIGN_FOLDER, run_id: '2' })
   })
 
   it('is a 404 for an unknown experiment or run', async () => {
@@ -34,13 +56,12 @@ describe('re-running a report', () => {
     const missing = await ask('POST', '/experiments/solver-gpu/runs/41/report')
     expect(missing.status).toBe(404)
     expect(missing.json.error).toBe('No such run: solver-gpu run 41')
+    const no_campaign_run = await ask('POST', '/experiments/nightly/runs/9/report')
+    expect(no_campaign_run.status).toBe(404)
+    expect(no_campaign_run.json.error).toBe('No such run: nightly run 9')
   })
 
-  it("refuses a campaign, and passes the workbench's refusal through as a 400", async () => {
-    const campaign = await ask('POST', '/experiments/nightly/runs/2/report')
-    expect(campaign.status).toBe(400)
-    expect(campaign.json.error).toContain('is a campaign')
-
+  it("passes the workbench's refusal through as a 400", async () => {
     const refused = await ask(
       'POST',
       '/experiments/solver-gpu/runs/0/report',

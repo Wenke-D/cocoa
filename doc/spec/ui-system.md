@@ -91,7 +91,7 @@ click outside dismiss it — unless it is busy, when nothing does. The Explorer'
 row menu is `ContextMenu` around each row: keyboard-navigable, closed with the
 row it belongs to.
 
-Link-styled buttons (`View report`, a breadcrumb, `Dismiss`) stay plain
+Link-styled buttons (a breadcrumb, `Dismiss`) stay plain
 `<button>`s styled in place: they are text that happens to act.
 
 ## Layout

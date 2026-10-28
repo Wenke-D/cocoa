@@ -5,6 +5,8 @@ import type {
   AddFolderResult,
   CancelResult,
   CancelTarget,
+  LockReportResult,
+  LockReportTarget,
   RerunReportResult,
   RerunReportTarget,
   StartResult
@@ -17,8 +19,10 @@ export interface AgentDeps {
   current_world: () => World
   /** Starts an experiment by name, stamped as the agent's (§43). */
   start(name: string, parameters: Record<string, unknown>): Promise<StartResult>
-  /** Re-runs a job run's report by hand: marks it due, as a click does. */
+  /** Regenerates a job run's or a campaign run's report: marks it due, as a click does. */
   rerun_report(target: RerunReportTarget): RerunReportResult
+  /** Locks or unlocks a job run's or a campaign run's report, as its button does. */
+  lock_report(target: LockReportTarget): LockReportResult
   /** Registers a folder, as the Explorer's `+` does with a picked one. */
   register(folder: string): AddFolderResult
   /** Cancels a job or campaign run, as the cancel modal's confirm does. */

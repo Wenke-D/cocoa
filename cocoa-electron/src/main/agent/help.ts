@@ -41,15 +41,17 @@ export function help(): AgentResponse {
         path: '/jobs/{name}',
         answers:
           'one Job and its runs, oldest first, each run with the locations to read directly ' +
-          '(run_dir, record, report), whether its report is running (report_running), and ' +
-          'why its report script failed on a FAILED run (report_error)'
+          '(run_dir, record, report), whether its report is running (report_running) or ' +
+          'locked (report_locked), and why its report script failed on a FAILED run ' +
+          '(report_error)'
       },
       {
         method: 'GET',
         path: '/campaigns/{name}',
         answers:
-          'one Campaign and its runs, each with the calls it dispatched and its locations ' +
-          '(run_dir, record, members, report)'
+          'one Campaign and its runs, each with the calls it dispatched, its locations ' +
+          '(run_dir, record, members, report), and whether its report is running ' +
+          '(report_running) or locked (report_locked)'
       },
       {
         method: 'POST',
@@ -84,14 +86,28 @@ export function help(): AgentResponse {
         method: 'POST',
         path: '/experiments/{name}/runs/{run_id}/report',
         answers:
-          'runs a Job run’s report script again, by hand, overwriting its report — for a run ' +
-          'whose cluster outcome was COMPLETED (including one left at ERROR by its report) or ' +
-          'FAILED. 202 with {run_id, report_running, location: {report}, follow} as soon as ' +
-          'the report is due; it runs on cocoa’s next refresh, up to the report timeout. ' +
-          'Follow GET /jobs/{name} until the run’s report_running is false: a COMPLETED-path ' +
-          'run then reads Succeeded, or Error with its error; a FAILED run stays Failed, with ' +
-          'report_error when the script failed. 404 for an unknown experiment or run; 400 ' +
-          'for a Campaign, a run that cannot be reported, or one whose report is already running.'
+          'regenerates a run’s report: runs its report script again, by hand, overwriting ' +
+          'the report — for a Job run whose cluster outcome was COMPLETED (including one left ' +
+          'at ERROR by its report) or FAILED, and for a Campaign run whose own report has run. ' +
+          '202 with {run_id, report_running, location: {report}, follow} as soon as the ' +
+          'report is due; it runs on cocoa’s next refresh, up to the report timeout. Follow ' +
+          'the `follow` read until the run’s report_running is false: a COMPLETED-path Job ' +
+          'run or a Campaign run then reads Succeeded, or Error with its error; a FAILED run ' +
+          'stays Failed, with report_error when the script failed. 404 for an unknown ' +
+          'experiment or run; 400 for a run that cannot be reported, one whose report is ' +
+          'already running, or one whose report is locked.'
+      },
+      {
+        method: 'POST',
+        path: '/experiments/{name}/runs/{run_id}/report/lock',
+        answers:
+          'locks or unlocks a Job run’s or a Campaign run’s report, body {"locked": true} or ' +
+          '{"locked": false}. A locked report is not regenerated and its run is not deleted ' +
+          '— nor, for a Campaign member, its Campaign run — until it is unlocked; it is the ' +
+          'user’s, so lock or unlock one only when they ask. 200 with {run_id, report_locked}; ' +
+          'asking for the state it is already in changes nothing. 404 for an unknown ' +
+          'experiment or run; 400 for a malformed body, a run with no report to lock, or one ' +
+          'whose report is being generated.'
       },
       {
         method: 'POST',

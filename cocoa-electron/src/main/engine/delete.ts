@@ -12,6 +12,7 @@ import type { Campaign } from './campaign/campaign'
 import type { Job } from './job/job'
 import { report_owed } from './record'
 import { report_path } from './report_paths'
+import { locked_refusal } from './report_lock'
 import { is_terminal } from './status'
 
 /**
@@ -21,7 +22,8 @@ import { is_terminal } from './status'
  * be the one way to never find out. A run a campaign dispatched is refused
  * outright, whatever its status: it is part of a fan-out, and the fan-out
  * is deleted whole, from the campaign's side. A FAILED run whose report has
- * not landed yet waits for it.
+ * not landed yet waits for it, and a run whose report is locked (§7.3.3)
+ * waits to be unlocked.
  */
 export function delete_run(job: Job, run_id: number): void {
   const record = job.runs.record(run_id)
@@ -41,6 +43,9 @@ export function delete_run(job: Job, run_id: number): void {
   if (report_owed(record)) {
     throw EngineError.validation(`${report_running(`run ${run_id}`)}; delete it once it lands`)
   }
+  if (record.report_locked === true) {
+    throw locked_refusal(`run ${run_id}`, 'delete the run')
+  }
   remove_run_files(job.path, run_id)
   job.runs.drop(run_id)
 }
@@ -52,7 +57,8 @@ export function delete_run(job: Job, run_id: number): void {
  * member still runs (§9.1), and deleting a running record is exactly what
  * this refuses everywhere. A member that cannot be resolved — its job
  * unregistered, its record already gone — has nothing left to delete and
- * does not block the rest.
+ * does not block the rest. A locked report (§7.3.3), the campaign's own or a
+ * member's, keeps the whole fan-out until it is unlocked.
  */
 export function delete_campaign_run(engine: Engine, campaign: Campaign, run_id: number): void {
   const record = campaign.runs.record(run_id)
@@ -67,12 +73,21 @@ export function delete_campaign_run(engine: Engine, campaign: Campaign, run_id: 
       `campaign run ${run_id} still has members running and cannot be deleted; cancel it first`
     )
   }
+  if (record.report_locked === true) {
+    throw locked_refusal(`campaign run ${run_id}`, 'delete the campaign run')
+  }
   const members = engine.resolve_members(record)
   for (const member of members) {
     if (member.record !== null && !is_terminal(member.record.status)) {
       throw EngineError.validation(
         `member run ${member.run_id} of \`${member.job_name}\` ` +
           `(${member.record.status}) is still active; cancel it first`
+      )
+    }
+    if (member.record?.report_locked === true) {
+      throw locked_refusal(
+        `member run ${member.run_id} of \`${member.job_name}\``,
+        'delete the campaign run'
       )
     }
     if (member.record !== null && report_owed(member.record)) {

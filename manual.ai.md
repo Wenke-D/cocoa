@@ -19,6 +19,7 @@ The rules, in short — each is explained in the first document:
 - Put executables and their material in place through `check` and `deploy`.
 - Never edit `runs/` or `report/`.
 - Cancel only a run the user named, or one you started; say which, and why.
+- Lock or unlock a report only when the user asks; a locked one is theirs.
 - Ask the user to remove a folder from the window.
 
 Live state — the experiments, their parameters, their runs — comes from cocoa

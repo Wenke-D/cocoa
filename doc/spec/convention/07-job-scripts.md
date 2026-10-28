@@ -157,7 +157,7 @@ a campaign with a `FAILED` member still settles `FAILED` with no campaign report
 
 ### 7.3.2 Re-running a report by hand
 
-A person (the run page's `Re-run report`) or an agent
+A person (the run page's `Regenerate`) or an agent
 (`POST /experiments/{name}/runs/{run_id}/report`) can ask for a job run's
 report again — after rewriting the script, say, to regenerate every report it
 ever wrote. Asking runs nothing. It marks the report **due**, exactly as the
@@ -186,9 +186,32 @@ run (§8.2 for a campaign's), and a status change carries only its status and
 moment; a re-run's `ANALYZING` is in the history like any other, and its
 asker is not a fact any reader of the record has needed.
 
-A campaign's own report is not re-run by hand. It dates the campaign's end (§8.2),
-which a re-run would move; its members' reports can each be re-run, under
+A campaign run's own report is regenerated the same way, and keeps the
+campaign's end where it was (§8.3); its members' reports are each re-run under
 their own jobs.
+
+### 7.3.3 Locking a report
+
+A report someone means to keep can be **locked**: by a person (the report
+row's `Lock`) or an agent (`POST /experiments/{name}/runs/{run_id}/report/lock`
+with `{"locked": true}`), and unlocked the same way with `false`. The record
+carries it, and only while it holds:
+
+```json
+{ "run_id": 42, "status": "SUCCEEDED", "report_locked": true }
+```
+
+While it holds, the two ways cocoa would otherwise replace or remove the
+report are refused, with the reason: regenerating it (§7.3.2) and deleting the
+run (§12.1). A campaign run takes its members with it when it is deleted, so
+it is held by its own locked report and by any member's. Nothing automatic is
+held back: a report runs on its own once, before there is anything to lock.
+
+Locking needs a report on disk that is not being written; a run with none, or
+one whose report is due or running, is refused. Unlocking always succeeds, and
+asking for the state the report is already in changes nothing. A campaign run's
+own report locks the same way (§8.3). A person and an agent lock and unlock
+alike; an agent does it only when the user asks (the agent manual's rule).
 
 ## 7.4 `cancel`
 

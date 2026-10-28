@@ -58,6 +58,7 @@ export function world(): World {
         report: 'Missing',
         report_error: null,
         report_rerunnable: false,
+        report_locked: false,
         attachments: 0,
         visualizable: false,
         deploy: null,
@@ -77,6 +78,7 @@ export function world(): World {
         report: { Available: { files: [{ format: 'PlainText', text_bytes: 120 }] } },
         report_error: null,
         report_rerunnable: false,
+        report_locked: false,
         attachments: 0,
         visualizable: false,
         deploy: null,
@@ -99,6 +101,8 @@ export function world(): World {
         query_health: 'Healthy',
         last_successful_query: '2026-08-20T12:00:03.000+02:00',
         report: 'Unavailable',
+        report_rerunnable: false,
+        report_locked: false,
         attachments: 0,
         visualizable: false,
         error: null
@@ -114,12 +118,14 @@ export function deps(
   start?: AgentDeps['start'],
   rerun?: AgentDeps['rerun_report'],
   register?: AgentDeps['register'],
-  cancel?: AgentDeps['cancel']
+  cancel?: AgentDeps['cancel'],
+  lock?: AgentDeps['lock_report']
 ): AgentDeps {
   return {
     current_world: world,
     start: start ?? (async () => ({ ok: true, run_id: '7' })),
     rerun_report: rerun ?? (() => ({ ok: true })),
+    lock_report: lock ?? (() => ({ ok: true })),
     register: register ?? ((folder) => ({ ok: true, entity_id: folder, already: false })),
     cancel: cancel ?? (async () => ({ ok: true }))
   }
@@ -177,10 +183,14 @@ export async function ask(
   start?: AgentDeps['start'],
   rerun?: AgentDeps['rerun_report'],
   register?: AgentDeps['register'],
-  cancel?: AgentDeps['cancel']
+  cancel?: AgentDeps['cancel'],
+  lock?: AgentDeps['lock_report']
 ) {
   const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'cocoa-ask-')))
-  const server = await serve(path.join(dir, 'cocoa.sock'), deps(start, rerun, register, cancel))
+  const server = await serve(
+    path.join(dir, 'cocoa.sock'),
+    deps(start, rerun, register, cancel, lock)
+  )
   try {
     const answer = await request(
       path.join(dir, 'cocoa.sock'),

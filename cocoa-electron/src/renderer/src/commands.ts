@@ -3,9 +3,13 @@
 import type {
   AddFolderResult,
   AttachmentsTarget,
+  LockReportResult,
+  LockReportTarget,
   OpenAttachmentsResult,
   RerunReportResult,
   RerunReportTarget,
+  SaveReportResult,
+  SaveReportTarget,
   VisualizeResult,
   VisualizeTarget
 } from '@shared/protocol'
@@ -37,7 +41,8 @@ export async function add_folder(): Promise<void> {
 }
 
 /**
- * Re-runs a job run's report by hand (convention §7.3.2). Accepted, the run
+ * Regenerates a job run's or a campaign run's report by hand (convention
+ * §7.3.2, §8.3). Accepted, the run
  * already reads `Generating` — its events precede the answer — so success
  * says nothing more; a refusal is said, as an error. How the report itself
  * went arrives later, the way an automatic report's does: on the run, and
@@ -51,6 +56,40 @@ export async function rerun_report(target: RerunReportTarget): Promise<void> {
     result = { ok: false, message: (error as Error).message }
   }
   if (!result.ok) {
+    notify(result.message, 'error')
+  }
+}
+
+/**
+ * Locks or unlocks a run's report (convention §7.3.3). The button shows the
+ * new state once the world does, so success says nothing; a refusal is said.
+ */
+export async function lock_report(target: LockReportTarget): Promise<void> {
+  let result: LockReportResult
+  try {
+    result = await window.cocoa.lock_report(target)
+  } catch (error) {
+    result = { ok: false, message: (error as Error).message }
+  }
+  if (!result.ok) {
+    notify(result.message, 'error')
+  }
+}
+
+/**
+ * Saves a copy of a run's report where the person picks. Closing the dialog
+ * says nothing; a saved copy is said with where it went, a refusal as an error.
+ */
+export async function save_report(target: SaveReportTarget): Promise<void> {
+  let result: SaveReportResult
+  try {
+    result = await window.cocoa.save_report(target)
+  } catch (error) {
+    result = { ok: false, cancelled: false, message: (error as Error).message }
+  }
+  if (result.ok) {
+    notify(`Report saved to ${result.path}.`)
+  } else if (!result.cancelled) {
     notify(result.message, 'error')
   }
 }

@@ -40,14 +40,22 @@
     {:else if is_deletable(run)}
       <!-- A campaign-dispatched run has no Delete here: the fan-out is deleted
            whole, from the campaign run's page (§16.4). Nor has a failed run
-           whose report is still being written (convention §12.1). -->
-      <Button
-        variant="destructive"
+           whose report is still being written (convention §12.1). A locked
+           report keeps the run (convention §7.3.3): Delete stays, disabled,
+           and the span takes the pointer a disabled button does not, to say
+           why. -->
+      <span
         class="ml-auto"
-        onclick={() => request_delete({ kind: 'job_run', job_id, run_id: run.id })}
+        title={run.report_locked ? 'The report is locked; unlock it to delete this run' : undefined}
       >
-        <Trash2Icon />Delete Run…
-      </Button>
+        <Button
+          variant="destructive"
+          disabled={run.report_locked}
+          onclick={() => request_delete({ kind: 'job_run', job_id, run_id: run.id })}
+        >
+          <Trash2Icon />Delete
+        </Button>
+      </span>
     {/if}
   </header>
 

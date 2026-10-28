@@ -54,7 +54,7 @@ export async function run({ page, shot, log, wait_text }) {
 
   // Wait for this call to finish, then read its report from here: the file is
   // in the job's folder, the breadcrumbs are the campaign's.
-  // One file is `View report`, two are a button per format; the plain-text
+  // One file is `View`, two are a button per format; the plain-text
   // one carries this title either way, and is the one that opens in the app.
   const plain_text = page.locator('button[title="Plain text report"]')
   await plain_text.waitFor({ timeout: 60_000 })

@@ -16,8 +16,12 @@ import type {
   StartResult,
   DeleteTarget,
   DeleteResult,
+  LockReportResult,
+  LockReportTarget,
   RerunReportResult,
   RerunReportTarget,
+  SaveReportResult,
+  SaveReportTarget,
   VisualizeResult,
   VisualizeTarget
 } from '@shared/protocol'
@@ -31,6 +35,8 @@ declare global {
       delete_run(target: DeleteTarget): Promise<DeleteResult>
       report(target: ReportTarget): Promise<ReportResult>
       rerun_report(target: RerunReportTarget): Promise<RerunReportResult>
+      lock_report(target: LockReportTarget): Promise<LockReportResult>
+      save_report(target: SaveReportTarget): Promise<SaveReportResult>
       open_attachments(target: AttachmentsTarget): Promise<OpenAttachmentsResult>
       visualize(target: VisualizeTarget): Promise<VisualizeResult>
       add_folder(): Promise<AddFolderResult>

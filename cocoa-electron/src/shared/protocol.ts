@@ -57,15 +57,26 @@ export type DeleteTarget =
 
 export type DeleteResult = { ok: true } | { ok: false; message: string }
 
-/** A job run whose report to re-run by hand (convention §7.3.2). */
+/** A job run's or a campaign run's report to regenerate by hand (convention
+ * §7.3.2, §8.3). The entity id is the folder it lives in. */
 export interface RerunReportTarget {
-  job_id: string
+  entity_id: string
   run_id: string
 }
 
 /** Accepted means due: the report runs on the next tick, and the world says
  * `Generating` until it lands. */
 export type RerunReportResult = { ok: true } | { ok: false; message: string }
+
+/** A job run's or a campaign run's report to lock or unlock (convention
+ * §7.3.3). The entity id is the folder it lives in. */
+export interface LockReportTarget {
+  entity_id: string
+  run_id: string
+  locked: boolean
+}
+
+export type LockReportResult = { ok: true } | { ok: false; message: string }
 
 /** Which run's report to read, and which of its files. The entity id is the
  * folder it lives in. */
@@ -74,6 +85,17 @@ export interface ReportTarget {
   run_id: string
   format: ReportFormat
 }
+
+/** Which run's report to save a copy of, wherever the person picks. */
+export interface SaveReportTarget {
+  entity_id: string
+  run_id: string
+}
+
+export type SaveReportResult =
+  | { ok: true; path: string }
+  /** `cancelled` is not a failure: closing the dialog saves nothing, and says nothing. */
+  | { ok: false; cancelled: boolean; message: string }
 
 /** Which run's report attachments to open in the system file manager. */
 export interface AttachmentsTarget {

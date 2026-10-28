@@ -80,7 +80,10 @@ The campaign's own record lists what it planned and what it got:
 `attempted`, the moment `at`, and `error` when the script failed. `at` is the
 campaign's end, for a person reading its history — a campaign that succeeded ended
 when its report landed, not when its last member did. A campaign that settles
-without a report (§9.1, step 4) ended with its last member.
+without a report (§9.1, step 4) ended with its last member. A regenerate
+(§8.3) writes `attempted: false` again and keeps `at`: the report is replaced,
+and the campaign still ended when it first reported. `report_locked: true`
+appears while the campaign's own report is locked (§7.3.3).
 
 Note what is **not** in it: a status. A campaign's status is derived on every read
 (§9.1) and is never stored.
@@ -140,6 +143,17 @@ it is that job's, and does not make one for the campaign.)
 
 *(Consequence: there is no aggregate report over a partially failed sweep. If
 that is ever wanted, this is the rule to revisit.)*
+
+**Regenerating by hand.** Once a campaign run's own report has run — landed,
+or failed — a person (the run page's `Regenerate`) or an agent
+(`POST /experiments/{name}/runs/{run_id}/report`) can ask for it again, as for
+a job run's (§7.3.2): asking marks it due, `report.attempted` back to `false`,
+and the refresh tick runs it with a fresh `members.json`. The run reads
+`ANALYZING` meanwhile, then `SUCCEEDED`, or `ERROR` with the script's output.
+`at` is not touched, so the campaign's end does not move. Refused, with the
+reason: a campaign run that has no report of its own (a member that did not
+succeed, a launch that failed), one whose report is already due or running,
+and one whose report is locked (§7.3.3).
 
 ## 8.4 `visualize`
 
