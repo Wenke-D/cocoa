@@ -15,8 +15,8 @@ template it declares, and — once cocoa has been used on it — its own records
       members.json       # the fan-out (campaigns)
       report/attachment/ # the report's attachments, when it brings any
   report/                # report output, at the folder root
-    <run_id>.txt         # required
-    <run_id>.html        # optional
+    <run_id>.txt         # the quick answer   } at least one,
+    <run_id>.html        # the long read      } or both (§11)
 ```
 
 A folder carries its full history and results with it: copy the folder and the

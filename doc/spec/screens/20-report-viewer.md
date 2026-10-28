@@ -1,12 +1,18 @@
 # 20. Report Viewer
 
 Reports come in two formats, and the application controls neither their content
-nor their styling:
+nor their styling (convention §11):
 
 ```text
-Plain text   rendered in-app
-HTML         rendered in-app, in a sandboxed frame
+Plain text   the quick answer — shown on the run's page itself (§17.5)
+HTML         the long read — rendered here, in a sandboxed frame
 ```
+
+The viewer is where an HTML report is read: the run page's `Open` leads here.
+A plain-text report is not opened at all — it is on the run's page already —
+and reaches the viewer only as an HTML report's source does, as text (§20.3).
+A plain-text address still opens, as text, should one be restored from an
+earlier session.
 
 An experiment writes whatever report it writes. Two HTML reports from two
 experiments may share no styling at all, and any in-app approximation of them
@@ -38,9 +44,11 @@ Show:
 - Breadcrumbs.
 - Report title.
 - Run ID or human-readable run time.
+- `Source` / `Rendered` toggle, for an HTML report.
 - Copy button.
-- Wrap Lines toggle.
-- Optional Open Externally button.
+- Wrap Lines toggle, while text is shown.
+
+There is no `Open in Browser`: the report renders here, in full.
 
 ## 20.2 Search
 
@@ -57,7 +65,9 @@ Search is case-insensitive by default.
 
 Exact visual text highlighting is optional, but match counting must work.
 
-## 20.3 Plain-Text Body
+## 20.3 Text Body
+
+An HTML report's source, or a plain-text report addressed directly.
 
 Requirements:
 
@@ -76,14 +86,14 @@ Do not display the report inside a small modal.
 
 ## 20.5 HTML Body
 
-The page must:
+The page renders the report whole, in the sandboxed frame described above,
+taking the full main-content area; the report scrolls inside it. `Source`
+swaps the frame for the file's text (§20.3), so search and copy work on an
+HTML report too, and `Rendered` swaps it back.
 
-- State plainly that the report is HTML and why it opens elsewhere.
-- Offer `Open in Browser` as the primary action.
-- Offer the source, so search and copy still work without leaving the app.
-
-Do not attempt to render a subset of HTML in-app. A partial rendering of an
-unknown stylesheet looks like a broken report, not a simplified one.
+Do not render a subset of HTML, or restyle it. A partial rendering of an
+unknown stylesheet looks like a broken report, not a simplified one: the frame
+renders the file as the browser engine would anywhere else.
 
 ## 20.4 Copy
 

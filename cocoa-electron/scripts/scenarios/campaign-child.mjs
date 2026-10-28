@@ -52,14 +52,14 @@ export async function run({ page, shot, log, wait_text }) {
   }
   await shot('child-in-campaign-context')
 
-  // Wait for this call to finish, then read its report from here: the file is
-  // in the job's folder, the breadcrumbs are the campaign's.
-  // One file is `View`, two are a button per format; the plain-text
-  // one carries this title either way, and is the one that opens in the app.
-  const plain_text = page.locator('button[title="Plain text report"]')
-  await plain_text.waitFor({ timeout: 60_000 })
-  await plain_text.click()
-  await page.locator('.body, iframe').first().waitFor({ timeout: 15_000 })
+  // Wait for this call to finish, then read its report from here: the files
+  // are in the job's folder, the breadcrumbs are the campaign's. The plain
+  // text is on this page; the HTML opens from it (§17.5).
+  const open_html = page.locator('button[title="Open the HTML report"]')
+  await open_html.waitFor({ timeout: 60_000 })
+  log('text in place:', (await page.locator('pre.text').innerText()).split('\n')[0])
+  await open_html.click()
+  await page.locator('iframe.rendered').waitFor({ timeout: 15_000 })
   const report_trail = (await page.locator(CRUMBS).innerText()).replace(/\n/g, ' ')
   log('report breadcrumbs:', report_trail)
   if (!report_trail.includes(campaign_run_id)) {

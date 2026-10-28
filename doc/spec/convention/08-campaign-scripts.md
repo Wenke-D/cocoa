@@ -129,10 +129,13 @@ looking:
 ```
 
 Member `report` paths are **absolute**, since they point into the member jobs'
-folders, and are **never null** — see the condition below. A member's
+folders, and are **never null** — see the condition below. A member's `report`
+is its `report/<id>.txt`, or its `report/<id>.html` when that is the only one
+it wrote (§11), so a script reading members' reports checks the extension. A member's
 `attachments` is the absolute path of its attachment directory (§7.3), or
-`null` when its report attached nothing. Output goes to `report/<run_id>.txt`
-plus an optional `.html`, and attachments to `--attachment-dir`, as for a job.
+`null` when its report attached nothing. Output goes to `report/<run_id>.txt`,
+`report/<run_id>.html`, or both, and attachments to `--attachment-dir`, as for
+a job (§7.3, §11.1).
 
 **A campaign reports only when every member succeeded.** If any member ends
 `FAILED`, `CANCELLED` or `ERROR`, the campaign terminates at that outcome and no

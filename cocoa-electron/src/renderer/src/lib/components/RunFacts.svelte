@@ -17,7 +17,7 @@
     origin_label,
     query_available
   } from '../../format'
-  import type { JobRun, ReportFormat } from '@shared/world'
+  import type { JobRun } from '@shared/world'
   import type { ReportContext } from '../../route'
   import {
     lock_report,
@@ -83,9 +83,10 @@
     <dd>
       <ReportButtons
         report={run.report}
+        source={{ entity_id: run.job_id, run_id: run.id }}
         error={run.report_error}
-        open={(format: ReportFormat) =>
-          navigate({ page: 'report', context: report_context, run_id: run.id, format })}
+        open_html={() =>
+          navigate({ page: 'report', context: report_context, run_id: run.id, format: 'Html' })}
         attachments={run.attachments}
         open_attachments={() => open_attachments({ entity_id: run.job_id, run_id: run.id })}
         visualize={run.visualizable

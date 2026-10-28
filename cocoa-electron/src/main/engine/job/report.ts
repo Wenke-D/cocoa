@@ -128,7 +128,7 @@ export async function report_run(
   const detail = ok
     ? undefined
     : invoke.invocation_ok(invocation)
-      ? `report script exited 0 but produced no report/${run_id}.txt`
+      ? `report script exited 0 but produced neither report/${run_id}.txt nor report/${run_id}.html`
       : invoke.invocation_output(invocation)
 
   if (failed) {

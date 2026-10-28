@@ -69,18 +69,26 @@ export async function run({ page, shot, wait_text }) {
   await open(page, 'solver-gpu')
   await page.locator('table.runs tbody tr').last().click()
   await wait_text('Succeeded', 60_000)
-  await page.getByRole('button', { name: 'HTML', exact: true }).waitFor({ timeout: 20_000 })
+  // Both formats: the verdict in place, the long read behind Open.
+  await page.locator('pre.text').waitFor({ timeout: 20_000 })
   await both(page, shot, 'job-run-succeeded')
 
-  await page.getByRole('button', { name: 'Text', exact: true }).click()
-  await page.locator('.body').waitFor({ timeout: 15_000 })
-  await page.locator('input[type="search"]').fill('residual')
-  await both(page, shot, 'report-text')
+  await page.getByRole('button', { name: 'Open', exact: true }).click()
+  await page.locator('iframe.rendered').waitFor({ timeout: 15_000 })
+  await both(page, shot, 'report-html')
 
   await open(page, 'failing-solver')
   await page.locator('table.runs tbody tr').first().click()
   await wait_text('Failed', 60_000)
+  // Plain text only, in place.
+  await page.locator('pre.text').waitFor({ timeout: 20_000 })
   await both(page, shot, 'job-run-failed')
+
+  // HTML only: just the button.
+  await open(page, 'flaky-solver')
+  await page.locator('table.runs tbody tr').first().click()
+  await page.getByRole('button', { name: 'Open', exact: true }).waitFor({ timeout: 60_000 })
+  await both(page, shot, 'job-run-html-only')
 
   await open(page, 'nightly-benchmark')
   await page.locator('table.runs tbody tr').first().click()

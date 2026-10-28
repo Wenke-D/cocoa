@@ -97,5 +97,8 @@ application's control:
 8. A light, document-styled failure report.
 9. A table-heavy Campaign summary.
 
-Both formats must appear in the demo Explorer so the viewer's two paths are both
-exercised without touching the developer controls.
+Every shape a report can take must appear in the demo Explorer — plain text
+only, HTML only, and both (convention §11) — so the run page's three report
+rows (§17.5) and the viewer are all exercised without touching the developer
+controls. The long and wide plain-text reports show the run page's text box
+scrolling inside itself.

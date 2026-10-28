@@ -36,6 +36,38 @@ describe('reports', () => {
     expect(cocoa.job(job).runs.record(run_id).status).toBe('SUCCEEDED')
     expect(is_file(job, 'report', `${run_id}.txt`)).toBe(true)
   })
+
+  /** A completed run whose report script is `script`, reported by one tick. */
+  async function completed_with(name: string, script: string): Promise<[string, Engine, number]> {
+    const dir = temp_dir()
+    const job = job_folder(dir, name)
+    write_script(job, 'report.sh', script)
+    const cocoa = engine(dir)
+    cocoa.register(job)
+    const run_id = await cocoa.start_job(job, { size: '1' }, { gpu: '0' }, 'human')
+    await settle(cocoa)
+    write(job, 'poll-state', 'COMPLETED')
+    await cocoa.refresh()
+    return [job, cocoa, run_id]
+  }
+
+  it('takes an HTML-only report as one that landed (§11)', async () => {
+    const [job, cocoa, run_id] = await completed_with(
+      'html-only',
+      'mkdir -p report\necho "<p>the long read</p>" > "report/$2.html"\n'
+    )
+    expect(cocoa.job(job).runs.record(run_id).status).toBe('SUCCEEDED')
+    expect(build_world(cocoa, null).job_runs[job][String(run_id)].report).toMatchObject({
+      Available: { files: [{ format: 'Html' }] }
+    })
+  })
+
+  it('takes a report that wrote neither file as an error, naming both', async () => {
+    const [job, cocoa, run_id] = await completed_with('no-report', 'exit 0\n')
+    const record = cocoa.job(job).runs.record(run_id)
+    expect(record.status).toBe('ERROR')
+    expect(record.error).toContain(`neither report/${run_id}.txt nor report/${run_id}.html`)
+  })
 })
 
 /**

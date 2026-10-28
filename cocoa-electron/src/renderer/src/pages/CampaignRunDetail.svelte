@@ -3,7 +3,6 @@
   import { display_status, format_duration, format_started_at, trigger_label } from '../format'
   import { tone_color, tone_of } from '../tone'
   import { campaign_run, job_run } from '@shared/world'
-  import type { ReportFormat } from '@shared/world'
   import type { Crumb } from '../route'
   import { lock_report, open_attachments, rerun_report, save_report, visualize } from '../commands'
   import { navigate } from '../navigation'
@@ -126,12 +125,13 @@
       <dd>
         <ReportButtons
           report={run.report}
-          open={(format: ReportFormat) =>
+          source={{ entity_id: campaign_id, run_id: run.id }}
+          open_html={() =>
             navigate({
               page: 'report',
               context: { kind: 'campaign_run', campaign_id },
               run_id: run.id,
-              format
+              format: 'Html'
             })}
           attachments={run.attachments}
           open_attachments={() => open_attachments({ entity_id: campaign_id, run_id: run.id })}

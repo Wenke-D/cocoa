@@ -10,7 +10,8 @@ cocoa is a desktop app. In it, a user can:
 6. Follow the run's status as it changes.
 7. Open a page with every detail of a run.
 8. Cancel a run that is still active.
-9. Open a run's report, as plain text or as HTML.
+9. Read a run's report: its plain-text answer on the run's page, its HTML
+   analysis opened in the app.
 10. For a Campaign run, see every run it dispatched.
 11. Open the detail page of any one of those dispatched runs.
 12. Tell at a glance whether a run succeeded, failed, was cancelled, could not

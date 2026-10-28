@@ -110,8 +110,11 @@ where the description and the behaviour cannot drift apart unnoticed.
 detail response points at files — the experiment folder, a run's directory and
 `run.json`, the report file when one exists, the report's attachment
 directory (`location.attachments`) when it attached anything — rather than carrying their
-bytes. An agent reads those paths directly; the socket stays a control channel
-and never becomes a file server.
+bytes. `location.report` is one path: the run's `report/<id>.txt`, or its
+`report/<id>.html` when that is the only one it wrote (convention §11); the
+other, when both exist, sits beside it with the other extension. An agent
+reads those paths directly; the socket stays a control channel and never
+becomes a file server.
 
 A folder's `visualize` script (convention §7.7) is not on the surface: it
 opens a window for a person. An agent looks at a run through the locations

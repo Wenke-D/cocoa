@@ -20,7 +20,8 @@ A change is done when all of the following hold.
 - A Campaign dispatches all of its calls at once, with no ordering or dependency.
 - A run dispatched by a Campaign appears in the referenced Job's own history, stored
   once and reachable from both contexts, showing the same facts either way (§19).
-- Reports open in the full main-content area, plain text and HTML alike (§20).
+- A plain-text report reads on its run's page; an HTML report opens in the
+  full main-content area (§17.5, §20).
 - Reports can be searched, wrapped, selected, and copied.
 - The sidebar remains the only persistent navigation panel.
 - The arrangement survives a relaunch, sanitized (§32).

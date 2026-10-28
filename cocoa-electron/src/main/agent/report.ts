@@ -3,7 +3,7 @@
 // Regenerate button would be (convention §7.3.2, §8.3).
 
 import { campaign_run, job_run } from '@shared/world'
-import { report_path } from '../engine/report_paths'
+import { primary_report_path } from '../engine/report_paths'
 import type { AgentDeps, AgentResponse } from './answer'
 import { failure, json } from './answer'
 
@@ -37,7 +37,7 @@ export function rerun_report(name: string, run_id: string, deps: AgentDeps): Age
   return json(202, {
     run_id,
     report_running: true,
-    location: { report: report_path(entity.id, run_id) },
+    location: { report: primary_report_path(entity.id, run_id) },
     follow: `/${entity.kind === 'Job' ? 'jobs' : 'campaigns'}/${name}`
   })
 }

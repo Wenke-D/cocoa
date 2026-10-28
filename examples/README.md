@@ -26,9 +26,9 @@ while the app polls every few seconds.
 
 | Folder | Behaviour |
 |---|---|
-| `jobs/solver-gpu` | Healthy job. `PENDING` → `RUNNING` (15 s) → `COMPLETED` (30 s) → report. Also writes an HTML report, and attaches its status history as `history.csv`; its `visualize` opens the HTML report in the browser. Its check compares `deployed/solver.cfg` with `solver.cfg`: the first start deploys (`DEPLOYING`, 2 s), later ones launch at once, and editing `solver.cfg` makes the next start deploy again — or be refused with `CONFLICT` while one of its runs is still active. |
-| `jobs/flaky-solver` | Same lifecycle, but between 5–10 s the poll reports `UNREACHABLE` (`squeue: connection timed out`), then recovers. |
-| `jobs/failing-solver` | Launch with `mode=fail` and the poll reports `FAILED` at 8 s. The run stays `FAILED`, and its report — run with `COCOA_RUN_STATUS=FAILED` — says where it broke. |
+| `jobs/solver-gpu` | Healthy job. `PENDING` → `RUNNING` (15 s) → `COMPLETED` (30 s) → report. Its report has both formats, each for its own reading: a one-line verdict in `.txt`, shown on the run's page as it is, and the long read in `.html`, opened from there (convention §11). It attaches its status history as `history.csv`; its `visualize` opens the HTML report in the browser. Its check compares `deployed/solver.cfg` with `solver.cfg`: the first start deploys (`DEPLOYING`, 2 s), later ones launch at once, and editing `solver.cfg` makes the next start deploy again — or be refused with `CONFLICT` while one of its runs is still active. |
+| `jobs/flaky-solver` | Same lifecycle, but between 5–10 s the poll reports `UNREACHABLE` (`squeue: connection timed out`), then recovers. Its report is HTML only, so the run's page shows just the button that opens it. |
+| `jobs/failing-solver` | Launch with `mode=fail` and the poll reports `FAILED` at 8 s. The run stays `FAILED`, and its report — run with `COCOA_RUN_STATUS=FAILED` — says where it broke. Its report is plain text only, shown on the run's page. |
 | `campaigns/nightly-benchmark` | Fans out to three instances (two `solver-gpu`, one `flaky-solver`) at once and produces a campaign report when all members succeed. |
 
 The submitted ids look like `slurm-<run id>`; the mock poll reads each run's

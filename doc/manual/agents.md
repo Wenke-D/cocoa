@@ -40,7 +40,10 @@ while its window is open**. A cocoa started with `--profile <name>` answers on
 
 `GET /help` (the `cocoa_help` tool) describes every route from the running
 cocoa itself. Answers carry file locations rather than contents: the agent
-reads a run's record and report straight from disk.
+reads a run's record and report straight from disk. A report's location is its
+`.txt` — the short answer — or its `.html` when that is all it wrote; when both
+exist, the HTML, the long analysis, sits beside the text with the other
+extension.
 
 ## The rules
 

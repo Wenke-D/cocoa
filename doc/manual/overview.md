@@ -68,8 +68,9 @@ Explorer row tell you which way you came.
 3. **Watch it.** cocoa polls every three seconds. Statuses move on their own; so
    does the duration.
 4. **Read the report.** When the run finishes, cocoa runs the report script and
-   shows the result in the window — plain text or HTML, searchable, with a wrap
-   toggle and a copy button.
+   shows the result on the run's page: a short plain-text answer right there,
+   and a long HTML report one `Open` away, rendered in the window, its source
+   searchable and copyable.
 5. **Cancel, if you need to.** Behind a confirmation, and for a Campaign, only the
    runs that Campaign dispatched.
 

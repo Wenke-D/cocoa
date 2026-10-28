@@ -15,7 +15,7 @@ import * as invoke from '../invoke'
 import type { Invocation } from '../invoke'
 import { all_params, now_stamp } from '../record'
 import type { CampaignMembersFile, CampaignRecord, RunRecord } from '../record'
-import { report_dir, report_path } from '../report_paths'
+import { primary_report_path, report_dir, report_on_disk } from '../report_paths'
 import { locked_refusal } from '../report_lock'
 import { write_atomic } from '../store'
 import type { Campaign } from './campaign'
@@ -98,7 +98,7 @@ export async function campaign_report(
         job: member.job_name,
         params: all_params(member_record),
         submission_id: member_record.submission_id,
-        report: report_path(job_path, member.run_id),
+        report: primary_report_path(job_path, member.run_id),
         attachments:
           attachment_count(job_path, member.run_id) > 0
             ? attachment_dir(job_path, member.run_id)
@@ -133,11 +133,11 @@ export async function campaign_report(
     settle_attachments(campaign.path, run_id)
   }
 
-  const ok = invoke.invocation_ok(invocation) && fs.existsSync(report_path(campaign.path, run_id))
+  const ok = invoke.invocation_ok(invocation) && report_on_disk(campaign.path, run_id)
   const error = ok
     ? undefined
     : invoke.invocation_ok(invocation)
-      ? `report script exited 0 but produced no report/${run_id}.txt`
+      ? `report script exited 0 but produced neither report/${run_id}.txt nor report/${run_id}.html`
       : invoke.invocation_output(invocation)
   // The first outcome dates the campaign's end (§8.2); a regenerate's keeps it.
   record.report = {

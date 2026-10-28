@@ -104,23 +104,32 @@ Possible states:
 ```text
 Report is not yet available.
 Report is being generated.
-[👁 View]
-[👁 Text]  [👁 HTML]
+┌ PASS  residual 2.1e-07 < tolerance 1e-06 ┐        .txt only
+└──────────────────────────────────────────┘
+[📖 Open]                                            .html only
+┌ PASS  residual 2.1e-07 < tolerance 1e-06 ┐        both
+└──────────────────────────────────────────┘
+[📖 Open]
 Report is missing.
 Unable to read report: <message>
 Report script failed: <output>
 ```
 
-A report that exists is shown as buttons alone, each opening the Report
-Viewer on one file; no sentence says a report is available, since the
-buttons do. One file is one action, `View`: someone who wants to read
-the report does not care which format it is, so the format is only the
-tooltip. Two files (`report/<run>.txt` and `report/<run>.html`) are a choice,
-and only then is the format the point: `Text` and `HTML`, plain text first,
-each with the view icon. The same row appears on a Campaign run's page (§18).
+A report is `.txt`, `.html`, or both, and each is shown for the reading it is
+meant for (convention §11.1). **The plain text is the quick answer, so it is
+on this page**: read when the report lands and shown as it is, monospaced, on
+code's ground, selectable, held to about a dozen lines and scrolling inside
+past that — there is no page to open between a reader and a verdict. **The
+HTML is the long read, so it is one button**: `Open`, with a book icon,
+tooltip `Open the HTML report`, which shows it in the Report Viewer (§20).
+With both, the text is here and `Open` leads the buttons under it. No
+sentence says a report is available: the text, or the button, does. A
+report that landed again — a regenerate passes through `Generating` — is
+read again; an unchanged one is not re-read on every tick. The same row
+appears on a Campaign run's page (§18).
 
 When the report attached anything (convention §7.3), an `Attachments`
-button with an open-folder icon follows the view buttons and opens the
+button with an open-folder icon follows `Open` and opens the
 attachment directory in the system file manager; its tooltip counts the
 entries. Attachments may be any kind of file and any size, so the app does
 not show them itself. The button is absent while the report is `Generating`.

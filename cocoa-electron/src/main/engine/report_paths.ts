@@ -1,5 +1,5 @@
-// Where a run's report lives (convention §7.3): `report/<run_id>.txt`, which
-// every report writes, and `report/<run_id>.html`, which it may add.
+// Where a run's report lives (convention §7.3): `report/<run_id>.txt`,
+// `report/<run_id>.html`, or both — a report writes at least one.
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -24,8 +24,26 @@ export function extension_of(format: ReportFormat): 'txt' | 'html' {
   return format === 'Html' ? 'html' : 'txt'
 }
 
-/** Whether `report/<run_id>.txt` exists in the folder (§11). */
+/** Whether the run's report landed: its `.txt`, its `.html`, or both (§11). */
 export function report_on_disk(folder: string, run_id: number): boolean {
-  const file = report_path(folder, run_id)
+  return (
+    is_file(report_path(folder, run_id, 'PlainText')) ||
+    is_file(report_path(folder, run_id, 'Html'))
+  )
+}
+
+/**
+ * The one path handed out for a run's report, where one path is asked for — a
+ * campaign member's in `members.json`, an agent's `location`: the plain text
+ * when there is one, the HTML when that is all there is. With neither, the
+ * plain text's, as the place a report is first looked for.
+ */
+export function primary_report_path(folder: string, run_id: number | string): string {
+  const text = report_path(folder, run_id, 'PlainText')
+  const html = report_path(folder, run_id, 'Html')
+  return !is_file(text) && is_file(html) ? html : text
+}
+
+function is_file(file: string): boolean {
   return fs.existsSync(file) && fs.statSync(file).isFile()
 }

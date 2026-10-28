@@ -139,11 +139,14 @@ export type ReportState =
 
 `Available` carries the report's **size, not its text**. A report can be
 megabytes, the world is sent to the renderer on every change (§26), and a run
-list has no use for the body. The text is fetched by its own request when the
-viewer opens (§20), which is also the only place a read error can be raised
-against the file as it is now rather than as it was at the last tick.
+list has no use for the body. The text is fetched by its own request when it
+is shown — a plain-text report when its run's page shows it (§17.5), an HTML
+one when the viewer opens it (§20) — which is also the only place a read error
+can be raised against the file as it is now rather than as it was at the last
+tick.
 
-Format decides presentation, never availability. See §20.
+Format decides presentation, never availability: a report is available with
+either file, or both (convention §11). See §17.5 and §20.
 
 Report state is independent from execution state.
 

@@ -17,7 +17,7 @@ The workbench must include:
 - Job run-detail page.
 - Campaign run-detail page.
 - Campaign child-run detail page.
-- Report viewer, plain text and HTML (§20).
+- Reports: plain text on the run's page (§17.5), HTML in the report viewer (§20).
 - Active Runs section.
 - All Runs table.
 - Campaign dispatch table.

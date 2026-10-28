@@ -120,7 +120,8 @@ export interface CampaignMembersFileMember {
   job: string
   params: Params
   submission_id: string
-  /** The absolute path of the member's `report/<id>.txt`. */
+  /** The absolute path of the member's report: its `report/<id>.txt`, or its
+   * `report/<id>.html` when that is the only one it wrote. */
   report: string
   /** The absolute path of the member's report attachment directory, or `null` when its report attached nothing. */
   attachments: string | null

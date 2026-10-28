@@ -1,6 +1,7 @@
 // A run's report attachments (convention §7.3, §8.3): the directory cocoa
 // hands a report script as `--attachment-dir`, for whatever the script brings
-// beside `report/<run_id>.txt` — plots, tables, whole output trees.
+// beside the run's `report/<run_id>.txt` or `.html` — plots, tables, whole
+// output trees.
 
 import fs from 'node:fs'
 import path from 'node:path'

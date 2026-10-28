@@ -1,10 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-// Open both kinds of report in the app: plain text with search, and HTML
-// rendered in place (§20, with this form's divergence — no system browser).
-// The mock writes both files, so the run offers a choice: `Text` and `HTML`
-// (§17.5). With one file left, it is a single `View`.
+// Both kinds of report, each read its own way (§17.5, convention §11): the
+// plain text in place on the run's page, the HTML opened from there and
+// rendered in the app (§20), its source one click away for search and copy.
+// The mock writes both; with the HTML gone, the text alone is left.
 
 export async function run({ page, shot, log, wait_text, library }) {
   await wait_text('solver-gpu', 20_000)
@@ -17,8 +17,14 @@ export async function run({ page, shot, log, wait_text, library }) {
 
   // The mock completes at 15 s and the tick reports it right after.
   await wait_text('Succeeded', 40_000)
-  const html_button = page.getByRole('button', { name: 'HTML', exact: true })
+  const html_button = page.getByRole('button', { name: 'Open', exact: true })
   await html_button.waitFor({ timeout: 10_000 })
+  const text = page.locator('pre.text')
+  await text.waitFor({ timeout: 10_000 })
+  log('text in place:', (await text.innerText()).split('\n')[0])
+  if (!(await text.innerText()).startsWith('PASS')) {
+    throw new Error('the plain-text report is not shown on the run page')
+  }
   log(
     'report row:',
     (await page.locator('dd', { has: html_button }).innerText()).replace(/\n/g, ' | ')
@@ -58,25 +64,7 @@ export async function run({ page, shot, log, wait_text, library }) {
   log('viewer failure notice shown')
   await shot('visualize-failed')
 
-  await page.getByRole('button', { name: 'Text', exact: true }).click()
-  await page.locator('pre.body').waitFor({ timeout: 10_000 })
-  log('report head:', (await page.locator('pre.body').innerText()).split('\n')[0])
-  log('header:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
-  await shot('report-text')
-
-  // Search counts matches (§20.2).
-  await page.locator('input[type="search"]').fill('params')
-  log('search:', await page.locator('.count').innerText())
-  await shot('report-search')
-
-  await page.locator('input[type="search"]').fill('')
-  await page.getByRole('button', { name: 'Copy' }).click()
-  await wait_text('Report copied.', 5_000)
-  log('copy notice shown')
-
-  // Now the HTML report the same mock also wrote: its own button, back on
-  // the run's page
-  await page.locator('nav button.crumb').nth(1).click()
+  // The HTML report opens in the app, from the run's page.
   await html_button.click()
   await page.locator('iframe.rendered').waitFor({ timeout: 10_000 })
   log('header:', (await page.locator('header').innerText()).replace(/\n/g, ' | '))
@@ -100,20 +88,24 @@ export async function run({ page, shot, log, wait_text, library }) {
     }))
   )
 
-  // The source is still one click away, so search and copy work on HTML too.
+  // The source is one click away, for search and copy (§20.2).
   await page.getByRole('button', { name: 'Source' }).click()
   await page.locator('pre.body').waitFor({ timeout: 5_000 })
   log('source head:', (await page.locator('pre.body').innerText()).slice(0, 60))
+  await page.locator('input[type="search"]').fill('residual')
+  log('search:', await page.locator('.count').innerText())
   await shot('report-html-source')
 
-  // With the HTML file gone, the next tick re-reads the folder: one button
+  await page.locator('input[type="search"]').fill('')
+  await page.getByRole('button', { name: 'Copy' }).click()
+  await wait_text('Report copied.', 5_000)
+  log('copy notice shown')
+
+  // With the HTML file gone, the next tick re-reads the folder: the text
+  // alone, and no Open.
   fs.rmSync(path.join(library, 'jobs/solver-gpu/report/0.html'))
   await page.locator('nav button.crumb').nth(1).click()
   await html_button.waitFor({ state: 'detached', timeout: 15_000 })
-  const text_button = page.getByRole('button', { name: 'View', exact: true })
-  log(
-    'report row:',
-    (await page.locator('dd', { has: text_button }).innerText()).replace(/\n/g, ' | ')
-  )
+  log('report row:', (await page.locator('dd', { has: text }).innerText()).replace(/\n/g, ' | '))
   await shot('run-text-only')
 }

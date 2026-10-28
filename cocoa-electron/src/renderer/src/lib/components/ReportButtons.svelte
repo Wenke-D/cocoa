@@ -1,11 +1,14 @@
 <!--
-  A run's Report row (§17.5): the way to look at the report, and the state in
-  words when there is none to look at.
+  A run's Report row (§17.5): the report itself when it is short enough to
+  be read in place, the way to open it when it is not, and the state in
+  words when there is none.
 
-  One file is one action, `View`: which format it is does not matter to
-  someone who wants to read it, so it is only the button's tooltip. Two
-  files are a choice, and then the format is the point: a `Text` and an
-  `HTML` button, each with the same view icon.
+  A report is `.txt`, `.html`, or both (convention §11), and the two are for
+  different reading. The plain text is the quick answer — a verdict, a few
+  numbers — so it is shown right here, read from `source`, held to a fixed
+  height and scrolling inside past it: no extra page between the reader and
+  a line. The HTML is the long analysis, so it is `Open`, to the report
+  viewer (§20). Both: the text here and `Open` for the HTML.
 
   `error` is a failed run's report script failing (convention §7.3.1). It
   says so in place of the state, or under the buttons when the script left
@@ -33,11 +36,12 @@
   no button, until the outcome lands.
 -->
 <script lang="ts">
-  import { format_label, report_summary } from '../../format'
-  import type { ReportFormat, ReportState } from '@shared/world'
+  import { report_summary } from '../../format'
+  import type { ReportResult } from '@shared/protocol'
+  import type { ReportState } from '@shared/world'
   import { Button } from '$lib/components/ui/button'
   import { Spinner } from '$lib/components/ui/spinner'
-  import EyeIcon from '@lucide/svelte/icons/eye'
+  import BookOpenTextIcon from '@lucide/svelte/icons/book-open-text'
   import ChartLineIcon from '@lucide/svelte/icons/chart-line'
   import FolderOpenIcon from '@lucide/svelte/icons/folder-open'
   import LockIcon from '@lucide/svelte/icons/lock'
@@ -47,8 +51,9 @@
 
   let {
     report,
+    source,
     error = null,
-    open,
+    open_html,
     attachments = 0,
     open_attachments = null,
     visualize = null,
@@ -57,8 +62,10 @@
     rerun = null
   }: {
     report: ReportState
+    /** Whose report this is: the folder it is in, and the run. */
+    source: { entity_id: string; run_id: string }
     error?: string | null
-    open: (format: ReportFormat) => void
+    open_html: () => void
     attachments?: number
     open_attachments?: (() => Promise<void>) | null
     visualize?: (() => Promise<void>) | null
@@ -68,6 +75,50 @@
   } = $props()
 
   const locked = $derived(lock?.locked ?? false)
+
+  const files = $derived(
+    typeof report === 'object' && 'Available' in report ? report.Available.files : []
+  )
+  const html = $derived(files.some((file) => file.format === 'Html'))
+
+  /**
+   * What the plain text is read for, as one string: it changes only when
+   * there is a different text to read. A world refresh hands the same report
+   * over every tick, and a regenerate passes through `Generating`, where
+   * this is `null`, so a new report is read again and an unchanged one is
+   * not.
+   */
+  const text_key = $derived(
+    files.some((file) => file.format === 'PlainText')
+      ? `${source.entity_id}\n${source.run_id}`
+      : null
+  )
+
+  /** The plain text once read, or why it could not be. */
+  let text = $state<ReportResult | null>(null)
+  const body = $derived(text !== null && text.ok ? text.text : '')
+
+  $effect(() => {
+    text = null
+    if (text_key === null) {
+      return
+    }
+    // Taken from the key, not from `source`, which is a fresh object
+    // whenever the run is: the read follows the key alone.
+    const [entity_id, run_id] = text_key.split('\n')
+    let current = true
+    void window.cocoa
+      .report({ entity_id, run_id, format: 'PlainText' })
+      .catch((cause: unknown): ReportResult => ({ ok: false, message: (cause as Error).message }))
+      .then((result) => {
+        if (current) {
+          text = result
+        }
+      })
+    return () => {
+      current = false
+    }
+  })
 
   /** Held while the save dialog is open, so one click asks once. */
   let saving = $state(false)
@@ -128,36 +179,25 @@
       starting = false
     }
   }
-
-  /** The name a choice between formats goes by: short, since the icon says "view". */
-  function choice_label(format: ReportFormat): string {
-    return format === 'Html' ? 'HTML' : 'Text'
-  }
 </script>
 
+{#if text_key !== null}
+  {#if text === null}
+    <p class="reading">Reading the report…</p>
+  {:else if !text.ok}
+    <p class="error">Unable to read the report: {text.message}</p>
+  {:else if body.trim() === ''}
+    <p class="reading">The plain-text report is empty.</p>
+  {:else}
+    <pre class="text" aria-label="Plain-text report">{body}</pre>
+  {/if}
+{/if}
 <div class="row">
-  {#if typeof report === 'object' && 'Available' in report}
-    {@const files = report.Available.files}
-    {#if files.length === 1}
-      <Button
-        variant="secondary"
-        title="{format_label(files[0].format)} report"
-        onclick={() => open(files[0].format)}
-      >
-        <EyeIcon />View
-      </Button>
-    {:else}
-      {#each files as file (file.format)}
-        <Button
-          variant="secondary"
-          title="{format_label(file.format)} report"
-          onclick={() => open(file.format)}
-        >
-          <EyeIcon />{choice_label(file.format)}
-        </Button>
-      {/each}
-    {/if}
-  {:else if error === null}
+  {#if html}
+    <Button variant="secondary" title="Open the HTML report" onclick={open_html}>
+      <BookOpenTextIcon />Open
+    </Button>
+  {:else if files.length === 0 && error === null}
     <span>{report_summary(report)}</span>
   {/if}
   {#if attachments > 0 && open_attachments !== null}
@@ -223,11 +263,40 @@
 {/if}
 
 <style>
+  /* The quick answer, in place: as long as it is short, all of it; past
+     about a dozen lines it scrolls inside itself, so a long text cannot
+     push the rest of the page away. */
+  .text {
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    max-height: 220px;
+    overflow: auto;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--strong-foreground);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    user-select: text;
+  }
+
+  .reading {
+    margin: 0 0 10px;
+    color: var(--description);
+  }
+
   .row {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .row:empty {
+    display: none;
   }
 
   .error {

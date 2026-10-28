@@ -33,8 +33,8 @@ records inside the folder — copy the folder and the history comes along.
       members.json       # the fan-out (campaigns)
       report/attachment/ # the report's attachments, when it brings any
   report/                # report output, at the folder root
-    <run_id>.txt         # required
-    <run_id>.html        # optional
+    <run_id>.txt         # the quick answer   } at least one,
+    <run_id>.html        # the long read      } or both (§11)
 ```
 
 cocoa creates and maintains only `runs/` and `report/` (§12); it never edits a
@@ -253,9 +253,9 @@ is for "I cannot see the cluster right now": cocoa keeps polling, shows the
 last known status, and the next good answer replaces it (§10).
 
 **`report`** — `./report.py --run 41 --submission 5001 --attachment-dir
-runs/41/report/attachment`. Writes `report/41.txt` (required; `report/41.html`
-optional beside it) and prints nothing to cocoa. A report script that exits 0
-without producing the file is a failure.
+runs/41/report/attachment`. Writes `report/41.txt`, `report/41.html`, or both,
+and prints nothing to cocoa. Which to write is *Text, HTML, or both*, below. A
+report script that exits 0 without producing either file is a failure.
 
 Anything else the report brings — plots, CSV tables, a copy of the solver's
 output directory — goes in the `--attachment-dir` directory, which cocoa
@@ -342,8 +342,10 @@ before dispatching.
 --attachment-dir runs/7/report/attachment`. The members file lists every
 dispatched run — its job, arguments, submission id, where that job's report
 landed, and its attachment directory when it has one — so the campaign's
-report can aggregate them. Output rules are the job report's: `report/7.txt`
-required, attachments optional.
+report can aggregate them. A member's `report` is its `.txt`, or its `.html`
+when that is all it wrote, so check the extension before parsing it. Output
+rules are the job report's: `report/7.txt`, `report/7.html`, or both;
+attachments optional.
 
 **`visualize`** (optional) — as a job's, with `--run 7`, once the campaign's
 report has landed. `runs/7/members.json` is still there to find every
@@ -374,7 +376,28 @@ machine the run ran on. What counts as the answer depends on the purpose,
 and a purpose can change: when an experiment is reused for something else,
 its report changes with it.
 
-A shape that serves most purposes, top to bottom:
+### Text, HTML, or both
+
+A report is `report/<run_id>.txt`, `report/<run_id>.html`, or both, and cocoa
+shows each for the reading it is meant for (convention §11.1):
+
+- **Text is for a quick, short result.** cocoa shows it on the run's page as
+  it is, with nothing to open; past a dozen lines or so it scrolls inside its
+  box. Write it for a glance: the verdict and the number it rests on.
+- **HTML is for the long analysis** — tables, plots, the diagnosis, anything
+  that is read sitting down. The run's page has an `Open` button that shows
+  it in the app.
+- **Both**, and the text says whether the run passed its checks — `PASS`,
+  `FAIL`, and the line that decides it — while the HTML carries the reading
+  behind that.
+
+Text alone suits an experiment whose whole answer fits in a few lines; HTML
+alone, one that has nothing to say at a glance.
+
+### A shape that works
+
+A shape that serves most purposes, top to bottom — the verdict in the text,
+the rest in the HTML when there is an HTML:
 
 1. **Verdict** — the first line: the answer, and the number it rests on.
 2. **What ran** — the run and its submission id; where it ran and on what

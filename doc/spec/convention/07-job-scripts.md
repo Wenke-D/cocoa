@@ -83,9 +83,11 @@ than a status word, cocoa cannot currently see this run — see §10.
 ./report.py --run 41 --submission 5001 --attachment-dir runs/41/report/attachment
 ```
 
-Must produce `report/<run_id>.txt`, and may additionally produce
-`report/<run_id>.html`. cocoa creates the `report/` directory beforehand; its
-contents are entirely the script's business.
+Must produce `report/<run_id>.txt`, `report/<run_id>.html`, or both. The
+plain text is the quick answer, shown on the run's page as it is; the HTML is
+the long read, opened from there. With both, the text is the verdict and the
+HTML the reading behind it (§11.1). cocoa creates the `report/` directory
+beforehand; its contents are entirely the script's business.
 
 **Attachments.** What a report brings beside its text — plots, tables, a
 copied output tree — goes in the directory `--attachment-dir` names, relative
@@ -98,8 +100,8 @@ optional and never checked: a report with nothing attached is a whole report.
 cocoa runs `report` automatically when a run reaches `COMPLETED`, holding the
 run at `ANALYZING` until it finishes (§9), and when it reaches `FAILED`, beside
 a status it never changes (§7.3.1). When the script exits 0, cocoa verifies
-that `report/<run_id>.txt` exists; a missing file is treated as a report
-failure.
+that `report/<run_id>.txt` or `report/<run_id>.html` exists; with neither,
+the report has failed.
 
 The arguments are the same either way. The cluster's outcome is in the
 environment instead (§6): `COCOA_RUN_STATUS=COMPLETED` or
@@ -135,9 +137,10 @@ The report's state therefore lives in the record, in the campaign report's shape
   it never passes through `ANALYZING`. cocoa runs `report` on the same tick.
   An owed report survives a close and is taken on the next session's first
   tick, as an `ANALYZING` run's is.
-- **Landed.** `attempted: true` and `at`, with `report/<run_id>.txt` on disk.
+- **Landed.** `attempted: true` and `at`, with `report/<run_id>.txt` or
+  `report/<run_id>.html` on disk.
 - **Failed.** `attempted: true`, `at`, and `error` with the script's captured
-  output — a non-zero exit, a timeout, or no `report/<run_id>.txt`. The
+  output — a non-zero exit, a timeout, or neither report file. The
   failure is raised as an operation error as well, like any report's. It is
   not retried: re-running by hand is the remedy (§7.3.2), and a re-run
   records its own outcome here, success or failure, and moves no status.
@@ -338,12 +341,12 @@ folder's: the next check says whether it is current.
 **Optional** — the one script a manifest may leave out. It opens a viewer on
 one reported run: a plotting window, ParaView on the output tree, a dashboard
 in the browser — whatever looking at a run takes beyond reading its report.
-`--report-dir` is the folder's report directory, where `<run_id>.txt` and
-`<run_id>.html` are (§7.3); `--attachment-dir` is the run's attachment
+`--report-dir` is the folder's report directory, where the run's
+`<run_id>.txt`, `<run_id>.html`, or both are (§7.3); `--attachment-dir` is the run's attachment
 directory, which exists only when the report attached something.
 
 cocoa never runs it on its own. A person asks for it — the run page's
-`Visualize` — once the run has a report, `report/<run_id>.txt` on disk, and
+`Visualize` — once the run has a report on disk, in either format, and
 not while that report is being generated. Any status will do: a `FAILED`
 run's landed report is looked at as a succeeded run's is. Refused, with the
 reason: a folder with no `[visualize]`, a run with no report, and a folder

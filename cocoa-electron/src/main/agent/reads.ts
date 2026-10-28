@@ -42,7 +42,8 @@ export function list_entities(world: World, kind: 'Job' | 'Campaign'): AgentResp
 /** Where the report file is, when there is one to read. */
 function report_location(folder: string, run_id: string, report: ReportState): Maybe<string> {
   if (typeof report === 'object' && 'Available' in report) {
-    // The plain-text file when there is one: it is the required report (§7.3)
+    // The plain-text file when there is one, else the HTML (§7.3): the
+    // files are listed plain text first.
     return some(report_path(folder, run_id, report.Available.files[0].format))
   }
   return empty()

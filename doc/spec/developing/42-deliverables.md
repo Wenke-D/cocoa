@@ -17,7 +17,7 @@ A delivery must include:
     - Campaign run detail with the dispatch table.
     - A parameter-sweep Campaign run.
     - Child-run detail.
-    - Report viewer, plain text and HTML.
+    - Reports: plain text on the run's page, HTML in the report viewer.
     - Query-unavailable state.
 9. No unhandled rejection or crash in the listed acceptance scenarios.
 10. No permanent right-side detail panel.
