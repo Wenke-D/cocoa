@@ -11,7 +11,7 @@ import type { ReportFormat } from '@shared/world'
 export type ReportContext =
   | { kind: 'job_run'; job_id: string }
   | { kind: 'campaign_run'; campaign_id: string }
-  | { kind: 'campaign_child'; campaign_id: string; campaign_run_id: string }
+  | { kind: 'campaign_child'; campaign_id: string; campaign_run_id: string; job_id: string }
 
 /** An address, never content. */
 export type Route =
@@ -20,8 +20,18 @@ export type Route =
   | { page: 'start'; entity_id: string }
   | { page: 'job_run'; job_id: string; run_id: string }
   | { page: 'campaign_run'; campaign_id: string; run_id: string }
-  /** A run dispatched by a campaign, seen in the campaign's context (§19). */
-  | { page: 'campaign_child'; campaign_id: string; campaign_run_id: string; run_id: string }
+  /**
+   * A run dispatched by a campaign, seen in the campaign's context (§19). Its
+   * job is part of the address: run ids are per job, so two calls of one
+   * campaign run can both be run 0.
+   */
+  | {
+      page: 'campaign_child'
+      campaign_id: string
+      campaign_run_id: string
+      job_id: string
+      run_id: string
+    }
   | { page: 'report'; context: ReportContext; run_id: string; format: ReportFormat }
 
 /**

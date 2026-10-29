@@ -61,6 +61,8 @@ function campaign_run(id: string, extra: Partial<CampaignRun> = {}): CampaignRun
     last_successful_query: '2026-08-19T10:00:03.000+02:00',
     report: 'Missing',
     report_rerunnable: false,
+    members_rerunnable: false,
+    members_regenerating: null,
     report_locked: false,
     attachments: 0,
     visualizable: false,
@@ -172,7 +174,9 @@ describe('diff_worlds', () => {
   it('tracks campaign runs and their plans', () => {
     const before = world_of({ campaign_runs: campaign_runs(campaign_run('1')) })
     const replanned = campaign_run('1', {
-      plan: { steps: [{ index: 0, job_id: 'solver', parameters: '--size 256', run_id: '2' }] }
+      plan: {
+        steps: [{ index: 0, job_id: 'solver', parameters: '--size 256', run_id: '2', attempts: [] }]
+      }
     })
     expect(diff_worlds(before, world_of({ campaign_runs: campaign_runs(replanned) }))).toEqual([
       { kind: 'campaign-run-upserted', run: replanned }

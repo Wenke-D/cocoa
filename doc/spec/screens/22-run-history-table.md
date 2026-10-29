@@ -140,10 +140,15 @@ about that run's parameters:
   and the refusal is shown in a modal with one `OK`, because it has to be
   read. On success the new run appears in the table and the transient message
   names it; the page does not move.
-- **Refill…** opens the Start page (§15) with this run's values filled in, as
+- **Refill** opens the Start page (§15) with this run's values filled in, as
   far as the manifest now allows: a parameter it no longer declares is
   dropped, one it newly declares is left empty, one whose value no longer
   fits its shape — an enum value since removed, one string where a list now
   is — is left empty too, and the message says which. The user still presses
-  Start — which is what the ellipsis says: this one opens something, the
-  other acts.
+  Start: this one opens something, the other acts. The label carries no
+  ellipsis — the user's choice, as of 2026-10-29: the Start page that opens
+  is the second look.
+
+A campaign run's dispatch table has the same two actions on each call's row
+(§18.3), aimed at the call's job, and the run they start takes that call's
+place in the campaign run rather than standing alone (convention §8.5).

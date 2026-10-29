@@ -34,15 +34,25 @@
   §7.3.2), is the last action in the row. It is busy only until the engine
   answers: by then the report is due and the row reads `Generating`, with
   no button, until the outcome lands.
+
+  `rerun_members` is a campaign run's other depth (§17.5, convention §8.3):
+  every member's report, then the campaign's. Given, `Regenerate` is a split
+  button whose face is `rerun` and whose menu names both depths; its `ask`
+  opens the confirmation, and `blocked` says why it cannot be taken now. A
+  campaign that has no report until its members' are regenerated has no
+  `rerun`, so the face is disabled and only the menu's second item is on.
+  `regenerating_members` counts the members' reports landed meanwhile.
 -->
 <script lang="ts">
   import { report_summary } from '../../format'
   import type { ReportResult } from '@shared/protocol'
   import type { ReportState } from '@shared/world'
   import { Button } from '$lib/components/ui/button'
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu'
   import { Spinner } from '$lib/components/ui/spinner'
   import BookOpenTextIcon from '@lucide/svelte/icons/book-open-text'
   import ChartLineIcon from '@lucide/svelte/icons/chart-line'
+  import ChevronDownIcon from '@lucide/svelte/icons/chevron-down'
   import FolderOpenIcon from '@lucide/svelte/icons/folder-open'
   import LockIcon from '@lucide/svelte/icons/lock'
   import LockOpenIcon from '@lucide/svelte/icons/lock-open'
@@ -59,7 +69,9 @@
     visualize = null,
     save = null,
     lock = null,
-    rerun = null
+    rerun = null,
+    rerun_members = null,
+    regenerating_members = null
   }: {
     report: ReportState
     /** Whose report this is: the folder it is in, and the run. */
@@ -72,9 +84,26 @@
     save?: (() => Promise<void>) | null
     lock?: { locked: boolean; toggle: () => Promise<void> } | null
     rerun?: (() => Promise<void>) | null
+    rerun_members?: { total: number; blocked: string | null; ask: () => void } | null
+    regenerating_members?: { done: number; total: number } | null
   } = $props()
 
   const locked = $derived(lock?.locked ?? false)
+
+  /** Why the split button's face cannot be pressed, or `null`. */
+  const face_blocked = $derived(
+    locked
+      ? 'The report is locked; unlock it to regenerate it'
+      : rerun === null
+        ? "The campaign has no report until every member succeeds; regenerate the members' reports first"
+        : null
+  )
+
+  const summary = $derived(
+    report === 'Generating' && regenerating_members !== null
+      ? `Regenerating member reports: ${regenerating_members.done} of ${regenerating_members.total} done.`
+      : report_summary(report)
+  )
 
   const files = $derived(
     typeof report === 'object' && 'Available' in report ? report.Available.files : []
@@ -198,7 +227,7 @@
       <BookOpenTextIcon />Open
     </Button>
   {:else if files.length === 0 && error === null}
-    <span>{report_summary(report)}</span>
+    <span>{summary}</span>
   {/if}
   {#if attachments > 0 && open_attachments !== null}
     <Button
@@ -244,7 +273,65 @@
       {#if locked}<LockIcon />Locked{:else}<LockOpenIcon />Lock{/if}
     </Button>
   {/if}
-  {#if rerun !== null}
+  {#if rerun_members !== null}
+    <!-- The face and its chevron are one control, joined; the lock holds
+         both, so the group carries the lock's why. -->
+    <span class="split" title={locked ? (face_blocked ?? undefined) : undefined}>
+      <span title={locked ? undefined : (face_blocked ?? undefined)}>
+        <Button
+          variant="secondary"
+          class="rounded-r-none"
+          title="Run the campaign's report script again; the members' reports are kept"
+          disabled={asking || face_blocked !== null}
+          onclick={ask_rerun}
+        >
+          {#if asking}<Spinner />Regenerating…{:else}<RotateCcwIcon />Regenerate{/if}
+        </Button>
+      </span>
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger disabled={asking || locked}>
+          {#snippet child({ props })}
+            <Button
+              {...props}
+              variant="secondary"
+              class="-ml-px rounded-l-none px-1.5"
+              aria-label="Choose what to regenerate"
+              title="Choose what to regenerate"
+            >
+              <ChevronDownIcon />
+            </Button>
+          {/snippet}
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content align="end" class="w-72">
+          <DropdownMenu.Item
+            class="flex-col items-start gap-0"
+            disabled={rerun === null}
+            onSelect={ask_rerun}
+          >
+            <span class="item">Campaign only</span>
+            <span class="item-line">
+              {rerun === null
+                ? 'No campaign report until every member succeeds'
+                : "Re-run the campaign's report on the members' reports as they are"}
+            </span>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            class="flex-col items-start gap-0"
+            disabled={rerun_members.blocked !== null}
+            onSelect={rerun_members.ask}
+          >
+            <span class="item">Members, then campaign…</span>
+            <span class="item-line">
+              {rerun_members.blocked ??
+                (rerun_members.total === 1
+                  ? "Re-run the member's report first, then the campaign's"
+                  : `Re-run all ${rerun_members.total} member reports first, then the campaign's`)}
+            </span>
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
+    </span>
+  {:else if rerun !== null}
     <!-- A disabled button takes no pointer, so the span carries the why. -->
     <span title={locked ? 'The report is locked; unlock it to regenerate it' : undefined}>
       <Button
@@ -297,6 +384,19 @@
 
   .row:empty {
     display: none;
+  }
+
+  .split {
+    display: inline-flex;
+  }
+
+  .item {
+    color: var(--strong-foreground);
+  }
+
+  .item-line {
+    font-size: 12px;
+    color: var(--description);
   }
 
   .error {

@@ -144,7 +144,10 @@ export function campaign_detail(world: World, name: string): AgentResponse {
           // Follow it under /jobs/{job}: the member is an ordinary job run,
           // and its id only means anything beside that job's name — ids are
           // per experiment (§10.1).
-          run_id: step.run_id
+          run_id: step.run_id,
+          // The call's earlier runs, oldest first, when a person ran it again
+          // (convention §8.5): same job, same rule.
+          attempts: step.attempts
         })),
         location: {
           run_dir: run_dir,

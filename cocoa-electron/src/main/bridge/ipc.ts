@@ -13,6 +13,7 @@ import type {
   CancelTarget,
   OpenAttachmentsResult,
   RemoveFolderResult,
+  ReplaceTarget,
   ReportResult,
   ReportTarget,
   StartResult,
@@ -55,8 +56,13 @@ export function register_ipc(): void {
   // renderer learns the run id, it has already applied the run.
   ipcMain.handle(
     'cocoa:start',
-    async (_event, name: string, parameters: Record<string, unknown>): Promise<StartResult> => {
-      const result = await operations.start_run(engine, name, parameters)
+    async (
+      _event,
+      name: string,
+      parameters: Record<string, unknown>,
+      replaces?: ReplaceTarget
+    ): Promise<StartResult> => {
+      const result = await operations.start_run(engine, name, parameters, 'human', replaces)
       publish_cycle(empty())
       return result
     }

@@ -2,7 +2,7 @@
 
 import { is_active } from '@shared/run_status'
 import { campaign_run, job_run } from '@shared/world'
-import type { Entity } from '@shared/world'
+import type { CampaignPlanStep, Entity } from '@shared/world'
 import type { JournalEntry } from './journal'
 import type { ReportContext } from './route'
 import { app } from './state.svelte'
@@ -52,29 +52,26 @@ export function context_entity_id(context: ReportContext): string {
  * campaign writes its report into the *job's* folder, because that is where the
  * run happened; the campaign is only how the reader arrived (§2.3.1, §20.1).
  */
-export function report_owner_id(context: ReportContext, run_id: string): string {
-  if (context.kind === 'campaign_child') {
-    return (
-      dispatched_owner(context.campaign_id, context.campaign_run_id, run_id) ?? context.campaign_id
-    )
-  }
-  return context_entity_id(context)
+export function report_owner_id(context: ReportContext): string {
+  return context.kind === 'campaign_child' ? context.job_id : context_entity_id(context)
 }
 
 /**
- * Which job a dispatched run belongs to, read from the campaign run's own plan.
- *
- * The plan is the only link between the two (§2.3.1): a run id means nothing
- * without the experiment it was allocated in, so there is no map to look a
- * bare child id up in.
+ * The campaign run's call a dispatched run was, as its current run or one of
+ * its earlier attempts (convention §8.5), read from the campaign run's own
+ * plan: the plan is the only link between the two (§2.3.1). A run id means
+ * nothing without its job, since ids are per experiment, so both name it.
  */
-export function dispatched_owner(
+export function call_of(
   campaign_id: string,
   campaign_run_id: string,
+  job_id: string,
   run_id: string
-): string | undefined {
+): CampaignPlanStep | undefined {
   const campaign = campaign_run(app.world, campaign_id, campaign_run_id)
-  return campaign?.plan.steps.find((step) => step.run_id === run_id)?.job_id
+  return campaign?.plan.steps.find(
+    (step) => step.job_id === job_id && (step.run_id === run_id || step.attempts.includes(run_id))
+  )
 }
 
 /** Whether an entity has any active run — the sidebar's activity dot. */

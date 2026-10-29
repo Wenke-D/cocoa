@@ -1,5 +1,6 @@
 // The refresh tick (§7.5, §10): what the engine does on every pass.
 
+import { release_awaiting } from './campaign/report'
 import type { Engine } from './engine'
 import { as_engine_error } from './errors'
 import type { EngineError } from './errors'
@@ -21,7 +22,7 @@ export interface RefreshReport {
 
 /**
  * One refresh tick (§7.5, §10): harvest, reconcile disk → memory, poll,
- * auto-report, campaign reports. Deploys are harvested before launches: a
+ * auto-report, release campaigns waiting on their members, campaign reports. Deploys are harvested before launches: a
  * deploy that landed spawns the launches waiting on it.
  */
 export async function refresh(engine: Engine): Promise<RefreshReport> {
@@ -90,6 +91,10 @@ export async function refresh(engine: Engine): Promise<RefreshReport> {
       }
     }
   }
+
+  // A campaign waiting on its members' regenerated reports (§8.3) is due once
+  // they have landed, which this tick's job reports may just have done.
+  report.report_errors.push(...release_awaiting(engine))
 
   for (const campaign of engine.campaigns()) {
     if (campaign.manifest === null) {

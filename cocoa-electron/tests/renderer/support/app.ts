@@ -76,6 +76,8 @@ export function campaign_run(
     last_successful_query: '2026-08-19T10:00:03.000+02:00',
     report: 'Missing',
     report_rerunnable: false,
+    members_rerunnable: false,
+    members_regenerating: null,
     report_locked: false,
     attachments: 0,
     visualizable: false,

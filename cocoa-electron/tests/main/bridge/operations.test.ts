@@ -256,6 +256,43 @@ describe('cancel', () => {
   })
 })
 
+describe('start_run in a campaign call’s place', () => {
+  it('starts the job’s run as the call’s, and answers every refusal', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'member')
+    const campaign = campaign_folder(dir, 'nightly', ['member'])
+    const cocoa = engine(dir)
+    cocoa.register(job)
+    cocoa.register(campaign)
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
+    await settle(cocoa)
+    write(job, 'poll-state', 'FAILED')
+    await cocoa.refresh()
+    const replaces = { campaign_id: campaign, campaign_run_id: String(start.run_id), run_id: '0' }
+
+    expect(await start_run(cocoa, 'nightly', { mesh: 'fine' }, 'human', replaces)).toEqual({
+      ok: false,
+      message: "only a job's run takes a campaign call's place"
+    })
+    expect(
+      await start_run(cocoa, 'member', { size: '1', gpu: '0' }, 'human', {
+        ...replaces,
+        run_id: '../0'
+      })
+    ).toEqual({ ok: false, message: 'a campaign call is named by run ids' })
+
+    write(job, 'poll-state', 'RUNNING')
+    expect(await start_run(cocoa, 'member', { size: '1', gpu: '0' }, 'human', replaces)).toEqual({
+      ok: true,
+      run_id: '1'
+    })
+    expect(cocoa.campaign(campaign).runs.record(start.run_id).members).toEqual([
+      { run_id: 1, job: 'member', attempts: [0] }
+    ])
+    await settle(cocoa)
+  })
+})
+
 describe('rerun_report', () => {
   it('answers an accepted re-run, and every refusal, never throwing', async () => {
     const dir = temp_dir()
@@ -283,6 +320,32 @@ describe('rerun_report', () => {
     expect(rerun_report(cocoa, { entity_id: job, run_id: '../0' }).ok).toBe(false)
     expect(rerun_report(cocoa, { entity_id: job, run_id: '41' }).ok).toBe(false)
     expect(rerun_report(cocoa, { entity_id: '/nowhere', run_id: '0' }).ok).toBe(false)
+    expect(rerun_report(cocoa, { ...target, members: true })).toEqual({
+      ok: false,
+      message: `${job} is a job, not a campaign`
+    })
+  })
+
+  it('takes a campaign run’s members first when asked', async () => {
+    const dir = temp_dir()
+    const job = job_folder(dir, 'member')
+    const campaign = campaign_folder(dir, 'nightly', ['member'])
+    const cocoa = engine(dir)
+    cocoa.register(job)
+    cocoa.register(campaign)
+    const start = await cocoa.start_campaign(campaign, { mesh: 'fine' }, 'human')
+    await settle(cocoa)
+    write(job, 'poll-state', 'COMPLETED')
+    await cocoa.refresh()
+    await cocoa.refresh()
+
+    const target = { entity_id: campaign, run_id: String(start.run_id), members: true }
+    expect(rerun_report(cocoa, target)).toEqual({ ok: true })
+    expect(cocoa.job(job).runs.record(start.members[0].run_id).status).toBe('ANALYZING')
+    expect(rerun_report(cocoa, target)).toEqual({
+      ok: false,
+      message: `the report of campaign run ${start.run_id} is already running`
+    })
   })
 })
 

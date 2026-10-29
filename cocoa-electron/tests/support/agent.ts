@@ -96,12 +96,16 @@ export function world(): World {
         ended_at: null,
         parameters: '--sweep full',
         params: { sweep: 'full' },
-        plan: { steps: [{ index: 0, job_id: FOLDER, parameters: '--nodes 4', run_id: '0' }] },
+        plan: {
+          steps: [{ index: 0, job_id: FOLDER, parameters: '--nodes 4', run_id: '0', attempts: [] }]
+        },
         status: 'Running',
         query_health: 'Healthy',
         last_successful_query: '2026-08-20T12:00:03.000+02:00',
         report: 'Unavailable',
         report_rerunnable: false,
+        members_rerunnable: false,
+        members_regenerating: null,
         report_locked: false,
         attachments: 0,
         visualizable: false,

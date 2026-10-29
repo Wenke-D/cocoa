@@ -124,7 +124,11 @@ export interface CampaignPlanStep {
   index: number
   job_id: string
   parameters: string
+  /** The call's current run. */
   run_id: string
+  /** Earlier runs of the call, oldest first, each replaced by the next
+   * (convention §8.5); empty for a call that ran once. */
+  attempts: string[]
 }
 
 export interface CampaignRun {
@@ -144,6 +148,14 @@ export interface CampaignRun {
    * aside: it has had one, every member succeeded, and it is not already
    * `Generating` (convention §8.3). */
   report_rerunnable: boolean
+  /** Whether every member's report, then the campaign's, can be regenerated
+   * by hand now, locks aside: each member finished on the path that ends
+   * `Succeeded`, and the campaign's report not `Generating` (convention §8.3). */
+  members_rerunnable: boolean
+  /** While the members' reports are regenerated before the campaign's
+   * (convention §8.3): how many have landed, of how many; `null` otherwise.
+   * The run reads `Analyzing` and its report `Generating` meanwhile. */
+  members_regenerating: { done: number; total: number } | null
   /** The campaign's report is locked, as a job run's can be (convention §7.3.3). */
   report_locked: boolean
   /** How many entries the campaign's report attached (convention §8.3). */

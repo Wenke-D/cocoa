@@ -72,7 +72,7 @@ describe('a dispatched run seen through its campaign', () => {
     send({
       kind: 'campaign-run-upserted',
       run: campaign_run('7', 'nightly', [
-        { index: 0, job_id: 'solver', parameters: '', run_id: '8' }
+        { index: 0, job_id: 'solver', parameters: '', run_id: '8', attempts: [] }
       ])
     })
     send({ kind: 'job-run-upserted', run: job_run('8', 'solver') })
@@ -80,7 +80,13 @@ describe('a dispatched run seen through its campaign', () => {
 
   it('falls back to the campaign run when the dispatched run goes', () => {
     dispatched()
-    navigate({ page: 'campaign_child', campaign_id: 'nightly', campaign_run_id: '7', run_id: '8' })
+    navigate({
+      page: 'campaign_child',
+      campaign_id: 'nightly',
+      campaign_run_id: '7',
+      job_id: 'solver',
+      run_id: '8'
+    })
 
     send({ kind: 'job-run-removed', job_id: 'solver', id: '8' })
     expect(app.route).toEqual({ page: 'campaign_run', campaign_id: 'nightly', run_id: '7' })
@@ -89,7 +95,13 @@ describe('a dispatched run seen through its campaign', () => {
 
   it('falls back past the campaign run when that goes too', () => {
     dispatched()
-    navigate({ page: 'campaign_child', campaign_id: 'nightly', campaign_run_id: '7', run_id: '8' })
+    navigate({
+      page: 'campaign_child',
+      campaign_id: 'nightly',
+      campaign_run_id: '7',
+      job_id: 'solver',
+      run_id: '8'
+    })
 
     send({ kind: 'campaign-run-removed', campaign_id: 'nightly', id: '7' })
     expect(app.route).toEqual({ page: 'entity', entity_id: 'nightly' })
@@ -99,7 +111,12 @@ describe('a dispatched run seen through its campaign', () => {
     dispatched()
     navigate({
       page: 'report',
-      context: { kind: 'campaign_child', campaign_id: 'nightly', campaign_run_id: '7' },
+      context: {
+        kind: 'campaign_child',
+        campaign_id: 'nightly',
+        campaign_run_id: '7',
+        job_id: 'solver'
+      },
       run_id: '8',
       format: 'PlainText'
     })

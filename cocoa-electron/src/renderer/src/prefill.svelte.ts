@@ -1,8 +1,9 @@
-// The history's row menu (§22.6): a run's parameters, used again.
+// The history's row menu (§22.6): a run's parameters, used again — and a
+// campaign call's, by a run that takes the call's place (§18.3).
 
 import type { Params } from '@shared/params'
 import { check_value } from '@shared/params'
-import type { StartResult } from '@shared/protocol'
+import type { ReplaceTarget, StartResult } from '@shared/protocol'
 import { navigate } from './navigation'
 import { notify } from './notice'
 import { app } from './state.svelte'
@@ -16,14 +17,21 @@ export interface Prefill {
   entity_id: string
   /** Only values that still fit the manifest: the rest were dropped, and said. */
   values: Params
+  /** The campaign call the run will take the place of (convention §8.5), or `null`. */
+  replaces: ReplaceTarget | null
 }
 
 /**
  * Starts a new run with exactly a past run's parameters. The backend validates
  * them against the manifest as it is now; a refusal — the manifest changed —
- * is put in a modal, because it has to be read, not one that fades.
+ * is put in a modal, because it has to be read, not one that fades. With
+ * `replaces`, the run takes that campaign call's place.
  */
-export async function start_again(entity_id: string, params: Params): Promise<void> {
+export async function start_again(
+  entity_id: string,
+  params: Params,
+  replaces: ReplaceTarget | null = null
+): Promise<void> {
   const entity = entity_of(entity_id)
   if (entity === undefined) {
     notify('That experiment is no longer in the Explorer.')
@@ -33,12 +41,23 @@ export async function start_again(entity_id: string, params: Params): Promise<vo
   try {
     // The params come off a run in the world, a `$state` proxy: the bridge
     // clones what it is handed, and a proxy does not clone.
-    result = await window.cocoa.start_run(entity.name, $state.snapshot(params))
+    result =
+      replaces === null
+        ? await window.cocoa.start_run(entity.name, $state.snapshot(params))
+        : await window.cocoa.start_run(
+            entity.name,
+            $state.snapshot(params),
+            $state.snapshot(replaces)
+          )
   } catch (error) {
     result = { ok: false, message: (error as Error).message }
   }
   if (result.ok) {
-    notify(`Run ${result.run_id} started.`)
+    notify(
+      replaces === null
+        ? `Run ${result.run_id} started.`
+        : `Run ${result.run_id} started in place of run ${replaces.run_id}.`
+    )
     return
   }
   app.overlay = { kind: 'refused', title: 'Could not start', message: result.message }
@@ -49,9 +68,15 @@ export async function start_again(entity_id: string, params: Params): Promise<vo
  * manifest as it is now allows: a parameter it no longer declares is dropped,
  * one it newly declares is left empty, one whose value no longer fits its
  * shape — an enum value since removed, one string where a list now is — is
- * left empty too, and the notice says which.
+ * left empty too, and the notice says which. With `replaces`, the page starts
+ * a run that takes that campaign call's place.
  */
-export function prefill_start(entity_id: string, run_id: string, params: Params): void {
+export function prefill_start(
+  entity_id: string,
+  run_id: string,
+  params: Params,
+  replaces: ReplaceTarget | null = null
+): void {
   const entity = entity_of(entity_id)
   if (entity === undefined) {
     notify('That experiment is no longer in the Explorer.')
@@ -71,7 +96,7 @@ export function prefill_start(entity_id: string, run_id: string, params: Params)
   }
   const declared = entity.parameters.map((spec) => spec.name)
   const extra = Object.keys(params).filter((name) => !declared.includes(name))
-  app.prefill = { entity_id, values }
+  app.prefill = { entity_id, values, replaces }
   navigate({ page: 'start', entity_id })
   if (missing.length === 0 && extra.length === 0 && unfit.length === 0) {
     notify(`Parameters of run ${run_id} filled in.`)
@@ -93,13 +118,13 @@ export function prefill_start(entity_id: string, run_id: string, params: Params)
 }
 
 /** The Start page takes the prefill meant for it, once. */
-export function take_prefill(entity_id: string): Params | null {
+export function take_prefill(entity_id: string): Prefill | null {
   const prefill = app.prefill
   if (prefill === null || prefill.entity_id !== entity_id) {
     return null
   }
   app.prefill = null
-  return prefill.values
+  return prefill
 }
 
 function quoted(names: string[]): string {

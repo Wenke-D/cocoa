@@ -37,7 +37,9 @@ other runs stay.
 A fan-out is deleted whole, from the campaign's side. A run a campaign dispatched
 cannot be deleted through its job — the refusal points at the campaign run —
 and deleting the campaign run removes every member run it dispatched, each
-from its own job's folder, along with the campaign's own files. A member that
+from its own job's folder, along with the campaign's own files. A member's
+earlier attempts (§8.5) were dispatched by it too, and go with it, held back
+by a locked report as the current runs are. A member that
 cannot be resolved (§9.2) has nothing left to delete and does not block the
 rest. Deletion therefore never leaves half a fan-out behind: no campaign
 pointing at members that are gone, no member naming a campaign that is.

@@ -215,6 +215,19 @@ export class Memory {
       }
     })
   }
+
+  /** Every member's earlier attempts (§8.5), looked up as `resolve_members` looks up the current runs. */
+  resolve_attempts(record: CampaignRecord): ResolvedMember[] {
+    return record.members.flatMap((member) => {
+      const job = this.find_job_by_name(member.job)
+      return (member.attempts ?? []).map((run_id) => ({
+        run_id,
+        job_name: member.job,
+        job_path: job?.path ?? null,
+        record: job?.runs.find(run_id) ?? null
+      }))
+    })
+  }
 }
 
 function read_manifest(folder: string): { manifest: Manifest | null; error: EngineError | null } {

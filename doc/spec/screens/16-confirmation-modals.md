@@ -94,3 +94,27 @@ One consequence is stated rather than hidden: a run id is derived from what
 is on disk (convention §5), so deleting the newest run hands its id — and
 every id above what remains — back to the next start. Deleting from the
 middle frees nothing.
+
+## 16.5 Regenerating a Campaign's Reports
+
+`Members, then campaign…` in a campaign run's `Regenerate` menu (§17) asks
+first, since it re-runs a report script for every run of the fan-out. The
+modal counts what it replaces:
+
+```text
+Regenerate 24 member reports, then the campaign's?
+
+nightly-sweep
+Each member's report script runs again, then the campaign's.
+Every report is replaced by its script's new output.
+A member report that fails stops it there; the campaign's report is then
+left as it is.
+
+[Keep them]                                        [Regenerate All]
+```
+
+The confirm is the primary colour, not the destructive one: a regenerate
+replaces files the scripts will write again, and the person may have saved
+or locked the ones to keep. Confirmed, the modal is busy until the engine
+answers, which is at once; accepted, it closes and the Report row says the
+rest. A refusal keeps the modal open with the reason.

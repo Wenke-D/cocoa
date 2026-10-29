@@ -18,7 +18,11 @@ import type {
 import { attachment_count } from './attachments'
 import type { EngineError } from './errors'
 import type { Engine } from './engine'
-import { campaign_report_rerunnable } from './campaign/report'
+import {
+  campaign_report_rerunnable,
+  members_progress,
+  members_report_rerunnable
+} from './campaign/report'
 import { report_in_flight, reportable } from './job/report'
 import { all_params, ended_at, started_at } from './record'
 import type { CampaignRecord, RunRecord } from './record'
@@ -201,11 +205,15 @@ function campaign_run_of(
   record: CampaignRecord,
   now_iso: string
 ): CampaignRun {
+  const campaign = engine.campaign(campaign_path)
+  // Waiting on its members' reports, the campaign is analyzing from the
+  // asking on (§8.3), though its members alone would say it is running.
+  const regenerating = members_progress(engine, campaign, record)
   let status: RunStatus = 'Error'
   let ended: string | null = null
   try {
     const derived = engine.campaign_status(campaign_path, record.run_id)
-    status = map_status(derived.status)
+    status = regenerating !== null ? 'Analyzing' : map_status(derived.status)
     ended = campaign_ended_at(engine, record, derived.status)
   } catch {
     // Fall through to Error.
@@ -226,7 +234,8 @@ function campaign_run_of(
           index,
           job_id: job?.path ?? member.job,
           parameters: member_record === null ? '' : format_params(all_params(member_record)),
-          run_id: String(member.run_id)
+          run_id: String(member.run_id),
+          attempts: (member.attempts ?? []).map(String)
         }
       })
     },
@@ -237,9 +246,11 @@ function campaign_run_of(
     // included: the file still on disk is the one being replaced.
     report: status === 'Analyzing' ? 'Generating' : report_state_of(campaign_path, record.run_id),
     report_rerunnable: campaign_report_rerunnable(engine, record),
+    members_rerunnable: members_report_rerunnable(engine, campaign, record),
+    members_regenerating: regenerating,
     report_locked: record.report_locked === true,
     attachments: status === 'Analyzing' ? 0 : attachment_count(campaign_path, record.run_id),
-    visualizable: visualizable(engine.campaign(campaign_path), record.run_id),
+    visualizable: visualizable(campaign, record.run_id),
     error: null
   }
 }

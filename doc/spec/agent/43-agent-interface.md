@@ -71,7 +71,8 @@ GET  /help                         what this is, and every route, from the tool 
 GET  /jobs                         every Job: name, folder, parameters, run tallies
 GET  /campaigns                      every Campaign, same shape
 GET  /jobs/{name}                  one Job and its runs, with file locations
-GET  /campaigns/{name}               one Campaign, its runs, their calls and locations
+GET  /campaigns/{name}               one Campaign, its runs, their calls (each with
+                                   the earlier `attempts` it replaced) and locations
 POST /experiments                  {"path": "/abs/folder"} → 201 {"name", "kind", …}
 POST /experiments/{name}/runs      {"parameters": {…}} → 201 {"run_id": "…"}
 POST /experiments/{name}/runs/{run_id}/report
@@ -158,6 +159,20 @@ workbench's refusal — a run that cannot be reported (a campaign run with a
 member that did not succeed among them), or one whose report is already
 running. Who asked is not recorded (convention §7.3.2). The MCP binary does not offer this route
 as a tool yet.
+
+For a campaign run, a body of `{"members": true}` takes the `Members, then
+campaign…` path instead (convention §8.3): every member's report is re-run
+under its own job, then the campaign's. The answer is the same `202`, and the
+campaign run's `report_running` stays true from the asking until its own
+report lands, so the same `follow` read covers both stages; each member's own
+`report_running` is under `GET /jobs/{job}`. `400` adds that path's refusals,
+all or nothing: a member that did not succeed and was not left at `Error` by
+its report, a member still running or reporting, and any locked report among
+the members. A member's report that fails stops it there: that member reads
+`Error`, the campaign's report is not regenerated, and the campaign run then
+reads `Error` for its member. A body without it, or `{"members": false}`,
+regenerates the campaign's report alone; `{"members": true}` on a job run is a
+`400`.
 
 **Locking a report** takes the `Lock` button's path (convention §7.3.3):
 `POST /experiments/{name}/runs/{run_id}/report/lock` with `{"locked": true}`

@@ -4,7 +4,7 @@
 import { campaign_run, job_run } from '@shared/world'
 import { notify } from './notice'
 import { app } from './state.svelte'
-import { context_entity_id, dispatched_owner, entity_of, report_owner_id } from './world_queries'
+import { call_of, context_entity_id, entity_of, report_owner_id } from './world_queries'
 
 /** Repairs a route — and closes an overlay — the world can no longer answer for. */
 export function recover(): void {
@@ -69,10 +69,10 @@ export function recover(): void {
         notify('That run is no longer listed.')
         return
       }
-      // Which job the child belongs to comes from the campaign's plan; if the
-      // plan no longer lists it, it is gone by the same test.
-      const job_id = dispatched_owner(route.campaign_id, route.campaign_run_id, route.run_id)
-      if (job_id === undefined || job_run(world, job_id, route.run_id) === undefined) {
+      // The campaign's plan must still list the child, as a call's current run
+      // or an earlier attempt (§8.5); if it does not, it is gone by the same test.
+      const call = call_of(route.campaign_id, route.campaign_run_id, route.job_id, route.run_id)
+      if (call === undefined || job_run(world, route.job_id, route.run_id) === undefined) {
         app.route = {
           page: 'campaign_run',
           campaign_id: route.campaign_id,
@@ -91,7 +91,7 @@ export function recover(): void {
       // though the context is the campaign's — the same two-addresses rule. The
       // owner is what says which map to look in, and for a dispatched run
       // that owner comes from the plan.
-      const owner_id = report_owner_id(route.context, route.run_id)
+      const owner_id = report_owner_id(route.context)
       const run =
         route.context.kind === 'campaign_run'
           ? campaign_run(world, owner_id, route.run_id)

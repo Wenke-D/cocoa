@@ -5,7 +5,8 @@ import type {
   CancelTarget,
   DeleteResult,
   DeleteTarget,
-  RemoveFolderResult
+  RemoveFolderResult,
+  RerunReportResult
 } from '@shared/protocol'
 import { navigate } from './navigation'
 import { notify } from './notice'
@@ -22,9 +23,60 @@ export type Overlay =
       | { kind: 'confirm_cancel'; target: CancelTarget }
       | { kind: 'confirm_delete'; target: DeleteTarget }
       | { kind: 'confirm_remove'; entity_id: string }
+      | { kind: 'confirm_regenerate'; target: RegenerateMembersTarget }
     ))
   /** A refusal that has to be read before anything else happens (§22.6). */
   | { kind: 'refused'; title: string; message: string }
+
+/**
+ * A campaign run whose members' reports, then its own, are to be regenerated:
+ * addressed as a campaign run's delete is, so `recover` closes it the same way.
+ */
+export interface RegenerateMembersTarget {
+  kind: 'campaign_run'
+  campaign_id: string
+  run_id: string
+}
+
+/** Opens the confirmation for regenerating every member's report first (§16.5). */
+export function request_regenerate_members(target: RegenerateMembersTarget): void {
+  app.overlay = { kind: 'confirm_regenerate', target, error: null, busy: false }
+}
+
+/**
+ * Asks for every member's report of the campaign run, then its own (convention
+ * §8.3). Accepted, the run already reads `Analyzing` — its events precede the
+ * answer — and the modal closes; the Report row says the rest. A refusal keeps
+ * the modal open with the reason.
+ */
+export async function confirm_regenerate(): Promise<void> {
+  const overlay = app.overlay
+  if (overlay === null || overlay.kind !== 'confirm_regenerate' || overlay.busy) {
+    return
+  }
+  overlay.busy = true
+  overlay.error = null
+  let result: RerunReportResult
+  try {
+    result = await window.cocoa.rerun_report({
+      entity_id: overlay.target.campaign_id,
+      run_id: overlay.target.run_id,
+      members: true
+    })
+  } catch (error) {
+    result = { ok: false, message: (error as Error).message }
+  }
+  if (app.overlay !== overlay) {
+    return
+  }
+  if (result.ok) {
+    app.overlay = null
+    return
+  }
+  overlay.busy = false
+  overlay.error = result.message
+  notify(result.message, 'error')
+}
 
 export function request_cancel(target: CancelTarget): void {
   app.overlay = { kind: 'confirm_cancel', target, error: null, busy: false }

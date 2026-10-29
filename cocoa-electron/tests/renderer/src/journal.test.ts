@@ -63,6 +63,8 @@ function campaign_run(id: string, extra: Partial<CampaignRun> = {}): CampaignRun
     last_successful_query: '2026-08-19T10:00:03.000+02:00',
     report: 'Missing',
     report_rerunnable: false,
+    members_rerunnable: false,
+    members_regenerating: null,
     report_locked: false,
     attachments: 0,
     visualizable: false,
@@ -118,8 +120,8 @@ describe('sentences_of', () => {
       by: 'Agent',
       plan: {
         steps: [
-          { index: 0, job_id: 'solver', parameters: '', run_id: '1' },
-          { index: 1, job_id: 'solver', parameters: '', run_id: '3' }
+          { index: 0, job_id: 'solver', parameters: '', run_id: '1', attempts: [] },
+          { index: 1, job_id: 'solver', parameters: '', run_id: '3', attempts: [] }
         ]
       }
     })

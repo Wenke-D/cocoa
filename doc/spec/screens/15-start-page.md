@@ -137,6 +137,15 @@ these parameters…* opens this page with one particular run's values filled in.
 That is an explicit act on a run the user is looking at, never a memory of
 what was typed last, and the page says what it filled — and what it could not.
 
+A campaign call's **Refill** (§18.3) comes in the same way, with one more
+thing: the run will take that call's place in its campaign run (convention
+§8.5). The page says so above the fields — `Replaces call 2 of
+nightly-benchmark run 0, whose run 3 failed.` — and the parameters are the
+job's own, as its manifest declares them now: the job may have changed since
+the call failed, which is often why it is run again. Launched, the page goes
+to the new run in the campaign's context (§19) rather than to the job's.
+Leaving the page drops the replacement with the rest of the draft.
+
 > There used to be a **Fill from last run** action here, and a `last_args` map
 > in the store behind it: an explicit button, never a default, that filled the
 > fields and stopped there. Both are gone as of 2026-08-20. It was the one

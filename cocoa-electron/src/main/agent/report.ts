@@ -14,8 +14,27 @@ import { failure, json } from './answer'
  * the MCP binary's own timeout were never sized for. The run reads
  * `report_running` in `GET /jobs/{name}` or `GET /campaigns/{name}` until the
  * outcome lands there.
+ *
+ * A body of `{"members": true}` asks a campaign run for every member's report
+ * first, then its own (§8.3); none, or `false`, for its own alone. The
+ * campaign run reads `report_running` through both stages.
  */
-export function rerun_report(name: string, run_id: string, deps: AgentDeps): AgentResponse {
+export function rerun_report(
+  name: string,
+  run_id: string,
+  body: string,
+  deps: AgentDeps
+): AgentResponse {
+  let members: unknown
+  try {
+    members = (JSON.parse(body === '' ? '{}' : body) as { members?: unknown }).members
+  } catch (error) {
+    return failure(400, (error as Error).message)
+  }
+  if (members !== undefined && typeof members !== 'boolean') {
+    return failure(400, '`members` is true or false')
+  }
+
   const world = deps.current_world()
   const entity = world.entities.find((candidate) => candidate.name === name)
   if (entity === undefined) {
@@ -28,8 +47,15 @@ export function rerun_report(name: string, run_id: string, deps: AgentDeps): Age
   if (run === undefined) {
     return failure(404, `No such run: ${name} run ${run_id}`)
   }
+  if (members === true && entity.kind === 'Job') {
+    return failure(400, `${name} is a Job; only a Campaign run has members`)
+  }
 
-  const result = deps.rerun_report({ entity_id: entity.id, run_id })
+  const result = deps.rerun_report({
+    entity_id: entity.id,
+    run_id,
+    ...(members === true ? { members } : {})
+  })
   // The workbench's own refusal, unchanged: not eligible, or already running.
   if (!result.ok) {
     return failure(400, result.message)

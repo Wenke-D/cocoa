@@ -191,7 +191,8 @@ asker is not a fact any reader of the record has needed.
 
 A campaign run's own report is regenerated the same way, and keeps the
 campaign's end where it was (§8.3); its members' reports are each re-run under
-their own jobs.
+their own jobs — one at a time, or all of them before the campaign's in one
+asking (§8.3).
 
 ### 7.3.3 Locking a report
 

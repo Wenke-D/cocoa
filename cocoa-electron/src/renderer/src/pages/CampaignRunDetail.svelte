@@ -6,10 +6,11 @@
   import type { Crumb } from '../route'
   import { lock_report, open_attachments, rerun_report, save_report, visualize } from '../commands'
   import { navigate } from '../navigation'
-  import { request_cancel, request_delete } from '../overlays.svelte'
+  import { request_cancel, request_delete, request_regenerate_members } from '../overlays.svelte'
   import { app } from '../state.svelte'
   import { entity_name, entity_of } from '../world_queries'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
+  import CallRow from '../lib/components/CallRow.svelte'
   import ReportButtons from '../lib/components/ReportButtons.svelte'
   import RunHeader from '../lib/components/RunHeader.svelte'
   import StatusPill from '../lib/components/StatusPill.svelte'
@@ -27,6 +28,13 @@
     { label: run_id, route: null, mono: true }
   ])
 
+  /** A member whose report is locked: it holds the whole fan-out (convention §7.3.3). */
+  const locked_member = $derived(
+    run?.plan.steps.find(
+      (step) => job_run(app.world, step.job_id, step.run_id)?.report_locked === true
+    )
+  )
+
   /** Why Delete is unavailable: a locked report it would take with it, or `null`. */
   const delete_lock = $derived.by(() => {
     if (run === undefined) {
@@ -35,12 +43,14 @@
     if (run.report_locked) {
       return 'The report is locked; unlock it to delete this run'
     }
-    const member = run.plan.steps.find(
-      (step) => job_run(app.world, step.job_id, step.run_id)?.report_locked === true
-    )
-    return member === undefined
+    // An earlier attempt goes with the campaign run too (convention §8.5).
+    const locked_attempt = run.plan.steps
+      .flatMap((step) => step.attempts.map((id) => ({ job_id: step.job_id, run_id: id })))
+      .find((attempt) => job_run(app.world, attempt.job_id, attempt.run_id)?.report_locked === true)
+    const locked = locked_member?.run_id ?? locked_attempt?.run_id
+    return locked === undefined
       ? null
-      : `The report of member run ${member.run_id} is locked; unlock it to delete this run`
+      : `The report of member run ${locked} is locked; unlock it to delete this run`
   })
 
   const finished = $derived.by(() => {
@@ -155,6 +165,18 @@
           rerun={run.report_rerunnable
             ? () => rerun_report({ entity_id: campaign_id, run_id: run.id })
             : null}
+          rerun_members={run.members_rerunnable || run.report_rerunnable
+            ? {
+                total: run.plan.steps.length,
+                blocked:
+                  locked_member === undefined
+                    ? null
+                    : `The report of member run ${locked_member.run_id} is locked; unlock it first`,
+                ask: () =>
+                  request_regenerate_members({ kind: 'campaign_run', campaign_id, run_id: run.id })
+              }
+            : null}
+          regenerating_members={run.members_regenerating}
         />
       </dd>
     </div>
@@ -206,17 +228,24 @@
           {@const job_name = entity_name(entity_of(step.job_id))}
           <!-- The campaign's context, not the job's: same run, other address
                (§2.3.1), and the Explorer stays on the campaign (§19). -->
-          <tr
-            onclick={() =>
-              navigate({
-                page: 'campaign_child',
-                campaign_id,
-                campaign_run_id: run.id,
-                run_id: step.run_id
-              })}
+          <CallRow
+            {campaign_id}
+            campaign_run_id={run.id}
+            {step}
+            run={child}
+            report_locked={run.report_locked}
           >
             <td class="num">{step.index}</td>
-            <td title={job_name}>{job_name}</td>
+            <td title={job_name}>
+              {job_name}
+              {#if step.attempts.length > 0}
+                <!-- Run again in its place (convention §8.5): the row is the
+                     current run, the earlier ones are on its page. -->
+                <span class="attempt" title="Earlier runs: {step.attempts.join(', ')}"
+                  >attempt {step.attempts.length + 1}</span
+                >
+              {/if}
+            </td>
             <td>
               {#if child !== undefined}
                 <StatusPill status={child.status} health={child.query_health} />
@@ -227,7 +256,7 @@
             <td title={step.parameters}>
               {#if step.parameters !== ''}<span class="mono params">{step.parameters}</span>{/if}
             </td>
-          </tr>
+          </CallRow>
         {/each}
       </tbody>
     </table>
@@ -260,5 +289,11 @@
   .missing {
     color: var(--description);
     font-style: italic;
+  }
+
+  .attempt {
+    margin-left: 6px;
+    color: var(--description);
+    font-size: 12px;
   }
 </style>

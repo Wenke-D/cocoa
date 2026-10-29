@@ -174,6 +174,43 @@ automatic path. A campaign run's own Report row has the same button once its
 report has run, landed or failed — `report_rerunnable` on the campaign run —
 and regenerates the campaign's report (convention §8.3).
 
+**A campaign run's `Regenerate` is a split button**, since its report can be
+regenerated at two depths. The face is `Regenerate` as above: the campaign's
+own report, over the members' reports as they are, with nothing asked first.
+A chevron joined to its right opens a menu naming both depths, each with a
+line under it saying what it does:
+
+```text
+[↺ Regenerate|▾]
+               ┌──────────────────────────────────────┐
+               │ Campaign only                        │
+               │   Re-run the campaign's report on    │
+               │   the members' reports as they are   │
+               │ Members, then campaign…              │
+               │   Re-run all 24 member reports       │
+               │   first, then the campaign's         │
+               └──────────────────────────────────────┘
+```
+
+`Campaign only` is the face's own action. `Members, then campaign…`
+re-runs every member's report and then the campaign's (convention §8.3); it
+touches every run of the fan-out, so it asks first (§16.5). The split button
+is there whenever either depth is on offer (`report_rerunnable`,
+`members_rerunnable`): a campaign with no report of its own because a
+member's report failed offers only the second, its face disabled with a
+tooltip saying the members' reports come first. Each item that cannot be
+taken is disabled, its second line giving the reason in place of what it
+does: a locked member report names the member run, since the whole asking is
+refused for it. The campaign's own lock disables the face and both items, as
+for a job run. From the asking until the campaign's report lands, the row
+reads `Regenerating member reports: N of M done.` while the members report,
+then `Report is being generated.`, with no button. A refusal is a notice in
+the error voice; a member's report that fails stops it there, with a notice
+naming the member, and the campaign's report is left as it was.
+
+Job runs and a campaign's calls keep the plain `Regenerate`: their reports
+have no members.
+
 A `Failed` run's report is shown exactly as a succeeded run's: the same
 buttons, the same viewer. When its script failed, the row says
 `Report script failed:` and the captured output, in the error colour, in

@@ -9,6 +9,7 @@
   import CancelModal from './lib/components/CancelModal.svelte'
   import DeleteModal from './lib/components/DeleteModal.svelte'
   import RefusedModal from './lib/components/RefusedModal.svelte'
+  import RegenerateModal from './lib/components/RegenerateModal.svelte'
   import RemoveModal from './lib/components/RemoveModal.svelte'
   import Sidebar from './lib/components/Sidebar.svelte'
   import StatusBar from './lib/components/StatusBar.svelte'
@@ -111,6 +112,7 @@
             <CampaignChildRunDetail
               campaign_id={app.route.campaign_id}
               campaign_run_id={app.route.campaign_run_id}
+              job_id={app.route.job_id}
               run_id={app.route.run_id}
             />
           {:else if app.route.page === 'report'}
@@ -132,6 +134,8 @@
     <DeleteModal overlay={app.overlay} />
   {:else if app.overlay?.kind === 'confirm_remove'}
     <RemoveModal overlay={app.overlay} />
+  {:else if app.overlay?.kind === 'confirm_regenerate'}
+    <RegenerateModal overlay={app.overlay} />
   {:else if app.overlay?.kind === 'refused'}
     <RefusedModal overlay={app.overlay} />
   {/if}

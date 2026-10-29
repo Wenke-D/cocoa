@@ -7,14 +7,16 @@
 -->
 <script lang="ts">
   import { manifest_blocking_reason } from '../format'
-  import type { StartResult } from '@shared/protocol'
+  import type { ReplaceTarget, StartResult } from '@shared/protocol'
+  import { job_run } from '@shared/world'
   import { describe_values } from '@shared/params'
   import type { ParamSpec, ParamValue, Params } from '@shared/params'
   import { untrack } from 'svelte'
   import { navigate } from '../navigation'
   import { notify } from '../notice'
   import { take_prefill } from '../prefill.svelte'
-  import { entity_of } from '../world_queries'
+  import { app } from '../state.svelte'
+  import { call_of, entity_name, entity_of } from '../world_queries'
   import { Button } from '$lib/components/ui/button'
   import { Checkbox } from '$lib/components/ui/checkbox'
   import { Input } from '$lib/components/ui/input'
@@ -37,13 +39,40 @@
   let ticked = $state<Record<string, string[]>>({})
   let submitting = $state(false)
   let error = $state<string | null>(null)
+  /** The campaign call this run takes the place of (§18.3), from a call's Refill. */
+  let replaces = $state<ReplaceTarget | null>(null)
+
+  /** What the page says above the fields when the run replaces a call. */
+  const replacing = $derived.by(() => {
+    if (replaces === null) {
+      return null
+    }
+    const step = call_of(replaces.campaign_id, replaces.campaign_run_id, entity_id, replaces.run_id)
+    const status = job_run(app.world, entity_id, replaces.run_id)?.status
+    const outcome =
+      status === 'Failed'
+        ? 'failed'
+        : status === 'Cancelled'
+          ? 'was cancelled'
+          : status === 'Error'
+            ? 'ended in error'
+            : 'ended'
+    return (
+      `Replaces call ${step?.index ?? '?'} of ${entity_name(entity_of(replaces.campaign_id))} ` +
+      `run ${replaces.campaign_run_id}, whose run ${replaces.run_id} ${outcome}. The run you ` +
+      `launch takes its place in the campaign run; run ${replaces.run_id} is kept as an ` +
+      `earlier attempt.`
+    )
+  })
 
   // Empty, unless a run in the history was asked to fill it (§22.6). The
   // prefill is read untracked: taking it clears it, and the effect must not
   // run again for that.
   $effect(() => {
     if (entity !== undefined) {
-      const prefill = untrack(() => take_prefill(entity_id)) ?? {}
+      const taken = untrack(() => take_prefill(entity_id))
+      const prefill = taken?.values ?? {}
+      replaces = taken?.replaces ?? null
       const next_text: Record<string, string> = {}
       const next_ticked: Record<string, string[]> = {}
       for (const spec of entity.parameters) {
@@ -102,13 +131,25 @@
     submitting = true
     error = null
     let result: StartResult
+    // A proxy does not cross IPC; the replacement goes as a plain object.
+    const target = replaces === null ? undefined : $state.snapshot(replaces)
     try {
-      result = await window.cocoa.start_run(entity.name, values_of(entity.parameters))
+      result = await window.cocoa.start_run(entity.name, values_of(entity.parameters), target)
     } catch (cause) {
       result = { ok: false, message: (cause as Error).message }
     }
     submitting = false
-    if (result.ok) {
+    if (result.ok && target !== undefined) {
+      // The new run is the call now: shown in the campaign's context (§19).
+      notify(`Run ${result.run_id} started in place of run ${target.run_id}.`)
+      navigate({
+        page: 'campaign_child',
+        campaign_id: target.campaign_id,
+        campaign_run_id: target.campaign_run_id,
+        job_id: entity_id,
+        run_id: result.run_id
+      })
+    } else if (result.ok) {
       notify(`Run ${result.run_id} started.`)
       navigate(
         entity.kind === 'Job'
@@ -138,6 +179,9 @@
   {#if manifest_blocking_reason(entity.manifest) !== null}
     <p class="blocking">{manifest_blocking_reason(entity.manifest)}</p>
   {:else}
+    {#if replacing !== null}
+      <p class="replacing">{replacing}</p>
+    {/if}
     <form class="panel" onsubmit={submit}>
       {#each entity.parameters as spec (spec.name)}
         {@const id = `param-${spec.name}`}
@@ -242,6 +286,19 @@
     margin: 0 0 16px;
     font-size: 22px;
     font-weight: 600;
+    color: var(--strong-foreground);
+  }
+
+  /* Said before the fields: the run is not a fresh start of the job but a
+     campaign call run again in its place. */
+  .replacing {
+    max-width: 560px;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--kind-campaign);
+    border-radius: 6px;
+    background: var(--widget-bg);
     color: var(--strong-foreground);
   }
 

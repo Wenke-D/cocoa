@@ -51,7 +51,8 @@ export function help(): AgentResponse {
         answers:
           'one Campaign and its runs, each with the calls it dispatched, its locations ' +
           '(run_dir, record, members, report), and whether its report is running ' +
-          '(report_running) or locked (report_locked)'
+          '(report_running) or locked (report_locked). A call’s run_id is its current run; ' +
+          'attempts lists the earlier runs a person replaced, oldest first'
       },
       {
         method: 'POST',
@@ -95,7 +96,11 @@ export function help(): AgentResponse {
           'run or a Campaign run then reads Succeeded, or Error with its error; a FAILED run ' +
           'stays Failed, with report_error when the script failed. 404 for an unknown ' +
           'experiment or run; 400 for a run that cannot be reported, one whose report is ' +
-          'already running, or one whose report is locked.'
+          'already running, or one whose report is locked. For a Campaign run, the body ' +
+          '{"members": true} re-runs every member’s report first, then the campaign’s, all ' +
+          'or nothing: 400 when any member cannot be reported or its report is locked. The ' +
+          'campaign run’s report_running stays true through both; a member’s report that ' +
+          'fails stops it there, and the campaign’s report is left as it was.'
       },
       {
         method: 'POST',

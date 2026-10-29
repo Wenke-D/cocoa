@@ -49,6 +49,46 @@ describe('re-running a report', () => {
     expect(asked).toEqual({ entity_id: CAMPAIGN_FOLDER, run_id: '2' })
   })
 
+  it('takes a campaign run’s members first with {"members": true}', async () => {
+    let asked: RerunReportTarget | null = null
+    const { status, json } = await ask(
+      'POST',
+      '/experiments/nightly/runs/2/report',
+      '{"members": true}',
+      undefined,
+      (target) => {
+        asked = target
+        return { ok: true }
+      }
+    )
+    expect(status).toBe(202)
+    expect(json.follow).toBe('/campaigns/nightly')
+    expect(asked).toEqual({ entity_id: CAMPAIGN_FOLDER, run_id: '2', members: true })
+
+    await ask(
+      'POST',
+      '/experiments/nightly/runs/2/report',
+      '{"members": false}',
+      undefined,
+      (t) => {
+        asked = t
+        return { ok: true }
+      }
+    )
+    expect(asked).toEqual({ entity_id: CAMPAIGN_FOLDER, run_id: '2' })
+  })
+
+  it('refuses members on a job run, and a members that is not a boolean', async () => {
+    const job = await ask('POST', '/experiments/solver-gpu/runs/1/report', '{"members": true}')
+    expect(job.status).toBe(400)
+    expect(job.json.error).toBe('solver-gpu is a Job; only a Campaign run has members')
+    const word = await ask('POST', '/experiments/nightly/runs/2/report', '{"members": "yes"}')
+    expect(word.status).toBe(400)
+    expect(word.json.error).toBe('`members` is true or false')
+    const broken = await ask('POST', '/experiments/nightly/runs/2/report', '{members')
+    expect(broken.status).toBe(400)
+  })
+
   it('is a 404 for an unknown experiment or run', async () => {
     const ghost = await ask('POST', '/experiments/ghost/runs/0/report')
     expect(ghost.status).toBe(404)

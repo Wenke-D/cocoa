@@ -40,7 +40,10 @@
       title: `Delete campaign run ${run.id} for good?`,
       subject: entity_name(entity_of(target.campaign_id)),
       lines: [
-        `This campaign run and the ${run.plan.steps.length} runs it dispatched disappear`,
+        `This campaign run and the ${run.plan.steps.reduce(
+          (total, step) => total + 1 + step.attempts.length,
+          0
+        )} runs it dispatched disappear`,
         'from their histories forever, reports included.',
         'This cannot be undone.'
       ]

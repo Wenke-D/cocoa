@@ -11,6 +11,7 @@ import type {
   CocoaEvent,
   OpenAttachmentsResult,
   RemoveFolderResult,
+  ReplaceTarget,
   ReportResult,
   ReportTarget,
   StartResult,
@@ -30,7 +31,7 @@ declare global {
   interface Window {
     cocoa: {
       bootstrap(): Promise<BootstrapPayload>
-      start_run(name: string, parameters: Params): Promise<StartResult>
+      start_run(name: string, parameters: Params, replaces?: ReplaceTarget): Promise<StartResult>
       cancel(target: CancelTarget): Promise<CancelResult>
       delete_run(target: DeleteTarget): Promise<DeleteResult>
       report(target: ReportTarget): Promise<ReportResult>

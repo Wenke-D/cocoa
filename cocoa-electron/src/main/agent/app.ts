@@ -65,7 +65,10 @@ export function agent_app(deps: AgentDeps): express.Express {
     reply(response, await start_run(request.params.name, text_of(request.body), deps))
   )
   app.post('/experiments/:name/runs/:run_id/report', (request, response) =>
-    reply(response, rerun_report(request.params.name, request.params.run_id, deps))
+    reply(
+      response,
+      rerun_report(request.params.name, request.params.run_id, text_of(request.body), deps)
+    )
   )
   app.post('/experiments/:name/runs/:run_id/report/lock', (request, response) =>
     reply(

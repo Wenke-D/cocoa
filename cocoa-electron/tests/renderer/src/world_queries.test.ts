@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { CocoaEvent } from '@shared/protocol'
 import { navigate } from '../../../src/renderer/src/navigation'
 import {
+  call_of,
   last_change,
   report_owner_id,
   selected_entity_id
@@ -19,7 +20,7 @@ describe('a dispatched run seen through its campaign', () => {
     send({
       kind: 'campaign-run-upserted',
       run: campaign_run('7', 'nightly', [
-        { index: 0, job_id: 'solver', parameters: '', run_id: '8' }
+        { index: 0, job_id: 'solver', parameters: '', run_id: '8', attempts: [] }
       ])
     })
     send({ kind: 'job-run-upserted', run: job_run('8', 'solver') })
@@ -29,7 +30,13 @@ describe('a dispatched run seen through its campaign', () => {
   // though the job is right there in the Explorer too (§19).
   it('keeps the campaign selected', () => {
     dispatched()
-    navigate({ page: 'campaign_child', campaign_id: 'nightly', campaign_run_id: '7', run_id: '8' })
+    navigate({
+      page: 'campaign_child',
+      campaign_id: 'nightly',
+      campaign_run_id: '7',
+      job_id: 'solver',
+      run_id: '8'
+    })
     expect(selected_entity_id()).toBe('nightly')
   })
 
@@ -40,9 +47,27 @@ describe('a dispatched run seen through its campaign', () => {
     const context = {
       kind: 'campaign_child',
       campaign_id: 'nightly',
-      campaign_run_id: '7'
+      campaign_run_id: '7',
+      job_id: 'solver'
     } as const
-    expect(report_owner_id(context, '8')).toBe('solver')
+    expect(report_owner_id(context)).toBe('solver')
+  })
+
+  // Run ids are per job, so two calls can both be run 8; and a call run again
+  // (convention §8.5) is still found by its earlier run.
+  it('finds a call by its job and run, current or earlier', () => {
+    send({ kind: 'entity-upserted', entity: entity('nightly', 'Campaign') })
+    send({
+      kind: 'campaign-run-upserted',
+      run: campaign_run('7', 'nightly', [
+        { index: 0, job_id: 'solver', parameters: '', run_id: '8', attempts: [] },
+        { index: 1, job_id: 'mesher', parameters: '', run_id: '9', attempts: ['8'] }
+      ])
+    })
+    expect(call_of('nightly', '7', 'solver', '8')?.index).toBe(0)
+    expect(call_of('nightly', '7', 'mesher', '8')?.index).toBe(1)
+    expect(call_of('nightly', '7', 'mesher', '9')?.index).toBe(1)
+    expect(call_of('nightly', '7', 'solver', '9')).toBeUndefined()
   })
 })
 

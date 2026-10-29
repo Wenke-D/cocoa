@@ -2,7 +2,7 @@
   One row of a job's or a campaign's history (§22): the cells are the page's;
   this is the row's behaviour — a click opens the run, and a right-click
   offers the run's parameters again (§22.6) — Start over runs them now,
-  Refill… puts them in the Start page — and, for a finished run, Delete…
+  Refill puts them in the Start page — and, for a finished run, Delete…
   (§16.4).
 -->
 <script lang="ts">
@@ -51,7 +51,7 @@
       >Start over</ContextMenu.Item
     >
     <ContextMenu.Item onSelect={() => prefill_start(entity_id, run_id, params)}
-      >Refill…</ContextMenu.Item
+      >Refill</ContextMenu.Item
     >
     <ContextMenu.Separator />
     <ContextMenu.Item variant="destructive" disabled={!deletable} onSelect={delete_target}>

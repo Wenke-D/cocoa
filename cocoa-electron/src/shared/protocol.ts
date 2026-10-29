@@ -40,6 +40,15 @@ export type CocoaEvent =
 
 export type StartResult = { ok: true; run_id: string } | { ok: false; message: string }
 
+/** A campaign run's call whose current run a start replaces (convention §8.5):
+ * the start is then of that call's job, and its run takes the call's place. */
+export interface ReplaceTarget {
+  campaign_id: string
+  campaign_run_id: string
+  /** The call's current run, the one being replaced. */
+  run_id: string
+}
+
 /**
  * What a cancel is aimed at. A modal is a temporary action, not a place, so
  * this is never part of a route (specification §9).
@@ -62,6 +71,8 @@ export type DeleteResult = { ok: true } | { ok: false; message: string }
 export interface RerunReportTarget {
   entity_id: string
   run_id: string
+  /** A campaign run's members' reports first, then its own (convention §8.3). */
+  members?: boolean
 }
 
 /** Accepted means due: the report runs on the next tick, and the world says

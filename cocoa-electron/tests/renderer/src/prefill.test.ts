@@ -48,12 +48,12 @@ describe('a run started again', () => {
   it('fills the Start page with what the manifest still takes, and says the rest', () => {
     prefill_start('solver', '3', { nodes: '4', gpu: '1' })
     expect(app.route).toEqual({ page: 'start', entity_id: 'solver' })
-    expect(take_prefill('solver')).toEqual({ nodes: '4', gpu: '1' })
+    expect(take_prefill('solver')?.values).toEqual({ nodes: '4', gpu: '1' })
     expect(take_prefill('solver')).toBeNull()
     expect(app.notice?.text).toBe('Parameters of run 3 filled in.')
 
     prefill_start('solver', '3', { nodes: '4', size: '256' })
-    expect(take_prefill('solver')).toEqual({ nodes: '4' })
+    expect(take_prefill('solver')?.values).toEqual({ nodes: '4' })
     expect(app.notice).toMatchObject({ level: 'error' })
     expect(app.notice?.text).toBe(
       'Filled what run 3 had; `gpu` is new and left empty; `size` is no longer taken.'
@@ -62,7 +62,7 @@ describe('a run started again', () => {
     // A value that no longer fits its shape — here a string where the run had
     // a list — is dropped too, and said.
     prefill_start('solver', '3', { nodes: ['4', '8'], gpu: '1' })
-    expect(take_prefill('solver')).toEqual({ gpu: '1' })
+    expect(take_prefill('solver')?.values).toEqual({ gpu: '1' })
     expect(app.notice?.text).toBe(
       'Filled what run 3 had; `nodes` no longer fits and is left empty.'
     )
@@ -71,6 +71,22 @@ describe('a run started again', () => {
   it('hands a prefill only to the page it was meant for', () => {
     prefill_start('solver', '3', { nodes: '4', gpu: '1' })
     expect(take_prefill('elsewhere')).toBeNull()
-    expect(take_prefill('solver')).toEqual({ nodes: '4', gpu: '1' })
+    expect(take_prefill('solver')?.values).toEqual({ nodes: '4', gpu: '1' })
+  })
+
+  // A campaign call run again (§18.3): the run takes the call's place.
+  it('carries the campaign call a run replaces, to the start and to the page', async () => {
+    const replaces = { campaign_id: 'nightly', campaign_run_id: '2', run_id: '3' }
+    start_run.mockResolvedValue({ ok: true, run_id: '9' })
+    await start_again('solver', { nodes: '4', gpu: '1' }, replaces)
+    expect(start_run).toHaveBeenCalledWith('solver', { nodes: '4', gpu: '1' }, replaces)
+    expect(app.notice?.text).toBe('Run 9 started in place of run 3.')
+
+    prefill_start('solver', '3', { nodes: '4', gpu: '1' }, replaces)
+    expect(take_prefill('solver')).toEqual({
+      entity_id: 'solver',
+      values: { nodes: '4', gpu: '1' },
+      replaces
+    })
   })
 })

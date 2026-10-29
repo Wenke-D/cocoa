@@ -17,6 +17,10 @@ Show:
 
 Do not show a current Job. Nothing is sequenced, so no call is "current".
 
+As built, the facts under the header carry the campaign's own Report row,
+the one of §17.5, whose `Regenerate` is a split button: the campaign's report
+alone, or every member's report first (§17.5, convention §8.3).
+
 ## 18.2 Progress Summary
 
 Show:
@@ -87,6 +91,24 @@ together. This is expected — do not treat staggered start times as a goal.
 Sort by `Call` index by default. Sorting by status or duration is P1.
 
 Clicking a row opens Campaign Child-Run Detail.
+
+**Running a call again.** A row's context menu has the history's two actions
+(§22.6), for a call that did not succeed — its run `Failed`, `Cancelled` or
+`Error`, and finished. Each starts a new run of the call's job that takes the
+call's place in this campaign run (convention §8.5):
+
+- **Start over** starts it at once with exactly the call's values; the
+  refusal of values the job no longer takes is a modal, as in the history.
+  The page stays, and the row turns to the new run.
+- **Refill** opens the job's Start page (§15) with the call's values filled
+  in, as far as the job's parameters as they are now allow, and says that the
+  run will replace this call.
+
+On any other row both are disabled, and the menu's first line says why: the
+call is still running, or it succeeded. A locked campaign report disables
+them too, since the new run would have it regenerated. A call that has been
+run again says so under its job's name — `attempt 2` — with the earlier run
+ids in its tooltip; the row shows the current run.
 
 Clicking a Report button opens that run's Report Viewer.
 

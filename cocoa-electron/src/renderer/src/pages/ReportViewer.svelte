@@ -29,7 +29,7 @@
   const entity_id = $derived(context_entity_id(context))
   const entity = $derived(entity_of(entity_id))
   /** The folder the file is in, which for a dispatched run is the job's. */
-  const owner_id = $derived(report_owner_id(context, run_id))
+  const owner_id = $derived(report_owner_id(context))
 
   /**
    * The trail a report is read under is the trail of the page it was opened
@@ -54,6 +54,7 @@
           page: 'campaign_child',
           campaign_id: context.campaign_id,
           campaign_run_id: context.campaign_run_id,
+          job_id: context.job_id,
           run_id
         },
         mono: true

@@ -31,7 +31,7 @@ export async function run({ page, shot, log, wait_text }) {
 
   // Start with…: the Start page, filled in.
   await page.locator('table.runs tbody tr').first().click({ button: 'right' })
-  await page.getByRole('menuitem', { name: 'Refill…' }).click()
+  await page.getByRole('menuitem', { name: 'Refill', exact: true }).click()
   await page.locator('form').waitFor({ timeout: 5_000 })
   const nodes = await page.locator('#param-nodes').inputValue()
   const gpu = await page.locator('#param-gpu').inputValue()

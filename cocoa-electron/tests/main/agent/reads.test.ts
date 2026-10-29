@@ -58,7 +58,7 @@ describe('reads', () => {
       }[]
     }
     expect(detail.runs[0].calls).toEqual([
-      { call: 0, job: 'solver-gpu', parameters: '--nodes 4', run_id: '0' }
+      { call: 0, job: 'solver-gpu', parameters: '--nodes 4', run_id: '0', attempts: [] }
     ])
     expect(detail.runs[0].location.members).toBe(`${CAMPAIGN_FOLDER}/runs/2/members.json`)
   })

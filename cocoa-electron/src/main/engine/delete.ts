@@ -9,6 +9,7 @@ import path from 'node:path'
 import type { Engine } from './engine'
 import { EngineError } from './errors'
 import type { Campaign } from './campaign/campaign'
+import { replacing_in } from './campaign/replace'
 import type { Job } from './job/job'
 import { report_owed } from './record'
 import { report_path } from './report_paths'
@@ -58,10 +59,17 @@ export function delete_run(job: Job, run_id: number): void {
  * this refuses everywhere. A member that cannot be resolved — its job
  * unregistered, its record already gone — has nothing left to delete and
  * does not block the rest. A locked report (§7.3.3), the campaign's own or a
- * member's, keeps the whole fan-out until it is unlocked.
+ * member's, keeps the whole fan-out until it is unlocked. A member's earlier
+ * attempts (§8.5) were dispatched by the campaign too, and go with it on the
+ * same terms; a call being run again holds it until its new run has started.
  */
 export function delete_campaign_run(engine: Engine, campaign: Campaign, run_id: number): void {
   const record = campaign.runs.record(run_id)
+  if (replacing_in(engine, campaign.path, run_id)) {
+    throw EngineError.validation(
+      `a call of campaign run ${run_id} is being run again; delete it once that run has started`
+    )
+  }
   let terminal = true
   try {
     terminal = is_terminal(engine.campaign_status(campaign.path, run_id).status)
@@ -76,7 +84,7 @@ export function delete_campaign_run(engine: Engine, campaign: Campaign, run_id: 
   if (record.report_locked === true) {
     throw locked_refusal(`campaign run ${run_id}`, 'delete the campaign run')
   }
-  const members = engine.resolve_members(record)
+  const members = [...engine.resolve_members(record), ...engine.resolve_attempts(record)]
   for (const member of members) {
     if (member.record !== null && !is_terminal(member.record.status)) {
       throw EngineError.validation(

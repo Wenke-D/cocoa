@@ -10,12 +10,12 @@
 -->
 <script lang="ts">
   import { is_cancellable } from '@shared/run_status'
-  import { campaign_run, job_run } from '@shared/world'
+  import { job_run } from '@shared/world'
   import type { Crumb } from '../route'
   import { navigate } from '../navigation'
   import { request_cancel } from '../overlays.svelte'
   import { app } from '../state.svelte'
-  import { dispatched_owner, entity_name, entity_of } from '../world_queries'
+  import { call_of, entity_name, entity_of } from '../world_queries'
   import Breadcrumbs from '../lib/components/Breadcrumbs.svelte'
   import RunFacts from '../lib/components/RunFacts.svelte'
   import RunHeader from '../lib/components/RunHeader.svelte'
@@ -25,15 +25,18 @@
   let {
     campaign_id,
     campaign_run_id,
+    job_id,
     run_id
-  }: { campaign_id: string; campaign_run_id: string; run_id: string } = $props()
+  }: { campaign_id: string; campaign_run_id: string; job_id: string; run_id: string } = $props()
 
-  /** The campaign *entity*, for its name; and the campaign *run* this was one call of. */
+  /** The campaign *entity*, for its name; the call is found in its run's plan. */
   const campaign = $derived(entity_of(campaign_id))
-  const parent_run = $derived(campaign_run(app.world, campaign_id, campaign_run_id))
-  const job_id = $derived(dispatched_owner(campaign_id, campaign_run_id, run_id))
-  const run = $derived(job_id === undefined ? undefined : job_run(app.world, job_id, run_id))
-  const step = $derived(parent_run?.plan.steps.find((candidate) => candidate.run_id === run_id))
+  const run = $derived(job_run(app.world, job_id, run_id))
+  const step = $derived(call_of(campaign_id, campaign_run_id, job_id, run_id))
+  /** Every run of this call, oldest first, when it was run again (convention §8.5). */
+  const attempts = $derived(
+    step === undefined || step.attempts.length === 0 ? [] : [...step.attempts, step.run_id]
+  )
   const job = $derived(step === undefined ? undefined : entity_of(step.job_id))
 
   /**
@@ -89,7 +92,7 @@
     {/snippet}
   </RunHeader>
 
-  <RunFacts {run} report_context={{ kind: 'campaign_child', campaign_id, campaign_run_id }}>
+  <RunFacts {run} report_context={{ kind: 'campaign_child', campaign_id, campaign_run_id, job_id }}>
     {#snippet leading()}
       <div class="fact">
         <dt>Job</dt>
@@ -112,6 +115,46 @@
         <dt>Call</dt>
         <dd class="mono">{step?.index ?? '—'}</dd>
       </div>
+      {#if attempts.length > 0}
+        <div class="fact">
+          <dt>Attempts</dt>
+          <dd class="attempts">
+            {#each attempts as attempt, position (attempt)}
+              {#if position > 0}<span class="then">→</span>{/if}
+              {#if attempt === run_id}
+                <strong class="mono">{attempt}</strong>
+              {:else}
+                <button
+                  class="job-link mono"
+                  onclick={() =>
+                    navigate({
+                      page: 'campaign_child',
+                      campaign_id,
+                      campaign_run_id,
+                      job_id,
+                      run_id: attempt
+                    })}
+                >
+                  {attempt}
+                </button>
+              {/if}
+            {/each}
+          </dd>
+        </div>
+      {/if}
     {/snippet}
   </RunFacts>
 {/if}
+
+<style>
+  .attempts {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .then {
+    color: var(--description);
+  }
+</style>

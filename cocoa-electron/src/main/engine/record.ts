@@ -59,8 +59,11 @@ export interface RunDeploy {
 
 /** A run a campaign dispatched, by its id in its job's folder. */
 export interface CampaignMember {
+  /** The call's current run. */
   run_id: number
   job: string
+  /** Earlier runs of this call, oldest first, each replaced by the next (§8.5). */
+  attempts?: number[]
 }
 
 /** A plan instance whose launch failed, so no run exists for it (§8.2). */

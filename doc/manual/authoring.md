@@ -281,7 +281,10 @@ as it would a finished one. Whatever the report does, a `FAILED` run stays
 the report's error, never as cocoa's `ERROR` (§7.3.1). Re-running the report
 by hand — `Regenerate` on the run's page, or the agent socket — runs the
 script again and overwrites it, for a failed run as for a completed one: the
-way to regenerate old reports after changing the script (§7.3.2).
+way to regenerate old reports after changing the script (§7.3.2). For a
+whole sweep, a campaign run's `Regenerate` menu has `Members, then
+campaign…`, which re-runs every member's report and then the campaign's
+(§8.3).
 
 **`cancel`** — `./cancel.sh --submission 5001`. Tells the scheduler to stop
 the run; the next poll reports what actually happened. Cancel requests the

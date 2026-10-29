@@ -24,6 +24,12 @@ The page must show:
 Cancelling here cancels this one run. It does not cancel the Campaign run and does
 not touch sibling runs.
 
+A call run again (convention §8.5) has had more than one run. Its page lists
+them all in an `Attempts` fact, oldest first, each run id a link to its own
+page here and the one shown in bold, so the failed run and the one that
+replaced it are a click apart. An earlier attempt keeps its page: it is still
+the campaign's, only no longer the call's current run.
+
 The sidebar must continue highlighting the parent Campaign.
 
 Example breadcrumb:

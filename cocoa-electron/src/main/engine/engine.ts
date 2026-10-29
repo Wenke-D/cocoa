@@ -8,7 +8,9 @@ import { cancel_campaign } from './campaign/cancel'
 import type { MemberCancel } from './campaign/cancel'
 import { plan_campaign } from './campaign/plan'
 import type { PlanInstance } from './campaign/plan'
-import { campaign_report, request_campaign_report } from './campaign/report'
+import { AwaitingMembers } from './campaign/awaiting'
+import { campaign_report, request_campaign_report, request_members_report } from './campaign/report'
+import { replace_member } from './campaign/replace'
 import { start_campaign } from './campaign/start'
 import type { CampaignStart } from './campaign/start'
 import { campaign_status } from './campaign/status'
@@ -52,6 +54,10 @@ export class Engine extends Memory {
   readonly gates = new JobGates()
   /** The deploys this engine is still waiting on. */
   readonly deploys: Deploys
+  /** Campaign runs whose report is regenerated once their members' have landed (§8.3). */
+  readonly awaiting_members = new AwaitingMembers()
+  /** Members being run again while their new run starts (§8.5), as `replace.ts` keys them. */
+  readonly replacing = new Set<string>()
 
   constructor(store_path: string, config: Config = DEFAULT_CONFIG) {
     super(store_path)
@@ -92,6 +98,11 @@ export class Engine extends Memory {
     }
   }
 
+  /** Asks for every member's report of a campaign run again, then its own (§8.3). */
+  request_members_report(folder: string, run_id: number): void {
+    request_members_report(this, this.campaign(folder), run_id)
+  }
+
   /** Locks or unlocks a job run's or a campaign run's report (§7.3.3). */
   set_report_lock(folder: string, run_id: number, locked: boolean): void {
     const job = this.jobs().find((candidate) => candidate.path === folder)
@@ -103,7 +114,8 @@ export class Engine extends Memory {
         this.campaign(folder).runs,
         run_id,
         locked,
-        (record) => record.report?.attempted === false
+        (record) =>
+          record.report?.attempted === false || this.awaiting_members.has(folder, record.run_id)
       )
     }
   }
@@ -134,6 +146,29 @@ export class Engine extends Memory {
     by: Trigger
   ): Promise<CampaignStart> {
     return start_campaign(this, this.campaign(folder), params, by)
+  }
+
+  /**
+   * Runs a campaign run's call again in its place (§8.5): a new run of
+   * `job_folder`, the member's job, with these values. Answers its run id.
+   */
+  async replace_member(
+    folder: string,
+    run_id: number,
+    member_run_id: number,
+    job_folder: string,
+    render: Record<string, unknown>,
+    launch: Record<string, unknown>
+  ): Promise<number> {
+    return replace_member(
+      this,
+      this.campaign(folder),
+      run_id,
+      member_run_id,
+      job_folder,
+      render,
+      launch
+    )
   }
 
   async campaign_report(folder: string, run_id: number): Promise<void> {

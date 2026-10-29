@@ -13,6 +13,7 @@ import type {
   CancelResult,
   CancelTarget,
   RemoveFolderResult,
+  ReplaceTarget,
   ReportResult,
   ReportTarget,
   StartResult,
@@ -41,17 +42,24 @@ const MAX_REPORT_BYTES = 16 * 1024 * 1024
  * `trigger` is the whole difference between a click and an agent's call
  * (§43): same lookup, same validation, same queue — one word on the record,
  * which is what the history table reads back as "you" or "agent".
+ *
+ * `replaces`, for a job, names a campaign run's call the run takes the place
+ * of (convention §8.5): the run then carries the campaign's origin instead.
  */
 export async function start_run(
   engine: Engine,
   name: string,
   parameters: Record<string, unknown>,
-  trigger: 'human' | 'agent' = 'human'
+  trigger: 'human' | 'agent' = 'human',
+  replaces?: ReplaceTarget
 ): Promise<StartResult> {
   try {
     const job = engine.find_job_by_name(name)
     const campaign = engine.find_campaign_by_name(name)
     let run_id: number
+    if (replaces !== undefined && job === null) {
+      return { ok: false, message: `only a job's run takes a campaign call's place` }
+    }
     if (job !== null) {
       const manifest = job.usable_manifest()
       const render_names = new Set(manifest.render_params.map((param) => param.name))
@@ -64,7 +72,20 @@ export async function start_run(
           launch[key] = value
         }
       }
-      run_id = await engine.start_job(job.path, render, launch, trigger)
+      if (replaces === undefined) {
+        run_id = await engine.start_job(job.path, render, launch, trigger)
+      } else if (!/^\d+$/.test(replaces.campaign_run_id) || !/^\d+$/.test(replaces.run_id)) {
+        return { ok: false, message: 'a campaign call is named by run ids' }
+      } else {
+        run_id = await engine.replace_member(
+          replaces.campaign_id,
+          Number(replaces.campaign_run_id),
+          Number(replaces.run_id),
+          job.path,
+          render,
+          launch
+        )
+      }
     } else if (campaign !== null) {
       const start = await engine.start_campaign(campaign.path, parameters, trigger)
       run_id = start.run_id
@@ -97,16 +118,21 @@ export function delete_run(engine: Engine, target: DeleteTarget): DeleteResult {
 
 /**
  * Regenerates a job run's or a campaign run's report by hand (convention
- * §7.3.2, §8.3). Accepted means the report is due — the run reads
- * `Generating` — not that it ran: the refresh tick runs it, and its outcome
- * arrives the way an automatic report's does.
+ * §7.3.2, §8.3), or a campaign run's members' reports and then its own.
+ * Accepted means the report is due — the run reads `Generating` — not that
+ * it ran: the refresh tick runs it, and its outcome arrives the way an
+ * automatic report's does.
  */
 export function rerun_report(engine: Engine, target: RerunReportTarget): RerunReportResult {
   try {
     if (!/^\d+$/.test(target.run_id)) {
       return { ok: false, message: `\`${target.run_id}\` is not a run id` }
     }
-    engine.request_report(target.entity_id, Number(target.run_id))
+    if (target.members === true) {
+      engine.request_members_report(target.entity_id, Number(target.run_id))
+    } else {
+      engine.request_report(target.entity_id, Number(target.run_id))
+    }
     return { ok: true }
   } catch (error) {
     return { ok: false, message: (error as Error).message }

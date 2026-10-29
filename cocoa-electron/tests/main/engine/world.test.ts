@@ -206,13 +206,15 @@ describe('build_world', () => {
         index: 0,
         job_id: job,
         parameters: '--gpu 0 --size 256',
-        run_id: String(start.members[0].run_id)
+        run_id: String(start.members[0].run_id),
+        attempts: []
       },
       {
         index: 1,
         job_id: job,
         parameters: '--gpu 0 --size 256',
-        run_id: String(start.members[1].run_id)
+        run_id: String(start.members[1].run_id),
+        attempts: []
       }
     ])
     expect(world.runs_by_campaign).toEqual({ [campaign]: [String(start.run_id)] })

@@ -71,6 +71,7 @@
                 page: 'campaign_child',
                 campaign_id: run.campaign_id,
                 campaign_run_id: run.id,
+                job_id: step.job_id,
                 run_id: member.id
               },
               members: []
